@@ -27,8 +27,8 @@
 ## Requirements
 
 - Emby Server 4.9 or newer (built against `MediaBrowser.Server.Core` 4.9.1.90).
-- A free [TMDB API key](https://www.themoviedb.org/settings/api) (v3).
-- Optional: Radarr and/or Sonarr v4 for requests.
+- A free [TMDB API key](https://www.themoviedb.org/settings/api).
+- Optional: Radarr and/or Sonarr for requests.
 - `ffmpeg` (included with Emby) is used to create tile images and confirmation cards.
 
 ## Installation
