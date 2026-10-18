@@ -1,0 +1,16 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+.idea/
+*.nupkg
+# Build output
+artifacts/
+publish/
+# OS
+.DS_Store
+Thumbs.db
+# Local Emby plugin configuration may contain API keys: never commit it
+Emby.Plugins.Discover.xml
