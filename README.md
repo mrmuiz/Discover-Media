@@ -59,8 +59,6 @@ Sonarr.
 | TMDB API key, language | Source of lists and metadata (default language `nl-NL`). |
 | Radarr / Sonarr URL and API key | Where requests are sent. API keys are hidden in the form (use the eye icon to show). |
 | Quality profile, root folder | Used for every request; the lists are filled from Radarr/Sonarr. |
-| `TileTextImages` | In `Emby.Plugins.Discover.xml`: set to `false` to show the tiles without text. |
-| `FfmpegPath` | In `Emby.Plugins.Discover.xml`: full path to ffmpeg if it is not found automatically. |
 
 ## Building
 
