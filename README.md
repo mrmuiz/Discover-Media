@@ -12,6 +12,26 @@
 > Other Emby versions may work, but are not individually tested. Please report problems through
 > [Issues](../../issues) and include the relevant diagnostics (see [Troubleshooting](#troubleshooting)).
 
+## Screenshots
+
+**Discover home** — recently added titles, recent requests and recommendations.
+
+<p align="center">
+  <img src="docs/screenshots/discover-home.png" alt="Emby Discover home page showing recently added titles, recent requests and trending movies and series" width="100%">
+</p>
+
+**Discover Media channel** — browse the available lists and collections.
+
+<p align="center">
+  <img src="docs/screenshots/discover-categories.png" alt="Discover Media channel with movie and series genres, popular and trending lists, studios and upcoming titles" width="100%">
+</p>
+
+**Movie genres** — open a genre to browse matching titles.
+
+<p align="center">
+  <img src="docs/screenshots/discover-movie-genres.png" alt="Movie Genres page with illustrated genre tiles" width="100%">
+</p>
+
 ## What it does
 
 - Adds a **Discover Media** channel with trending, popular and upcoming movies and series, genre lists, studios and networks.
