@@ -5,91 +5,97 @@
 <h1 align="center">Emby Discover</h1>
 
 <p align="center">
-  A Seerr-style <em>Discover</em> experience inside Emby: browse trending, popular and upcoming movies and series
-  (TMDB), watch trailers and request titles through Radarr and Sonarr, from the web client, the TV apps and mobile.
+  Browse movies and series from TMDB in Emby, watch trailers, and send requests to Radarr or Sonarr.
 </p>
 
-> **Status: 1.0 beta.** It works for the author's setup, but expect rough edges. Please report problems through
-> [issues](../../issues) and include the diagnostics report (see [Troubleshooting](#troubleshooting)).
+> **Status: beta.** The latest release is **1.0.35 beta**. It has been tested with Emby Server 4.11.0.9.
+> Other Emby versions may work, but are not individually tested. Please report problems through
+> [Issues](../../issues) and include the relevant diagnostics (see [Troubleshooting](#troubleshooting)).
 
-## Features
+## What it does
 
-- **Discover channel** in Emby ("Discover Media"): Trending, Popular and Upcoming movies and series, movie and series
-  genres, and studios and networks, each as a coloured tile.
-- **Trailer and request per title**: *Play* shows the YouTube trailer, *Request* adds the title to Radarr (movies) or
-  Sonarr (series, with season selection).
-- **Works on TV and mobile apps**: apps that cannot show an extra button get an *Aanvragen* item where pressing ▶
-  requests the title; a short confirmation card is shown.
-- **Status at a glance**: already requested (⏳) or available (✓) titles are recognised from Radarr and Sonarr.
-- **Own Discover page** in the Emby web UI with search, in the style of Seerr.
-- **Diagnostics page** that checks the plugin, channel, TMDB, Radarr, Sonarr and user access.
+- Adds a **Discover Media** channel with trending, popular and upcoming movies and series, genre lists, studios and networks.
+- Provides a **Discover** page in the Emby web client with browsing and search.
+- Lets users request movies through Radarr and series through Sonarr.
+- Shows a trailer and a separate **Request** button on supported web-client detail pages, including both Request and Trailer items.
+- Provides a Play-based request flow for TV and other clients that cannot run the web button script.
+- Shows whether a title is already requested or available when that status can be matched in Radarr or Sonarr.
 
 ## Requirements
 
-- Emby Server 4.9 or newer (built against `MediaBrowser.Server.Core` 4.9.1.90).
-- A free [TMDB API key](https://www.themoviedb.org/settings/api).
-- Radarr and/or Sonarr, to send requests (Radarr for movies, Sonarr for series).
-- `ffmpeg` (included with Emby) is used to create tile images and confirmation cards.
+- Emby Server. The plugin is built against `MediaBrowser.Server.Core` 4.9.1.90; the latest release was tested on 4.11.0.9.
+- A [TMDB API key](https://www.themoviedb.org/settings/api).
+- Radarr for movie requests and/or Sonarr for series requests.
+- Emby's bundled `ffmpeg` is used to create some channel artwork and the request confirmation clip.
 
-## Installation
+## Install
 
-1. Download `Emby.Plugins.Discover.dll` from the [latest release](../../releases/latest)
-   (or build it yourself, see below).
-2. Copy it into the `plugins` folder of your Emby data directory (Docker: `/config/plugins`).
-3. Restart Emby Server.
-4. Open **Dashboard > Plugins > Discover** and fill in your TMDB key, the Radarr and Sonarr URL and API key, then press
-   *Test connection*. The *Quality profile* and *Root folder* lists fill themselves; pick the ones you want and save.
-5. Give users access to the channel: **User > Access > Channels**.
+1. Download `Emby.Plugins.Discover.dll` from the [latest release](../../releases/latest).
+2. Stop Emby, then copy the DLL into the Emby data directory's `plugins` folder. For Docker installations, this is usually `<Emby config folder>/plugins` (inside the container: `/config/plugins`).
+3. Remove older copies of the Discover DLL from that folder so only one version remains.
+4. Start Emby.
+5. Open **Dashboard > Plugins > Discover** and configure the TMDB key and the Radarr/Sonarr connection details. Use **Test connection**, select the quality profile and root folder, and save.
+6. Give the intended users access to channels in their Emby user settings.
+7. Open **Discover** once in the Emby web client. This activates the web-client request buttons for that browser.
 
-When Emby runs in Docker, `localhost` does not point to the host: use the IP address or container name of Radarr and
-Sonarr.
+The button script is embedded in the plugin DLL and is served by Emby. A normal installation does **not** require editing `index.html`, changing permissions on Emby's web-client folder, or installing a separate JavaScript file. If you have an old manual script include from a previous installation, remove it only after confirming the current plugin works.
 
-## Usage
+For Docker, do not use `localhost` for Radarr or Sonarr unless those services share the Emby container's network namespace. Use an address that Emby can reach, such as a service/container name on the same Docker network or the host's LAN address.
 
-- Open the **Discover Media** channel, pick a list, then a title.
-- **Web client**: use the *Request* button on the title page. For series with several seasons you can choose which
-  seasons to request.
-- **TV and mobile apps**: open *Aanvragen: <title>* and press ▶.
-- Folders (the coloured tiles) are only opened, never played: playing a folder would request every title in it.
+## Use
+
+- Open **Discover Media** and browse a list, genre, studio or network.
+- In the web client, open a title and choose **Request**. On a series, choose the seasons to monitor when prompted.
+- To watch a trailer, open its **Trailer** item and press **Play**.
+- In TV apps or other clients without the web request button, open the title's **Request** item and press **Play** to send the request. The short confirmation clip is used by this fallback flow; do not remove it if those clients are in use.
+- Open folders and tiles to browse them; do not press Play on a folder.
 
 ## Configuration
 
-| Setting | Description |
+| Setting | Purpose |
 |---|---|
-| TMDB API key, language | Source of lists and metadata (default language `nl-NL`). |
-| Radarr / Sonarr URL and API key | Where requests are sent. API keys are hidden in the form (use the eye icon to show). |
-| Quality profile, root folder | Used for every request; the lists are filled from Radarr/Sonarr. |
+| TMDB API key and language | Provides titles, artwork and metadata. |
+| Radarr URL and API key | Sends movie requests to Radarr. |
+| Sonarr URL and API key | Sends series requests to Sonarr. |
+| Quality profile and root folder | Selects the destination settings used for requests. Choose values returned by **Test connection**. |
+| Show Diagnostics | Keeps the browser diagnostic line and technical media information visible when enabled. |
 
-## Building
+API keys are stored in the plugin configuration and are masked in the settings form by default.
+
+## Troubleshooting
+
+Open **Dashboard > Plugins > Discover > Status and diagnostics**. It reports the plugin and Emby versions, service connectivity, channel visibility, request counts and recent plugin events. Do not post API keys or other secrets in an issue.
+
+For web-client button problems:
+
+1. Open **Discover** once in that browser, then refresh the page. Try a hard refresh (`Ctrl+F5`) after an update.
+2. On the Discover page, check that diagnostics say **button script active in browser: YES** and show the expected plugin version.
+3. Confirm that only one Discover DLL is installed and that Emby was restarted after replacing it.
+4. If the script is still inactive, open the browser developer console, copy the relevant error, and include it with the diagnostics report.
+
+Other common causes:
+
+- The user cannot see the channel: grant channel access in that user's Emby settings.
+- Radarr or Sonarr cannot be reached from Emby: verify the URL from the server/container, not just from a desktop browser.
+- Old channel artwork or entries remain cached: restart Emby and reopen the channel; Emby may retain channel items between requests.
+
+## Build
+
+Use the source ZIP attached to the same release to build that exact version:
 
 ```bash
 dotnet build EmbyDiscover/EmbyDiscover.csproj -c Release
 ```
 
-The plugin is `EmbyDiscover/bin/Release/netstandard2.0/Emby.Plugins.Discover.dll`. GitHub Actions builds it on every
-push (artifact *Emby.Plugins.Discover*) and attaches it to a release when you push a tag such as `v1.0.0-beta.1`.
-
-## Troubleshooting
-
-Open **Dashboard > Plugins > Discover > Status and diagnostics**. The report shows the Emby version, whether the plugin
-is loaded, TMDB/Radarr/Sonarr connectivity, channel access per user and the most recent plugin events (including why a
-tile image could not be created). Attach it (without URLs or API keys) to an issue.
-
-Common causes:
-
-- The DLL is not in the `plugins` folder, or Emby was not restarted.
-- The user has no access to the channel (*User > Access > Channels*).
-- Radarr/Sonarr is not reachable from the Emby server at that URL.
-- Old tiles remain after an update: Emby stores channel items per id. The plugin changes its ids when images or names
-  change; restart Emby and reopen the channel.
+The output DLL is `EmbyDiscover/bin/Release/netstandard2.0/Emby.Plugins.Discover.dll`.
 
 ## Contributing
 
-Issues and pull requests are welcome. Please describe the Emby version and client you tested with.
+Issues and pull requests are welcome. Include the Emby Server version, client type, steps to reproduce, and relevant diagnostics.
 
 ## License
 
 [MIT](LICENSE). The embedded Poppins font is licensed under the SIL Open Font License; see
 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
 
-This product uses the TMDB API but is not endorsed or certified by TMDB. Not affiliated with Emby, Radarr or Sonarr.
+This product uses the TMDB API but is not endorsed or certified by TMDB. It is not affiliated with Emby, Radarr or Sonarr.
