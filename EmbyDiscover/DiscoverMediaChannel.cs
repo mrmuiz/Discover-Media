@@ -54,7 +54,7 @@ namespace Emby.Plugins.Discover
         public string HomePageUrl => "";
 
         // Ophogen als Emby oude (bewaarde) kanaalinhoud blijft tonen.
-        public string DataVersion => "51";
+        public string DataVersion => "57";
         public ChannelParentalRating ParentalRating => ChannelParentalRating.GeneralAudience;
         public bool IsEnabledFor(string userId) => true;
 
@@ -309,9 +309,9 @@ namespace Emby.Plugins.Discover
 
         private sealed class TileSpec
         {
-            public readonly string Id, Name, Text, Color, Backdrop;
-            public TileSpec(string id, string name, string text, string color, string backdrop)
-            { Id = id; Name = name; Text = text; Color = color; Backdrop = backdrop; }
+            public readonly string Id, Caption, Color, Backdrop;
+            public TileSpec(string id, string caption, string color, string backdrop)
+            { Id = id; Caption = caption; Color = color; Backdrop = backdrop; }
         }
 
         // Artwork is optional and must not hold up Emby's channel refresh.
@@ -355,26 +355,29 @@ namespace Emby.Plugins.Discover
                 return l[start % l.Count];
             };
 
-            // Names below tiles follow the selected language; text printed on the artwork stays English.
-            // De volgorde van pick() blijft zoals voorheen, zodat geen twee mappen dezelfde film tonen.
+            // Use the same localized captions on the artwork and below each tile.
+            // Keep the existing pick() order so tiles still use distinct titles.
             var specs = new[]
             {
-                new TileSpec(AskListPrefix + "trending_movie", DiscoverLanguage.Text("Trending films", "Trending Movies", "Aktuelle Filme"), "Trending Movies", "orange", pick(0, 3)),
-                new TileSpec(AskListPrefix + "popular_movie", DiscoverLanguage.Text("Populaire films", "Popular Movies", "Beliebte Filme"), "Popular Movies", "red", pick(1, 3)),
-                new TileSpec(AskListPrefix + "upcoming_movie", DiscoverLanguage.Text("Verwachte films", "Upcoming Movies", "Kommende Filme"), "Upcoming Movies", "purple", pick(2, 3)),
-                new TileSpec(AskGenrePrefix + "movie", DiscoverLanguage.Text("Filmgenres", "Movie Genres", "Filmgenres"), "Movie Genres", "green", pick(1, 8)),
-                new TileSpec(AskListPrefix + "trending_tv", DiscoverLanguage.Text("Trending series", "Trending Series", "Aktuelle Serien"), "Trending Series", "yellow", pick(3, 3)),
-                new TileSpec(AskListPrefix + "popular_tv", DiscoverLanguage.Text("Populaire series", "Popular Series", "Beliebte Serien"), "Popular Series", "pink", pick(4, 3)),
-                new TileSpec(AskListPrefix + "upcoming_tv", DiscoverLanguage.Text("Verwachte series", "Upcoming Series", "Kommende Serien"), "Upcoming Series", "blue", pick(5, 3)),
-                new TileSpec(AskGenrePrefix + "tv", DiscoverLanguage.Text("Seriegenres", "Series Genres", "Seriengenres"), "Series Genres", "lightgreen", pick(4, 8)),
-                new TileSpec(AskStudioRoot, DiscoverLanguage.Text("Studio's", "Studios", "Studios"),
-                    "Studios", "black", pick(0, 8))
+                new TileSpec(AskListPrefix + "trending_movie", DiscoverLanguage.Text("Trending films", "Trending Movies", "Aktuelle Filme"), "orange", pick(0, 3)),
+                new TileSpec(AskListPrefix + "popular_movie", DiscoverLanguage.Text("Populaire films", "Popular Movies", "Beliebte Filme"), "red", pick(1, 3)),
+                new TileSpec(AskListPrefix + "upcoming_movie", DiscoverLanguage.Text("Verwachte films", "Upcoming Movies", "Kommende Filme"), "purple", pick(2, 3)),
+                new TileSpec(AskGenrePrefix + "movie", DiscoverLanguage.Text("Filmgenres", "Movie Genres", "Filmgenres"), "green", pick(1, 8)),
+                new TileSpec(AskListPrefix + "trending_tv", DiscoverLanguage.Text("Trending series", "Trending Series", "Aktuelle Serien"), "yellow", pick(3, 3)),
+                new TileSpec(AskListPrefix + "popular_tv", DiscoverLanguage.Text("Populaire series", "Popular Series", "Beliebte Serien"), "pink", pick(4, 3)),
+                new TileSpec(AskListPrefix + "upcoming_tv", DiscoverLanguage.Text("Verwachte series", "Upcoming Series", "Kommende Serien"), "blue", pick(5, 3)),
+                new TileSpec(AskGenrePrefix + "tv", DiscoverLanguage.Text("Seriegenres", "Series Genres", "Seriengenres"), "lightgreen", pick(4, 8)),
+                new TileSpec(AskStudioRoot, DiscoverLanguage.Text("Studio's", "Studios", "Studios"), "black", pick(0, 8))
             };
 
             // Start every tile together, then allow one shared time budget for the text artwork.
-            var creations = specs.Select(spec => FolderTile.Create(
-                spec.Id.Replace(":", "-"), spec.Text, DuotoneUrl(spec.Color, spec.Backdrop), CancellationToken.None)).ToArray();
-            var files = new string[specs.Length];
+            var creationOrder = specs
+                .OrderBy(spec => spec.Id == AskListPrefix + "trending_movie" ? 0 :
+                    spec.Id == AskStudioRoot ? 1 : 2)
+                .ToArray();
+            var creations = creationOrder.Select(spec => FolderTile.Create(
+                spec.Id.Replace(":", "-"), spec.Caption, DuotoneUrl(spec.Color, spec.Backdrop), CancellationToken.None)).ToArray();
+            var files = new Dictionary<string, string>();
             var deadline = DateTime.UtcNow.AddSeconds(2);
             for (int i = 0; i < creations.Length; i++)
             {
@@ -384,12 +387,12 @@ namespace Emby.Plugins.Discover
 
                 if (creations[i].IsCompleted)
                 {
-                    try { files[i] = await creations[i].ConfigureAwait(false); }
-                    catch (Exception ex) { DiscoverDiagnostics.Add("tegelafbeelding '" + specs[i].Text + "' mislukt: " + ex.Message); }
+                    try { files[creationOrder[i].Id] = await creations[i].ConfigureAwait(false); }
+                    catch (Exception ex) { DiscoverDiagnostics.Add("tegelafbeelding '" + creationOrder[i].Caption + "' mislukt: " + ex.Message); }
                 }
                 else
                 {
-                    _ = ObserveTileCreation(creations[i], specs[i].Text);
+                    _ = ObserveTileCreation(creations[i], creationOrder[i].Caption);
                 }
             }
 
@@ -397,7 +400,9 @@ namespace Emby.Plugins.Discover
             for (int i = 0; i < specs.Length; i++)
             {
                 var sp = specs[i];
-                items.Add(Folder(sp.Id, sp.Name, files[i] ?? DuotoneUrl(sp.Color, sp.Backdrop), null));
+                string file;
+                files.TryGetValue(sp.Id, out file);
+                items.Add(Folder(sp.Id, sp.Caption, file ?? DuotoneUrl(sp.Color, sp.Backdrop), null));
             }
             return new ChannelItemResult { Items = items, TotalRecordCount = items.Count };
         }
@@ -451,6 +456,13 @@ namespace Emby.Plugins.Discover
             string name;
             if (!GenreColor.TryGetValue(genreId, out name)) name = GenreColor[0];
             return DuotoneUrl(name, backdrop);
+        }
+
+        private static string GenreFallbackColor(int genreId)
+        {
+            string name;
+            if (!GenreColor.TryGetValue(genreId, out name)) name = GenreColor[0];
+            return ColorTones[name][0];
         }
 
         // Achtergronden van de bovenste titels van een lijst (voor de plaatjes van de hoofdmappen); 6 uur bewaard.
@@ -513,10 +525,24 @@ namespace Emby.Plugins.Discover
         {
             var genres = await _tmdb.GetGenres(tv, ct).ConfigureAwait(false);
             var backs = await Task.WhenAll(genres.Select(g => GenreBackdrop(tv, g.id, ct))).ConfigureAwait(false);
+            var imageUrls = genres.Select((genre, i) => GenreImageUrl(genre.id, backs[i])).ToArray();
+            var creations = genres.Select((genre, i) => FolderTile.Create(
+                "genre-" + (tv ? "tv-" : "movie-") + genre.id,
+                genre.name,
+                imageUrls[i],
+                CancellationToken.None,
+                GenreFallbackColor(genre.id))).ToArray();
+            var files = new string[genres.Count];
+            for (int i = 0; i < creations.Length; i++)
+            {
+                try { files[i] = await creations[i].ConfigureAwait(false); }
+                catch (Exception ex) { DiscoverDiagnostics.Add("genretegel '" + genres[i].name + "' mislukt: " + ex.Message); }
+            }
+
             var items = new List<ChannelItemInfo>();
             for (int i = 0; i < genres.Count; i++)
                 items.Add(Folder(AskListPrefix + (tv ? "gt_" : "gm_") + genres[i].id, genres[i].name,
-                                 GenreImageUrl(genres[i].id, backs[i]), null));
+                                 files[i] ?? imageUrls[i], null));
             items = items.OrderBy(x => x.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
             return new ChannelItemResult { Items = items, TotalRecordCount = items.Count };
         }
@@ -540,8 +566,8 @@ namespace Emby.Plugins.Discover
             var nUrls = networks.Select((x, i) => LogoImageUrl(nLogos[i], TwoToneNetworks.Contains(x.Key))).ToArray();
 
             // Elk logo midden in een liggend, doorzichtig plaatje (niets afgesneden); lukt dat niet, dan het logo zelf.
-            var sFiles = await Task.WhenAll(studios.Select((x, i) => FolderTile.CreateLogo("s" + x.Key, sUrls[i], ct))).ConfigureAwait(false);
-            var nFiles = await Task.WhenAll(networks.Select((x, i) => FolderTile.CreateLogo("n" + x.Key, nUrls[i], ct))).ConfigureAwait(false);
+            var sFiles = await Task.WhenAll(studios.Select((x, i) => FolderTile.CreateLogo("s" + x.Key, sUrls[i], x.Value, ct))).ConfigureAwait(false);
+            var nFiles = await Task.WhenAll(networks.Select((x, i) => FolderTile.CreateLogo("n" + x.Key, nUrls[i], x.Value, ct))).ConfigureAwait(false);
 
             var items = new List<ChannelItemInfo>();
             for (int i = 0; i < studios.Length; i++)

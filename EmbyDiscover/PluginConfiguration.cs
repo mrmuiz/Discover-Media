@@ -28,7 +28,7 @@ namespace Emby.Plugins.Discover
         /// <summary>Optioneel: volledig pad naar ffmpeg, voor de bevestigingskaart per titel. Leeg = zoeken op gangbare plekken.</summary>
         public string FfmpegPath { get; set; } = "";
 
-        /// <summary>Zet de Engelse mapnaam als tekst op de plaatjes van de hoofdmappen. Op false = plaatjes zonder tekst.</summary>
+        /// <summary>Toon de tegelnaam als tekst op kanaaltegelafbeeldingen. Op false = plaatjes zonder toegevoegde tekst.</summary>
         public bool TileTextImages { get; set; } = true;
     }
 }

@@ -10,15 +10,15 @@ using System.Threading.Tasks;
 namespace Emby.Plugins.Discover
 {
     /// <summary>
-    /// Maakt voor een hoofdmap een liggend plaatje: de kleurachtergrond van TMDB (duotone) met de naam van de map
-    /// er in het Engels op, in wit Poppins Bold. Het plaatje komt als bestand op schijf; het kanaal geeft het pad door
-    /// aan Emby. Lukt iets niet (geen ffmpeg, geen schrijfrechten, TMDB niet bereikbaar), dan geeft Create null
+    /// Maakt liggende tegelafbeeldingen met de naam van de map in wit Poppins Bold. Het plaatje komt als bestand
+    /// op schijf; het kanaal geeft het pad door aan Emby. Lukt iets niet (geen ffmpeg, geen schrijfrechten,
+    /// TMDB niet bereikbaar), dan geeft Create null
     /// terug en gebruikt het kanaal de achtergrond zonder tekst, zoals in 0.23.
     /// </summary>
     internal static class FolderTile
     {
         // Ophogen als de opmaak verandert, dan worden bewaarde plaatjes niet meer hergebruikt.
-        private const int TileVersion = 2;
+        private const int TileVersion = 4;
 
         private const int W = 1280;
         private const int H = 720;
@@ -35,12 +35,13 @@ namespace Emby.Plugins.Discover
         }
 
         /// <summary>Geeft het pad van het plaatje (uit de bewaarde bestanden of net gemaakt), of null als het niet lukt.</summary>
-        public static async Task<string> Create(string key, string text, string backgroundUrl, CancellationToken ct)
+        public static async Task<string> Create(string key, string text, string backgroundUrl, CancellationToken ct, string fallbackColor = null)
         {
             try
             {
                 if (!Plugin.GetCurrentConfiguration().TileTextImages) return null;
-                if (string.IsNullOrEmpty(backgroundUrl) || string.IsNullOrEmpty(text)) return null;
+                if (string.IsNullOrEmpty(text)) return null;
+                if (string.IsNullOrEmpty(backgroundUrl) && string.IsNullOrEmpty(fallbackColor)) return null;
 
                 var ffmpeg = RequestCard.FindFfmpeg();
                 if (ffmpeg == null)
@@ -50,7 +51,7 @@ namespace Emby.Plugins.Discover
                 }
 
                 var dir = Plugin.Instance.WorkDir("discover-tiles");
-                var final = Path.Combine(dir, string.Format("tile-{0}-{1}-v{2}.jpg", key, Hash(text + "|" + backgroundUrl), TileVersion));
+                var final = Path.Combine(dir, string.Format("tile-{0}-{1}-v{2}.jpg", key, Hash(text + "|" + backgroundUrl + "|" + fallbackColor), TileVersion));
                 if (File.Exists(final) && new FileInfo(final).Length > 0) return final;
 
                 await Gate.WaitAsync(ct).ConfigureAwait(false);
@@ -62,7 +63,18 @@ namespace Emby.Plugins.Discover
                     Directory.CreateDirectory(work);
                     try
                     {
-                        if (!await Download(backgroundUrl, Path.Combine(work, "bg.jpg"), ct).ConfigureAwait(false))
+                        var input = string.Empty;
+                        if (!string.IsNullOrEmpty(backgroundUrl) &&
+                            await Download(backgroundUrl, Path.Combine(work, "bg.jpg"), ct).ConfigureAwait(false))
+                        {
+                            input = "-i bg.jpg";
+                        }
+                        else if (!string.IsNullOrEmpty(fallbackColor))
+                        {
+                            DiscoverDiagnostics.Add("mapplaatje '" + text + "': effen achtergrond gebruikt");
+                            input = "-f lavfi -i color=c=0x" + fallbackColor.TrimStart('#') + ":s=" + W + "x" + H + ":d=1";
+                        }
+                        else
                         {
                             DiscoverDiagnostics.Add("mapplaatje '" + text + "': achtergrond niet opgehaald (plaatje zonder tekst gebruikt)");
                             return null;
@@ -93,7 +105,7 @@ namespace Emby.Plugins.Discover
                         {
                             try
                             {
-                                var args = "-y -hide_banner -loglevel error -i bg.jpg -filter_complex \"" + variants[v] +
+                                var args = "-y -hide_banner -loglevel error " + input + " -filter_complex \"" + variants[v] +
                                            "\" -map [v] -frames:v 1 -q:v 3 out.jpg";
                                 await RunFfmpeg(ffmpeg, work, args).ConfigureAwait(false);
                                 if (File.Exists(Path.Combine(work, "out.jpg")) && new FileInfo(Path.Combine(work, "out.jpg")).Length > 0) { lastError = null; break; }
@@ -141,20 +153,21 @@ namespace Emby.Plugins.Discover
 
         /// <summary>
         /// Zet een studio- of netwerklogo (al in kleur gezet door TMDB) in het midden van een liggend, doorzichtig plaatje
-        /// van 1280x720, zodat Emby het niet afsnijdt. Geeft het pad van het PNG-bestand, of null als het niet lukt
+        /// van 1280x720, met de tegelnaam onder het logo. Geeft het pad van het PNG-bestand, of null als het niet lukt
         /// (dan gebruikt het kanaal het logo zoals het is).
         /// </summary>
-        public static async Task<string> CreateLogo(string key, string logoUrl, CancellationToken ct)
+        public static async Task<string> CreateLogo(string key, string logoUrl, string text, CancellationToken ct)
         {
             try
             {
-                if (string.IsNullOrEmpty(logoUrl)) return null;
+                if (string.IsNullOrEmpty(logoUrl) || string.IsNullOrEmpty(text)) return null;
 
                 var ffmpeg = RequestCard.FindFfmpeg();
                 if (ffmpeg == null) return null;
 
+                bool addText = Plugin.GetCurrentConfiguration().TileTextImages;
                 var dir = Plugin.Instance.WorkDir("discover-tiles");
-                var final = Path.Combine(dir, string.Format("logo-{0}-{1}-v{2}.png", key, Hash(logoUrl), TileVersion));
+                var final = Path.Combine(dir, string.Format("logo-{0}-{1}-v{2}.png", key, Hash((addText ? text : "") + "|" + logoUrl), TileVersion));
                 if (File.Exists(final) && new FileInfo(final).Length > 0) return final;
 
                 await Gate.WaitAsync(ct).ConfigureAwait(false);
@@ -170,7 +183,18 @@ namespace Emby.Plugins.Discover
 
                         // Passend maken binnen 1000x400 (met ruime marge rondom) op een doorzichtig vlak van 1280x720.
                         var args = "-y -hide_banner -loglevel error -i logo.png -vf \"format=rgba,scale=1000:400:force_original_aspect_ratio=decrease," +
-                                   "pad=" + W + ":" + H + ":(ow-iw)/2:(oh-ih)/2:color=black@0\" -frames:v 1 out.png";
+                                   "pad=" + W + ":" + H + ":(ow-iw)/2:(oh-ih)/2:color=black@0";
+                        if (addText)
+                        {
+                            CopyResource("Poppins-Bold.ttf", Path.Combine(work, "bold.ttf"));
+                            File.WriteAllText(Path.Combine(work, "text.txt"), text, new UTF8Encoding(false));
+                            int size = 72;
+                            double width = RequestCard.Measure(text, size, true);
+                            if (width > 1080) size = (int)Math.Floor(size * 1080 / width);
+                            args += ",drawtext=fontfile=bold.ttf:textfile=text.txt:expansion=none:fontsize=" + size +
+                                    ":fontcolor=white:x=(w-text_w)/2:y=h-text_h-48:shadowcolor=black@0.8:shadowx=3:shadowy=3";
+                        }
+                        args += "\" -frames:v 1 out.png";
                         await RunFfmpeg(ffmpeg, work, args).ConfigureAwait(false);
 
                         var made = Path.Combine(work, "out.png");
