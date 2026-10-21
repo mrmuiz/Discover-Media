@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Discover</title>
+</head>
+<body>
+<div data-role="page" class="page type-interior pluginConfigurationPage discoverConfigPage" data-require="emby-input,emby-button,emby-select,emby-checkbox" data-controller="__plugin/discoverconfigjs1046">
+        <style>
+        .discoverConfigPage .keyWrap { position: relative; }
+        .discoverConfigPage .keyWrap input { padding-right: 2.8em; }
+        .discoverConfigPage .keyWrap .btnToggleKey { position: absolute; right: .2em; bottom: .15em; margin: 0; }
+    </style>
+    <div data-role="content">
+        <div class="content-primary">
+            <form class="discoverForm">
+                <h2>Discover</h2>
+
+                <h3>TMDB</h3>
+                <div class="inputContainer keyWrap">
+                    <label class="inputLabel inputLabelUnfocused" for="txtTmdbKey">API key</label>
+                    <input is="emby-input" type="password" id="txtTmdbKey" autocomplete="new-password" spellcheck="false" />
+                    <button is="emby-button" type="button" class="paper-icon-button-light btnToggleKey" data-target="txtTmdbKey" title="Tonen" aria-label="Tonen"><i class="md-icon">visibility</i></button>
+                </div>
+                <div class="selectContainer">
+                    <label class="selectLabel" for="selPluginLanguage">Plugin-taal</label>
+                    <select is="emby-select" id="selPluginLanguage">
+                        <option value="auto">Volg de taal van Emby Server</option>
+                        <option value="nl-NL">Nederlands</option>
+                        <option value="en-US">English</option>
+                    </select>
+                </div>
+                <div class="selectContainer">
+                    <label class="selectLabel" for="selTmdbLang">TMDB-taal</label>
+                    <select is="emby-select" id="selTmdbLang">
+                        <option value="auto">Volg de taal van Emby Server</option>
+                    </select>
+                    <div class="inputContainer" id="tmdbLanguageFallback">
+                        <label class="inputLabel inputLabelUnfocused" for="txtTmdbLanguage">Handmatige TMDB-taalcode (bijv. nl-NL of en-US)</label>
+                        <input is="emby-input" type="text" id="txtTmdbLanguage" autocomplete="off" spellcheck="false" />
+                    </div>
+                    <div class="fieldDescription" id="statusTmdbLanguages">Voer een TMDB-key in en test deze om de volledige talenlijst te laden.</div>
+                </div>
+                <div class="checkboxContainer">
+                    <label class="emby-checkbox-label">
+                        <input is="emby-checkbox" type="checkbox" id="chkShowDiagnostics" />
+                        <span class="checkboxLabel">Toon het gele debugbericht en media-informatie op itempagina's</span>
+                        <span class="emby-checkbox-outline">
+                            <span class="emby-checkbox-on"><i class="md-icon">check</i></span>
+                            <span class="emby-checkbox-off"></span>
+                        </span>
+                    </label>
+                </div>
+
+                <div>
+                    <button is="emby-button" type="button" class="raised btnTestTmdb"><span>Test TMDB-key</span></button>
+                    <div class="fieldDescription testStatus" id="statusTmdb" style="margin-top:.5em;"></div>
+                </div>
+
+                <h3>Radarr (films)</h3>
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused" for="txtRadarrUrl">URL (bijv. http://192.168.1.10:7878)</label>
+                    <input is="emby-input" type="text" id="txtRadarrUrl" />
+                </div>
+                <div class="inputContainer keyWrap">
+                    <label class="inputLabel inputLabelUnfocused" for="txtRadarrKey">API key</label>
+                    <input is="emby-input" type="password" id="txtRadarrKey" autocomplete="new-password" spellcheck="false" />
+                    <button is="emby-button" type="button" class="paper-icon-button-light btnToggleKey" data-target="txtRadarrKey" title="Tonen" aria-label="Tonen"><i class="md-icon">visibility</i></button>
+                </div>
+                <div>
+                    <button is="emby-button" type="button" class="raised btnTestRadarr" data-kind="Radarr"><span>Test verbinding</span></button>
+                    <div class="fieldDescription testStatus" id="statusRadarr" style="margin-top:.5em;"></div>
+                </div>
+                <div class="selectContainer">
+                    <label class="selectLabel" for="selRadarrProfile">Quality profile</label>
+                    <select is="emby-select" id="selRadarrProfile"></select>
+                </div>
+                <div class="selectContainer">
+                    <label class="selectLabel" for="selRadarrRoot">Root folder</label>
+                    <select is="emby-select" id="selRadarrRoot"></select>
+                </div>
+
+                <h3>Sonarr (series)</h3>
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused" for="txtSonarrUrl">URL (bijv. http://192.168.1.10:8989)</label>
+                    <input is="emby-input" type="text" id="txtSonarrUrl" />
+                </div>
+                <div class="inputContainer keyWrap">
+                    <label class="inputLabel inputLabelUnfocused" for="txtSonarrKey">API key</label>
+                    <input is="emby-input" type="password" id="txtSonarrKey" autocomplete="new-password" spellcheck="false" />
+                    <button is="emby-button" type="button" class="paper-icon-button-light btnToggleKey" data-target="txtSonarrKey" title="Tonen" aria-label="Tonen"><i class="md-icon">visibility</i></button>
+                </div>
+                <div>
+                    <button is="emby-button" type="button" class="raised btnTestSonarr" data-kind="Sonarr"><span>Test verbinding</span></button>
+                    <div class="fieldDescription testStatus" id="statusSonarr" style="margin-top:.5em;"></div>
+                </div>
+                <div class="selectContainer">
+                    <label class="selectLabel" for="selSonarrProfile">Quality profile</label>
+                    <select is="emby-select" id="selSonarrProfile"></select>
+                </div>
+                <div class="selectContainer">
+                    <label class="selectLabel" for="selSonarrRoot">Root folder</label>
+                    <select is="emby-select" id="selSonarrRoot"></select>
+                </div>
+
+                <div>
+                    <button is="emby-button" type="submit" class="raised button-submit block"><span>Opslaan</span></button>
+                    <div class="fieldDescription" id="statusSave" role="status" aria-live="polite"></div>
+                </div>
+                <div style="margin-top:1em;">
+                    <button is="emby-button" type="button" class="raised btnStatus"><span>Status en diagnose</span></button>
+                    <div class="fieldDescription" style="margin-top:.5em;">Controleert plugin, kanaal, TMDB, Radarr, Sonarr en gebruikerstoegang. Handig om twee servers te vergelijken.</div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+</body>
+</html>

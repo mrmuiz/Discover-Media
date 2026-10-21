@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <AssemblyName>Emby.Plugins.Discover</AssemblyName>
+    <RootNamespace>Emby.Plugins.Discover</RootNamespace>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <Version>1.0.37.74-beta</Version>
+    <Description>Discover movies and series (TMDB) in Emby and request them through Radarr and Sonarr.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Vaste versie (dezelfde als de andere plugin die op jouw server laadt). Een vlottende versie (4.9.*) kan op een andere PC naar een andere SDK oplossen. -->
+    <PackageReference Include="MediaBrowser.Server.Core" Version="4.9.1.90" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Configuration\configPage.html" />
+    <EmbeddedResource Include="Configuration\configPage.js" />
+    <EmbeddedResource Include="Configuration\discoverPage.html" />
+    <EmbeddedResource Include="Configuration\discoverPage.js" />
+    <EmbeddedResource Include="Configuration\statusPage.html" />
+    <EmbeddedResource Include="Configuration\statusPage.js" />
+    <EmbeddedResource Include="Resources\request-ok.mp4" />
+    <EmbeddedResource Include="Resources\Poppins-Bold.ttf" />
+    <EmbeddedResource Include="Resources\Poppins-Regular.ttf" />
+    <EmbeddedResource Include="Resources\card-grad.png" />
+    <EmbeddedResource Include="Resources\card-mask.png" />
+    <EmbeddedResource Include="Resources\card-shadow.png" />
+    <EmbeddedResource Include="Resources\card-star.png" />
+    <EmbeddedResource Include="Resources\card-pill-new.png" />
+    <EmbeddedResource Include="Resources\card-pill-dup-radarr.png" />
+    <EmbeddedResource Include="Resources\card-pill-dup-sonarr.png" />
+    <EmbeddedResource Include="Resources\discover.png" />
+    <EmbeddedResource Include="Resources\discover-request-button.js" />
+  </ItemGroup>
+
+</Project>
