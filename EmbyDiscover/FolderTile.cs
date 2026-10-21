@@ -39,7 +39,7 @@ namespace Emby.Plugins.Discover
         {
             try
             {
-                if (!Plugin.Instance.Configuration.TileTextImages) return null;
+                if (!Plugin.GetCurrentConfiguration().TileTextImages) return null;
                 if (string.IsNullOrEmpty(backgroundUrl) || string.IsNullOrEmpty(text)) return null;
 
                 var ffmpeg = RequestCard.FindFfmpeg();

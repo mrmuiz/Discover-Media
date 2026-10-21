@@ -8,28 +8,49 @@ namespace Emby.Plugins.Discover
     /// <summary>Bouwt de Seerr-achtige infoteksten (releasedatum, status, seizoenen, netwerk/studio, genres).</summary>
     internal static class InfoText
     {
-        private static readonly string[] Months =
+        private static readonly string[] DutchMonths =
         {
             "januari", "februari", "maart", "april", "mei", "juni",
             "juli", "augustus", "september", "oktober", "november", "december"
         };
 
-        private static readonly Dictionary<string, string> MovieStatus = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        private static readonly string[] EnglishMonths =
+        {
+            "January", "February", "March", "April", "May", "June",
+            "July", "August", "September", "October", "November", "December"
+        };
+
+        private static readonly Dictionary<string, string> DutchMovieStatus = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
             { "Released", "Verschenen" }, { "Post Production", "Postproductie" }, { "In Production", "In productie" },
             { "Planned", "Gepland" }, { "Rumored", "Geruchten" }, { "Canceled", "Geannuleerd" }
         };
 
-        private static readonly Dictionary<string, string> TvStatus = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        private static readonly Dictionary<string, string> EnglishMovieStatus = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            { "Released", "Released" }, { "Post Production", "Post-production" }, { "In Production", "In production" },
+            { "Planned", "Planned" }, { "Rumored", "Rumored" }, { "Canceled", "Canceled" }
+        };
+
+        private static readonly Dictionary<string, string> DutchTvStatus = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
             { "Returning Series", "Lopend" }, { "Ended", "Beëindigd" }, { "Canceled", "Geannuleerd" },
             { "In Production", "In productie" }, { "Planned", "Gepland" }, { "Pilot", "Pilot" }
         };
 
+        private static readonly Dictionary<string, string> EnglishTvStatus = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            { "Returning Series", "Returning" }, { "Ended", "Ended" }, { "Canceled", "Canceled" },
+            { "In Production", "In production" }, { "Planned", "Planned" }, { "Pilot", "Pilot" }
+        };
+
         public static bool TryDate(string date, out DateTime d) =>
             DateTime.TryParseExact(date ?? "", "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out d);
 
-        public static string LongDate(DateTime d) => d.Day + " " + Months[d.Month - 1] + " " + d.Year;
+        public static string LongDate(DateTime d) =>
+            DiscoverLanguage.IsDutch
+                ? d.Day + " " + DutchMonths[d.Month - 1] + " " + d.Year
+                : EnglishMonths[d.Month - 1] + " " + d.Day + ", " + d.Year;
 
         /// <summary>"Verschijnt op 14 november 2026" / "Verschenen op ..." (series: "Eerste aflevering op" / "Gestart op"). Leeg als de datum onbekend is.</summary>
         public static string DateLine(string date, bool tv)
@@ -37,8 +58,13 @@ namespace Emby.Plugins.Discover
             DateTime d;
             if (!TryDate(date, out d)) return null;
             bool future = d.Date > DateTime.UtcNow.Date;
-            if (tv) return (future ? "Eerste aflevering op " : "Gestart op ") + LongDate(d);
-            return (future ? "Verschijnt op " : "Verschenen op ") + LongDate(d);
+            if (tv)
+                return DiscoverLanguage.IsDutch
+                    ? (future ? "Eerste aflevering op " : "Gestart op ") + LongDate(d)
+                    : (future ? "First episode on " : "Started on ") + LongDate(d);
+            return DiscoverLanguage.IsDutch
+                ? (future ? "Verschijnt op " : "Verschenen op ") + LongDate(d)
+                : (future ? "Coming on " : "Released on ") + LongDate(d);
         }
 
         private static string Names(List<TmdbNamed> list, int max)
@@ -68,46 +94,66 @@ namespace Emby.Plugins.Discover
 
             var parts = new List<string>();
             string st;
-            if (!string.IsNullOrWhiteSpace(x.status) && (tv ? TvStatus : MovieStatus).TryGetValue(x.status.Trim(), out st))
+            var statusMap = tv
+                ? (DiscoverLanguage.IsDutch ? DutchTvStatus : EnglishTvStatus)
+                : (DiscoverLanguage.IsDutch ? DutchMovieStatus : EnglishMovieStatus);
+            if (!string.IsNullOrWhiteSpace(x.status) && statusMap.TryGetValue(x.status.Trim(), out st))
                 parts.Add("Status: " + st);
             if (tv)
             {
-                if (x.number_of_seasons > 0) parts.Add(x.number_of_seasons + (x.number_of_seasons == 1 ? " seizoen" : " seizoenen"));
-                if (x.number_of_episodes > 0) parts.Add(x.number_of_episodes + (x.number_of_episodes == 1 ? " aflevering" : " afleveringen"));
+                if (x.number_of_seasons > 0)
+                    parts.Add(x.number_of_seasons + (DiscoverLanguage.IsDutch
+                        ? (x.number_of_seasons == 1 ? " seizoen" : " seizoenen")
+                        : (x.number_of_seasons == 1 ? " season" : " seasons")));
+                if (x.number_of_episodes > 0)
+                    parts.Add(x.number_of_episodes + (DiscoverLanguage.IsDutch
+                        ? (x.number_of_episodes == 1 ? " aflevering" : " afleveringen")
+                        : (x.number_of_episodes == 1 ? " episode" : " episodes")));
                 int ep = x.episode_run_time != null ? x.episode_run_time.FirstOrDefault(m => m > 0) : 0;
-                if (ep > 0) parts.Add("± " + ep + " min per aflevering");
+                if (ep > 0) parts.Add(DiscoverLanguage.IsDutch
+                    ? "± " + ep + " min per aflevering"
+                    : "Approx. " + ep + " min per episode");
             }
             else if (x.runtime > 0)
             {
-                parts.Add(x.runtime >= 60 ? (x.runtime / 60) + " u " + (x.runtime % 60) + " min" : x.runtime + " min");
+                parts.Add(x.runtime >= 60
+                    ? (DiscoverLanguage.IsDutch
+                        ? (x.runtime / 60) + " u " + (x.runtime % 60) + " min"
+                        : (x.runtime / 60) + " hr " + (x.runtime % 60) + " min")
+                    : x.runtime + " min");
             }
             if (parts.Count > 0) lines.Add(string.Join(" · ", parts));
 
             DateTime nd;
             if (tv && x.next_episode_to_air != null && TryDate(x.next_episode_to_air.air_date, out nd))
-                lines.Add("Volgende aflevering: S" + x.next_episode_to_air.season_number.ToString("00") +
-                          "E" + x.next_episode_to_air.episode_number.ToString("00") + " op " + LongDate(nd));
+                lines.Add(DiscoverLanguage.Text("Volgende aflevering: S", "Next episode: S") +
+                          x.next_episode_to_air.season_number.ToString("00") +
+                          "E" + x.next_episode_to_air.episode_number.ToString("00") +
+                          DiscoverLanguage.Text(" op ", " on ") + LongDate(nd));
 
             var genres = Names(x.genres, 5);
             if (genres != null) lines.Add("Genres: " + genres);
 
             var studio = Names(tv ? x.networks : x.production_companies, 3);
-            if (studio != null) lines.Add((tv ? "Netwerk: " : "Studio: ") + studio);
+            if (studio != null)
+                lines.Add(DiscoverLanguage.Text(tv ? "Netwerk: " : "Studio: ", tv ? "Network: " : "Studio: ") + studio);
             if (tv)
             {
                 var by = Names(x.created_by, 3);
-                if (by != null) lines.Add("Bedenker: " + by);
+                if (by != null) lines.Add(DiscoverLanguage.Text("Bedenker: ", "Created by: ") + by);
             }
             else if (x.credits != null && x.credits.crew != null)
             {
                 var dir = x.credits.crew.Where(c => string.Equals(c.job, "Director", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(c.name))
                     .Select(c => c.name.Trim()).Distinct().Take(2).ToList();
-                if (dir.Count > 0) lines.Add("Regie: " + string.Join(", ", dir));
+                if (dir.Count > 0) lines.Add(DiscoverLanguage.Text("Regie: ", "Director: ") + string.Join(", ", dir));
             }
 
             if (includeRating && x.vote_average > 0 && x.vote_count > 0)
-                lines.Add("TMDB-beoordeling: " + (int)Math.Round(x.vote_average * 10) + "% (" +
-                          x.vote_count.ToString("N0", CultureInfo.InvariantCulture).Replace(",", ".") + " stemmen)");
+                lines.Add(DiscoverLanguage.Text("TMDB-beoordeling: ", "TMDB rating: ") +
+                          (int)Math.Round(x.vote_average * 10) + "% (" +
+                          x.vote_count.ToString("N0", CultureInfo.InvariantCulture).Replace(",", ".") +
+                          DiscoverLanguage.Text(" stemmen)", " votes)"));
             return lines;
         }
     }

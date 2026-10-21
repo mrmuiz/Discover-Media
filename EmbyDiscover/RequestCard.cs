@@ -413,7 +413,7 @@ namespace Emby.Plugins.Discover
 
         internal static string FindFfmpeg()
         {
-            var configured = Plugin.Instance.Configuration.FfmpegPath;
+            var configured = Plugin.GetCurrentConfiguration().FfmpegPath;
             if (!string.IsNullOrWhiteSpace(configured) && File.Exists(configured.Trim())) return configured.Trim();
 
             bool win = Environment.OSVersion.Platform == PlatformID.Win32NT;

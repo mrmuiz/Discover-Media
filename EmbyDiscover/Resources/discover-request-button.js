@@ -3,18 +3,33 @@
  * Verbergt ook "Media informatie" op Discover/Trailers-detailpagina's. */
 (function () {
     'use strict';
-    if (window.__discoverRequestButton) { return; }
+    if (window.__discoverRequestButtonVersion === '1.0.37.74-beta') { return; }
+    if (window.__discoverRequestButton) {
+        console.warn('[Discover] oudere knopcode is nog actief; vernieuw de webclient om dubbele handlers te voorkomen.');
+        return;
+    }
     window.__discoverRequestButton = true;
-    window.__discoverRequestButtonVersion = '1.0.0-beta';
-    console.log('[Discover] request-button script geladen v1.0.0-beta');
+    window.__discoverRequestButtonVersion = '1.0.37.74-beta';
+    console.log('[Discover] request-button script geladen v1.0.37.74-beta');
 
+    var diagnosticsEnabled = false;
+    var lastDiagnostic = null;
+    var diagnosticsLoaded = false;
+    var diagnosticsRequest = false;
+    var diagnosticsRetryAfter = 0;
+    var diagnosticsItemId;
     var lookups = {};
 
-    // Kleine diagnoseregel linksonder op detailpagina's (tijdelijk, om te zien waarom een knop wel/niet komt).
+    // Diagnostics are opt-in because the detail pages can contain user-visible debug text.
     function dbg(msg) {
         try {
+            if (msg === null) { lastDiagnostic = null; }
+            else { lastDiagnostic = msg; }
             var el = document.getElementById('discover-dbg');
-            if (msg === null) { if (el && el.parentNode) { el.parentNode.removeChild(el); } return; }
+            if (!diagnosticsEnabled || msg === null) {
+                if (el && el.parentNode) { el.parentNode.removeChild(el); }
+                return;
+            }
             if (!el) {
                 el = document.createElement('div');
                 el.id = 'discover-dbg';
@@ -22,7 +37,7 @@
                     'color:#ffd666;background:rgba(0,0,0,.7);padding:4px 8px;border-radius:4px;pointer-events:none;white-space:pre-wrap;';
                 document.body.appendChild(el);
             }
-            el.textContent = 'Discover v1.0.0-beta | ' + msg;
+            el.textContent = 'Discover v1.0.37.74-beta | ' + msg;
         } catch (e) { }
     }
     var isAdmin = false;
@@ -35,9 +50,6 @@
         var s = document.createElement('style');
         s.id = 'discover-request-css';
         s.textContent = [
-            '.itemDetailPage .audioVideoMediaInfo,',
-            '.itemDetailPage .detailVerticalSection.audioVideoMediaInfo,',
-            '.verticalSection.detailVerticalSection.audioVideoMediaInfo { display: none !important; }',
             'body.discover-item-page .btnMoreCommands { display: none !important; }',
             'body.discover-item-page .itemDetailPage.discover-seerr { position: relative; isolation: isolate; }',
             '.discover-hero { position: absolute; top: 0; left: 0; right: 0; height: 480px; z-index: -1; pointer-events: none;',
@@ -76,6 +88,24 @@
 
     function api() { return window.ApiClient || null; }
 
+    function loadDiagnosticsSetting() {
+        var client = api();
+        if (!client || !client.ajax || !client.getUrl || diagnosticsRequest || Date.now() < diagnosticsRetryAfter) { return; }
+        diagnosticsRequest = true;
+        client.ajax({ type: 'GET', url: client.getUrl('Discover/Status'), dataType: 'json' }).then(function (status) {
+            diagnosticsEnabled = !!(status && status.ShowDiagnostics);
+            diagnosticsLoaded = true;
+            diagnosticsRequest = false;
+            diagnosticsRetryAfter = 0;
+            if (diagnosticsEnabled && lastDiagnostic) { dbg(lastDiagnostic); }
+            else if (!diagnosticsEnabled) { dbg(null); }
+        }, function (error) {
+            diagnosticsRequest = false;
+            diagnosticsRetryAfter = Date.now() + 5000;
+            console.error('[Discover] debuginstelling laden mislukt', error);
+        });
+    }
+
     function itemIdFromHash() {
         var h = window.location.hash || '';
         if (!/\/item\?/.test(h)) { return null; }
@@ -93,6 +123,10 @@
     }
 
     function findButtonBox() {
+        var play = findPlayButton(document.body);
+        if (play && play.parentElement && visible(play.parentElement)) {
+            return play.parentElement;
+        }
         var selectors = [
             '.mainDetailButtons',
             '.detailButtons',
@@ -106,15 +140,20 @@
                 if (visible(list[i])) { return list[i]; }
             }
         }
-        var play = findPlayButton(document.body);
-        if (play && play.parentElement && visible(play.parentElement)) {
-            return play.parentElement;
-        }
         return null;
     }
 
     function findPlayButton(root) {
         if (!root) return null;
+        if (root === document.body) {
+            var pages = root.querySelectorAll('.itemDetailPage');
+            for (var p = 0; p < pages.length; p++) {
+                if (visible(pages[p])) {
+                    var pagePlay = findPlayButton(pages[p]);
+                    if (pagePlay) { return pagePlay; }
+                }
+            }
+        }
         var candidates = root.querySelectorAll(
             '.btnPlay, .btnResume, button[data-action="play"], button[title*="Play"], button[title*="Afspelen"], .raised.detailButton'
         );
@@ -133,6 +172,43 @@
             if (/afspelen|play|resume|hervatten/i.test(txt)) return all[j];
         }
         return null;
+    }
+
+    function positionRequestButton(id) {
+        var btn = document.querySelector('.btnDiscoverRequest[data-itemid="' + id + '"]');
+        var play = findPlayButton(document.body);
+        if (!btn || !play || !play.parentNode) { return false; }
+        if (btn.classList.contains('btnDiscoverFloating')) {
+            btn.classList.remove('btnDiscoverFloating');
+            ['position', 'right', 'bottom', 'z-index', 'margin-left', 'box-shadow'].forEach(function (name) {
+                btn.style.removeProperty(name);
+            });
+        }
+        if (btn.parentNode !== play.parentNode || btn.previousElementSibling !== play) {
+            play.parentNode.insertBefore(btn, play.nextSibling);
+        }
+        if (btn._rm && btn.parentNode) { btn.parentNode.insertBefore(btn._rm, btn.nextSibling); }
+        return true;
+    }
+
+    function buttonDiagnostic(id) {
+        if (askIds[id]) {
+            var nativeButton = findPlayButton(document.body);
+            if (!nativeButton) { return 'native Aanvragen-knop ontbreekt of is nog niet zichtbaar'; }
+            var nativeLabel = (nativeButton.textContent || '').replace(/\s+/g, ' ').trim();
+            return 'native Aanvragen-knop ' + (visible(nativeButton) ? 'zichtbaar' : 'verborgen') +
+                (nativeLabel ? ' [' + nativeLabel + ']' : '') +
+                '; extra plugin-aanvraagknop is hier niet van toepassing';
+        }
+        var button = document.querySelector('.btnDiscoverRequest[data-itemid="' + id + '"]');
+        if (!button) { return 'aanvraagknop ontbreekt'; }
+        var play = findPlayButton(document.body);
+        var position = button.classList.contains('btnDiscoverFloating') ? 'zwevend' :
+            (play && button.parentNode === play.parentNode && button.previousElementSibling === play ?
+                'naast Afspelen' : 'niet naast Afspelen');
+        var label = (button.textContent || '').replace(/\s+/g, ' ').trim();
+        return 'aanvraagknop ' + (visible(button) ? 'zichtbaar' : 'verborgen') +
+            (label ? ' [' + label + ']' : '') + '; positie=' + position;
     }
 
     var negCount = {};
@@ -502,6 +578,13 @@
     }
 
     function addButton(box, id, info) {
+        var current = document.querySelector('.btnDiscoverRequest[data-itemid="' + id + '"]');
+        if (current) {
+            current._info = info;
+            render(current, info);
+            positionRequestButton(id);
+            return;
+        }
         if (box.querySelector('.btnDiscoverRequest')) { return; }
 
         var btn = buildButton(id, info);
@@ -527,6 +610,7 @@
 
     // Verbergt het blok "Media informatie" (pad van de clip/YouTube-link) op Discover-pagina's.
     function hideMediaInfo() {
+        if (diagnosticsEnabled) { return; }
         var pages = document.querySelectorAll('.itemDetailPage');
         for (var p = 0; p < pages.length; p++) {
             if (!visible(pages[p])) { continue; }
@@ -579,11 +663,12 @@
         var btn = id ? document.querySelector('.btnDiscoverRequest[data-itemid="' + id + '"]') : null;
         var on = !!btn;
         if (document.body) { document.body.classList.toggle('discover-item-page', on); }
-        if (on) { hideMediaInfo(); applyHero(btn._info); dbg(null); } else { removeHero(); }
+        if (on) { hideMediaInfo(); applyHero(btn._info); } else { removeHero(); }
     }
 
     // Verbergt het hele blok "Over" (genres, links, media-informatie, video/geluid) en alles daaronder.
     function hideOverSection() {
+        if (diagnosticsEnabled) { return; }
         var pages = document.querySelectorAll('.itemDetailPage');
         for (var p = 0; p < pages.length; p++) {
             if (!visible(pages[p])) { continue; }
@@ -646,6 +731,7 @@
     }
 
     function hideFilePathLines(withMeta, onlyPages) {
+        if (diagnosticsEnabled) { return; }
         var pages = document.querySelectorAll('.itemDetailPage');
         var roots = [];
         for (var p = 0; p < pages.length; p++) { if (visible(pages[p])) { roots.push(pages[p]); } }
@@ -697,7 +783,8 @@
         for (var i = 0; i < leaves.length; i++) {
             var el = leaves[i];
             if (el.children.length !== 0 || !visible(el)) { continue; }
-            if (!SECTION_LABELS.test((el.textContent || '').trim())) { continue; }
+            var label = (el.textContent || '').trim();
+            if (!SECTION_LABELS.test(label) || (diagnosticsEnabled && /media\s*(information|informatie)/i.test(label))) { continue; }
             if (el.closest && el.closest('.btnDiscoverRequest, button, .dcRoot')) { continue; }
             var sec = el;
             while (sec.parentElement && sec.parentElement !== document.body) {
@@ -803,6 +890,10 @@
 
     function tick() {
         var id = itemIdFromHash();
+        if (!diagnosticsLoaded || id !== diagnosticsItemId) {
+            diagnosticsItemId = id;
+            loadDiagnosticsSetting();
+        }
 
         var old = document.querySelectorAll('.btnDiscoverRequest');
         for (var i = 0; i < old.length; i++) {
@@ -829,17 +920,33 @@
             askLast = id;
             if (id && askIds[id]) { delete lookups[id]; delete askStatus[id]; }
         }
-        if (ask || trl) { applyAskPage(ask); if (ask) { dbg(null); } }
+        if (ask || trl) {
+            applyAskPage(ask);
+            dbg((ask ? 'aanvraagdetailpagina herkend' : 'trailerdetailpagina herkend') +
+                '; ' + buttonDiagnostic(id));
+        }
         if (ask) { syncAskPlay(id); } else { syncAskPlay(null); }
         if (!id) { dbg(null); }
         if (!id || !api()) { return; }
-        if (document.querySelector('.btnDiscoverRequest[data-itemid="' + id + '"]')) { return; }
+        var buttonPositioned = positionRequestButton(id);
+        if (buttonPositioned && (askIds[id] || trailerIds[id])) {
+            dbg((ask ? 'aanvraagdetailpagina' : 'trailerdetailpagina') + ' herkend; ' + buttonDiagnostic(id));
+            return;
+        }
 
         resolveItem(id).then(function (info) {
             if (!info || itemIdFromHash() !== id) { return; }
-            if (document.querySelector('.btnDiscoverRequest[data-itemid="' + id + '"]')) { return; }
+            if (positionRequestButton(id)) {
+                dbg((ask ? 'aanvraagdetailpagina' : 'trailerdetailpagina') + ' herkend; ' + buttonDiagnostic(id));
+                return;
+            }
             var b = findButtonBox();
-            if (b) { misses = 0; addButton(b, id, info); dbg('knop geplaatst (Found=' + info.Found + ')'); return; }
+            if (b) {
+                misses = 0;
+                addButton(b, id, info);
+                dbg((ask ? 'aanvraagdetailpagina' : 'trailerdetailpagina') + ' herkend; ' + buttonDiagnostic(id));
+                return;
+            }
             dbg('geen knoppenbalk gevonden (poging ' + (misses + 1) + ')');
             // Pagina nog niet opgebouwd: even wachten, daarna zwevende knop als noodgreep.
             misses++;

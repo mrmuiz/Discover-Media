@@ -47,11 +47,13 @@ namespace Emby.Plugins.Discover
 
         // ---------- IChannel ----------
         public string Name => "Discover Media";
-        public string Description => "Ontdek films en series en vraag ze aan.";
+        public string Description => DiscoverLanguage.Text(
+            "Ontdek films en series en vraag ze aan.",
+            "Discover movies and series and request them.");
         public string HomePageUrl => "";
 
         // Ophogen als Emby oude (bewaarde) kanaalinhoud blijft tonen.
-        public string DataVersion => "39";
+        public string DataVersion => "46";
         public ChannelParentalRating ParentalRating => ChannelParentalRating.GeneralAudience;
         public bool IsEnabledFor(string userId) => true;
 
@@ -79,19 +81,18 @@ namespace Emby.Plugins.Discover
         // ---------- Mappen en items ----------
         public async Task<ChannelItemResult> GetChannelItems(InternalChannelItemQuery query, CancellationToken ct)
         {
-            var cfg = Plugin.Instance.Configuration;
+            var cfg = Plugin.GetCurrentConfiguration();
             var hasKey = !string.IsNullOrWhiteSpace(cfg.TmdbApiKey);
             var folder = string.IsNullOrEmpty(query.FolderId) ? "(root)" : query.FolderId;
 
             DiscoverDiagnostics.CountCall();
-            DiscoverDiagnostics.Add(string.Format("opgevraagd: map={0} start={1} limit={2} key={3}",
-                folder, query.StartIndex, query.Limit, hasKey));
-            _logger.Info("Discover: kanaal geopend, map '{0}', TMDB-key ingesteld: {1}, Radarr: {2}, Sonarr: {3}, start: {4}, limit: {5}",
-                folder, hasKey, ArrClient.RadarrConfigured, ArrClient.SonarrConfigured, query.StartIndex, query.Limit);
+            var tmdbLanguage = TmdbClient.Language();
+            DiscoverDiagnostics.Add(string.Format("opgevraagd: map={0} start={1} limit={2} key={3} taal={4}",
+                folder, query.StartIndex, query.Limit, hasKey, tmdbLanguage));
+            _logger.Info("Discover: kanaal geopend, map '{0}', TMDB-key ingesteld: {1}, TMDB-taal: {2}, Radarr: {3}, Sonarr: {4}, start: {5}, limit: {6}",
+                folder, hasKey, tmdbLanguage, ArrClient.RadarrConfigured, ArrClient.SonarrConfigured, query.StartIndex, query.Limit);
 
             var id = query.FolderId;
-            if (string.IsNullOrEmpty(id)) return await Root(ct).ConfigureAwait(false);
-
             // Bewust een exception en geen "bericht-item": een normaal resultaat wordt door Emby bewaard,
             // waardoor "niet ingesteld" of een tijdelijke netwerkfout blijft staan na het instellen/herstellen.
             if (!hasKey)
@@ -100,6 +101,8 @@ namespace Emby.Plugins.Discover
                 throw new InvalidOperationException(
                     "Discover is nog niet ingesteld: vul de TMDB API key in bij Dashboard > Plugins > Discover.");
             }
+
+            if (string.IsNullOrEmpty(id)) return await Root(ct).ConfigureAwait(false);
 
             try
             {
@@ -193,10 +196,18 @@ namespace Emby.Plugins.Discover
             if (extra != null) PrewarmCard(t, extra, tv, status != 0);
 
             string action;
-            if (status == 2 && tv && ArrClient.IsPartial(tmdbId)) action = "\u2713 Gedeeltelijk beschikbaar: een deel van de afleveringen staat al in je bibliotheek.";
-            else if (status == 2) action = "\u2713 Deze titel is al beschikbaar in je bibliotheek.";
-            else if (status == 1) action = "\u23F3 Deze titel is al aangevraagd en staat in " + arr + ".";
-            else action = "DRUK OP DE \u25B6 KNOP OM AAN TE VRAGEN.";
+            if (status == 2 && tv && ArrClient.IsPartial(tmdbId))
+                action = DiscoverLanguage.Text("\u2713 Gedeeltelijk beschikbaar: een deel van de afleveringen staat al in je bibliotheek.",
+                    "\u2713 Partially available: some episodes are already in your library.");
+            else if (status == 2)
+                action = DiscoverLanguage.Text("\u2713 Deze titel is al beschikbaar in je bibliotheek.",
+                    "\u2713 This title is already available in your library.");
+            else if (status == 1)
+                action = DiscoverLanguage.Text("\u23F3 Deze titel is al aangevraagd en staat in " + arr + ".",
+                    "\u23F3 This title has already been requested from " + arr + ".");
+            else
+                action = DiscoverLanguage.Text("DRUK OP DE \u25B6 KNOP OM AAN TE VRAGEN.",
+                    "PRESS THE \u25B6 BUTTON TO REQUEST.");
 
             var date = tv ? t.first_air_date : t.release_date;
             var y = YearOf(date);
@@ -210,7 +221,7 @@ namespace Emby.Plugins.Discover
             var item = new ChannelItemInfo
             {
                 Id = AskPrefix + rest,
-                Name = "Aanvragen: " + title,
+                Name = DiscoverLanguage.Text("Aanvragen: ", "Request: ") + title,
                 Type = ChannelItemType.Media,
                 MediaType = ChannelMediaType.Video,
                 ContentType = ChannelMediaContentType.Clip,
@@ -234,12 +245,13 @@ namespace Emby.Plugins.Discover
             var trailer = new ChannelItemInfo
             {
                 Id = TrailerPrefix + rest,
-                Name = "Trailer: " + title,
+                Name = DiscoverLanguage.Text("Trailer: ", "Trailer: ") + title,
                 Type = ChannelItemType.Media,
                 MediaType = ChannelMediaType.Video,
                 ContentType = ChannelMediaContentType.Clip,
                 ImageUrl = item.ImageUrl,
-                Overview = "Druk op de \u25B6 knop om de trailer te bekijken."
+                Overview = DiscoverLanguage.Text("Druk op de \u25B6 knop om de trailer te bekijken.",
+                    "Press the \u25B6 button to watch the trailer.")
                            + (info == null ? "" : "\n\n" + info)
                            + (string.IsNullOrWhiteSpace(t.overview) ? "" : "\n\n" + t.overview.Trim()),
                 ProviderIds = item.ProviderIds,
@@ -293,9 +305,7 @@ namespace Emby.Plugins.Discover
             { Id = id; Name = name; Text = text; Color = color; Backdrop = backdrop; }
         }
 
-        // Mappen waarvan de titels bij Afspelen worden aangevraagd (voor apps die geen eigen knop kunnen tonen).
-        // Elke map krijgt een liggend plaatje: een achtergrond uit de bovenste titels van die lijst met een kleurfilter
-        // (zelfde stijl als de genretegels) met de Engelse naam er in wit op (zie FolderTile). De naam onder de tegel komt van Emby.
+        // Artwork is optional and must not hold up Emby's channel refresh.
         private async Task<ChannelItemResult> RequestRoot(CancellationToken ct)
         {
             string[] paths =
@@ -304,10 +314,21 @@ namespace Emby.Plugins.Discover
                 "/trending/tv/week", "/tv/popular", "/tv/upcoming"
             };
             List<string>[] tops;
-            try { tops = await Task.WhenAll(paths.Select(x => TopBackdrops(x, ct))).ConfigureAwait(false); }
-            catch (Exception ex)
+            var topTask = Task.WhenAll(paths.Select(x => TopBackdrops(x, CancellationToken.None)));
+            var topWait = await Task.WhenAny(topTask, Task.Delay(TimeSpan.FromSeconds(2))).ConfigureAwait(false);
+            if (topWait == topTask)
             {
-                if (ex is OperationCanceledException) throw;
+                try { tops = await topTask.ConfigureAwait(false); }
+                catch (Exception ex)
+                {
+                    DiscoverDiagnostics.Add("achtergrondlijst ophalen mislukt: " + ex.Message);
+                    tops = paths.Select(x => new List<string>()).ToArray();
+                }
+            }
+            else
+            {
+                DiscoverDiagnostics.Add("root-artwork na 2 seconden uitgesteld; kanaal wordt direct teruggegeven");
+                _ = ObserveTopBackdrops(topTask);
                 tops = paths.Select(x => new List<string>()).ToArray();
             }
 
@@ -325,24 +346,38 @@ namespace Emby.Plugins.Discover
                 return l[start % l.Count];
             };
 
-            // Per map: id, naam onder de tegel (taal van Emby), Engelse tekst op het plaatje, kleur en achtergrond.
+            // Per map: id, localized name and artwork text, colour and backdrop.
             // De volgorde van pick() blijft zoals voorheen, zodat geen twee mappen dezelfde film tonen.
             var specs = new[]
             {
-                new TileSpec(AskListPrefix + "trending_movie", "Trending films", "Trending Movies", "orange", pick(0, 3)),
-                new TileSpec(AskListPrefix + "popular_movie", "Populaire films", "Popular Movies", "red", pick(1, 3)),
-                new TileSpec(AskListPrefix + "upcoming_movie", "Verwachte films", "Upcoming Movies", "purple", pick(2, 3)),
-                new TileSpec(AskGenrePrefix + "movie", "Filmgenres", "Movie Genres", "green", pick(1, 8)),
-                new TileSpec(AskListPrefix + "trending_tv", "Trending series", "Trending Series", "yellow", pick(3, 3)),
-                new TileSpec(AskListPrefix + "popular_tv", "Populaire series", "Popular Series", "pink", pick(4, 3)),
-                new TileSpec(AskListPrefix + "upcoming_tv", "Verwachte series", "Upcoming Series", "blue", pick(5, 3)),
-                new TileSpec(AskGenrePrefix + "tv", "Seriegenres", "Series Genres", "lightgreen", pick(4, 8)),
+                new TileSpec(AskListPrefix + "trending_movie", DiscoverLanguage.Text("Trending films", "Trending Movies"), DiscoverLanguage.Text("Trending films", "Trending Movies"), "orange", pick(0, 3)),
+                new TileSpec(AskListPrefix + "popular_movie", DiscoverLanguage.Text("Populaire films", "Popular Movies"), DiscoverLanguage.Text("Populaire films", "Popular Movies"), "red", pick(1, 3)),
+                new TileSpec(AskListPrefix + "upcoming_movie", DiscoverLanguage.Text("Verwachte films", "Upcoming Movies"), DiscoverLanguage.Text("Verwachte films", "Upcoming Movies"), "purple", pick(2, 3)),
+                new TileSpec(AskGenrePrefix + "movie", DiscoverLanguage.Text("Filmgenres", "Movie Genres"), DiscoverLanguage.Text("Filmgenres", "Movie Genres"), "green", pick(1, 8)),
+                new TileSpec(AskListPrefix + "trending_tv", DiscoverLanguage.Text("Trending series", "Trending Series"), DiscoverLanguage.Text("Trending series", "Trending Series"), "yellow", pick(3, 3)),
+                new TileSpec(AskListPrefix + "popular_tv", DiscoverLanguage.Text("Populaire series", "Popular Series"), DiscoverLanguage.Text("Popular series", "Popular Series"), "pink", pick(4, 3)),
+                new TileSpec(AskListPrefix + "upcoming_tv", DiscoverLanguage.Text("Verwachte series", "Upcoming Series"), DiscoverLanguage.Text("Verwachte series", "Upcoming Series"), "blue", pick(5, 3)),
+                new TileSpec(AskGenrePrefix + "tv", DiscoverLanguage.Text("Seriegenres", "Series Genres"), DiscoverLanguage.Text("Seriegenres", "Series Genres"), "lightgreen", pick(4, 8)),
                 new TileSpec(AskStudioRoot, "Studio's", "Studios", "black", pick(0, 8))
             };
 
-            // Plaatje met tekst (bestand op schijf, 6 uur of langer bewaard); lukt dat niet, dan de kleurachtergrond zonder tekst.
-            var files = await Task.WhenAll(specs.Select(x =>
-                FolderTile.Create(x.Id.Replace(":", "-"), x.Text, DuotoneUrl(x.Color, x.Backdrop), ct))).ConfigureAwait(false);
+            // Tile artwork is optional; never let slow ffmpeg/download work cancel an Emby channel refresh.
+            var files = new string[specs.Length];
+            for (int i = 0; i < specs.Length; i++)
+            {
+                var spec = specs[i];
+                var creation = FolderTile.Create(
+                    spec.Id.Replace(":", "-"), spec.Text, DuotoneUrl(spec.Color, spec.Backdrop), CancellationToken.None);
+                if (creation.IsCompleted)
+                {
+                    try { files[i] = creation.GetAwaiter().GetResult(); }
+                    catch (Exception ex) { DiscoverDiagnostics.Add("tegelafbeelding '" + spec.Text + "' mislukt: " + ex.Message); }
+                }
+                else
+                {
+                    _ = ObserveTileCreation(creation, spec.Text);
+                }
+            }
 
             var items = new List<ChannelItemInfo>();
             for (int i = 0; i < specs.Length; i++)
@@ -351,6 +386,18 @@ namespace Emby.Plugins.Discover
                 items.Add(Folder(sp.Id, sp.Name, files[i] ?? DuotoneUrl(sp.Color, sp.Backdrop), null));
             }
             return new ChannelItemResult { Items = items, TotalRecordCount = items.Count };
+        }
+
+        private static async Task ObserveTileCreation(Task<string> creation, string text)
+        {
+            try { await creation.ConfigureAwait(false); }
+            catch (Exception ex) { DiscoverDiagnostics.Add("tegelafbeelding '" + text + "' mislukt: " + ex.Message); }
+        }
+
+        private static async Task ObserveTopBackdrops(Task<List<string>[]> loading)
+        {
+            try { await loading.ConfigureAwait(false); }
+            catch (Exception ex) { DiscoverDiagnostics.Add("achtergrondlijst ophalen mislukt: " + ex.Message); }
         }
 
         // ---------- genre-, studio- en netwerktegels (zoals Seerr) ----------
@@ -398,10 +445,11 @@ namespace Emby.Plugins.Discover
 
         private async Task<List<string>> TopBackdrops(string path, CancellationToken ct)
         {
+            var cacheKey = TmdbClient.Language() + "|" + path;
             lock (TopBackdropCache)
             {
                 KeyValuePair<DateTime, List<string>> hit;
-                if (TopBackdropCache.TryGetValue(path, out hit) && DateTime.UtcNow - hit.Key < TimeSpan.FromHours(6)) return hit.Value;
+                if (TopBackdropCache.TryGetValue(cacheKey, out hit) && DateTime.UtcNow - hit.Key < TimeSpan.FromHours(6)) return hit.Value;
             }
             try
             {
@@ -410,7 +458,7 @@ namespace Emby.Plugins.Discover
                     ? new List<string>()
                     : page.results.Where(x => !x.adult && !string.IsNullOrEmpty(x.backdrop_path)).Select(x => x.backdrop_path).ToList();
                 if (list.Count > 0)
-                    lock (TopBackdropCache) { TopBackdropCache[path] = new KeyValuePair<DateTime, List<string>>(DateTime.UtcNow, list); }
+                    lock (TopBackdropCache) { TopBackdropCache[cacheKey] = new KeyValuePair<DateTime, List<string>>(DateTime.UtcNow, list); }
                 return list;
             }
             catch (Exception ex)
@@ -424,7 +472,7 @@ namespace Emby.Plugins.Discover
         // Zoals Seerr: de vijfde achtergrond uit de populairste titels van dat genre.
         private async Task<string> GenreBackdrop(bool tv, int genreId, CancellationToken ct)
         {
-            var key = (tv ? "t" : "m") + genreId;
+            var key = TmdbClient.Language() + "|" + (tv ? "t" : "m") + genreId;
             lock (GenreBackdropCache)
             {
                 KeyValuePair<DateTime, string> hit;
@@ -498,10 +546,11 @@ namespace Emby.Plugins.Discover
 
         private async Task<List<TmdbItem>> GetCachedList(string key, string path, CancellationToken ct, bool tv = false, string filter = null)
         {
+            var cacheKey = TmdbClient.Language() + "|" + key;
             lock (ListCache)
             {
                 KeyValuePair<DateTime, List<TmdbItem>> hit;
-                if (ListCache.TryGetValue(key, out hit) && DateTime.UtcNow - hit.Key < ListCacheTtl) return hit.Value;
+                if (ListCache.TryGetValue(cacheKey, out hit) && DateTime.UtcNow - hit.Key < ListCacheTtl) return hit.Value;
             }
             List<TmdbItem> list;
             try
@@ -515,7 +564,7 @@ namespace Emby.Plugins.Discover
                 DiscoverDiagnostics.Add("FOUT TMDB " + path + ": " + ex.Message);
                 throw;
             }
-            lock (ListCache) { ListCache[key] = new KeyValuePair<DateTime, List<TmdbItem>>(DateTime.UtcNow, list); }
+            lock (ListCache) { ListCache[cacheKey] = new KeyValuePair<DateTime, List<TmdbItem>>(DateTime.UtcNow, list); }
             return list;
         }
 
@@ -553,7 +602,7 @@ namespace Emby.Plugins.Discover
                 string clean = TitleOf(i, tv);
                 string prefix = states.TryGetValue(i.id, out var hasFiles) ? (hasFiles ? "\u2713 " : "\u23F3 ") : "";
                 // Zoals bij het Trailers-kanaal: de titel zelf is het item (geen map). Klik je erop, dan opent
-                // de detailpagina; daar zet het knop-script (zie ScriptInstaller) de knop "Aanvragen".
+                // de detailpagina; het ingebedde Emby-pluginresource-script voegt daar de knop "Aanvragen" toe.
                 var f = new ChannelItemInfo
                 {
                     Id = (request ? AskItemPrefix : "") + (tv ? "t:" : "m:") + i.id,
@@ -837,8 +886,7 @@ namespace Emby.Plugins.Discover
         {
             var result = new List<string>();
             if (i.genre_ids == null) return result;
-            var lang = Plugin.Instance.Configuration.TmdbLanguage ?? "";
-            int col = lang.StartsWith("nl", StringComparison.OrdinalIgnoreCase) ? 0 : 1;
+            int col = DiscoverLanguage.IsDutch ? 0 : 1;
             var map = tv ? TvGenres : MovieGenres;
             foreach (var g in i.genre_ids)
             {

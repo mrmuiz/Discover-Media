@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using MediaBrowser.Controller.Net;
@@ -18,12 +19,27 @@ namespace Emby.Plugins.Discover
         public string ApiKey { get; set; }
     }
 
+    public class TmdbLanguageOption
+    {
+        public string Code { get; set; }
+        public string EnglishName { get; set; }
+        public string Name { get; set; }
+    }
+
+    public class TmdbLanguageResponse
+    {
+        public string iso_639_1 { get; set; }
+        public string english_name { get; set; }
+        public string name { get; set; }
+    }
+
     public class TestConnectionResult
     {
         public bool Success { get; set; }
         public string Error { get; set; }
         public string AppName { get; set; }
         public string Version { get; set; }
+        public List<TmdbLanguageOption> Languages { get; set; } = new List<TmdbLanguageOption>();
         public List<ArrProfile> Profiles { get; set; } = new List<ArrProfile>();
         public List<ArrRootFolder> RootFolders { get; set; } = new List<ArrRootFolder>();
     }
@@ -65,6 +81,17 @@ namespace Emby.Plugins.Discover
 
             try
             {
+                if (string.Equals(request.Type, "TmdbLanguages", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (string.IsNullOrWhiteSpace(request.ApiKey))
+                        throw new InvalidOperationException("Vul eerst een API key in.");
+
+                    result.Languages = await GetTmdbLanguages(request.ApiKey).ConfigureAwait(false);
+                    result.Success = true;
+                    result.AppName = "TMDB";
+                    return result;
+                }
+
                 if (string.Equals(request.Type, "Tmdb", StringComparison.OrdinalIgnoreCase))
                 {
                     if (string.IsNullOrWhiteSpace(request.ApiKey))
@@ -116,17 +143,63 @@ namespace Emby.Plugins.Discover
             catch (TaskCanceledException)
             {
                 result.Error = "Time-out: geen antwoord binnen 10 seconden. Controleer de URL en poort.";
+                LogTmdbLanguageFailure(request, result.Error);
             }
             catch (HttpRequestException ex)
             {
                 result.Error = "Kan geen verbinding maken: " + (ex.InnerException?.Message ?? ex.Message);
+                LogTmdbLanguageFailure(request, result.Error);
             }
             catch (Exception ex)
             {
                 result.Error = ex.Message;
+                LogTmdbLanguageFailure(request, result.Error);
             }
 
             return result;
+        }
+
+        private static void LogTmdbLanguageFailure(TestConnectionRequest request, string error)
+        {
+            if (request != null && string.Equals(request.Type, "TmdbLanguages", StringComparison.OrdinalIgnoreCase))
+                DiscoverDiagnostics.Add("FOUT TMDB-talenlijst: " + error);
+        }
+
+        private async Task<List<TmdbLanguageOption>> GetTmdbLanguages(string apiKey)
+        {
+            using (var resp = await Http.GetAsync(
+                "https://api.themoviedb.org/3/configuration/languages?api_key=" +
+                Uri.EscapeDataString(apiKey.Trim())).ConfigureAwait(false))
+            {
+                if ((int)resp.StatusCode == 401)
+                    throw new InvalidOperationException("TMDB weigert de key voor de talenlijst (401).");
+                if (!resp.IsSuccessStatusCode)
+                    throw new InvalidOperationException(
+                        "TMDB-talenlijst gaf HTTP " + (int)resp.StatusCode + " " + resp.ReasonPhrase + ".");
+
+                var languages = _json.DeserializeFromString<List<TmdbLanguageResponse>>(
+                    await resp.Content.ReadAsStringAsync().ConfigureAwait(false));
+                if (languages == null) throw new InvalidOperationException("TMDB gaf geen geldige talenlijst terug.");
+
+                var options = languages
+                    .Where(x => !string.IsNullOrWhiteSpace(x.iso_639_1))
+                    .Select(x => new TmdbLanguageOption
+                    {
+                        Code = string.Equals(x.iso_639_1, "nl", StringComparison.OrdinalIgnoreCase)
+                            ? DiscoverLanguage.Dutch
+                            : string.Equals(x.iso_639_1, "en", StringComparison.OrdinalIgnoreCase)
+                                ? DiscoverLanguage.English
+                                : x.iso_639_1,
+                        EnglishName = x.english_name,
+                        Name = x.name
+                    })
+                    .GroupBy(x => x.Code, StringComparer.OrdinalIgnoreCase)
+                    .Select(x => x.First())
+                    .OrderBy(x => x.EnglishName, StringComparer.CurrentCultureIgnoreCase)
+                    .ToList();
+                DiscoverDiagnostics.Add("TMDB-talenlijst geladen: " + options.Count + " talen");
+                return options;
+            }
         }
 
         private static async Task<string> GetAsync(string baseUrl, string apiKey, string path)

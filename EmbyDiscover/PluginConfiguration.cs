@@ -6,6 +6,9 @@ namespace Emby.Plugins.Discover
     {
         public string TmdbApiKey { get; set; } = "";
         public string TmdbLanguage { get; set; } = "nl-NL";
+        public string TmdbLanguageMode { get; set; } = "auto";
+        public string PluginLanguage { get; set; } = "auto";
+        public bool ShowDiagnostics { get; set; } = false;
 
         public string RadarrUrl { get; set; } = "";
         public string RadarrApiKey { get; set; } = "";

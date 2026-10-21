@@ -40,12 +40,12 @@ namespace Emby.Plugins.Discover
         public ArrClient(IJsonSerializer json) { _json = json; }
 
         public static bool RadarrConfigured =>
-            !string.IsNullOrWhiteSpace(Plugin.Instance.Configuration.RadarrUrl) &&
-            !string.IsNullOrWhiteSpace(Plugin.Instance.Configuration.RadarrApiKey);
+            !string.IsNullOrWhiteSpace(Plugin.GetCurrentConfiguration().RadarrUrl) &&
+            !string.IsNullOrWhiteSpace(Plugin.GetCurrentConfiguration().RadarrApiKey);
 
         public static bool SonarrConfigured =>
-            !string.IsNullOrWhiteSpace(Plugin.Instance.Configuration.SonarrUrl) &&
-            !string.IsNullOrWhiteSpace(Plugin.Instance.Configuration.SonarrApiKey);
+            !string.IsNullOrWhiteSpace(Plugin.GetCurrentConfiguration().SonarrUrl) &&
+            !string.IsNullOrWhiteSpace(Plugin.GetCurrentConfiguration().SonarrApiKey);
 
         /// <summary>Spaties weg, geen slash aan het eind en http:// ervoor als het schema ontbreekt.</summary>
         private static string NormalizeBase(string baseUrl)
@@ -103,7 +103,7 @@ namespace Emby.Plugins.Discover
             if (!RadarrConfigured) return new Dictionary<int, bool>();
             if (_movieCache != null && DateTime.UtcNow - _movieCacheAt < CacheTtl) return _movieCache;
 
-            var cfg = Plugin.Instance.Configuration;
+            var cfg = Plugin.GetCurrentConfiguration();
             var text = await Send(HttpMethod.Get, cfg.RadarrUrl, cfg.RadarrApiKey, "/api/v3/movie", null, ct).ConfigureAwait(false);
             var list = _json.DeserializeFromString<List<RadarrMovieDto>>(text) ?? new List<RadarrMovieDto>();
 
@@ -120,7 +120,7 @@ namespace Emby.Plugins.Discover
             if (!SonarrConfigured) return new Dictionary<int, bool>();
             if (_seriesCache != null && DateTime.UtcNow - _seriesCacheAt < CacheTtl) return _seriesCache;
 
-            var cfg = Plugin.Instance.Configuration;
+            var cfg = Plugin.GetCurrentConfiguration();
             var text = await Send(HttpMethod.Get, cfg.SonarrUrl, cfg.SonarrApiKey, "/api/v3/series", null, ct).ConfigureAwait(false);
             var list = _json.DeserializeFromString<List<SonarrSeriesDto>>(text) ?? new List<SonarrSeriesDto>();
 
@@ -182,7 +182,7 @@ namespace Emby.Plugins.Discover
         public async Task<bool> AddMovie(int tmdbId, string title, int year, CancellationToken ct)
         {
             if (!RadarrConfigured) throw new InvalidOperationException("Radarr is niet ingesteld.");
-            var cfg = Plugin.Instance.Configuration;
+            var cfg = Plugin.GetCurrentConfiguration();
 
             var states = await GetMovieStates(ct).ConfigureAwait(false);
             if (states.ContainsKey(tmdbId)) return false;
@@ -208,7 +208,7 @@ namespace Emby.Plugins.Discover
         public async Task<bool> AddSeries(int tmdbId, int tvdbId, string title, int[] seasons, CancellationToken ct)
         {
             if (!SonarrConfigured) throw new InvalidOperationException("Sonarr is niet ingesteld.");
-            var cfg = Plugin.Instance.Configuration;
+            var cfg = Plugin.GetCurrentConfiguration();
 
             var states = await GetSeriesStates(ct).ConfigureAwait(false);
             if (states.ContainsKey(tmdbId) || _seriesTvdbIds.Contains(tvdbId)) return false;
@@ -250,7 +250,7 @@ namespace Emby.Plugins.Discover
         public async Task<bool> RemoveMovie(int tmdbId, bool deleteFiles, CancellationToken ct)
         {
             if (!RadarrConfigured) throw new InvalidOperationException("Radarr is niet ingesteld.");
-            var cfg = Plugin.Instance.Configuration;
+            var cfg = Plugin.GetCurrentConfiguration();
 
             var text = await Send(HttpMethod.Get, cfg.RadarrUrl, cfg.RadarrApiKey, "/api/v3/movie", null, ct).ConfigureAwait(false);
             var list = _json.DeserializeFromString<List<RadarrMovieDto>>(text) ?? new List<RadarrMovieDto>();
@@ -268,7 +268,7 @@ namespace Emby.Plugins.Discover
         public async Task<bool> RemoveSeries(int tmdbId, bool deleteFiles, CancellationToken ct)
         {
             if (!SonarrConfigured) throw new InvalidOperationException("Sonarr is niet ingesteld.");
-            var cfg = Plugin.Instance.Configuration;
+            var cfg = Plugin.GetCurrentConfiguration();
 
             var text = await Send(HttpMethod.Get, cfg.SonarrUrl, cfg.SonarrApiKey, "/api/v3/series", null, ct).ConfigureAwait(false);
             var list = _json.DeserializeFromString<List<SonarrSeriesDto>>(text) ?? new List<SonarrSeriesDto>();

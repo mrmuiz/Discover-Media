@@ -5,7 +5,7 @@
     <title>Discover</title>
 </head>
 <body>
-<div data-role="page" class="page type-interior pluginConfigurationPage discoverConfigPage" data-require="emby-input,emby-button,emby-select" data-controller="__plugin/discoverconfigjs">
+<div data-role="page" class="page type-interior pluginConfigurationPage discoverConfigPage" data-require="emby-input,emby-button,emby-select,emby-checkbox" data-controller="__plugin/discoverconfigjs1046">
         <style>
         .discoverConfigPage .keyWrap { position: relative; }
         .discoverConfigPage .keyWrap input { padding-right: 2.8em; }
@@ -22,9 +22,34 @@
                     <input is="emby-input" type="password" id="txtTmdbKey" autocomplete="new-password" spellcheck="false" />
                     <button is="emby-button" type="button" class="paper-icon-button-light btnToggleKey" data-target="txtTmdbKey" title="Tonen" aria-label="Tonen"><i class="md-icon">visibility</i></button>
                 </div>
-                <div class="inputContainer">
-                    <label class="inputLabel inputLabelUnfocused" for="txtTmdbLang">Taal (bijv. nl-NL)</label>
-                    <input is="emby-input" type="text" id="txtTmdbLang" />
+                <div class="selectContainer">
+                    <label class="selectLabel" for="selPluginLanguage">Plugin-taal</label>
+                    <select is="emby-select" id="selPluginLanguage">
+                        <option value="auto">Volg de taal van Emby Server</option>
+                        <option value="nl-NL">Nederlands</option>
+                        <option value="en-US">English</option>
+                    </select>
+                </div>
+                <div class="selectContainer">
+                    <label class="selectLabel" for="selTmdbLang">TMDB-taal</label>
+                    <select is="emby-select" id="selTmdbLang">
+                        <option value="auto">Volg de taal van Emby Server</option>
+                    </select>
+                    <div class="inputContainer" id="tmdbLanguageFallback">
+                        <label class="inputLabel inputLabelUnfocused" for="txtTmdbLanguage">Handmatige TMDB-taalcode (bijv. nl-NL of en-US)</label>
+                        <input is="emby-input" type="text" id="txtTmdbLanguage" autocomplete="off" spellcheck="false" />
+                    </div>
+                    <div class="fieldDescription" id="statusTmdbLanguages">Voer een TMDB-key in en test deze om de volledige talenlijst te laden.</div>
+                </div>
+                <div class="checkboxContainer">
+                    <label class="emby-checkbox-label">
+                        <input is="emby-checkbox" type="checkbox" id="chkShowDiagnostics" />
+                        <span class="checkboxLabel">Toon het gele debugbericht en media-informatie op itempagina's</span>
+                        <span class="emby-checkbox-outline">
+                            <span class="emby-checkbox-on"><i class="md-icon">check</i></span>
+                            <span class="emby-checkbox-off"></span>
+                        </span>
+                    </label>
                 </div>
 
                 <div>
@@ -80,6 +105,7 @@
 
                 <div>
                     <button is="emby-button" type="submit" class="raised button-submit block"><span>Opslaan</span></button>
+                    <div class="fieldDescription" id="statusSave" role="status" aria-live="polite"></div>
                 </div>
                 <div style="margin-top:1em;">
                     <button is="emby-button" type="button" class="raised btnStatus"><span>Status en diagnose</span></button>

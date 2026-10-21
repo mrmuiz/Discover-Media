@@ -106,6 +106,9 @@ namespace Emby.Plugins.Discover
     {
         public string PluginVersion { get; set; }
         public bool TmdbKeySet { get; set; }
+        public bool ShowDiagnostics { get; set; }
+        public string PluginLanguage { get; set; }
+        public string TmdbLanguage { get; set; }
         public bool RadarrSet { get; set; }
         public bool SonarrSet { get; set; }
         public string LoadedAt { get; set; }
@@ -166,6 +169,7 @@ namespace Emby.Plugins.Discover
 
     public class DiscoverHomeResponse
     {
+        public string Language { get; set; }
         public string Message { get; set; }
         public List<DiscoverRow> Rows { get; set; } = new List<DiscoverRow>();
     }
@@ -264,13 +268,16 @@ namespace Emby.Plugins.Discover
 
         public object Get(DiscoverStatusRequest request)
         {
-            var cfg = Plugin.Instance.Configuration;
+            var cfg = Plugin.GetCurrentConfiguration();
             string clipError;
             var clipPath = ClipPathOrError(out clipError);
             return new DiscoverStatusResponse
             {
                 PluginVersion = typeof(Plugin).Assembly.GetName().Version.ToString(),
                 TmdbKeySet = !string.IsNullOrWhiteSpace(cfg.TmdbApiKey),
+                ShowDiagnostics = cfg.ShowDiagnostics,
+                PluginLanguage = DiscoverLanguage.PluginLanguage,
+                TmdbLanguage = TmdbClient.Language(),
                 RadarrSet = ArrClient.RadarrConfigured,
                 SonarrSet = ArrClient.SonarrConfigured,
                 LoadedAt = DiscoverDiagnostics.LoadedUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss"),
@@ -286,10 +293,12 @@ namespace Emby.Plugins.Discover
 
         public async Task<object> Get(DiscoverHomeRequest request)
         {
-            var resp = new DiscoverHomeResponse();
-            if (string.IsNullOrWhiteSpace(Plugin.Instance.Configuration.TmdbApiKey))
+            var resp = new DiscoverHomeResponse { Language = DiscoverLanguage.PluginLanguage };
+            if (string.IsNullOrWhiteSpace(Plugin.GetCurrentConfiguration().TmdbApiKey))
             {
-                resp.Message = "Vul eerst je TMDB API key in bij de plugininstellingen (Dashboard > Plugins > Discover).";
+                resp.Message = DiscoverLanguage.Text(
+                    "Vul eerst je TMDB API key in bij de plugininstellingen (Dashboard > Plugins > Discover).",
+                    "Enter your TMDB API key in the plugin settings first (Dashboard > Plugins > Discover).");
                 return resp;
             }
 
@@ -309,7 +318,7 @@ namespace Emby.Plugins.Discover
             {
                 _logger.Error("Discover: home laden mislukt: {0}", ex.Message);
                 DiscoverDiagnostics.Add("FOUT home laden: " + ex.Message);
-                resp.Message = "Laden mislukt: " + ex.Message;
+                resp.Message = DiscoverLanguage.Text("Laden mislukt: ", "Loading failed: ") + ex.Message;
             }
             return resp;
         }
@@ -319,7 +328,7 @@ namespace Emby.Plugins.Discover
             var row = new DiscoverRow
             {
                 Key = d.Key,
-                Title = d.Title,
+                Title = LocalizedRowTitle(d.Key),
                 NextPage = TmdbClient.PagesPerRow + 1,
                 Kind = d.Kind == "tiles" ? "tiles" : "posters",
                 TileKind = d.TileKind
@@ -341,6 +350,7 @@ namespace Emby.Plugins.Discover
                         row.Tiles = await TilesFor(d.TileKind).ConfigureAwait(false);
                         break;
                 }
+
             }
             catch (Exception ex)
             {
@@ -348,6 +358,25 @@ namespace Emby.Plugins.Discover
                 DiscoverDiagnostics.Add("FOUT rij " + d.Key + ": " + ex.Message);
             }
             return row;
+        }
+
+        private static string LocalizedRowTitle(string key)
+        {
+            switch (key)
+            {
+                case "recent_added": return DiscoverLanguage.Text("Onlangs toegevoegd", "Recently added");
+                case "recent_requests": return DiscoverLanguage.Text("Recente aanvragen", "Recent requests");
+                case "trending": return "Trending";
+                case "popular_movie": return DiscoverLanguage.Text("Populaire films", "Popular Movies");
+                case "genres_movie": return DiscoverLanguage.Text("Filmgenres", "Movie Genres");
+                case "upcoming_movie": return DiscoverLanguage.Text("Aankomende films", "Upcoming Movies");
+                case "studios": return DiscoverLanguage.Text("Studio's", "Studios");
+                case "popular_tv": return DiscoverLanguage.Text("Populaire series", "Popular Series");
+                case "genres_tv": return DiscoverLanguage.Text("Seriegenres", "Series Genres");
+                case "upcoming_tv": return DiscoverLanguage.Text("Aankomende series", "Upcoming Series");
+                case "networks": return DiscoverLanguage.Text("Netwerken", "Networks");
+                default: return key;
+            }
         }
 
         public async Task<object> Get(DiscoverListRequest request)
@@ -434,7 +463,7 @@ namespace Emby.Plugins.Discover
         // ---------- onlangs toegevoegd / recente aanvragen (uit Radarr en Sonarr) ----------
         private async Task<TmdbItem> CachedDetail(bool tv, int id)
         {
-            var key = (tv ? "tv:" : "movie:") + id;
+            var key = TmdbClient.Language() + "|" + (tv ? "tv:" : "movie:") + id;
             lock (DetailCache) { TmdbItem c; if (DetailCache.TryGetValue(key, out c)) return c; }
             try
             {
@@ -542,13 +571,15 @@ namespace Emby.Plugins.Discover
             try
             {
                 bool tv = string.Equals(request.Type, "tv", StringComparison.OrdinalIgnoreCase);
-                if (request.TmdbId <= 0 || string.IsNullOrWhiteSpace(Plugin.Instance.Configuration.TmdbApiKey)) return res;
+                if (request.TmdbId <= 0 || string.IsNullOrWhiteSpace(Plugin.GetCurrentConfiguration().TmdbApiKey)) return res;
                 var x = await _tmdb.GetExtraCached(tv, request.TmdbId, CancellationToken.None).ConfigureAwait(false);
                 if (x == null) return res;
                 var states = await SafeStates(tv).ConfigureAwait(false);
                 bool hasFiles;
                 if (tv && states.TryGetValue(request.TmdbId, out hasFiles) && hasFiles && ArrClient.IsPartial(request.TmdbId))
-                    res.Lines.Add("\u2713 Gedeeltelijk beschikbaar");
+                    res.Lines.Add(DiscoverLanguage.Text(
+                        "\u2713 Gedeeltelijk beschikbaar",
+                        "\u2713 Partially available"));
                 res.Lines.AddRange(InfoText.Lines(null, x, tv, true));
             }
             catch (Exception ex)
@@ -567,7 +598,7 @@ namespace Emby.Plugins.Discover
                 var name = (request.Name ?? "").Trim();
                 // Het kanaal zet een status-icoon voor de titel.
                 while (name.Length > 1 && (name[0] == '\u2713' || name[0] == '\u23F3')) name = name.Substring(1).TrimStart();
-                if (name.Length == 0 || string.IsNullOrWhiteSpace(Plugin.Instance.Configuration.TmdbApiKey)) return res;
+                if (name.Length == 0 || string.IsNullOrWhiteSpace(Plugin.GetCurrentConfiguration().TmdbApiKey)) return res;
 
                 bool tv = false;
                 TmdbItem hit = null;

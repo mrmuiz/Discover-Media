@@ -63,6 +63,8 @@ define(['emby-button'], function () {
                     window.__discoverStatus = r;
                     ok(lines, 'Discover-service bereikbaar, DLL-versie ' + r.PluginVersion + ', geladen om ' + r.LoadedAt);
                     (r.TmdbKeySet ? ok : bad)(lines, 'TMDB-key ingesteld: ' + (r.TmdbKeySet ? 'ja' : 'NEE'));
+                    info(lines, 'Plugin-/Emby-taal: ' + r.PluginLanguage + '; TMDB-taal: ' + r.TmdbLanguage);
+                    info(lines, 'Debuginformatie op Discover-/detailpagina\'s: ' + (r.ShowDiagnostics ? 'aan' : 'uit'));
                     (r.RadarrSet ? ok : bad)(lines, 'Radarr ingesteld: ' + (r.RadarrSet ? 'ja' : 'NEE'));
                     (r.SonarrSet ? ok : bad)(lines, 'Sonarr ingesteld: ' + (r.SonarrSet ? 'ja' : 'NEE'));
                     if (r.ClipError) { bad(lines, 'Bevestigingsclip kan niet worden weggeschreven: ' + r.ClipError); }

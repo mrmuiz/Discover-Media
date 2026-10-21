@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Common.Plugins;
+using MediaBrowser.Controller.Configuration;
 using MediaBrowser.Model.Drawing;
 using MediaBrowser.Model.Plugins;
 using MediaBrowser.Model.Serialization;
@@ -12,14 +13,70 @@ namespace Emby.Plugins.Discover
     public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages, IHasThumbImage
     {
         private readonly IApplicationPaths _paths;
+        private readonly IXmlSerializer _xmlSerializer;
+        private readonly IServerConfigurationManager _serverConfigurationManager;
+        private readonly object _configurationGate = new object();
+        private PluginConfiguration _savedConfiguration;
+        private long _configurationFileTicks;
+        private long _configurationFileLength;
 
         public static Plugin Instance { get; private set; }
 
-        public Plugin(IApplicationPaths applicationPaths, IXmlSerializer xmlSerializer)
+        public Plugin(
+            IApplicationPaths applicationPaths,
+            IXmlSerializer xmlSerializer,
+            IServerConfigurationManager serverConfigurationManager)
             : base(applicationPaths, xmlSerializer)
         {
             _paths = applicationPaths;
+            _xmlSerializer = xmlSerializer;
+            _serverConfigurationManager = serverConfigurationManager;
             Instance = this;
+        }
+
+        public string ServerUiCulture => _serverConfigurationManager.Configuration.UICulture;
+
+        public static PluginConfiguration GetCurrentConfiguration()
+        {
+            var plugin = Instance;
+            if (plugin == null) throw new InvalidOperationException("Discover plugin configuration is unavailable.");
+            return plugin.ReadCurrentConfiguration();
+        }
+
+        private PluginConfiguration ReadCurrentConfiguration()
+        {
+            try
+            {
+                if (File.Exists(ConfigurationFilePath))
+                {
+                    var file = new FileInfo(ConfigurationFilePath);
+                    lock (_configurationGate)
+                    {
+                        if (_savedConfiguration != null &&
+                            _configurationFileTicks == file.LastWriteTimeUtc.Ticks &&
+                            _configurationFileLength == file.Length)
+                        {
+                            return _savedConfiguration;
+                        }
+
+                        var saved = _xmlSerializer.DeserializeFromFile(typeof(PluginConfiguration), ConfigurationFilePath)
+                            as PluginConfiguration;
+                        if (saved != null)
+                        {
+                            _savedConfiguration = saved;
+                            _configurationFileTicks = file.LastWriteTimeUtc.Ticks;
+                            _configurationFileLength = file.Length;
+                            return saved;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                DiscoverDiagnostics.Add("FOUT opgeslagen plugininstellingen laden: " + ex.Message);
+            }
+
+            return Configuration;
         }
 
         public override string Name => "Discover";
@@ -44,14 +101,14 @@ namespace Emby.Plugins.Discover
             {
                 new PluginPageInfo
                 {
-                    Name = "discoverconfig",
+                    Name = "discoverconfig1046",
                     EmbeddedResourcePath = GetType().Namespace + ".Configuration.configPage.html",
                     EnableInMainMenu = true,
                     IsMainConfigPage = true
                 },
                 new PluginPageInfo
                 {
-                    Name = "discoverui",
+                    Name = "discoverui1074",
                     DisplayName = "Discover",
                     EmbeddedResourcePath = GetType().Namespace + ".Configuration.discoverPage.html",
                     EnableInMainMenu = true,
@@ -60,12 +117,12 @@ namespace Emby.Plugins.Discover
                 },
                 new PluginPageInfo
                 {
-                    Name = "discoveruijs",
+                    Name = "discoveruijs1074",
                     EmbeddedResourcePath = GetType().Namespace + ".Configuration.discoverPage.js"
                 },
                 new PluginPageInfo
                 {
-                    Name = "discoverbuttonjs",
+                    Name = "discoverbuttonjs1074",
                     EmbeddedResourcePath = GetType().Namespace + ".Resources.discover-request-button.js"
                 },
                 new PluginPageInfo
@@ -80,7 +137,7 @@ namespace Emby.Plugins.Discover
                 },
                 new PluginPageInfo
                 {
-                    Name = "discoverconfigjs",
+                    Name = "discoverconfigjs1046",
                     EmbeddedResourcePath = GetType().Namespace + ".Configuration.configPage.js"
                 }
             };

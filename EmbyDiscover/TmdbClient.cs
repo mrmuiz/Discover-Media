@@ -133,7 +133,7 @@ namespace Emby.Plugins.Discover
         /// <summary>Aantal TMDB-pagina's (20 items per stuk) per rij op de Discover-pagina.</summary>
         public const int PagesPerRow = 3;
 
-        private const string FallbackLanguage = "en-US";
+        private const string FallbackLanguage = DiscoverLanguage.English;
 
         private static readonly HttpClient Http = new HttpClient { Timeout = TimeSpan.FromSeconds(20) };
         // Niet te veel tegelijk, TMDB geeft anders 429.
@@ -145,15 +145,11 @@ namespace Emby.Plugins.Discover
         public static string PosterUrl(string posterPath) =>
             string.IsNullOrEmpty(posterPath) ? null : "https://image.tmdb.org/t/p/w500" + posterPath;
 
-        private static string Language()
-        {
-            var l = Plugin.Instance.Configuration.TmdbLanguage;
-            return string.IsNullOrWhiteSpace(l) ? FallbackLanguage : l.Trim();
-        }
+        internal static string Language() => DiscoverLanguage.TmdbLanguage;
 
         private async Task<T> Get<T>(string path, string extra, string language, CancellationToken ct)
         {
-            var cfg = Plugin.Instance.Configuration;
+            var cfg = Plugin.GetCurrentConfiguration();
             var url = "https://api.themoviedb.org/3" + path
                       + "?api_key=" + Uri.EscapeDataString((cfg.TmdbApiKey ?? "").Trim())
                       + "&language=" + Uri.EscapeDataString(language)
