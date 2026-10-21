@@ -107,3 +107,20 @@ Use the source ZIP attached to the same release to build that exact version:
 
 ```bash
 dotnet build EmbyDiscover/EmbyDiscover.csproj -c Release
+
+The output DLL is `EmbyDiscover/bin/Release/netstandard2.0/Emby.Plugins.Discover.dll`.
+
+
+## Contributing
+
+
+Issues and pull requests are welcome. Include the Emby Server version, client type, steps to reproduce, and relevant diagnostics.
+
+
+## License
+
+
+MIT. The embedded Poppins font is licensed under the SIL Open Font License; see THIRD-PARTY-NOTICES.md.
+
+
+This product uses the TMDB API but is not endorsed or certified by TMDB. It is not affiliated with Emby, Radarr or Sonarr.
