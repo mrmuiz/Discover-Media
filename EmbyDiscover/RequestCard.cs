@@ -97,7 +97,7 @@ namespace Emby.Plugins.Discover
 
             var meta = new List<string>();
             if (!string.IsNullOrEmpty(date) && date.Length >= 4) meta.Add(date.Substring(0, 4));
-            meta.Add(tv ? "Serie" : "Film");
+            meta.Add(DiscoverLanguage.Text(tv ? "Serie" : "Film", tv ? "Series" : "Movie", tv ? "Serie" : "Film"));
             string length = LengthOf(t, x, tv);
             if (length != null) meta.Add(length);
             bool hasRating = t.vote_average > 0;
@@ -125,18 +125,24 @@ namespace Emby.Plugins.Discover
                     foreach (var c in x.credits.crew)
                         if (c.job == "Director" && !string.IsNullOrWhiteSpace(c.name) && !makers.Contains(c.name) && makers.Count < 2) makers.Add(c.name);
                 }
-                if (makers.Count > 0) credits.Add(new KeyValuePair<string, string>(tv ? "MAKER" : "REGIE", string.Join(", ", makers)));
+                if (makers.Count > 0) credits.Add(new KeyValuePair<string, string>(
+                    tv ? DiscoverLanguage.Text("MAKER", "CREATED BY", "ERSTELLT VON") : DiscoverLanguage.Text("REGIE", "DIRECTOR", "REGIE"),
+                    string.Join(", ", makers)));
                 var cast = new List<string>();
                 if (x.credits != null && x.credits.cast != null)
                     foreach (var c in x.credits.cast) if (!string.IsNullOrWhiteSpace(c.name) && cast.Count < 5) cast.Add(c.name);
                 if (cast.Count > 0) credits.Add(new KeyValuePair<string, string>("CAST", string.Join(", ", cast)));
             }
 
-            string badge = alreadyThere ? "Staat al in " + arr : "Aangevraagd";
+            string badge = alreadyThere
+                ? DiscoverLanguage.Text("Staat al in ", "Already in ", "Bereits in ") + arr
+                : DiscoverLanguage.Text("Aangevraagd", "Requested", "Angefordert");
             string pillFile = alreadyThere ? (tv ? "card-pill-dup-sonarr.png" : "card-pill-dup-radarr.png") : "card-pill-new.png";
             string sub = alreadyThere
-                ? "Er is niets dubbel aangevraagd."
-                : "Zodra de download klaar is, staat hij in je bibliotheek.";
+                ? DiscoverLanguage.Text("Er is niets dubbel aangevraagd.", "Nothing was requested twice.", "Es wurde nichts doppelt angefordert.")
+                : DiscoverLanguage.Text("Zodra de download klaar is, staat hij in je bibliotheek.",
+                    "It will be in your library when the download is complete.",
+                    "Sobald der Download abgeschlossen ist, ist der Titel in deiner Bibliothek.");
             CopyResource(pillFile, Path.Combine(work, "pill.png"));
             if (hasPoster)
             {
@@ -312,12 +318,20 @@ namespace Emby.Plugins.Discover
             if (tv)
             {
                 if (x.number_of_seasons > 0)
-                    return x.number_of_seasons + (x.number_of_seasons == 1 ? " seizoen" : " seizoenen");
+                    return x.number_of_seasons + DiscoverLanguage.Text(
+                        x.number_of_seasons == 1 ? " seizoen" : " seizoenen",
+                        x.number_of_seasons == 1 ? " season" : " seasons",
+                        x.number_of_seasons == 1 ? " Staffel" : " Staffeln");
                 return null;
             }
             if (x.runtime <= 0) return null;
             int h = x.runtime / 60, m = x.runtime % 60;
-            return h > 0 ? h + " u " + m.ToString("00", CultureInfo.InvariantCulture) + " min" : m + " min";
+            return h > 0
+                ? DiscoverLanguage.Text(
+                    h + " u " + m.ToString("00", CultureInfo.InvariantCulture) + " min",
+                    h + " hr " + m.ToString("00", CultureInfo.InvariantCulture) + " min",
+                    h + " Std. " + m.ToString("00", CultureInfo.InvariantCulture) + " Min.")
+                : DiscoverLanguage.Text(m + " min", m + " min", m + " Min.");
         }
 
         // Breedte per teken (in em) van Poppins, ASCII 32..126 (gemeten uit de lettertypes in de DLL).

@@ -5,7 +5,7 @@
     <title>Discover</title>
 </head>
 <body>
-<div data-role="page" class="page type-interior pluginConfigurationPage discoverConfigPage" data-require="emby-input,emby-button,emby-select,emby-checkbox" data-controller="__plugin/discoverconfigjs1046">
+<div data-role="page" class="page type-interior pluginConfigurationPage discoverConfigPage" data-require="emby-input,emby-button,emby-select,emby-checkbox" data-controller="__plugin/discoverconfigjs1079">
         <style>
         .discoverConfigPage .keyWrap { position: relative; }
         .discoverConfigPage .keyWrap input { padding-right: 2.8em; }
@@ -25,9 +25,10 @@
                 <div class="selectContainer">
                     <label class="selectLabel" for="selPluginLanguage">Plugin-taal</label>
                     <select is="emby-select" id="selPluginLanguage">
-                        <option value="auto">Volg de taal van Emby Server</option>
+                        <option value="auto">Volg de plugin-/Emby-taal automatisch</option>
                         <option value="nl-NL">Nederlands</option>
                         <option value="en-US">English</option>
+                        <option value="de-DE">Deutsch</option>
                     </select>
                 </div>
                 <div class="selectContainer">
@@ -35,10 +36,6 @@
                     <select is="emby-select" id="selTmdbLang">
                         <option value="auto">Volg de taal van Emby Server</option>
                     </select>
-                    <div class="inputContainer" id="tmdbLanguageFallback">
-                        <label class="inputLabel inputLabelUnfocused" for="txtTmdbLanguage">Handmatige TMDB-taalcode (bijv. nl-NL of en-US)</label>
-                        <input is="emby-input" type="text" id="txtTmdbLanguage" autocomplete="off" spellcheck="false" />
-                    </div>
                     <div class="fieldDescription" id="statusTmdbLanguages">Voer een TMDB-key in en test deze om de volledige talenlijst te laden.</div>
                 </div>
                 <div class="checkboxContainer">

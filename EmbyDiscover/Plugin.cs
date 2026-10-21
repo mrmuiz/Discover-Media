@@ -82,7 +82,7 @@ namespace Emby.Plugins.Discover
         public override string Name => "Discover";
 
         public override string Description =>
-            "Ontdek films en series (TMDB) in Emby en vraag ze aan via Radarr en Sonarr. Versie 1.0 beta.";
+            "Discover movies and series (TMDB) in Emby and request them through Radarr and Sonarr.";
 
         public override Guid Id => new Guid("7b0f3a52-4c1e-4a7b-9d2e-5f6c8a1b3d90");
 
@@ -101,14 +101,14 @@ namespace Emby.Plugins.Discover
             {
                 new PluginPageInfo
                 {
-                    Name = "discoverconfig1046",
+                    Name = "discoverconfig1079",
                     EmbeddedResourcePath = GetType().Namespace + ".Configuration.configPage.html",
                     EnableInMainMenu = true,
                     IsMainConfigPage = true
                 },
                 new PluginPageInfo
                 {
-                    Name = "discoverui1074",
+                    Name = "discoverui1075",
                     DisplayName = "Discover",
                     EmbeddedResourcePath = GetType().Namespace + ".Configuration.discoverPage.html",
                     EnableInMainMenu = true,
@@ -117,27 +117,27 @@ namespace Emby.Plugins.Discover
                 },
                 new PluginPageInfo
                 {
-                    Name = "discoveruijs1074",
+                    Name = "discoveruijs1075",
                     EmbeddedResourcePath = GetType().Namespace + ".Configuration.discoverPage.js"
                 },
                 new PluginPageInfo
                 {
-                    Name = "discoverbuttonjs1074",
+                    Name = "discoverbuttonjs1075",
                     EmbeddedResourcePath = GetType().Namespace + ".Resources.discover-request-button.js"
                 },
                 new PluginPageInfo
                 {
-                    Name = "discoverstatus",
+                    Name = "discoverstatus1078",
                     EmbeddedResourcePath = GetType().Namespace + ".Configuration.statusPage.html"
                 },
                 new PluginPageInfo
                 {
-                    Name = "discoverstatusjs",
+                    Name = "discoverstatusjs1078",
                     EmbeddedResourcePath = GetType().Namespace + ".Configuration.statusPage.js"
                 },
                 new PluginPageInfo
                 {
-                    Name = "discoverconfigjs1046",
+                    Name = "discoverconfigjs1079",
                     EmbeddedResourcePath = GetType().Namespace + ".Configuration.configPage.js"
                 }
             };

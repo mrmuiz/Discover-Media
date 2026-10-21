@@ -3,15 +3,19 @@
  * Verbergt ook "Media informatie" op Discover/Trailers-detailpagina's. */
 (function () {
     'use strict';
-    if (window.__discoverRequestButtonVersion === '1.0.37.74-beta') { return; }
+    if (window.__discoverRequestButtonVersion === '1.0.37.75-beta') { return; }
     if (window.__discoverRequestButton) {
         console.warn('[Discover] oudere knopcode is nog actief; vernieuw de webclient om dubbele handlers te voorkomen.');
         return;
     }
     window.__discoverRequestButton = true;
-    window.__discoverRequestButtonVersion = '1.0.37.74-beta';
-    console.log('[Discover] request-button script geladen v1.0.37.74-beta');
+    window.__discoverRequestButtonVersion = '1.0.37.75-beta';
+    console.log('[Discover] request-button script geladen v1.0.37.75-beta');
 
+    var uiLanguage = 'nl';
+    function text(dutch, english, german) {
+        return uiLanguage === 'de' ? (german || english) : uiLanguage === 'en' ? english : dutch;
+    }
     var diagnosticsEnabled = false;
     var lastDiagnostic = null;
     var diagnosticsLoaded = false;
@@ -37,7 +41,7 @@
                     'color:#ffd666;background:rgba(0,0,0,.7);padding:4px 8px;border-radius:4px;pointer-events:none;white-space:pre-wrap;';
                 document.body.appendChild(el);
             }
-            el.textContent = 'Discover v1.0.37.74-beta | ' + msg;
+            el.textContent = 'Discover v1.0.37.75-beta | ' + msg;
         } catch (e) { }
     }
     var isAdmin = false;
@@ -94,11 +98,16 @@
         diagnosticsRequest = true;
         client.ajax({ type: 'GET', url: client.getUrl('Discover/Status'), dataType: 'json' }).then(function (status) {
             diagnosticsEnabled = !!(status && status.ShowDiagnostics);
+            var culture = String(status && status.PluginLanguage || '').toLowerCase();
+            uiLanguage = culture.indexOf('nl') === 0 ? 'nl' : culture.indexOf('de') === 0 ? 'de' : 'en';
             diagnosticsLoaded = true;
             diagnosticsRequest = false;
             diagnosticsRetryAfter = 0;
             if (diagnosticsEnabled && lastDiagnostic) { dbg(lastDiagnostic); }
             else if (!diagnosticsEnabled) { dbg(null); }
+            Array.prototype.forEach.call(document.querySelectorAll('.btnDiscoverRequest'), function (btn) {
+                if (btn._info) { render(btn, btn._info); }
+            });
         }, function (error) {
             diagnosticsRequest = false;
             diagnosticsRetryAfter = Date.now() + 5000;
@@ -256,9 +265,9 @@
             // Op beide pagina's verdwijnen de overbodige knoppen en het blok "Over".
             var nm = String(item.Name || '');
             if (/^[\u2713\u23F3]?\s*Trailer:/.test(nm)) { trailerIds[id] = true; }
-            if (/^[\u2713\u23F3]?\s*Aanvragen:/.test(nm)) {
+            if (/^[\u2713\u23F3]?\s*(?:Aanvragen|Anfragen|Request):/i.test(nm)) {
                 askIds[id] = true;
-                var askName = nm.replace(/^[\u2713\u23F3]?\s*Aanvragen:\s*/, '');
+                var askName = nm.replace(/^[\u2713\u23F3]?\s*(?:Aanvragen|Anfragen|Request):\s*/i, '');
                 var askPid = item.ProviderIds || {};
                 return c.ajax({
                     type: 'GET',
@@ -335,7 +344,9 @@
         var show = isAdmin && info.Found && info.Status > 0;
         rm.style.setProperty('display', show ? 'inline-flex' : 'none', 'important');
         rm.disabled = false;
-        var t = info.Status === 2 ? 'Verwijderen' : 'Annuleren';
+        var t = info.Status === 2
+            ? text('Verwijderen', 'Delete', 'Löschen')
+            : text('Annuleren', 'Cancel request', 'Anfrage abbrechen');
         var span = rm.querySelector('.detailButton-text');
         if (span) { span.textContent = t; }
         rm.setAttribute('title', t);
@@ -344,10 +355,10 @@
     function render(btn, info) {
         btn._info = info;
         updateRm(btn, info);
-        if (!info.Found) { setLabel(btn, 'Niet gevonden', 'help_outline'); btn.disabled = true; }
-        else if (info.Status === 2) { setLabel(btn, 'Beschikbaar', 'check'); btn.disabled = true; }
-        else if (info.Status === 1) { setLabel(btn, 'Aangevraagd', 'check'); btn.disabled = true; }
-        else { setLabel(btn, 'Aanvragen', 'add'); btn.disabled = false; }
+        if (!info.Found) { setLabel(btn, text('Niet gevonden', 'Not found', 'Nicht gefunden'), 'help_outline'); btn.disabled = true; }
+        else if (info.Status === 2) { setLabel(btn, text('Beschikbaar', 'Available', 'Verfügbar'), 'check'); btn.disabled = true; }
+        else if (info.Status === 1) { setLabel(btn, text('Aangevraagd', 'Requested', 'Angefordert'), 'check'); btn.disabled = true; }
+        else { setLabel(btn, text('Aanvragen', 'Request', 'Anfragen'), 'add'); btn.disabled = false; }
     }
 
     function closeModal(overlay) {
@@ -372,12 +383,14 @@
 
         var header = document.createElement('div');
         header.style.cssText = 'padding:1.2em 1.4em .6em;font-size:1.15em;font-weight:600;';
-        header.textContent = 'Seizoenen: ' + (info.Title || '');
+        header.textContent = text('Seizoenen: ', 'Seasons: ', 'Staffeln: ') + (info.Title || '');
         card.appendChild(header);
 
         var sub = document.createElement('div');
         sub.style.cssText = 'padding:0 1.4em .8em;opacity:.7;font-size:.9em;';
-        sub.textContent = 'Kies welke seizoenen je wilt aanvragen.';
+        sub.textContent = text('Kies welke seizoenen je wilt aanvragen.',
+            'Choose which seasons to request.',
+            'Wähle aus, welche Staffeln angefordert werden sollen.');
         card.appendChild(sub);
 
         var list = document.createElement('div');
@@ -399,9 +412,9 @@
 
             var label = document.createElement('span');
             label.style.cssText = 'flex:1;';
-            var name = s.Name || ('Seizoen ' + s.Number);
+            var name = s.Name || (text('Seizoen ', 'Season ', 'Staffel ') + s.Number);
             if (s.Number === 0 && name.toLowerCase().indexOf('special') < 0) { name = 'Specials'; }
-            label.textContent = name + (s.EpisodeCount ? ' (' + s.EpisodeCount + ' afl.)' : '');
+            label.textContent = name + (s.EpisodeCount ? ' (' + s.EpisodeCount + ' ' + text('afl.', 'eps.', 'Folgen') + ')' : '');
 
             row.appendChild(cb);
             row.appendChild(label);
@@ -421,18 +434,18 @@
             return b;
         }
 
-        var btnAll = mkBtn('Alles', false);
+        var btnAll = mkBtn(text('Alles', 'All', 'Alle'), false);
         btnAll.onclick = function () { checks.forEach(function (c) { c.checked = true; }); };
 
-        var btnCancel = mkBtn('Annuleren', false);
+        var btnCancel = mkBtn(text('Annuleren', 'Cancel', 'Abbrechen'), false);
         btnCancel.onclick = function () { closeModal(overlay); };
 
-        var btnOk = mkBtn('Aanvragen', true);
+        var btnOk = mkBtn(text('Aanvragen', 'Request', 'Anfragen'), true);
         btnOk.onclick = function () {
             var selected = [];
             checks.forEach(function (c) { if (c.checked) { selected.push(parseInt(c.value, 10)); } });
             if (selected.length === 0) {
-                toast('Kies minstens één seizoen.', true);
+                toast(text('Kies minstens één seizoen.', 'Select at least one season.', 'Wähle mindestens eine Staffel aus.'), true);
                 return;
             }
             closeModal(overlay);
@@ -450,7 +463,7 @@
 
     function doRequest(btn, info, seasons) {
         btn.disabled = true;
-        setLabel(btn, 'Aanvragen...', 'add');
+        setLabel(btn, text('Aanvragen...', 'Requesting...', 'Wird angefragt...'), 'add');
         var c = api();
         var body = { Type: info.Type, TmdbId: info.TmdbId };
         if (seasons && seasons.length) { body.Seasons = seasons; }
@@ -461,13 +474,14 @@
         }).then(function (r) {
             if (r && r.Success) {
                 info.Status = 1;
-                toast((info.Title || 'Titel') + ': ' + r.Message, false);
+                toast((info.Title || text('Titel', 'Title', 'Titel')) + ': ' + r.Message, false);
             } else {
-                toast('Mislukt: ' + ((r && r.Message) || 'onbekende fout'), true);
+                toast(text('Mislukt: ', 'Failed: ', 'Fehlgeschlagen: ') +
+                    ((r && r.Message) || text('onbekende fout', 'unknown error', 'unbekannter Fehler')), true);
             }
             render(btn, info);
         }, function () {
-            toast('Aanvraag mislukt.', true);
+            toast(text('Aanvraag mislukt.', 'Request failed.', 'Anfrage fehlgeschlagen.'), true);
             render(btn, info);
         });
     }
@@ -552,8 +566,12 @@
             var arr = cur.Type === 'tv' ? 'Sonarr' : 'Radarr';
             var withFiles = cur.Status === 2;
             var q = withFiles
-                ? '"' + (cur.Title || 'Titel') + '" verwijderen uit ' + arr + ' EN de bestanden van schijf verwijderen?'
-                : 'De aanvraag voor "' + (cur.Title || 'titel') + '" annuleren en verwijderen uit ' + arr + '?';
+                ? text('"' + (cur.Title || 'Titel') + '" verwijderen uit ' + arr + ' EN de bestanden van schijf verwijderen?',
+                    'Delete "' + (cur.Title || 'Title') + '" from ' + arr + ' AND delete its files from disk?',
+                    '"' + (cur.Title || 'Titel') + '" aus ' + arr + ' entfernen UND die Dateien von der Festplatte löschen?')
+                : text('De aanvraag voor "' + (cur.Title || 'titel') + '" annuleren en verwijderen uit ' + arr + '?',
+                    'Cancel the request for "' + (cur.Title || 'title') + '" and remove it from ' + arr + '?',
+                    'Die Anfrage für "' + (cur.Title || 'Titel') + '" abbrechen und aus ' + arr + ' entfernen?');
             if (!window.confirm(q)) { return; }
             rm.disabled = true;
             var c = api();
@@ -564,13 +582,16 @@
             }).then(function (r) {
                 if (r && r.Success) {
                     cur.Status = 0;
-                    toast((cur.Title || 'Titel') + ': ' + r.Message, false);
+                    toast((cur.Title || text('Titel', 'Title', 'Titel')) + ': ' + r.Message, false);
                 } else {
-                    toast('Mislukt: ' + ((r && r.Message) || 'onbekende fout'), true);
+                    toast(text('Mislukt: ', 'Failed: ', 'Fehlgeschlagen: ') +
+                        ((r && r.Message) || text('onbekende fout', 'unknown error', 'unbekannter Fehler')), true);
                 }
                 render(btn, cur);
             }, function () {
-                toast('Verwijderen mislukt (alleen beheerders mogen dit).', true);
+                toast(text('Verwijderen mislukt (alleen beheerders mogen dit).',
+                    'Delete failed (only administrators can do this).',
+                    'Löschen fehlgeschlagen (nur Administratoren dürfen dies).'), true);
                 render(btn, cur);
             });
         }, true);

@@ -1,8 +1,10 @@
 define([], function () {
     'use strict';
 
-    var isEnglish = false;
-    function text(dutch, english) { return isEnglish ? english : dutch; }
+    var uiLanguage = 'nl';
+    function text(dutch, english, german) {
+        return uiLanguage === 'de' ? (german || english) : uiLanguage === 'en' ? english : dutch;
+    }
 
     function esc(s) {
         return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -22,22 +24,22 @@ define([], function () {
 
     function showDiag() {
         if (!diagEl) { return; }
-        diagEl.textContent = text('Diagnose: knop-script actief in browser: ', 'Diagnostics: request script active in browser: ') +
-            (window.__discoverRequestButton ? text('JA v', 'YES v') + (window.__discoverRequestButtonVersion || text('oud (<0.14.6)', 'old (<0.14.6)')) : text('NEE', 'NO')) +
-            '\n' + text('laden vanaf Discover-pagina: ', 'loaded from Discover page: ') + diag.load +
-            '\n' + text('server: ', 'server: ') + (diag.status || '...');
+        diagEl.textContent = text('Diagnose: knop-script actief in browser: ', 'Diagnostics: request script active in browser: ', 'Diagnose: Schaltflächenskript im Browser aktiv: ') +
+            (window.__discoverRequestButton ? text('JA v', 'YES v', 'JA v') + (window.__discoverRequestButtonVersion || text('oud (<0.14.6)', 'old (<0.14.6)', 'alt (<0.14.6)')) : text('NEE', 'NO', 'NEIN')) +
+            '\n' + text('laden vanaf Discover-pagina: ', 'loaded from Discover page: ', 'von der Discover-Seite geladen: ') + diag.load +
+            '\n' + text('server: ', 'server: ', 'Server: ') + (diag.status || '...');
     }
 
     // Load as an external script so Emby's Content-Security-Policy does not block inline execution.
     function loadButtonScript() {
-        if (window.__discoverRequestButtonVersion === '1.0.37.74-beta') {
-            diag.load = 'script is al actief v1.0.37.74-beta';
+        if (window.__discoverRequestButtonVersion === '1.0.37.75-beta') {
+            diag.load = 'script is al actief v1.0.37.75-beta';
             showDiag();
             return;
         }
         var urls = [
-            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1074' }),
-            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1074' }),
+            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1075' }),
+            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1075' }),
             ApiClient.getUrl('Plugins/Discover/Script')
         ];
         var n = 0;
@@ -49,7 +51,7 @@ define([], function () {
             script.src = u + (u.indexOf('?') === -1 ? '?' : '&') + '_=' + Date.now();
             script.async = true;
             script.onload = function () {
-                if (window.__discoverRequestButtonVersion === '1.0.37.74-beta') {
+                if (window.__discoverRequestButtonVersion === '1.0.37.75-beta') {
                     diag.load = 'OK via extern script ' + u;
                     showDiag();
                 } else {
@@ -80,7 +82,7 @@ define([], function () {
         setTimeout(showDiag, 1500);
         var content = view.querySelector('.dcContent');
         var input = view.querySelector('.dcSearchInput');
-        input.placeholder = text('Films en series zoeken', 'Search movies and series');
+        input.placeholder = text('Films en series zoeken', 'Search movies and series', 'Filme und Serien suchen');
         var overlay = view.querySelector('.dcOverlay');
         var toast = view.querySelector('.dcToast');
         var items = {};      // sleutel -> item (gedeeld door alle kaarten)
@@ -122,10 +124,10 @@ define([], function () {
 
         function openBrowse(kind, id, name) {
             browse = { kind: kind, id: id, next: 1, loading: false, done: false, seen: {} };
-            content.innerHTML = '<div class="dcBrowseHead"><button type="button" class="dcBack">&#10094; ' + text('Terug', 'Back') + '</button>' +
+            content.innerHTML = '<div class="dcBrowseHead"><button type="button" class="dcBack">&#10094; ' + text('Terug', 'Back', 'Zurück') + '</button>' +
                 '<span class="dcBrowseTitle">' + esc(name) + '</span></div>' +
                 '<div class="dcGrid dcBrowseGrid"></div>' +
-                '<div class="dcMore"><button type="button" class="dcBtn dcMoreBtn">' + text('Meer laden', 'Load more') + '</button></div>';
+                '<div class="dcMore"><button type="button" class="dcBtn dcMoreBtn">' + text('Meer laden', 'Load more', 'Mehr laden') + '</button></div>';
             var root = view.querySelector('.dcRoot');
             if (root) { root.scrollTop = 0; }
             loadBrowse();
@@ -136,7 +138,7 @@ define([], function () {
             if (!b || b.loading || b.done) { return; }
             b.loading = true;
             var btn = content.querySelector('.dcMoreBtn');
-            if (btn) { btn.disabled = true; btn.textContent = text('Laden...', 'Loading...'); }
+            if (btn) { btn.disabled = true; btn.textContent = text('Laden...', 'Loading...', 'Wird geladen...'); }
             api('GET', 'Discover/Browse', { Kind: b.kind, Id: b.id, Page: b.next }).then(function (r) {
                 if (browse !== b) { return; }
                 var list = (r && r.Items) || [];
@@ -152,13 +154,13 @@ define([], function () {
                 if (!list.length) { b.done = true; }
                 var more = content.querySelector('.dcMore');
                 if (more) { more.style.display = b.done ? 'none' : 'block'; }
-                if (btn) { btn.disabled = false; btn.textContent = text('Meer laden', 'Load more'); }
+                if (btn) { btn.disabled = false; btn.textContent = text('Meer laden', 'Load more', 'Mehr laden'); }
                 if (b.done && !b.seenAny && !fresh.length && grid && !grid.children.length) {
-                    grid.innerHTML = '<div class="dcMsg">' + text('Geen resultaten.', 'No results.') + '</div>';
+                    grid.innerHTML = '<div class="dcMsg">' + text('Geen resultaten.', 'No results.', 'Keine Ergebnisse.') + '</div>';
                 }
             }, function () {
                 b.loading = false;
-                if (btn) { btn.disabled = false; btn.textContent = text('Opnieuw proberen', 'Try again'); }
+                if (btn) { btn.disabled = false; btn.textContent = text('Opnieuw proberen', 'Try again', 'Erneut versuchen'); }
             });
         }
 
@@ -189,7 +191,7 @@ define([], function () {
                     '<button type="button" class="dcArrow right" data-dir="1">&#10095;</button>' +
                     '</div>';
             });
-            content.innerHTML = html || '<div class="dcMsg">' + text('Geen resultaten.', 'No results.') + '</div>';
+            content.innerHTML = html || '<div class="dcMsg">' + text('Geen resultaten.', 'No results.', 'Keine Ergebnisse.') + '</div>';
         }
 
         // Laadt de volgende TMDB-pagina als je bijna aan het eind van een rij bent.
@@ -216,17 +218,19 @@ define([], function () {
 
         function loadHome() {
             browse = null;
-            content.innerHTML = '<div class="dcMsg">' + text('Laden...', 'Loading...') + '</div>';
+            content.innerHTML = '<div class="dcMsg">' + text('Laden...', 'Loading...', 'Wird geladen...') + '</div>';
             api('GET', 'Discover/Home').then(function (r) {
-                isEnglish = String(r.Language || '').toLowerCase().indexOf('nl') !== 0;
-                input.placeholder = text('Films en series zoeken', 'Search movies and series');
+                var culture = String(r.Language || '').toLowerCase();
+                uiLanguage = culture.indexOf('nl') === 0 ? 'nl' : culture.indexOf('de') === 0 ? 'de' : 'en';
+                input.placeholder = text('Films en series zoeken', 'Search movies and series', 'Filme und Serien suchen');
                 if (r.Message) { content.innerHTML = '<div class="dcMsg">' + esc(r.Message) + '</div>'; return; }
                 renderRows(r.Rows || []);
                 loaded = true;
             }, function () {
                 content.innerHTML = '<div class="dcMsg">' + text(
                     'Laden mislukt. Controleer of de plugin is bijgewerkt en Emby opnieuw is gestart.',
-                    'Loading failed. Check that the plugin is updated and Emby has been restarted.') + '</div>';
+                    'Loading failed. Check that the plugin is updated and Emby has been restarted.',
+                    'Laden fehlgeschlagen. Prüfe, ob das Plugin aktualisiert und Emby neu gestartet wurde.') + '</div>';
             });
         }
 
@@ -235,8 +239,8 @@ define([], function () {
             api('GET', 'Discover/Search', { Query: q }).then(function (r) {
                 var list = r.Items || [];
                 content.innerHTML = list.length
-                    ? '<div class="dcRowTitle">' + text('Zoekresultaten', 'Search results') + '</div><div class="dcGrid">' + list.map(cardHtml).join('') + '</div>'
-                    : '<div class="dcMsg">' + text('Niets gevonden voor "', 'Nothing found for "') + esc(q) + '".</div>';
+                    ? '<div class="dcRowTitle">' + text('Zoekresultaten', 'Search results', 'Suchergebnisse') + '</div><div class="dcGrid">' + list.map(cardHtml).join('') + '</div>'
+                    : '<div class="dcMsg">' + text('Niets gevonden voor "', 'Nothing found for "', 'Keine Ergebnisse für "') + esc(q) + '".</div>';
             });
         }
 
@@ -252,12 +256,12 @@ define([], function () {
             var d = overlay.querySelector('.dcBtnDel');
             if (!current) { return; }
             d.disabled = false;
-            if (isAdmin && current.Status === 1) { d.textContent = text('Aanvraag annuleren', 'Cancel request'); d.classList.add('show'); }
-            else if (isAdmin && current.Status === 2) { d.textContent = text('Verwijderen', 'Delete'); d.classList.add('show'); }
+            if (isAdmin && current.Status === 1) { d.textContent = text('Aanvraag annuleren', 'Cancel request', 'Anfrage abbrechen'); d.classList.add('show'); }
+            else if (isAdmin && current.Status === 2) { d.textContent = text('Verwijderen', 'Delete', 'Löschen'); d.classList.add('show'); }
             else { d.classList.remove('show'); }
-            if (current.Status === 2) { b.textContent = text('Beschikbaar', 'Available'); b.disabled = true; }
-            else if (current.Status === 1) { b.textContent = text('Aangevraagd', 'Requested'); b.disabled = true; }
-            else { b.textContent = text('Aanvragen', 'Request'); b.disabled = false; }
+            if (current.Status === 2) { b.textContent = text('Beschikbaar', 'Available', 'Verfügbar'); b.disabled = true; }
+            else if (current.Status === 1) { b.textContent = text('Aangevraagd', 'Requested', 'Angefordert'); b.disabled = true; }
+            else { b.textContent = text('Aanvragen', 'Request', 'Anfragen'); b.disabled = false; }
         }
 
         function refreshCards(i) {
@@ -276,10 +280,10 @@ define([], function () {
             img.style.visibility = i.Poster ? 'visible' : 'hidden';
             overlay.querySelector('.dcModalTitle').textContent = i.Title + (i.Year ? ' (' + i.Year + ')' : '');
             overlay.querySelector('.dcMeta').textContent =
-                text(i.Type === 'tv' ? 'Serie' : 'Film', i.Type === 'tv' ? 'Series' : 'Movie') +
+                text(i.Type === 'tv' ? 'Serie' : 'Film', i.Type === 'tv' ? 'Series' : 'Movie', i.Type === 'tv' ? 'Serie' : 'Film') +
                 (i.Rating ? '  \u2022  \u2605 ' + i.Rating.toFixed(1) : '');
             overlay.querySelector('.dcOverview').textContent =
-                i.Overview || text('Geen beschrijving beschikbaar.', 'No description available.');
+                i.Overview || text('Geen beschrijving beschikbaar.', 'No description available.', 'Keine Beschreibung verfügbar.');
             var infoEl = overlay.querySelector('.dcInfo');
             infoEl.textContent = '';
             api('GET', 'Discover/Info', { Type: i.Type, TmdbId: i.TmdbId }).then(function (r) {
@@ -385,18 +389,18 @@ define([], function () {
             if (!i || i.Status !== 0) { return; }
             var b = this;
             b.disabled = true;
-            b.textContent = text('Aanvragen...', 'Requesting...');
+            b.textContent = text('Aanvragen...', 'Requesting...', 'Wird angefragt...');
             api('POST', 'Discover/RequestItem', null, { Type: i.Type, TmdbId: i.TmdbId }).then(function (r) {
                 if (r && r.Success) {
                     i.Status = 1;
                     refreshCards(i);
                     showToast(i.Title + ': ' + r.Message, false);
                 } else {
-                    showToast(text('Mislukt: ', 'Failed: ') + ((r && r.Message) || text('onbekende fout', 'unknown error')), true);
+                    showToast(text('Mislukt: ', 'Failed: ', 'Fehlgeschlagen: ') + ((r && r.Message) || text('onbekende fout', 'unknown error', 'unbekannter Fehler')), true);
                 }
                 updateButton();
             }, function () {
-                showToast(text('Aanvraag mislukt.', 'Request failed.'), true);
+                showToast(text('Aanvraag mislukt.', 'Request failed.', 'Anfrage fehlgeschlagen.'), true);
                 updateButton();
             });
         });
@@ -408,9 +412,11 @@ define([], function () {
             var withFiles = i.Status === 2;
             var q = withFiles
                 ? text('"' + i.Title + '" verwijderen uit ' + arr + ' EN de bestanden van schijf verwijderen?',
-                    'Delete "' + i.Title + '" from ' + arr + ' AND delete its files from disk?')
+                    'Delete "' + i.Title + '" from ' + arr + ' AND delete its files from disk?',
+                    '"' + i.Title + '" aus ' + arr + ' entfernen UND die Dateien von der Festplatte löschen?')
                 : text('De aanvraag voor "' + i.Title + '" annuleren en verwijderen uit ' + arr + '?',
-                    'Cancel the request for "' + i.Title + '" and remove it from ' + arr + '?');
+                    'Cancel the request for "' + i.Title + '" and remove it from ' + arr + '?',
+                    'Die Anfrage für "' + i.Title + '" abbrechen und aus ' + arr + ' entfernen?');
             if (!window.confirm(q)) { return; }
             var d = this;
             d.disabled = true;
@@ -420,12 +426,13 @@ define([], function () {
                     refreshCards(i);
                     showToast(i.Title + ': ' + r.Message, false);
                 } else {
-                    showToast(text('Mislukt: ', 'Failed: ') + ((r && r.Message) || text('onbekende fout', 'unknown error')), true);
+                    showToast(text('Mislukt: ', 'Failed: ', 'Fehlgeschlagen: ') + ((r && r.Message) || text('onbekende fout', 'unknown error', 'unbekannter Fehler')), true);
                 }
                 updateButton();
             }, function () {
                 showToast(text('Verwijderen mislukt (alleen beheerders mogen dit).',
-                    'Delete failed (only administrators can do this).'), true);
+                    'Delete failed (only administrators can do this).',
+                    'Löschen fehlgeschlagen (nur Administratoren dürfen dies).'), true);
                 updateButton();
             });
         });

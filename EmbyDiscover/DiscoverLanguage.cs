@@ -7,6 +7,7 @@ namespace Emby.Plugins.Discover
         public const string Auto = "auto";
         public const string English = "en-US";
         public const string Dutch = "nl-NL";
+        public const string German = "de-DE";
 
         public static string PluginLanguage
         {
@@ -35,20 +36,25 @@ namespace Emby.Plugins.Discover
                     return config.TmdbLanguage.Trim();
                 }
 
-                return FromEmbyCulture(Plugin.Instance.ServerUiCulture);
+                return PluginLanguage;
             }
         }
 
         public static bool IsDutch => PluginLanguage == Dutch;
+        public static bool IsGerman => PluginLanguage == German;
 
-        public static string Text(string dutch, string english) => IsDutch ? dutch : english;
+        public static string Text(string dutch, string english, string german = null) =>
+            IsDutch ? dutch : IsGerman ? (german ?? english) : english;
 
         public static string FromEmbyCulture(string culture) => Normalize(culture);
 
-        private static string Normalize(string culture) =>
-            !string.IsNullOrWhiteSpace(culture) &&
-            culture.Trim().StartsWith("nl", StringComparison.OrdinalIgnoreCase)
-                ? Dutch
-                : English;
+        private static string Normalize(string culture)
+        {
+            if (string.IsNullOrWhiteSpace(culture)) return English;
+            var normalized = culture.Trim();
+            if (normalized.StartsWith("nl", StringComparison.OrdinalIgnoreCase)) return Dutch;
+            if (normalized.StartsWith("de", StringComparison.OrdinalIgnoreCase)) return German;
+            return English;
+        }
     }
 }

@@ -49,11 +49,12 @@ namespace Emby.Plugins.Discover
         public string Name => "Discover Media";
         public string Description => DiscoverLanguage.Text(
             "Ontdek films en series en vraag ze aan.",
-            "Discover movies and series and request them.");
+            "Discover movies and series and request them.",
+            "Entdecke Filme und Serien und fordere sie an.");
         public string HomePageUrl => "";
 
         // Ophogen als Emby oude (bewaarde) kanaalinhoud blijft tonen.
-        public string DataVersion => "46";
+        public string DataVersion => "51";
         public ChannelParentalRating ParentalRating => ChannelParentalRating.GeneralAudience;
         public bool IsEnabledFor(string userId) => true;
 
@@ -99,7 +100,10 @@ namespace Emby.Plugins.Discover
             {
                 DiscoverDiagnostics.Add("FOUT: geen TMDB-key ingesteld");
                 throw new InvalidOperationException(
-                    "Discover is nog niet ingesteld: vul de TMDB API key in bij Dashboard > Plugins > Discover.");
+                    DiscoverLanguage.Text(
+                        "Discover is nog niet ingesteld: vul de TMDB API key in bij Dashboard > Plugins > Discover.",
+                        "Discover is not configured: enter the TMDB API key under Dashboard > Plugins > Discover.",
+                        "Discover ist noch nicht eingerichtet: Gib den TMDB-API-Schlüssel unter Dashboard > Plugins > Discover ein."));
             }
 
             if (string.IsNullOrEmpty(id)) return await Root(ct).ConfigureAwait(false);
@@ -198,16 +202,20 @@ namespace Emby.Plugins.Discover
             string action;
             if (status == 2 && tv && ArrClient.IsPartial(tmdbId))
                 action = DiscoverLanguage.Text("\u2713 Gedeeltelijk beschikbaar: een deel van de afleveringen staat al in je bibliotheek.",
-                    "\u2713 Partially available: some episodes are already in your library.");
+                    "\u2713 Partially available: some episodes are already in your library.",
+                    "\u2713 Teilweise verfügbar: Einige Folgen befinden sich bereits in deiner Bibliothek.");
             else if (status == 2)
                 action = DiscoverLanguage.Text("\u2713 Deze titel is al beschikbaar in je bibliotheek.",
-                    "\u2713 This title is already available in your library.");
+                    "\u2713 This title is already available in your library.",
+                    "\u2713 Dieser Titel ist bereits in deiner Bibliothek verfügbar.");
             else if (status == 1)
                 action = DiscoverLanguage.Text("\u23F3 Deze titel is al aangevraagd en staat in " + arr + ".",
-                    "\u23F3 This title has already been requested from " + arr + ".");
+                    "\u23F3 This title has already been requested from " + arr + ".",
+                    "\u23F3 Dieser Titel wurde bereits bei " + arr + " angefordert.");
             else
                 action = DiscoverLanguage.Text("DRUK OP DE \u25B6 KNOP OM AAN TE VRAGEN.",
-                    "PRESS THE \u25B6 BUTTON TO REQUEST.");
+                    "PRESS THE \u25B6 BUTTON TO REQUEST.",
+                    "DRÜCKE AUF DIE \u25B6-TASTE, UM DEN TITEL ANZUFORDERN.");
 
             var date = tv ? t.first_air_date : t.release_date;
             var y = YearOf(date);
@@ -221,7 +229,7 @@ namespace Emby.Plugins.Discover
             var item = new ChannelItemInfo
             {
                 Id = AskPrefix + rest,
-                Name = DiscoverLanguage.Text("Aanvragen: ", "Request: ") + title,
+                Name = DiscoverLanguage.Text("Aanvragen: ", "Request: ", "Anfragen: ") + title,
                 Type = ChannelItemType.Media,
                 MediaType = ChannelMediaType.Video,
                 ContentType = ChannelMediaContentType.Clip,
@@ -245,13 +253,14 @@ namespace Emby.Plugins.Discover
             var trailer = new ChannelItemInfo
             {
                 Id = TrailerPrefix + rest,
-                Name = DiscoverLanguage.Text("Trailer: ", "Trailer: ") + title,
+                Name = DiscoverLanguage.Text("Trailer: ", "Trailer: ", "Trailer: ") + title,
                 Type = ChannelItemType.Media,
                 MediaType = ChannelMediaType.Video,
                 ContentType = ChannelMediaContentType.Clip,
                 ImageUrl = item.ImageUrl,
                 Overview = DiscoverLanguage.Text("Druk op de \u25B6 knop om de trailer te bekijken.",
-                    "Press the \u25B6 button to watch the trailer.")
+                    "Press the \u25B6 button to watch the trailer.",
+                    "Drücke auf die \u25B6-Taste, um den Trailer anzusehen.")
                            + (info == null ? "" : "\n\n" + info)
                            + (string.IsNullOrWhiteSpace(t.overview) ? "" : "\n\n" + t.overview.Trim()),
                 ProviderIds = item.ProviderIds,
@@ -346,36 +355,41 @@ namespace Emby.Plugins.Discover
                 return l[start % l.Count];
             };
 
-            // Per map: id, localized name and artwork text, colour and backdrop.
+            // Names below tiles follow the selected language; text printed on the artwork stays English.
             // De volgorde van pick() blijft zoals voorheen, zodat geen twee mappen dezelfde film tonen.
             var specs = new[]
             {
-                new TileSpec(AskListPrefix + "trending_movie", DiscoverLanguage.Text("Trending films", "Trending Movies"), DiscoverLanguage.Text("Trending films", "Trending Movies"), "orange", pick(0, 3)),
-                new TileSpec(AskListPrefix + "popular_movie", DiscoverLanguage.Text("Populaire films", "Popular Movies"), DiscoverLanguage.Text("Populaire films", "Popular Movies"), "red", pick(1, 3)),
-                new TileSpec(AskListPrefix + "upcoming_movie", DiscoverLanguage.Text("Verwachte films", "Upcoming Movies"), DiscoverLanguage.Text("Verwachte films", "Upcoming Movies"), "purple", pick(2, 3)),
-                new TileSpec(AskGenrePrefix + "movie", DiscoverLanguage.Text("Filmgenres", "Movie Genres"), DiscoverLanguage.Text("Filmgenres", "Movie Genres"), "green", pick(1, 8)),
-                new TileSpec(AskListPrefix + "trending_tv", DiscoverLanguage.Text("Trending series", "Trending Series"), DiscoverLanguage.Text("Trending series", "Trending Series"), "yellow", pick(3, 3)),
-                new TileSpec(AskListPrefix + "popular_tv", DiscoverLanguage.Text("Populaire series", "Popular Series"), DiscoverLanguage.Text("Popular series", "Popular Series"), "pink", pick(4, 3)),
-                new TileSpec(AskListPrefix + "upcoming_tv", DiscoverLanguage.Text("Verwachte series", "Upcoming Series"), DiscoverLanguage.Text("Verwachte series", "Upcoming Series"), "blue", pick(5, 3)),
-                new TileSpec(AskGenrePrefix + "tv", DiscoverLanguage.Text("Seriegenres", "Series Genres"), DiscoverLanguage.Text("Seriegenres", "Series Genres"), "lightgreen", pick(4, 8)),
-                new TileSpec(AskStudioRoot, "Studio's", "Studios", "black", pick(0, 8))
+                new TileSpec(AskListPrefix + "trending_movie", DiscoverLanguage.Text("Trending films", "Trending Movies", "Aktuelle Filme"), "Trending Movies", "orange", pick(0, 3)),
+                new TileSpec(AskListPrefix + "popular_movie", DiscoverLanguage.Text("Populaire films", "Popular Movies", "Beliebte Filme"), "Popular Movies", "red", pick(1, 3)),
+                new TileSpec(AskListPrefix + "upcoming_movie", DiscoverLanguage.Text("Verwachte films", "Upcoming Movies", "Kommende Filme"), "Upcoming Movies", "purple", pick(2, 3)),
+                new TileSpec(AskGenrePrefix + "movie", DiscoverLanguage.Text("Filmgenres", "Movie Genres", "Filmgenres"), "Movie Genres", "green", pick(1, 8)),
+                new TileSpec(AskListPrefix + "trending_tv", DiscoverLanguage.Text("Trending series", "Trending Series", "Aktuelle Serien"), "Trending Series", "yellow", pick(3, 3)),
+                new TileSpec(AskListPrefix + "popular_tv", DiscoverLanguage.Text("Populaire series", "Popular Series", "Beliebte Serien"), "Popular Series", "pink", pick(4, 3)),
+                new TileSpec(AskListPrefix + "upcoming_tv", DiscoverLanguage.Text("Verwachte series", "Upcoming Series", "Kommende Serien"), "Upcoming Series", "blue", pick(5, 3)),
+                new TileSpec(AskGenrePrefix + "tv", DiscoverLanguage.Text("Seriegenres", "Series Genres", "Seriengenres"), "Series Genres", "lightgreen", pick(4, 8)),
+                new TileSpec(AskStudioRoot, DiscoverLanguage.Text("Studio's", "Studios", "Studios"),
+                    "Studios", "black", pick(0, 8))
             };
 
-            // Tile artwork is optional; never let slow ffmpeg/download work cancel an Emby channel refresh.
+            // Start every tile together, then allow one shared time budget for the text artwork.
+            var creations = specs.Select(spec => FolderTile.Create(
+                spec.Id.Replace(":", "-"), spec.Text, DuotoneUrl(spec.Color, spec.Backdrop), CancellationToken.None)).ToArray();
             var files = new string[specs.Length];
-            for (int i = 0; i < specs.Length; i++)
+            var deadline = DateTime.UtcNow.AddSeconds(2);
+            for (int i = 0; i < creations.Length; i++)
             {
-                var spec = specs[i];
-                var creation = FolderTile.Create(
-                    spec.Id.Replace(":", "-"), spec.Text, DuotoneUrl(spec.Color, spec.Backdrop), CancellationToken.None);
-                if (creation.IsCompleted)
+                var remaining = deadline - DateTime.UtcNow;
+                if (remaining > TimeSpan.Zero)
+                    await Task.WhenAny(creations[i], Task.Delay(remaining)).ConfigureAwait(false);
+
+                if (creations[i].IsCompleted)
                 {
-                    try { files[i] = creation.GetAwaiter().GetResult(); }
-                    catch (Exception ex) { DiscoverDiagnostics.Add("tegelafbeelding '" + spec.Text + "' mislukt: " + ex.Message); }
+                    try { files[i] = await creations[i].ConfigureAwait(false); }
+                    catch (Exception ex) { DiscoverDiagnostics.Add("tegelafbeelding '" + specs[i].Text + "' mislukt: " + ex.Message); }
                 }
                 else
                 {
-                    _ = ObserveTileCreation(creation, spec.Text);
+                    _ = ObserveTileCreation(creations[i], specs[i].Text);
                 }
             }
 
@@ -855,23 +869,23 @@ namespace Emby.Plugins.Discover
 
         private static readonly Dictionary<int, string[]> MovieGenres = new Dictionary<int, string[]>
         {
-            {28, new[]{"Actie","Action"}}, {12, new[]{"Avontuur","Adventure"}}, {16, new[]{"Animatie","Animation"}},
-            {35, new[]{"Komedie","Comedy"}}, {80, new[]{"Misdaad","Crime"}}, {99, new[]{"Documentaire","Documentary"}},
-            {18, new[]{"Drama","Drama"}}, {10751, new[]{"Familie","Family"}}, {14, new[]{"Fantasie","Fantasy"}},
-            {36, new[]{"Geschiedenis","History"}}, {27, new[]{"Horror","Horror"}}, {10402, new[]{"Muziek","Music"}},
-            {9648, new[]{"Mysterie","Mystery"}}, {10749, new[]{"Romantiek","Romance"}}, {878, new[]{"Science fiction","Science Fiction"}},
-            {10770, new[]{"Tv-film","TV Movie"}}, {53, new[]{"Thriller","Thriller"}}, {10752, new[]{"Oorlog","War"}},
-            {37, new[]{"Western","Western"}}
+            {28, new[]{"Actie","Action","Action"}}, {12, new[]{"Avontuur","Adventure","Abenteuer"}}, {16, new[]{"Animatie","Animation","Animation"}},
+            {35, new[]{"Komedie","Comedy","Komödie"}}, {80, new[]{"Misdaad","Crime","Krimi"}}, {99, new[]{"Documentaire","Documentary","Dokumentarfilm"}},
+            {18, new[]{"Drama","Drama","Drama"}}, {10751, new[]{"Familie","Family","Familie"}}, {14, new[]{"Fantasie","Fantasy","Fantasy"}},
+            {36, new[]{"Geschiedenis","History","Geschichte"}}, {27, new[]{"Horror","Horror","Horror"}}, {10402, new[]{"Muziek","Music","Musik"}},
+            {9648, new[]{"Mysterie","Mystery","Mystery"}}, {10749, new[]{"Romantiek","Romance","Liebesfilm"}}, {878, new[]{"Science fiction","Science Fiction","Science-Fiction"}},
+            {10770, new[]{"Tv-film","TV Movie","Fernsehfilm"}}, {53, new[]{"Thriller","Thriller","Thriller"}}, {10752, new[]{"Oorlog","War","Kriegsfilm"}},
+            {37, new[]{"Western","Western","Western"}}
         };
 
         private static readonly Dictionary<int, string[]> TvGenres = new Dictionary<int, string[]>
         {
-            {10759, new[]{"Actie & avontuur","Action & Adventure"}}, {16, new[]{"Animatie","Animation"}},
-            {35, new[]{"Komedie","Comedy"}}, {80, new[]{"Misdaad","Crime"}}, {99, new[]{"Documentaire","Documentary"}},
-            {18, new[]{"Drama","Drama"}}, {10751, new[]{"Familie","Family"}}, {10762, new[]{"Kinderen","Kids"}},
-            {9648, new[]{"Mysterie","Mystery"}}, {10763, new[]{"Nieuws","News"}}, {10764, new[]{"Reality","Reality"}},
-            {10765, new[]{"Sci-fi & fantasie","Sci-Fi & Fantasy"}}, {10766, new[]{"Soap","Soap"}}, {10767, new[]{"Talkshow","Talk"}},
-            {10768, new[]{"Oorlog & politiek","War & Politics"}}, {37, new[]{"Western","Western"}}
+            {10759, new[]{"Actie & avontuur","Action & Adventure","Action & Abenteuer"}}, {16, new[]{"Animatie","Animation","Animation"}},
+            {35, new[]{"Komedie","Comedy","Komödie"}}, {80, new[]{"Misdaad","Crime","Krimi"}}, {99, new[]{"Documentaire","Documentary","Dokumentarfilm"}},
+            {18, new[]{"Drama","Drama","Drama"}}, {10751, new[]{"Familie","Family","Familie"}}, {10762, new[]{"Kinderen","Kids","Kinder"}},
+            {9648, new[]{"Mysterie","Mystery","Mystery"}}, {10763, new[]{"Nieuws","News","Nachrichten"}}, {10764, new[]{"Reality","Reality","Reality"}},
+            {10765, new[]{"Sci-fi & fantasie","Sci-Fi & Fantasy","Science-Fiction & Fantasy"}}, {10766, new[]{"Soap","Soap","Seifenoper"}}, {10767, new[]{"Talkshow","Talk","Talkshow"}},
+            {10768, new[]{"Oorlog & politiek","War & Politics","Krieg & Politik"}}, {37, new[]{"Western","Western","Western"}}
         };
 
         /// <summary>Beschrijving uit de lijst met de releasedatum eraan voorop (geen extra TMDB-call).</summary>
@@ -886,7 +900,7 @@ namespace Emby.Plugins.Discover
         {
             var result = new List<string>();
             if (i.genre_ids == null) return result;
-            int col = DiscoverLanguage.IsDutch ? 0 : 1;
+            int col = DiscoverLanguage.IsDutch ? 0 : DiscoverLanguage.IsGerman ? 2 : 1;
             var map = tv ? TvGenres : MovieGenres;
             foreach (var g in i.genre_ids)
             {

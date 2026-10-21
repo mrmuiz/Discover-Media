@@ -9,6 +9,7 @@ namespace Emby.Plugins.Discover
         public string TmdbLanguageMode { get; set; } = "auto";
         public string PluginLanguage { get; set; } = "auto";
         public bool ShowDiagnostics { get; set; } = false;
+        public bool DiagnosticsDefaultApplied { get; set; } = false;
 
         public string RadarrUrl { get; set; } = "";
         public string RadarrApiKey { get; set; } = "";
@@ -27,7 +28,7 @@ namespace Emby.Plugins.Discover
         /// <summary>Optioneel: volledig pad naar ffmpeg, voor de bevestigingskaart per titel. Leeg = zoeken op gangbare plekken.</summary>
         public string FfmpegPath { get; set; } = "";
 
-        /// <summary>Zet de Engelse naam als tekst op de plaatjes van de hoofdmappen. Op false (in Emby.Plugins.Discover.xml) = plaatjes zonder tekst, zoals in 0.23.</summary>
+        /// <summary>Zet de Engelse mapnaam als tekst op de plaatjes van de hoofdmappen. Op false = plaatjes zonder tekst.</summary>
         public bool TileTextImages { get; set; } = true;
     }
 }
