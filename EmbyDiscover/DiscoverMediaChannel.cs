@@ -25,13 +25,13 @@ namespace Emby.Plugins.Discover
     {
 #pragma warning restore CS0618
         // Id-voorvoegsels. Bij een wijziging ook DataVersion ophogen (Emby bewaart oude items met dezelfde id).
-        private const string AskRoot = "ask9root";
-        private const string AskItemPrefix = "ask9item:";   // map met trailer + aanvraag per titel
-        private const string AskListPrefix = "ask9list:";
-        private const string AskGenrePrefix = "ask9genres:";   // map met genretegels (movie of tv)
-        private const string AskStudioRoot = "ask9studios";       // map met studio- en netwerktegels
-        internal const string AskPrefix = "ask9:";           // het aanvraagitem zelf
-        private const string TrailerPrefix = "tr9:";         // het trailer-item naast het aanvraagitem
+        private const string AskRoot = "ask10root";
+        private const string AskItemPrefix = "ask10item:";   // map met trailer + aanvraag per titel
+        private const string AskListPrefix = "ask10list:";
+        private const string AskGenrePrefix = "ask10genres:";   // map met genretegels (movie of tv)
+        private const string AskStudioRoot = "ask10studios";       // map met studio- en netwerktegels
+        internal const string AskPrefix = "ask10:";           // het aanvraagitem zelf
+        private const string TrailerPrefix = "tr10:";         // het trailer-item naast het aanvraagitem
 
         private readonly TmdbClient _tmdb;
         private readonly ArrClient _arr;
@@ -54,7 +54,7 @@ namespace Emby.Plugins.Discover
         public string HomePageUrl => "";
 
         // Ophogen als Emby oude (bewaarde) kanaalinhoud blijft tonen.
-        public string DataVersion => "57";
+        public string DataVersion => "58";
         public ChannelParentalRating ParentalRating => ChannelParentalRating.GeneralAudience;
         public bool IsEnabledFor(string userId) => true;
 
@@ -628,8 +628,11 @@ namespace Emby.Plugins.Discover
                 default: return new ChannelItemResult { Items = new List<ChannelItemInfo>(), TotalRecordCount = 0 };
             }
 
-            var all = await GetCachedList(key, path, ct, tv, filter).ConfigureAwait(false);
-            var states = await SafeStates(tv, ct).ConfigureAwait(false);
+            // Lijst en Radarr/Sonarr-status tegelijk ophalen (SafeStates geeft bij een fout gewoon een lege lijst).
+            var allTask = GetCachedList(key, path, ct, tv, filter);
+            var statesTask = SafeStates(tv, ct);
+            var all = await allTask.ConfigureAwait(false);
+            var states = await statesTask.ConfigureAwait(false);
 
             var titles = new Dictionary<string, string>();
             var items = new List<ChannelItemInfo>();

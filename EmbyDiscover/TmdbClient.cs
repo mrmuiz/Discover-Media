@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -135,9 +136,9 @@ namespace Emby.Plugins.Discover
 
         private const string FallbackLanguage = DiscoverLanguage.English;
 
-        private static readonly HttpClient Http = new HttpClient { Timeout = TimeSpan.FromSeconds(20) };
+        private static readonly HttpClient Http = new HttpClient(new HttpClientHandler { AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate }) { Timeout = TimeSpan.FromSeconds(20) };
         // Niet te veel tegelijk, TMDB geeft anders 429.
-        private static readonly SemaphoreSlim Gate = new SemaphoreSlim(8, 8);
+        private static readonly SemaphoreSlim Gate = new SemaphoreSlim(12, 12);
         private readonly IJsonSerializer _json;
 
         public TmdbClient(IJsonSerializer json) { _json = json; }
@@ -226,9 +227,95 @@ namespace Emby.Plugins.Discover
             return primary;
         }
 
-        private async Task<TmdbPage> GetMergedSafe(string path, string extra, CancellationToken ct)
+        // ---- Paginacache: dezelfde TMDB-pagina wordt door kanaal en Discover-pagina gedeeld, gelijktijdige
+        // aanvragen wachten op dezelfde download, en een verlopen pagina wordt direct getoond terwijl hij op de
+        // achtergrond ververst wordt. De inhoud is hetzelfde als voorheen, alleen sneller beschikbaar.
+        private sealed class PageEntry
         {
-            try { return await GetMerged(path, extra, ct).ConfigureAwait(false); }
+            public Task<TmdbPage> Task;
+            public DateTime At;
+            public bool Refreshing;
+        }
+
+        private static readonly Dictionary<string, PageEntry> PageCache = new Dictionary<string, PageEntry>();
+        private static readonly TimeSpan PageFresh = TimeSpan.FromMinutes(15);
+        private static readonly TimeSpan PageStale = TimeSpan.FromHours(6);
+
+        private async Task<TmdbPage> GetMergedCached(string path, string extra, CancellationToken ct)
+        {
+            var key = Language() + "|" + path + extra;
+            Task<TmdbPage> task = null;
+            bool startRefresh = false;
+            lock (PageCache)
+            {
+                PageEntry e;
+                if (PageCache.TryGetValue(key, out e))
+                {
+                    var age = DateTime.UtcNow - e.At;
+                    if (!e.Task.IsCompleted)
+                    {
+                        task = e.Task;
+                    }
+                    else if (e.Task.Status == TaskStatus.RanToCompletion && age < PageFresh)
+                    {
+                        task = e.Task;
+                    }
+                    else if (e.Task.Status == TaskStatus.RanToCompletion && age < PageStale)
+                    {
+                        task = e.Task;
+                        if (!e.Refreshing) { e.Refreshing = true; startRefresh = true; }
+                    }
+                }
+                if (task == null)
+                {
+                    // Niet delen met de annulering van een enkele aanvrager: de download mag doorlopen voor de rest.
+                    task = LoadPage(key, path, extra);
+                    PageCache[key] = new PageEntry { Task = task, At = DateTime.UtcNow };
+                    if (PageCache.Count > 400)
+                    {
+                        var old = PageCache.Where(kv => kv.Value.Task.IsCompleted && DateTime.UtcNow - kv.Value.At > PageStale)
+                                           .Select(kv => kv.Key).ToList();
+                        foreach (var k in old) PageCache.Remove(k);
+                    }
+                }
+            }
+            if (startRefresh) { var ignore = RefreshPage(key, path, extra); }
+            ct.ThrowIfCancellationRequested();
+            return await task.ConfigureAwait(false);
+        }
+
+        private async Task<TmdbPage> LoadPage(string key, string path, string extra)
+        {
+            try { return await GetMerged(path, extra, CancellationToken.None).ConfigureAwait(false); }
+            catch
+            {
+                lock (PageCache)
+                {
+                    PageEntry e;
+                    if (PageCache.TryGetValue(key, out e) && e.Task.IsCompleted && e.Task.Status != TaskStatus.RanToCompletion) PageCache.Remove(key);
+                }
+                throw;
+            }
+        }
+
+        private async Task RefreshPage(string key, string path, string extra)
+        {
+            try
+            {
+                var t = GetMerged(path, extra, CancellationToken.None);
+                await t.ConfigureAwait(false);
+                lock (PageCache) { PageCache[key] = new PageEntry { Task = t, At = DateTime.UtcNow }; }
+            }
+            catch (Exception ex)
+            {
+                DiscoverDiagnostics.Add("TMDB " + path + " verversen op de achtergrond mislukt: " + ex.Message);
+                lock (PageCache) { PageEntry e; if (PageCache.TryGetValue(key, out e)) e.Refreshing = false; }
+            }
+        }
+
+        private async Task<TmdbPage> GetMergedSafe(string path, string extra, CancellationToken ct, bool cache = false)
+        {
+            try { return cache ? await GetMergedCached(path, extra, ct).ConfigureAwait(false) : await GetMerged(path, extra, ct).ConfigureAwait(false); }
             catch (Exception ex)
             {
                 if (ex is OperationCanceledException) throw;
@@ -281,7 +368,7 @@ namespace Emby.Plugins.Discover
         {
             string real;
             var extra = ListExtra(path, page, out real);
-            return GetMerged(real, extra, ct);
+            return GetMergedCached(real, extra, ct);
         }
 
         /// <summary>Meerdere pagina's tegelijk, ontdubbeld. Gebruikt door de Discover-pagina.</summary>
@@ -292,7 +379,7 @@ namespace Emby.Plugins.Discover
             {
                 string real;
                 var extra = ListExtra(path, p, out real);
-                tasks.Add(p == firstPage ? GetMerged(real, extra, ct) : GetMergedSafe(real, extra, ct));
+                tasks.Add(p == firstPage ? GetMergedCached(real, extra, ct) : GetMergedSafe(real, extra, ct, true));
             }
             await Task.WhenAll(tasks).ConfigureAwait(false);
             return Dedupe(tasks.Select(t => t.Result));
@@ -348,7 +435,7 @@ namespace Emby.Plugins.Discover
             for (int p = firstPage; p <= lastPage; p++)
             {
                 var extra = "&page=" + p + "&sort_by=popularity.desc" + filter;
-                tasks.Add(p == firstPage ? GetMerged(path, extra, ct) : GetMergedSafe(path, extra, ct));
+                tasks.Add(p == firstPage ? GetMergedCached(path, extra, ct) : GetMergedSafe(path, extra, ct, true));
             }
             await Task.WhenAll(tasks).ConfigureAwait(false);
             var items = Dedupe(tasks.Select(t => t.Result));

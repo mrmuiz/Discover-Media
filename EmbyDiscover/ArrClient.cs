@@ -19,8 +19,10 @@ namespace Emby.Plugins.Discover
     /// <summary>Praat met Radarr (films) en Sonarr v4 (series).</summary>
     internal class ArrClient
     {
-        private static readonly HttpClient Http = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
-        private static readonly TimeSpan CacheTtl = TimeSpan.FromSeconds(60);
+        private static readonly HttpClient Http = new HttpClient(new HttpClientHandler { AutomaticDecompression = System.Net.DecompressionMethods.GZip | System.Net.DecompressionMethods.Deflate }) { Timeout = TimeSpan.FromSeconds(30) };
+        private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(5);
+        private static readonly SemaphoreSlim _movieLock = new SemaphoreSlim(1, 1);
+        private static readonly SemaphoreSlim _seriesLock = new SemaphoreSlim(1, 1);
 
         private static Dictionary<int, bool> _movieCache;
         private static DateTime _movieCacheAt;
@@ -101,7 +103,15 @@ namespace Emby.Plugins.Discover
         public async Task<Dictionary<int, bool>> GetMovieStates(CancellationToken ct)
         {
             if (!RadarrConfigured) return new Dictionary<int, bool>();
-            if (_movieCache != null && DateTime.UtcNow - _movieCacheAt < CacheTtl) return _movieCache;
+            var cachedNow = _movieCache;
+            if (cachedNow != null && DateTime.UtcNow - _movieCacheAt < CacheTtl) return cachedNow;
+
+            // Gelijktijdige aanvragen wachten op één download in plaats van de hele filmlijst meerdere keren op te halen.
+            await _movieLock.WaitAsync(ct).ConfigureAwait(false);
+            try
+            {
+            cachedNow = _movieCache;
+            if (cachedNow != null && DateTime.UtcNow - _movieCacheAt < CacheTtl) return cachedNow;
 
             var cfg = Plugin.GetCurrentConfiguration();
             var text = await Send(HttpMethod.Get, cfg.RadarrUrl, cfg.RadarrApiKey, "/api/v3/movie", null, ct).ConfigureAwait(false);
@@ -112,13 +122,22 @@ namespace Emby.Plugins.Discover
             _movieRecent = list.Where(m => m.tmdbId > 0).Select(m => new RecentEntry { TmdbId = m.tmdbId, HasFile = m.hasFile, Added = m.added }).ToList();
             _movieCache = dict; _movieCacheAt = DateTime.UtcNow;
             return dict;
+            }
+            finally { _movieLock.Release(); }
         }
 
         /// <summary>tmdbId -> true als Sonarr minstens 1 aflevering heeft.</summary>
         public async Task<Dictionary<int, bool>> GetSeriesStates(CancellationToken ct)
         {
             if (!SonarrConfigured) return new Dictionary<int, bool>();
-            if (_seriesCache != null && DateTime.UtcNow - _seriesCacheAt < CacheTtl) return _seriesCache;
+            var cachedNow = _seriesCache;
+            if (cachedNow != null && DateTime.UtcNow - _seriesCacheAt < CacheTtl) return cachedNow;
+
+            await _seriesLock.WaitAsync(ct).ConfigureAwait(false);
+            try
+            {
+            cachedNow = _seriesCache;
+            if (cachedNow != null && DateTime.UtcNow - _seriesCacheAt < CacheTtl) return cachedNow;
 
             var cfg = Plugin.GetCurrentConfiguration();
             var text = await Send(HttpMethod.Get, cfg.SonarrUrl, cfg.SonarrApiKey, "/api/v3/series", null, ct).ConfigureAwait(false);
@@ -143,6 +162,8 @@ namespace Emby.Plugins.Discover
             _seriesRecent = list.Where(x => x.tmdbId > 0).Select(x => new RecentEntry { TmdbId = x.tmdbId, HasFile = x.statistics != null && x.statistics.episodeFileCount > 0, Added = x.added }).ToList();
             _seriesCache = dict; _seriesCacheAt = DateTime.UtcNow;
             return dict;
+            }
+            finally { _seriesLock.Release(); }
         }
 
         /// <summary>Laatst toegevoegde titels in Radarr/Sonarr (nieuwste eerst).</summary>

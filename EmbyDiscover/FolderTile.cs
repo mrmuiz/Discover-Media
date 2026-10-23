@@ -27,6 +27,52 @@ namespace Emby.Plugins.Discover
         // Maximaal twee ffmpeg-processen tegelijk (negen mappen bij de eerste keer openen).
         private static readonly SemaphoreSlim Gate = new SemaphoreSlim(2, 2);
 
+        // Downloads gebeuren buiten de ffmpeg-wachtrij, zodat de twee ffmpeg-plaatsen niet op het netwerk staan te wachten.
+        private static readonly SemaphoreSlim DownloadGate = new SemaphoreSlim(8, 8);
+        // Plaatjes die al op de achtergrond opnieuw gemaakt worden (niet dubbel starten).
+        private static readonly System.Collections.Generic.HashSet<string> Building = new System.Collections.Generic.HashSet<string>();
+
+        private static async Task<string> PreDownload(string url, string dir, string ext, CancellationToken ct)
+        {
+            var tmp = Path.Combine(dir, "dl-" + Guid.NewGuid().ToString("N") + ext);
+            await DownloadGate.WaitAsync(ct).ConfigureAwait(false);
+            try
+            {
+                if (await Download(url, tmp, ct).ConfigureAwait(false)) return tmp;
+            }
+            finally { DownloadGate.Release(); }
+            try { if (File.Exists(tmp)) File.Delete(tmp); } catch { }
+            return null;
+        }
+
+        /// <summary>Nieuwste bestaande versie van hetzelfde plaatje (andere achtergrond), of null.</summary>
+        private static string FindStale(string dir, string pattern, string final)
+        {
+            try
+            {
+                FileInfo best = null;
+                foreach (var f in Directory.GetFiles(dir, pattern))
+                {
+                    if (string.Equals(f, final, StringComparison.OrdinalIgnoreCase)) continue;
+                    var fi = new FileInfo(f);
+                    if (fi.Length > 0 && (best == null || fi.LastWriteTimeUtc > best.LastWriteTimeUtc)) best = fi;
+                }
+                return best == null ? null : best.FullName;
+            }
+            catch { return null; }
+        }
+
+        private static void RebuildInBackground(string final, Func<Task<string>> make)
+        {
+            lock (Building) { if (!Building.Add(final)) return; }
+            Task.Run(async () =>
+            {
+                try { await make().ConfigureAwait(false); }
+                catch (Exception ex) { DiscoverDiagnostics.Add("plaatje op de achtergrond vernieuwen mislukt: " + ex.Message); }
+                finally { lock (Building) { Building.Remove(final); } }
+            });
+        }
+
         private static HttpClient CreateHttp()
         {
             var c = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
@@ -35,7 +81,7 @@ namespace Emby.Plugins.Discover
         }
 
         /// <summary>Geeft het pad van het plaatje (uit de bewaarde bestanden of net gemaakt), of null als het niet lukt.</summary>
-        public static async Task<string> Create(string key, string text, string backgroundUrl, CancellationToken ct, string fallbackColor = null)
+        public static async Task<string> Create(string key, string text, string backgroundUrl, CancellationToken ct, string fallbackColor = null, bool allowStale = true)
         {
             try
             {
@@ -54,6 +100,22 @@ namespace Emby.Plugins.Discover
                 var final = Path.Combine(dir, string.Format("tile-{0}-{1}-v{2}.jpg", key, Hash(text + "|" + backgroundUrl + "|" + fallbackColor), TileVersion));
                 if (File.Exists(final) && new FileInfo(final).Length > 0) return final;
 
+                // Is er al een eerder plaatje van deze tegel, toon dat dan meteen en maak het nieuwe op de achtergrond.
+                if (allowStale)
+                {
+                    var stale = FindStale(dir, "tile-" + key + "-????????-v" + TileVersion + ".jpg", final);
+                    if (stale != null)
+                    {
+                        RebuildInBackground(final, () => Create(key, text, backgroundUrl, CancellationToken.None, fallbackColor, false));
+                        return stale;
+                    }
+                }
+
+                string pre = null;
+                if (!string.IsNullOrEmpty(backgroundUrl))
+                    pre = await PreDownload(backgroundUrl, dir, ".jpg", ct).ConfigureAwait(false);
+                try
+                {
                 await Gate.WaitAsync(ct).ConfigureAwait(false);
                 try
                 {
@@ -64,9 +126,10 @@ namespace Emby.Plugins.Discover
                     try
                     {
                         var input = string.Empty;
-                        if (!string.IsNullOrEmpty(backgroundUrl) &&
-                            await Download(backgroundUrl, Path.Combine(work, "bg.jpg"), ct).ConfigureAwait(false))
+                        if (pre != null)
                         {
+                            File.Move(pre, Path.Combine(work, "bg.jpg"));
+                            pre = null;
                             input = "-i bg.jpg";
                         }
                         else if (!string.IsNullOrEmpty(fallbackColor))
@@ -142,6 +205,8 @@ namespace Emby.Plugins.Discover
                     return final;
                 }
                 finally { Gate.Release(); }
+                }
+                finally { if (pre != null) { try { File.Delete(pre); } catch { } } }
             }
             catch (Exception ex)
             {
@@ -156,7 +221,7 @@ namespace Emby.Plugins.Discover
         /// van 1280x720, met de tegelnaam onder het logo. Geeft het pad van het PNG-bestand, of null als het niet lukt
         /// (dan gebruikt het kanaal het logo zoals het is).
         /// </summary>
-        public static async Task<string> CreateLogo(string key, string logoUrl, string text, CancellationToken ct)
+        public static async Task<string> CreateLogo(string key, string logoUrl, string text, CancellationToken ct, bool allowStale = true)
         {
             try
             {
@@ -170,6 +235,20 @@ namespace Emby.Plugins.Discover
                 var final = Path.Combine(dir, string.Format("logo-{0}-{1}-v{2}.png", key, Hash((addText ? text : "") + "|" + logoUrl), TileVersion));
                 if (File.Exists(final) && new FileInfo(final).Length > 0) return final;
 
+                if (allowStale)
+                {
+                    var stale = FindStale(dir, "logo-" + key + "-????????-v" + TileVersion + ".png", final);
+                    if (stale != null)
+                    {
+                        RebuildInBackground(final, () => CreateLogo(key, logoUrl, text, CancellationToken.None, false));
+                        return stale;
+                    }
+                }
+
+                var pre = await PreDownload(logoUrl, dir, ".png", ct).ConfigureAwait(false);
+                if (pre == null) return null;
+                try
+                {
                 await Gate.WaitAsync(ct).ConfigureAwait(false);
                 try
                 {
@@ -179,7 +258,8 @@ namespace Emby.Plugins.Discover
                     Directory.CreateDirectory(work);
                     try
                     {
-                        if (!await Download(logoUrl, Path.Combine(work, "logo.png"), ct).ConfigureAwait(false)) return null;
+                        File.Move(pre, Path.Combine(work, "logo.png"));
+                        pre = null;
 
                         // Passend maken binnen 1000x400 (met ruime marge rondom) op een doorzichtig vlak van 1280x720.
                         var args = "-y -hide_banner -loglevel error -i logo.png -vf \"format=rgba,scale=1000:400:force_original_aspect_ratio=decrease," +
@@ -217,6 +297,8 @@ namespace Emby.Plugins.Discover
                     return final;
                 }
                 finally { Gate.Release(); }
+                }
+                finally { if (pre != null) { try { File.Delete(pre); } catch { } } }
             }
             catch (Exception ex)
             {

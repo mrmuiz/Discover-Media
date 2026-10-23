@@ -2,6 +2,12 @@
 
 Release notes per version (in Dutch; the project started as a private build). Newest first.
 
+## Snelheid (zonder zichtbare wijzigingen)
+- TMDB-pagina's worden gedeeld tussen kanaal en Discover-pagina, gelijktijdige aanvragen wachten op dezelfde download, en een verlopen pagina wordt direct getoond terwijl hij op de achtergrond ververst wordt (15 min vers, daarna tot 6 uur direct tonen).
+- Lijst en Radarr/Sonarr-status worden tegelijk opgehaald; de status wordt 5 minuten bewaard (direct vernieuwd na een aanvraag) en wordt bij gelijktijdige aanvragen maar één keer opgehaald.
+- Mapplaatjes en logo's: een bestaand plaatje wordt direct getoond terwijl het nieuwe op de achtergrond gemaakt wordt; downloads gebeuren buiten de ffmpeg-wachtrij.
+- gzip aan voor TMDB, Radarr en Sonarr; 12 gelijktijdige TMDB-calls i.p.v. 8.
+
 ## Version 1.0 beta
 - **Studio- en netwerklogo's**: elk logo staat nu volledig (niets afgesneden) midden in een liggende tegel, in één kleur: paars, of zwart voor logo's die als kaal paars vlak zouden eindigen (ABC, AMC, 20th Century, Cartoon Network, Paramount, Marvel, DreamWorks). Zonder ffmpeg valt het terug op het logo zoals het was.
 - **Mappen** van het Discover-kanaal: geen ▶, vinkje, puntjes of selectiecirkel meer op de tegels, en geen Afspelen/Willekeurig bovenaan een map. Een map afspelen startte alle titels erin en deed daardoor aanvragen.
