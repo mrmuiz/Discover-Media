@@ -13,7 +13,8 @@ namespace Emby.Plugins.Discover
     public class ArrRootDto { public string path { get; set; } }
     public class RadarrMovieDto { public int id { get; set; } public int tmdbId { get; set; } public bool hasFile { get; set; } public string added { get; set; } }
     public class SonarrStatsDto { public int episodeFileCount { get; set; } public int episodeCount { get; set; } }
-    public class SonarrSeriesDto { public int id { get; set; } public int tmdbId { get; set; } public int tvdbId { get; set; } public string added { get; set; } public SonarrStatsDto statistics { get; set; } }
+    public class SonarrSeasonDto { public int seasonNumber { get; set; } public bool monitored { get; set; } public SonarrStatsDto statistics { get; set; } }
+    public class SonarrSeriesDto { public int id { get; set; } public int tmdbId { get; set; } public int tvdbId { get; set; } public string added { get; set; } public SonarrStatsDto statistics { get; set; } public List<SonarrSeasonDto> seasons { get; set; } }
     public class RecentEntry { public int TmdbId { get; set; } public bool HasFile { get; set; } public string Added { get; set; } }
 
     /// <summary>Praat met Radarr (films) en Sonarr v4 (series).</summary>
@@ -28,6 +29,8 @@ namespace Emby.Plugins.Discover
         private static DateTime _movieCacheAt;
         private static Dictionary<int, bool> _seriesCache;
         private static DateTime _seriesCacheAt;
+        private static Dictionary<int, Dictionary<int, SonarrSeasonDto>> _seriesSeasonCache =
+            new Dictionary<int, Dictionary<int, SonarrSeasonDto>>();
         private static HashSet<int> _seriesTvdbIds = new HashSet<int>();
         private static HashSet<int> _seriesPartial = new HashSet<int>();
 
@@ -144,6 +147,7 @@ namespace Emby.Plugins.Discover
             var list = _json.DeserializeFromString<List<SonarrSeriesDto>>(text) ?? new List<SonarrSeriesDto>();
 
             var dict = new Dictionary<int, bool>();
+            var seasonStates = new Dictionary<int, Dictionary<int, SonarrSeasonDto>>();
             var tvdbIds = new HashSet<int>();
             var partial = new HashSet<int>();
             int noTmdb = 0;
@@ -151,6 +155,15 @@ namespace Emby.Plugins.Discover
             {
                 if (s.tvdbId > 0) tvdbIds.Add(s.tvdbId);
                 if (s.tmdbId > 0) dict[s.tmdbId] = s.statistics != null && s.statistics.episodeFileCount > 0;
+                if (s.tmdbId > 0 && s.seasons != null)
+                {
+                    var byNumber = new Dictionary<int, SonarrSeasonDto>();
+                    foreach (var season in s.seasons)
+                    {
+                        if (season != null && season.seasonNumber > 0) byNumber[season.seasonNumber] = season;
+                    }
+                    seasonStates[s.tmdbId] = byNumber;
+                }
                 if (s.tmdbId > 0 && s.statistics != null && s.statistics.episodeFileCount > 0 &&
                     s.statistics.episodeFileCount < s.statistics.episodeCount) partial.Add(s.tmdbId);
                 else noTmdb++;
@@ -158,12 +171,29 @@ namespace Emby.Plugins.Discover
             if (noTmdb > 0)
                 DiscoverDiagnostics.Add("Sonarr: " + noTmdb + " serie(s) zonder tmdbId, die krijgen geen status op de Discover-pagina (ververs ze in Sonarr).");
             _seriesTvdbIds = tvdbIds;
-            lock (_seriesCacheLock) { _seriesPartial = partial; }
+            lock (_seriesCacheLock)
+            {
+                _seriesPartial = partial;
+                _seriesSeasonCache = seasonStates;
+            }
             _seriesRecent = list.Where(x => x.tmdbId > 0).Select(x => new RecentEntry { TmdbId = x.tmdbId, HasFile = x.statistics != null && x.statistics.episodeFileCount > 0, Added = x.added }).ToList();
             _seriesCache = dict; _seriesCacheAt = DateTime.UtcNow;
             return dict;
             }
             finally { _seriesLock.Release(); }
+        }
+
+        public async Task<Dictionary<int, SonarrSeasonDto>> GetSeasonStates(int tmdbId, CancellationToken ct)
+        {
+            if (!SonarrConfigured) return new Dictionary<int, SonarrSeasonDto>();
+            await GetSeriesStates(ct).ConfigureAwait(false);
+            lock (_seriesCacheLock)
+            {
+                Dictionary<int, SonarrSeasonDto> states;
+                return _seriesSeasonCache.TryGetValue(tmdbId, out states)
+                    ? new Dictionary<int, SonarrSeasonDto>(states)
+                    : new Dictionary<int, SonarrSeasonDto>();
+            }
         }
 
         /// <summary>Laatst toegevoegde titels in Radarr/Sonarr (nieuwste eerst).</summary>
@@ -177,6 +207,7 @@ namespace Emby.Plugins.Discover
         {
             _movieCache = null;
             _seriesCache = null;
+            lock (_seriesCacheLock) { _seriesSeasonCache = new Dictionary<int, Dictionary<int, SonarrSeasonDto>>(); }
         }
 
         // ---------- Aanvragen ----------
@@ -237,28 +268,45 @@ namespace Emby.Plugins.Discover
             var profile = await ResolveProfile(cfg.SonarrUrl, cfg.SonarrApiKey, cfg.SonarrQualityProfileId, ct).ConfigureAwait(false);
             var root = await ResolveRoot(cfg.SonarrUrl, cfg.SonarrApiKey, cfg.SonarrRootFolder, ct).ConfigureAwait(false);
 
-            string monitor;
+            string addOptions;
             string seasonsJson = null;
             if (seasons == null || seasons.Length == 0)
             {
-                monitor = "all";
+                addOptions = "{\"monitor\":\"all\",\"searchForMissingEpisodes\":true}";
             }
             else
             {
-                // Specifieke seizoenen: monitor=none + seasons-array met monitored true/false.
-                // Sonarr v4 accepteert seasons bij add; niet-opgegeven seizoenen blijven unmonitored.
-                monitor = "none";
+                // Specifieke seizoenen: de seasons-array bepaalt wat gemonitord wordt. Geen addOptions.monitor meesturen:
+                // "none" zet na het toevoegen alle seizoenen weer op niet-gemonitord, waardoor Sonarr niets downloadt.
+                // Alle seizoenen van Sonarr worden meegestuurd (gekozen = true, rest = false), zodat de rest ook echt uit blijft.
+                var selected = new HashSet<int>(seasons);
+                var all = new SortedSet<int>(selected);
+                try
+                {
+                    var lookupText = await Send(HttpMethod.Get, cfg.SonarrUrl, cfg.SonarrApiKey,
+                        "/api/v3/series/lookup?term=tvdb%3A" + tvdbId, null, ct).ConfigureAwait(false);
+                    var lookup = _json.DeserializeFromString<List<SonarrSeriesDto>>(lookupText);
+                    var found = lookup == null ? null : lookup.FirstOrDefault(x => x.tvdbId == tvdbId) ?? lookup.FirstOrDefault();
+                    if (found != null && found.seasons != null)
+                        foreach (var sn in found.seasons) all.Add(sn.seasonNumber);
+                }
+                catch (Exception ex)
+                {
+                    if (ex is OperationCanceledException) throw;
+                    DiscoverDiagnostics.Add("Sonarr seizoenen opzoeken mislukt (alleen gekozen seizoenen meegestuurd): " + ex.Message);
+                }
                 var parts = new List<string>();
-                foreach (var n in seasons.Distinct().OrderBy(x => x))
-                    parts.Add("{\"seasonNumber\":" + n + ",\"monitored\":true}");
+                foreach (var n in all)
+                    parts.Add("{\"seasonNumber\":" + n + ",\"monitored\":" + (selected.Contains(n) ? "true" : "false") + "}");
                 seasonsJson = "[" + string.Join(",", parts) + "]";
+                addOptions = "{\"searchForMissingEpisodes\":true}";
             }
 
             var body = "{\"title\":\"" + Esc(title) + "\",\"tvdbId\":" + tvdbId +
                        ",\"qualityProfileId\":" + profile + ",\"rootFolderPath\":\"" + Esc(root) + "\"" +
                        ",\"monitored\":true,\"seasonFolder\":true,\"seriesType\":\"standard\"" +
                        (seasonsJson != null ? ",\"seasons\":" + seasonsJson : "") +
-                       ",\"addOptions\":{\"monitor\":\"" + monitor + "\",\"searchForMissingEpisodes\":true}}";
+                       ",\"addOptions\":" + addOptions + "}";
 
             await Send(HttpMethod.Post, cfg.SonarrUrl, cfg.SonarrApiKey, "/api/v3/series", body, ct).ConfigureAwait(false);
             InvalidateCaches();

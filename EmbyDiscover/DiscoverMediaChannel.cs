@@ -28,13 +28,14 @@ namespace Emby.Plugins.Discover
         private const string AskRoot = "ask16root";
         private const string AskItemPrefix = "ask16item:";   // versioned folder identity to avoid stale cached children
         private const string AskTvItemPrefix = "ask21tvitem:"; // refresh filtered series lists, not movie folders
-        private const string AskSeasonFolderPrefix = "ask19seasons:"; // refresh season folder cache after label/order changes
+        private const string AskSeasonFolderPrefix = "ask22seasons:"; // new ID so Emby re-reads the season list and its images
         private const string LegacyAskSeasonFolderPrefix = "ask18seasons:"; // keep previously cached season folders working
+        private const string LegacyAskSeasonFolderPrefix2 = "ask19seasons:"; // idem
         private const string AskListPrefix = "ask16list:";
         private const string AskGenrePrefix = "ask16genres:";   // map met genretegels (movie of tv)
         private const string AskStudioRoot = "ask16studios";       // map met studio- en netwerktegels
         internal const string AskPrefix = "ask16:";           // het aanvraagitem zelf
-        internal const string AskSeasonPrefix = "ask20season:"; // seizoenaanvraagitems
+        internal const string AskSeasonPrefix = "ask22season:"; // seizoenaanvraagitems
         private const string TrailerPrefix = "tr10:";         // het trailer-item naast het aanvraagitem
 
         private readonly TmdbClient _tmdb;
@@ -58,7 +59,7 @@ namespace Emby.Plugins.Discover
         public string HomePageUrl => "";
 
         // Ophogen als Emby oude (bewaarde) kanaalinhoud blijft tonen.
-        public string DataVersion => "67";
+        public string DataVersion => "68";
         public ChannelParentalRating ParentalRating => ChannelParentalRating.GeneralAudience;
         public bool IsEnabledFor(string userId) => true;
 
@@ -119,6 +120,7 @@ namespace Emby.Plugins.Discover
                 else if (id.StartsWith(AskTvItemPrefix)) { var two = await RequestItems(id.Substring(AskTvItemPrefix.Length), ct).ConfigureAwait(false); res = new ChannelItemResult { Items = two, TotalRecordCount = two.Count }; }
                 else if (id.StartsWith(AskItemPrefix)) { var two = await RequestItems(id.Substring(AskItemPrefix.Length), ct).ConfigureAwait(false); res = new ChannelItemResult { Items = two, TotalRecordCount = two.Count }; }
                 else if (id.StartsWith(AskSeasonFolderPrefix)) res = await RequestSeasons(id.Substring(AskSeasonFolderPrefix.Length), ct).ConfigureAwait(false);
+                else if (id.StartsWith(LegacyAskSeasonFolderPrefix2)) res = await RequestSeasons(id.Substring(LegacyAskSeasonFolderPrefix2.Length), ct).ConfigureAwait(false);
                 else if (id.StartsWith(LegacyAskSeasonFolderPrefix)) res = await RequestSeasons(id.Substring(LegacyAskSeasonFolderPrefix.Length), ct).ConfigureAwait(false);
                 else if (id.StartsWith(AskGenrePrefix)) res = await GenreTiles(id.Substring(AskGenrePrefix.Length) == "tv", ct).ConfigureAwait(false);
                 else if (id == AskStudioRoot) res = await StudioTiles(ct).ConfigureAwait(false);
