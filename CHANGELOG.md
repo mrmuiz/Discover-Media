@@ -2,6 +2,131 @@
 
 Release notes per version (in Dutch; the project started as a private build). Newest first.
 
+## Version 1.0.40.0-beta
+- Trailer-afspelen speelt nooit meer de "Aangevraagd"-bevestigingsclip af. Is er geen trailer of lukt het ophalen niet, dan meldt Emby een eerlijke fout en wordt er niets aangevraagd of gecachet.
+- Trailer zoeken is robuuster: ook Engelse en taalloze TMDB-video's, bij series ook de video's van seizoen 1, met een nieuwe poging bij een tijdelijke TMDB-fout. Fouten staan in de diagnose.
+- Het driepuntjesmenu (en de hover-knoppen) verdwijnt van de aanvraag-/trailertegels in de kanaallijst.
+
+## Version 1.0.38.0-beta
+- Bevestigingsclip heeft nu een staand posterformaat; tekst, poster, status en overige informatie blijven behouden.
+- Seizoensdetailpagina toont onder de poster een donkerblauwe serie-informatiekaart met beschikbare TMDB-gegevens.
+- Studio- en netwerklogo's zijn wit in plaats van paars; versiegebonden afbeeldingscache en kanaalcache vernieuwd.
+- Aanvraag-/trailertegels krijgen direct hun vaste verhouding zonder handmatig verversen. Ontbrekende hoofdcategorie- en genreafbeeldingen krijgen een kleurfallback.
+
+## Version 1.0.37.111-beta
+- Forceer een vaste 16:9-verhouding voor herkende aanvraag-/trailertegels en 2:3 voor seizoenposters, zodat de verhouding ook klopt bij navigeren zonder volledige browserverversing.
+
+## Version 1.0.37.110-beta
+- Ontbrekende seizoenbeschrijvingen worden waar mogelijk aangevuld vanuit TMDB in het Engels, zonder bestaande vertaalde beschrijvingen te overschrijven.
+- Hoofdcategorieën krijgen een effen kleurtegel als TMDB geen achtergrond heeft; achtergrondtegels worden opnieuw opgehaald als ze eerder leeg zijn gecachet.
+- DataVersion 66 ververst eenmalig de gecachete kanaalitems zodat de bijgewerkte tegelafbeeldingen zichtbaar worden.
+
+## Version 1.0.37.109-beta
+- De statuscontrole herkent het kanaal ook onder de bestaande Emby-naam "Films & Series Aanvragen" en gebruikt die herkenning ook voor de gebruikertoegang.
+
+## Version 1.0.37.108-beta
+- Genrenamen op tegels en in de Discover-pagina volgen nu de ingestelde plugin-taal (Nederlands, Engels of Duits), ook als TMDB de genrelabels in een andere taal terugstuurt.
+- De genretegels worden bij het openen vernieuwd, zodat vertaalde namen en afbeeldingen niet op oude cache-inhoud blijven hangen.
+
+## Version 1.0.37.107-beta
+- De Sonarr-zandloper staat na de seizoentitel, zodat het sorteren op titel met "Seizoen N" begint en seizoen 14 niet voor seizoen 1 komt.
+- De webclient behoudt de zandloper vóór het zichtbare seizoennummer.
+
+## Version 1.0.37.106-beta
+- Seizoentegels heten nu kort "Seizoen N" en worden in de webclient op seizoenummer gesorteerd, ongeacht de statusicoontjes.
+- De seizoenselectormap heeft een nieuwe cache-ID; overige kanaallijsten worden niet onnodig ververst.
+
+## Version 1.0.37.105-beta
+- Seizoentegels worden herkend aan "Aanvragen Seizoen N", zodat de afspeelknop en het driepuntjesmenu echt verdwijnen.
+- Een vinkje verschijnt zodra Emby minstens één aflevering van het seizoen bevat; een zandloper verschijnt als Sonarr het seizoen volgt of er al afleveringen van heeft geïmporteerd.
+
+## Version 1.0.37.104-beta
+- Afspeelknop en driepuntjesmenu verdwijnen van de seizoensaanvraagposters; de poster blijft aanklikbaar om de seizoenpagina te openen.
+
+## Version 1.0.37.103-beta
+- Seizoenpagina's verbergen metadata-kopjes ook wanneer Emby de tekst in geneste elementen plaatst; de seizoensbeschrijving blijft behouden.
+
+## Version 1.0.37.102-beta
+- Seizoenaanvraagpagina's herkennen de seizoenitems ook zonder kanaalmetadata: de knop toont "Aanvragen".
+- Seizoensbeschrijvingen worden volledig getoond; "Over", "Links" en "Media informatie" worden op die pagina verborgen.
+- De gele diagnose-overlay toont een startmelding wanneer diagnose is ingeschakeld.
+
+## Version 1.0.37.101-beta
+- De webclient forceert nu ook beschrijvingsblokken met hoofdlettergevoelige Emby-klassen open en verbergt de knop "Meer" zonder die te openen.
+
+## Version 1.0.37.100-beta
+- Seizoensbeschrijvingen blijven zichtbaar: de algemene aanvraagpagina-verwerking verborg eerder het volledige blok "Over" op seizoenitems.
+- De webclient toont op seizoenaanvraagpagina's de volledige tekst en verbergt alleen de knop "Meer".
+
+## Version 1.0.37.99-beta
+- Seizoenaanvraagpagina's in de Emby-webclient herkennen nu de titel "Aanvragen Seizoen N", zodat de volledige beschrijving standaard zichtbaar is zonder op "Meer" te klikken.
+
+## Version 1.0.37.98-beta
+- Seizoenaanvragen gebruiken de staande TMDB-seizoensposter rechtstreeks, zonder extra tekst over de afbeelding heen.
+- Bijgewerkt naar de nieuwste gepubliceerde Emby-SDK-package: `MediaBrowser.Server.Core` 4.11.0.5-beta6.
+
+## Version 1.0.37.97-beta
+- TMDB-serielijsten tonen alleen series waarvan het land van oorsprong Nederland of de Verenigde Staten is; toegepast op de aanvraaglijst, genres/netwerken en Discover-overzichten.
+
+## Version 1.0.37.96-beta
+- Seizoenitems gebruiken weer de rechtstreekse TMDB-poster-URL; lokale gerenderde bestandspaden werden door Emby niet als afbeelding getoond op media-items.
+- Seizoenitem-ID's vernieuwd zodat Emby de oude lege postergegevens niet hergebruikt.
+
+## Version 1.0.37.95-beta
+- Seizoenposters worden volledig en zonder uitsnijden in de liggende Emby-tegel geplaatst, met een onscherpe vulling aan de zijkanten; `Seizoen N` blijft als tekst zichtbaar.
+- Als de poster of ffmpeg niet beschikbaar is, valt de tegel terug op de oorspronkelijke seizoensposter.
+
+## Version 1.0.37.94-beta
+- Ververst de ID van alleen de aanvraagmappen voor series, zodat Emby de nieuwe directe seizoenaanvraagitems ophaalt uit zijn cache; film- en rootlijst-ID's en DataVersion blijven gelijk.
+
+## Version 1.0.37.93-beta
+- Seizoenstegels zijn directe aanvraagitems met de naam **Aanvragen Seizoen N** en `Seizoen N` op de afbeelding; de extra aanvraagtegel blijft weg.
+- Nieuwe seizoens-ID's verversen alleen deze seizoenitems. De algemene kanaal-ID's en DataVersion blijven ongewijzigd.
+
+## Version 1.0.37.92-beta
+- Seizoentegels zijn nu direct aanvraagitems (`Aanvragen seizoen N`); de extra aanvraagtegel/map is verwijderd.
+- Tegelafbeeldingen tonen `Seizoen N` over TMDB-seizoensartwork; detailuitleg bevat het aantal afleveringen en TMDB-seizoensbeschrijving waar beschikbaar.
+- Alleen de seizoensroute-ID's zijn vernieuwd; overige kanaal-ID's en DataVersion blijven ongewijzigd.
+
+## Version 1.0.37.91-beta
+- De seriecategorieën staan nu vóór de filmcategorieën in de kanaalroot, zodat Emby ze eerst ophaalt bij een kanaalverversing.
+- Bestaande kanaal-ID's en DataVersion blijven ongewijzigd om onnodige cache-invalidatie te vermijden.
+
+## Version 1.0.37.90-beta
+- Correcte opvolgende versietag voor de directe seizoenindeling: **Aanvragen: <serie>** toont direct seizoenmappen; **Trailer: <serie>** blijft staan. Elke seizoenmap bevat één aanvraagitem voor dat seizoen.
+- Nieuwe browser-scriptversie; seizoenmappen tonen in deze build de serieachtergrond zonder tekst-overlay.
+
+## Version 1.0.37.88-beta
+- De map **Aanvragen: <serie>** opent direct de seizoenmappen; er is geen tussenmap **Per seizoen** of aanvraagitem voor de hele serie. Seizoentegels gebruiken de serieachtergrond zonder tekst-overlay; elke map bevat één aanvraagitem voor alleen dat seizoen.
+- Kanaal-ID's zijn `ask16...` en DataVersion is 65 om eerder bewaarde kanaalitems te verversen.
+
+## Version 1.0.37.87-beta
+- Per-serieaanvraagmap blijft de enige aanvraagmap naast Trailer; daarbinnen staan directe mappen `Seizoen 1`, `Seizoen 2`, enzovoort. Seizoentegels gebruiken dezelfde achtergrond als de serie met `Seizoen N` als tekstoverlay; bestaande FolderTile-cache en fallback blijven van toepassing. Elke seizoenmap bevat één `Aanvragen`-item voor dat seizoen.
+- Nieuwe `ask14`-ID's en DataVersion 63 zorgen voor verse kanaalitems na de structuur- en afbeeldingwijziging.
+
+## Version 1.0.37.86-beta
+- Seizoentegels heten kort **Seizoen 1**, **Seizoen 2**, enzovoort; geen serie- of afleveringsnamen op de tegels.
+- Nieuwe `ask13`-ID's en DataVersion 62 zorgen dat de gewijzigde tegelbenamingen niet onder de eerder gebruikte cache-identiteit blijven staan.
+
+## Version 1.0.37.85-beta
+- In de serie-aanvraagmap is de aparte volledige-serie-aanvraagtegel vervangen door de map **Aanvragen: <titel>**. Deze bevat rechtstreeks één genummerde map per regulier seizoen (`1`, `2`, `3`, ...); elke map bevat precies één item **Aanvragen** voor dat seizoen.
+- Nieuwe `ask12`-map- en seizoens-ID's plus DataVersion 61 voorkomen dat Emby de eerder gecachte reeks-/afleveringsinhoud onder dezelfde mapidentiteit blijft tonen.
+
+## Version 1.0.37.84-beta
+- De seizoenskeuze in de webclient selecteert standaard geen seizoenen; je moet expliciet minimaal één seizoen aanvinken voordat er een aanvraag wordt verzonden.
+
+## Version 1.0.37.83-beta
+- In de browser wordt, wanneer beide kanaalitems met dezelfde titel en bovenliggende map zijn bevestigd, de losse **Aanvragen**-tegel verborgen en de **Trailer**-tegel hernoemd naar **Aanvragen**. Op de detailpagina heet Afspelen **Trailer**; de bestaande gele knop biedt de seizoenskeuze.
+- Dit verandert geen kanaalitems of native apps: daar blijven Trailer, volledige Aanvragen en de map Per seizoen beschikbaar. De Trailer wordt afgespeeld via de Emby-speler, niet als iframe.
+
+## Version 1.0.37.82-beta
+- In de serie-aanvraagmap staat nu **Per seizoen**. Daarin staat één map per seizoen, met daarin één afspeelbaar item dat alleen dat seizoen aanvraagt.
+- De bestaande items **Trailer** en **Aanvragen** (alle seizoenen) blijven ongewijzigd. Kanaalmappen hebben nieuwe ID's gekregen om oude bewaarde inhoud niet te hergebruiken.
+
+## Version 1.0.37.80-beta
+- Bij de bevestigingsclip worden TMDB-extra-info en Radarr/Sonarr-status nu tegelijk opgehaald; de wachttijd is niet meer de optelsom van beide onafhankelijke verzoeken.
+- De clip blijft liggend voor alle clients: Emby's media-info-callback geeft geen client- of apparaatgegevens door om veilig alleen mobiele browsers een staande versie te tonen.
+
 ## Snelheid (zonder zichtbare wijzigingen)
 - TMDB-pagina's worden gedeeld tussen kanaal en Discover-pagina, gelijktijdige aanvragen wachten op dezelfde download, en een verlopen pagina wordt direct getoond terwijl hij op de achtergrond ververst wordt (15 min vers, daarna tot 6 uur direct tonen).
 - Lijst en Radarr/Sonarr-status worden tegelijk opgehaald; de status wordt 5 minuten bewaard (direct vernieuwd na een aanvraag) en wordt bij gelijktijdige aanvragen maar één keer opgehaald.
