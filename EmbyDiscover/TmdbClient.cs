@@ -27,6 +27,7 @@ namespace Emby.Plugins.Discover
         public string original_title { get; set; }
         public string original_name { get; set; }
         public string original_language { get; set; }
+        public List<string> origin_country { get; set; }
         public string overview { get; set; }
         public string poster_path { get; set; }
         public string release_date { get; set; }
@@ -114,6 +115,8 @@ namespace Emby.Plugins.Discover
         public string name { get; set; }
         public int episode_count { get; set; }
         public string air_date { get; set; }
+        public string overview { get; set; }
+        public string poster_path { get; set; }
     }
 
     public class TmdbTvDetail : TmdbItem
@@ -121,6 +124,18 @@ namespace Emby.Plugins.Discover
         public int number_of_seasons { get; set; }
         public int number_of_episodes { get; set; }
         public List<TmdbSeasonBrief> seasons { get; set; }
+    }
+
+    public class TmdbWatchProviders
+    {
+        public Dictionary<string, TmdbWatchProviderCountry> results { get; set; }
+    }
+
+    public class TmdbWatchProviderCountry
+    {
+        public List<TmdbNamed> flatrate { get; set; }
+        public List<TmdbNamed> free { get; set; }
+        public List<TmdbNamed> ads { get; set; }
     }
 
     public class TmdbGenre { public int id { get; set; } public string name { get; set; } }
@@ -147,6 +162,12 @@ namespace Emby.Plugins.Discover
             string.IsNullOrEmpty(posterPath) ? null : "https://image.tmdb.org/t/p/w500" + posterPath;
 
         internal static string Language() => DiscoverLanguage.TmdbLanguage;
+
+        internal static bool IsDutchOrUsTv(TmdbItem item) =>
+            item?.origin_country != null &&
+            item.origin_country.Any(country =>
+                string.Equals(country, "NL", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(country, "US", StringComparison.OrdinalIgnoreCase));
 
         private async Task<T> Get<T>(string path, string extra, string language, CancellationToken ct)
         {
@@ -507,9 +528,11 @@ namespace Emby.Plugins.Discover
         {
             var lang = Language();
             var item = await Get<TmdbTvDetail>("/tv/" + id, "", lang, ct).ConfigureAwait(false);
-            if (item != null &&
+            bool missingSeasonOverview = item?.seasons != null &&
+                item.seasons.Any(season => season != null && string.IsNullOrWhiteSpace(season.overview));
+            if (item != null && !string.Equals(lang, FallbackLanguage, StringComparison.OrdinalIgnoreCase) &&
                 (string.IsNullOrWhiteSpace(item.overview) || string.IsNullOrWhiteSpace(item.poster_path) ||
-                 string.IsNullOrWhiteSpace(item.name)))
+                 string.IsNullOrWhiteSpace(item.name) || missingSeasonOverview))
             {
                 try
                 {
@@ -520,6 +543,19 @@ namespace Emby.Plugins.Discover
                         if (string.IsNullOrWhiteSpace(item.poster_path)) item.poster_path = fb.poster_path;
                         if (string.IsNullOrWhiteSpace(item.name)) item.name = fb.name;
                         if (item.seasons == null || item.seasons.Count == 0) item.seasons = fb.seasons;
+                        else if (fb.seasons != null)
+                        {
+                            foreach (var season in item.seasons)
+                            {
+                                if (season == null) continue;
+                                var fallbackSeason = fb.seasons.FirstOrDefault(candidate =>
+                                    candidate != null && candidate.season_number == season.season_number);
+                                if (fallbackSeason == null) continue;
+                                if (string.IsNullOrWhiteSpace(season.overview)) season.overview = fallbackSeason.overview;
+                                if (string.IsNullOrWhiteSpace(season.poster_path)) season.poster_path = fallbackSeason.poster_path;
+                                if (string.IsNullOrWhiteSpace(season.name)) season.name = fallbackSeason.name;
+                            }
+                        }
                         if (item.number_of_seasons == 0) item.number_of_seasons = fb.number_of_seasons;
                     }
                 }
@@ -528,44 +564,129 @@ namespace Emby.Plugins.Discover
             return item;
         }
 
+        public async Task<TmdbSeasonBrief> GetTvSeasonDetail(int id, int seasonNumber, CancellationToken ct)
+        {
+            var path = "/tv/" + id + "/season/" + seasonNumber;
+            var lang = Language();
+            TmdbSeasonBrief item = null;
+            try { item = await Get<TmdbSeasonBrief>(path, "", lang, ct).ConfigureAwait(false); }
+            catch (Exception ex)
+            {
+                if (ex is OperationCanceledException) throw;
+                DiscoverDiagnostics.Add("TMDB seizoensbeschrijving " + id + "/s" + seasonNumber + " (" + lang + ") mislukt: " + ex.Message);
+            }
+
+            if (!string.Equals(lang, FallbackLanguage, StringComparison.OrdinalIgnoreCase) &&
+                string.IsNullOrWhiteSpace(item?.overview))
+            {
+                try
+                {
+                    var fallback = await Get<TmdbSeasonBrief>(path, "", FallbackLanguage, ct).ConfigureAwait(false);
+                    if (fallback != null)
+                    {
+                        if (item == null) item = fallback;
+                        else
+                        {
+                            if (string.IsNullOrWhiteSpace(item.overview)) item.overview = fallback.overview;
+                            if (string.IsNullOrWhiteSpace(item.poster_path)) item.poster_path = fallback.poster_path;
+                            if (string.IsNullOrWhiteSpace(item.name)) item.name = fallback.name;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    if (ex is OperationCanceledException) throw;
+                    DiscoverDiagnostics.Add("TMDB Engelse seizoensbeschrijving " + id + "/s" + seasonNumber + " mislukt: " + ex.Message);
+                }
+            }
+            return item;
+        }
+
+        public async Task<TmdbWatchProviderCountry> GetTvWatchProviders(int id, CancellationToken ct)
+        {
+            var providers = await Get<TmdbWatchProviders>("/tv/" + id + "/watch/providers", "", FallbackLanguage, ct)
+                .ConfigureAwait(false);
+            var language = Language();
+            var separator = language.LastIndexOf('-');
+            var region = separator >= 0 && separator < language.Length - 1
+                ? language.Substring(separator + 1).ToUpperInvariant()
+                : null;
+            TmdbWatchProviderCountry country;
+            return !string.IsNullOrEmpty(region) && providers?.results != null &&
+                   providers.results.TryGetValue(region, out country)
+                ? country
+                : null;
+        }
+
         /// <summary>
         /// Haalt YouTube-trailer/teaser op (officiële trailer in de ingestelde taal eerst).
-        /// Geeft de YouTube-key terug, of null als er geen video is.
+        /// Geeft de YouTube-key terug, of null als TMDB antwoordt maar er geen YouTube-video is.
+        /// Gooit een exception als TMDB niet bereikbaar was (zodat de aanroeper geen "geen trailer" meldt).
         /// </summary>
         public async Task<string> GetYoutubeTrailerKey(bool tv, int tmdbId, CancellationToken ct)
         {
-            string path = (tv ? "/tv/" : "/movie/") + tmdbId + "/videos";
-            TmdbVideosPage page = null;
-            try { page = await Get<TmdbVideosPage>(path, "", Language(), ct).ConfigureAwait(false); }
-            catch { }
-            var list = page?.results;
-            if (list == null || list.Count == 0)
-            {
-                try { page = await Get<TmdbVideosPage>(path, "", FallbackLanguage, ct).ConfigureAwait(false); }
-                catch { }
-                list = page?.results;
-            }
-            if (list == null || list.Count == 0) return null;
-
-            var yt = list.Where(v =>
-                string.Equals(v.site, "YouTube", StringComparison.OrdinalIgnoreCase) &&
-                !string.IsNullOrWhiteSpace(v.key)).ToList();
-            if (yt.Count == 0) return null;
-
             string lang = Language();
             string shortLang = lang.Length >= 2 ? lang.Substring(0, 2).ToLowerInvariant() : "en";
+            string basePath = (tv ? "/tv/" : "/movie/") + tmdbId;
 
-            // Preferentie: officiële Trailer in taal > Trailer in taal > officiële Trailer > Trailer > Teaser > rest
-            TmdbVideo pick =
-                yt.FirstOrDefault(v => v.official && EqType(v, "Trailer") && LangMatch(v, shortLang))
-                ?? yt.FirstOrDefault(v => EqType(v, "Trailer") && LangMatch(v, shortLang))
-                ?? yt.FirstOrDefault(v => v.official && EqType(v, "Trailer"))
-                ?? yt.FirstOrDefault(v => EqType(v, "Trailer"))
-                ?? yt.FirstOrDefault(v => EqType(v, "Teaser") && LangMatch(v, shortLang))
-                ?? yt.FirstOrDefault(v => EqType(v, "Teaser"))
-                ?? yt.OrderByDescending(v => v.size).FirstOrDefault();
+            // TMDB geeft bij language=xx alleen video's in die taal terug. Daarom ook expliciet Engels en
+            // taalloze video's opvragen; nieuwe titels hebben vaak alleen een Engelse trailer.
+            var attempts = new List<Tuple<string, string, string>>
+            {
+                Tuple.Create(basePath + "/videos", "&include_video_language=" + shortLang + ",en,null", lang),
+                Tuple.Create(basePath + "/videos", "&include_video_language=en,null", FallbackLanguage)
+            };
+            if (tv)
+            {
+                attempts.Add(Tuple.Create(basePath + "/season/1/videos", "&include_video_language=" + shortLang + ",en,null", lang));
+                attempts.Add(Tuple.Create(basePath + "/season/1/videos", "&include_video_language=en,null", FallbackLanguage));
+            }
 
-            return pick?.key;
+            Exception lastError = null;
+            bool answered = false;
+            foreach (var a in attempts)
+            {
+                ct.ThrowIfCancellationRequested();
+                TmdbVideosPage page = null;
+                for (int retry = 0; retry < 2 && page == null; retry++)
+                {
+                    try
+                    {
+                        page = await Get<TmdbVideosPage>(a.Item1, a.Item2, a.Item3, ct).ConfigureAwait(false);
+                    }
+                    catch (OperationCanceledException) { throw; }
+                    catch (Exception ex)
+                    {
+                        lastError = ex;
+                        // 404 = (seizoen) bestaat niet: niet opnieuw proberen.
+                        if (ex.Message.IndexOf("404", StringComparison.Ordinal) >= 0) break;
+                        DiscoverDiagnostics.Add("TMDB video's " + a.Item1 + " (" + a.Item3 + ") poging " + (retry + 1) + " mislukt: " + ex.Message);
+                        await Task.Delay(500, ct).ConfigureAwait(false);
+                    }
+                }
+                if (page == null) continue;
+                answered = true;
+
+                var yt = (page.results ?? new List<TmdbVideo>()).Where(v =>
+                    string.Equals(v.site, "YouTube", StringComparison.OrdinalIgnoreCase) &&
+                    !string.IsNullOrWhiteSpace(v.key)).ToList();
+                if (yt.Count == 0) continue;
+
+                // Preferentie: officiële Trailer in taal > Trailer in taal > officiële Trailer > Trailer > Teaser > rest
+                TmdbVideo pick =
+                    yt.FirstOrDefault(v => v.official && EqType(v, "Trailer") && LangMatch(v, shortLang))
+                    ?? yt.FirstOrDefault(v => EqType(v, "Trailer") && LangMatch(v, shortLang))
+                    ?? yt.FirstOrDefault(v => v.official && EqType(v, "Trailer"))
+                    ?? yt.FirstOrDefault(v => EqType(v, "Trailer"))
+                    ?? yt.FirstOrDefault(v => EqType(v, "Teaser") && LangMatch(v, shortLang))
+                    ?? yt.FirstOrDefault(v => EqType(v, "Teaser"))
+                    ?? yt.OrderByDescending(v => v.size).FirstOrDefault();
+                if (pick != null) return pick.key;
+            }
+
+            if (!answered && lastError != null)
+                throw new InvalidOperationException("TMDB niet bereikbaar voor video's: " + lastError.Message, lastError);
+            return null;
         }
 
         private static bool EqType(TmdbVideo v, string type) =>

@@ -6,13 +6,12 @@
     <RootNamespace>Emby.Plugins.Discover</RootNamespace>
     <LangVersion>latest</LangVersion>
     <Nullable>disable</Nullable>
-    <Version>1.0.37.79-beta</Version>
+    <Version>1.0.40.0-beta</Version>
     <Description>Discover movies and series (TMDB) in Emby and request them through Radarr and Sonarr.</Description>
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- Vaste versie (dezelfde als de andere plugin die op jouw server laadt). Een vlottende versie (4.9.*) kan op een andere PC naar een andere SDK oplossen. -->
-    <PackageReference Include="MediaBrowser.Server.Core" Version="4.9.1.90" />
+    <PackageReference Include="MediaBrowser.Server.Core" Version="4.11.0.5-beta6" />
   </ItemGroup>
 
   <ItemGroup>

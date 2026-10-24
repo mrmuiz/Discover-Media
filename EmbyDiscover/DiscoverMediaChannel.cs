@@ -24,13 +24,17 @@ namespace Emby.Plugins.Discover
     public class DiscoverMediaChannel : IChannel, IHasChannelFeatures, IRequiresMediaInfoCallback, IDisableMediaSourceDisplay
     {
 #pragma warning restore CS0618
-        // Id-voorvoegsels. Bij een wijziging ook DataVersion ophogen (Emby bewaart oude items met dezelfde id).
-        private const string AskRoot = "ask10root";
-        private const string AskItemPrefix = "ask10item:";   // map met trailer + aanvraag per titel
-        private const string AskListPrefix = "ask10list:";
-        private const string AskGenrePrefix = "ask10genres:";   // map met genretegels (movie of tv)
-        private const string AskStudioRoot = "ask10studios";       // map met studio- en netwerktegels
-        internal const string AskPrefix = "ask10:";           // het aanvraagitem zelf
+        // Versioned IDs refresh only the affected channel lists without invalidating every cached list.
+        private const string AskRoot = "ask16root";
+        private const string AskItemPrefix = "ask16item:";   // versioned folder identity to avoid stale cached children
+        private const string AskTvItemPrefix = "ask21tvitem:"; // refresh filtered series lists, not movie folders
+        private const string AskSeasonFolderPrefix = "ask19seasons:"; // refresh season folder cache after label/order changes
+        private const string LegacyAskSeasonFolderPrefix = "ask18seasons:"; // keep previously cached season folders working
+        private const string AskListPrefix = "ask16list:";
+        private const string AskGenrePrefix = "ask16genres:";   // map met genretegels (movie of tv)
+        private const string AskStudioRoot = "ask16studios";       // map met studio- en netwerktegels
+        internal const string AskPrefix = "ask16:";           // het aanvraagitem zelf
+        internal const string AskSeasonPrefix = "ask20season:"; // seizoenaanvraagitems
         private const string TrailerPrefix = "tr10:";         // het trailer-item naast het aanvraagitem
 
         private readonly TmdbClient _tmdb;
@@ -54,7 +58,7 @@ namespace Emby.Plugins.Discover
         public string HomePageUrl => "";
 
         // Ophogen als Emby oude (bewaarde) kanaalinhoud blijft tonen.
-        public string DataVersion => "58";
+        public string DataVersion => "67";
         public ChannelParentalRating ParentalRating => ChannelParentalRating.GeneralAudience;
         public bool IsEnabledFor(string userId) => true;
 
@@ -112,7 +116,10 @@ namespace Emby.Plugins.Discover
             {
                 ChannelItemResult res = null;
                 if (id == AskRoot) res = await RequestRoot(ct).ConfigureAwait(false);
+                else if (id.StartsWith(AskTvItemPrefix)) { var two = await RequestItems(id.Substring(AskTvItemPrefix.Length), ct).ConfigureAwait(false); res = new ChannelItemResult { Items = two, TotalRecordCount = two.Count }; }
                 else if (id.StartsWith(AskItemPrefix)) { var two = await RequestItems(id.Substring(AskItemPrefix.Length), ct).ConfigureAwait(false); res = new ChannelItemResult { Items = two, TotalRecordCount = two.Count }; }
+                else if (id.StartsWith(AskSeasonFolderPrefix)) res = await RequestSeasons(id.Substring(AskSeasonFolderPrefix.Length), ct).ConfigureAwait(false);
+                else if (id.StartsWith(LegacyAskSeasonFolderPrefix)) res = await RequestSeasons(id.Substring(LegacyAskSeasonFolderPrefix.Length), ct).ConfigureAwait(false);
                 else if (id.StartsWith(AskGenrePrefix)) res = await GenreTiles(id.Substring(AskGenrePrefix.Length) == "tv", ct).ConfigureAwait(false);
                 else if (id == AskStudioRoot) res = await StudioTiles(ct).ConfigureAwait(false);
                 else if (id.StartsWith(AskListPrefix)) res = await GetList(id.Substring(AskListPrefix.Length), query, ct, true).ConfigureAwait(false);
@@ -269,7 +276,116 @@ namespace Emby.Plugins.Discover
                 PremiereDate = item.PremiereDate
             };
             if (genres.Count > 0) trailer.Genres = genres;
+            if (tv)
+            {
+                // The Aanvragen: <series> folder is the season selector; do not add a whole-series request tile.
+                return new List<ChannelItemInfo>
+                {
+                    trailer,
+                    Folder(AskSeasonFolderPrefix + rest,
+                    DiscoverLanguage.Text("Aanvragen: ", "Request: ", "Anfragen: ") + title,
+                    item.ImageUrl,
+                    DiscoverLanguage.Text("Kies een seizoen om alleen dat seizoen aan te vragen.",
+                        "Choose a season to request only that season.",
+                        "Wähle eine Staffel aus, um nur diese anzufordern."))
+                };
+            }
             return new List<ChannelItemInfo> { trailer, item };
+        }
+
+        private async Task<ChannelItemResult> RequestSeasons(string rest, CancellationToken ct)
+        {
+            var parts = rest.Split(':');
+            int tmdbId;
+            if (parts.Length != 2 || parts[0] != "t" || !int.TryParse(parts[1], out tmdbId))
+                throw new InvalidOperationException("Onbekend serie-id voor seizoenskeuze: " + rest);
+
+            var detail = await _tmdb.GetTvDetail(tmdbId, ct).ConfigureAwait(false);
+            if (detail == null || detail.seasons == null)
+                throw new InvalidOperationException("Seizoenen van TMDB niet beschikbaar voor serie " + tmdbId);
+
+            var seasons = detail.seasons
+                .Where(s => s != null && s.season_number > 0)
+                .GroupBy(s => s.season_number)
+                .Select(g => g.First())
+                .OrderBy(s => s.season_number)
+                .ToList();
+            var sonarrSeasons = new Dictionary<int, SonarrSeasonDto>();
+            if (ArrClient.SonarrConfigured)
+            {
+                try { sonarrSeasons = await _arr.GetSeasonStates(tmdbId, ct).ConfigureAwait(false); }
+                catch (Exception ex)
+                {
+                    DiscoverDiagnostics.Add("seizoensstatus uit Sonarr ophalen mislukt voor " + tmdbId + ": " + ex.Message);
+                }
+            }
+            string background = !string.IsNullOrEmpty(detail.backdrop_path)
+                ? "https://image.tmdb.org/t/p/w780" + detail.backdrop_path
+                : TmdbClient.PosterUrl(detail.poster_path);
+            var items = new List<ChannelItemInfo>();
+            for (int i = 0; i < seasons.Count; i++)
+            {
+                var season = seasons[i];
+                var seasonNumber = season.season_number;
+                SonarrSeasonDto sonarrSeason;
+                bool hasSonarrSeason = sonarrSeasons.TryGetValue(seasonNumber, out sonarrSeason);
+                bool hasFiles = hasSonarrSeason && sonarrSeason.statistics != null &&
+                    sonarrSeason.statistics.episodeFileCount > 0;
+                bool showHourglass = hasSonarrSeason && (sonarrSeason.monitored || hasFiles);
+                if (showHourglass && string.IsNullOrWhiteSpace(season.overview))
+                {
+                    try
+                    {
+                        var fullSeason = await _tmdb.GetTvSeasonDetail(tmdbId, seasonNumber, ct).ConfigureAwait(false);
+                        if (!string.IsNullOrWhiteSpace(fullSeason?.overview)) season.overview = fullSeason.overview;
+                    }
+                    catch (Exception ex)
+                    {
+                        if (ex is OperationCanceledException) throw;
+                        DiscoverDiagnostics.Add("seizoensbeschrijving ophalen mislukt voor " + tmdbId +
+                            "/seizoen " + seasonNumber + ": " + ex.Message);
+                    }
+                }
+                var image = !string.IsNullOrEmpty(season.poster_path)
+                    ? TmdbClient.PosterUrl(season.poster_path)
+                    : background;
+                var countText = season.episode_count > 0
+                    ? DiscoverLanguage.Text(
+                        season.episode_count == 1 ? "1 aflevering" : season.episode_count + " afleveringen",
+                        season.episode_count == 1 ? "1 episode" : season.episode_count + " episodes",
+                        season.episode_count == 1 ? "1 Folge" : season.episode_count + " Folgen")
+                    : null;
+                var overview = DiscoverLanguage.Text(
+                    "Druk op \u25B6 om alleen seizoen " + seasonNumber + " aan te vragen.",
+                    "Press \u25B6 to request season " + seasonNumber + " only.",
+                    "Drücke auf \u25B6, um nur Staffel " + seasonNumber + " anzufordern.");
+                if (!string.IsNullOrWhiteSpace(countText)) overview += "\n" + countText + ".";
+                if (!string.IsNullOrWhiteSpace(season.overview)) overview += "\n\n" + season.overview.Trim();
+
+                var displayName = DiscoverLanguage.Text("Seizoen ", "Season ", "Staffel ") +
+                    seasonNumber.ToString(CultureInfo.InvariantCulture);
+                if (showHourglass) displayName += " \u23F3";
+
+                items.Add(new ChannelItemInfo
+                {
+                    Id = AskSeasonPrefix + "t:" + tmdbId + ":s:" + seasonNumber,
+                    Name = displayName,
+                    Type = ChannelItemType.Media,
+                    MediaType = ChannelMediaType.Video,
+                    ContentType = ChannelMediaContentType.Clip,
+                    // Media items need a client-fetchable URL; local generated file paths leave blank tiles here.
+                    ImageUrl = image,
+                    Overview = overview,
+                    ProviderIds = new ProviderIdDictionary { { "Tmdb", tmdbId.ToString() } },
+                    IndexNumber = seasonNumber,
+                    ForceUpdate = true
+                });
+            }
+
+            if (items.Count == 0)
+                throw new InvalidOperationException("TMDB heeft geen aanvraagbare seizoenen voor serie " + tmdbId);
+
+            return new ChannelItemResult { Items = items, TotalRecordCount = items.Count };
         }
 
         private async Task<TmdbExtra> SafeExtra(bool tv, int tmdbId, CancellationToken ct)
@@ -324,7 +440,7 @@ namespace Emby.Plugins.Discover
             };
             List<string>[] tops;
             var topTask = Task.WhenAll(paths.Select(x => TopBackdrops(x, CancellationToken.None)));
-            var topWait = await Task.WhenAny(topTask, Task.Delay(TimeSpan.FromSeconds(2))).ConfigureAwait(false);
+            var topWait = await Task.WhenAny(topTask, Task.Delay(TimeSpan.FromSeconds(5))).ConfigureAwait(false);
             if (topWait == topTask)
             {
                 try { tops = await topTask.ConfigureAwait(false); }
@@ -336,7 +452,7 @@ namespace Emby.Plugins.Discover
             }
             else
             {
-                DiscoverDiagnostics.Add("root-artwork na 2 seconden uitgesteld; kanaal wordt direct teruggegeven");
+                DiscoverDiagnostics.Add("root-artwork na 5 seconden uitgesteld; kanaal wordt direct teruggegeven");
                 _ = ObserveTopBackdrops(topTask);
                 tops = paths.Select(x => new List<string>()).ToArray();
             }
@@ -376,9 +492,10 @@ namespace Emby.Plugins.Discover
                     spec.Id == AskStudioRoot ? 1 : 2)
                 .ToArray();
             var creations = creationOrder.Select(spec => FolderTile.Create(
-                spec.Id.Replace(":", "-"), spec.Caption, DuotoneUrl(spec.Color, spec.Backdrop), CancellationToken.None)).ToArray();
+                spec.Id.Replace(":", "-"), spec.Caption, DuotoneUrl(spec.Color, spec.Backdrop),
+                CancellationToken.None, ColorTones[spec.Color][0])).ToArray();
             var files = new Dictionary<string, string>();
-            var deadline = DateTime.UtcNow.AddSeconds(2);
+            var deadline = DateTime.UtcNow.AddSeconds(10);
             for (int i = 0; i < creations.Length; i++)
             {
                 var remaining = deadline - DateTime.UtcNow;
@@ -396,13 +513,26 @@ namespace Emby.Plugins.Discover
                 }
             }
 
+            // Return series folders first so Emby starts fetching them before movie lists during a channel refresh.
+            // Keep the IDs and DataVersion unchanged so this display-order change does not invalidate all cached lists.
+            var displayOrder = specs
+                .OrderBy(spec =>
+                    spec.Id == AskListPrefix + "trending_tv" ||
+                    spec.Id == AskListPrefix + "popular_tv" ||
+                    spec.Id == AskListPrefix + "upcoming_tv" ||
+                    spec.Id == AskGenrePrefix + "tv" ? 0 :
+                    spec.Id == AskStudioRoot ? 2 : 1)
+                .ToArray();
+
             var items = new List<ChannelItemInfo>();
-            for (int i = 0; i < specs.Length; i++)
+            for (int i = 0; i < displayOrder.Length; i++)
             {
-                var sp = specs[i];
+                var sp = displayOrder[i];
                 string file;
                 files.TryGetValue(sp.Id, out file);
-                items.Add(Folder(sp.Id, sp.Caption, file ?? DuotoneUrl(sp.Color, sp.Backdrop), null));
+                var folder = Folder(sp.Id, sp.Caption, file ?? DuotoneUrl(sp.Color, sp.Backdrop), null);
+                folder.ForceUpdate = true;
+                items.Add(folder);
             }
             return new ChannelItemResult { Items = items, TotalRecordCount = items.Count };
         }
@@ -524,11 +654,12 @@ namespace Emby.Plugins.Discover
         private async Task<ChannelItemResult> GenreTiles(bool tv, CancellationToken ct)
         {
             var genres = await _tmdb.GetGenres(tv, ct).ConfigureAwait(false);
+            var names = genres.Select(genre => LocalizedGenreName(genre.id, tv, genre.name)).ToArray();
             var backs = await Task.WhenAll(genres.Select(g => GenreBackdrop(tv, g.id, ct))).ConfigureAwait(false);
             var imageUrls = genres.Select((genre, i) => GenreImageUrl(genre.id, backs[i])).ToArray();
             var creations = genres.Select((genre, i) => FolderTile.Create(
                 "genre-" + (tv ? "tv-" : "movie-") + genre.id,
-                genre.name,
+                names[i],
                 imageUrls[i],
                 CancellationToken.None,
                 GenreFallbackColor(genre.id))).ToArray();
@@ -536,25 +667,25 @@ namespace Emby.Plugins.Discover
             for (int i = 0; i < creations.Length; i++)
             {
                 try { files[i] = await creations[i].ConfigureAwait(false); }
-                catch (Exception ex) { DiscoverDiagnostics.Add("genretegel '" + genres[i].name + "' mislukt: " + ex.Message); }
+                catch (Exception ex) { DiscoverDiagnostics.Add("genretegel '" + names[i] + "' mislukt: " + ex.Message); }
             }
 
             var items = new List<ChannelItemInfo>();
             for (int i = 0; i < genres.Count; i++)
-                items.Add(Folder(AskListPrefix + (tv ? "gt_" : "gm_") + genres[i].id, genres[i].name,
-                                 files[i] ?? imageUrls[i], null));
+            {
+                var folder = Folder(AskListPrefix + (tv ? "gt_" : "gm_") + genres[i].id, names[i],
+                                    files[i] ?? imageUrls[i], null);
+                folder.ForceUpdate = true;
+                items.Add(folder);
+            }
             items = items.OrderBy(x => x.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
             return new ChannelItemResult { Items = items, TotalRecordCount = items.Count };
         }
 
-        // Alle logo's in een kleur (paars, zoals Seerr). Logo's met een vlak en letters erin (ABC, 20th Century Studios, ...)
-        // worden anders een kaal paars vlak: daar worden de letters zwart (twoTone).
-        private static readonly HashSet<int> TwoToneStudios = new HashSet<int> { 127928, 4, 420, 521 };   // 20th Century, Paramount, Marvel, DreamWorks
-        private static readonly HashSet<int> TwoToneNetworks = new HashSet<int> { 2, 174, 56 };           // ABC, AMC, Cartoon Network
-
-        private static string LogoImageUrl(string logoPath, bool twoTone) =>
+        // Logo's zijn wit zodat ze bij de donkere kanaalstijl passen.
+        private static string LogoImageUrl(string logoPath) =>
             string.IsNullOrEmpty(logoPath) ? null
-                : "https://image.tmdb.org/t/p/w780_filter(duotone,bf00ff," + (twoTone ? "000000" : "bf00ff") + ")" + logoPath;
+                : "https://image.tmdb.org/t/p/w780_filter(duotone,ffffff,ffffff)" + logoPath;
 
         private async Task<ChannelItemResult> StudioTiles(CancellationToken ct)
         {
@@ -562,8 +693,8 @@ namespace Emby.Plugins.Discover
             var networks = DiscoverApiService.Networks;
             var sLogos = await Task.WhenAll(studios.Select(x => _tmdb.GetLogo(false, x.Key, ct))).ConfigureAwait(false);
             var nLogos = await Task.WhenAll(networks.Select(x => _tmdb.GetLogo(true, x.Key, ct))).ConfigureAwait(false);
-            var sUrls = studios.Select((x, i) => LogoImageUrl(sLogos[i], TwoToneStudios.Contains(x.Key))).ToArray();
-            var nUrls = networks.Select((x, i) => LogoImageUrl(nLogos[i], TwoToneNetworks.Contains(x.Key))).ToArray();
+            var sUrls = sLogos.Select(LogoImageUrl).ToArray();
+            var nUrls = nLogos.Select(LogoImageUrl).ToArray();
 
             // Elk logo midden in een liggend, doorzichtig plaatje (niets afgesneden); lukt dat niet, dan het logo zelf.
             var sFiles = await Task.WhenAll(studios.Select((x, i) => FolderTile.CreateLogo("s" + x.Key, sUrls[i], x.Value, ct))).ConfigureAwait(false);
@@ -571,9 +702,17 @@ namespace Emby.Plugins.Discover
 
             var items = new List<ChannelItemInfo>();
             for (int i = 0; i < studios.Length; i++)
-                items.Add(Folder(AskListPrefix + "s_" + studios[i].Key, studios[i].Value, sFiles[i] ?? sUrls[i], null));
+            {
+                var folder = Folder(AskListPrefix + "s_" + studios[i].Key, studios[i].Value, sFiles[i] ?? sUrls[i], null);
+                folder.ForceUpdate = true;
+                items.Add(folder);
+            }
             for (int i = 0; i < networks.Length; i++)
-                items.Add(Folder(AskListPrefix + "n_" + networks[i].Key, networks[i].Value, nFiles[i] ?? nUrls[i], null));
+            {
+                var folder = Folder(AskListPrefix + "n_" + networks[i].Key, networks[i].Value, nFiles[i] ?? nUrls[i], null);
+                folder.ForceUpdate = true;
+                items.Add(folder);
+            }
             return new ChannelItemResult { Items = items, TotalRecordCount = items.Count };
         }
 
@@ -638,7 +777,8 @@ namespace Emby.Plugins.Discover
             var items = new List<ChannelItemInfo>();
             int rank = 0;
             var now = DateTimeOffset.UtcNow;
-            foreach (var i in all)
+            var candidates = all.Where(i => !tv || TmdbClient.IsDutchOrUsTv(i)).ToList();
+            foreach (var i in candidates)
             {
                 if (i.adult || string.IsNullOrEmpty(i.poster_path)) continue;
                 rank++;
@@ -648,7 +788,7 @@ namespace Emby.Plugins.Discover
                 // de detailpagina; het ingebedde Emby-pluginresource-script voegt daar de knop "Aanvragen" toe.
                 var f = new ChannelItemInfo
                 {
-                    Id = (request ? AskItemPrefix : "") + (tv ? "t:" : "m:") + i.id,
+                    Id = (request ? (tv ? AskTvItemPrefix : AskItemPrefix) : "") + (tv ? "t:" : "m:") + i.id,
                     Name = prefix + clean,
                     Type = request ? ChannelItemType.Folder : ChannelItemType.Media,
                     MediaType = ChannelMediaType.Video,
@@ -657,7 +797,11 @@ namespace Emby.Plugins.Discover
                     Overview = WithDate(i, tv),
                     ProviderIds = new ProviderIdDictionary { { "Tmdb", i.id.ToString() } }
                 };
-                if (request) f.FolderType = ChannelFolderType.Container;
+                if (request)
+                {
+                    f.FolderType = ChannelFolderType.Container;
+                    f.ForceUpdate = tv;
+                }
                 var genres = GenresOf(i, tv);
                 if (genres.Count > 0) f.Genres = genres;
                 var date = tv ? i.first_air_date : i.release_date;
@@ -699,8 +843,8 @@ namespace Emby.Plugins.Discover
             }
             var result = ordered.ToList();
 
-            _logger.Info("Discover: lijst '{0}': TMDB gaf {1} items, teruggegeven aan Emby: {2}, sortering: {3} {4}",
-                key, all.Count, result.Count, sort ?? "(geen)", desc ? "aflopend" : "oplopend");
+            _logger.Info("Discover: lijst '{0}': TMDB gaf {1} items, na landfilter {2}, teruggegeven aan Emby: {3}, sortering: {4} {5}",
+                key, all.Count, candidates.Count, result.Count, sort ?? "(geen)", desc ? "aflopend" : "oplopend");
             return new ChannelItemResult { Items = result, TotalRecordCount = result.Count };
         }
 
@@ -708,8 +852,20 @@ namespace Emby.Plugins.Discover
         public async Task<IEnumerable<MediaSourceInfo>> GetChannelItemMediaInfo(string id, CancellationToken ct)
         {
             DiscoverDiagnostics.Add("trailer afspelen: " + id);
-            bool isReq = id.StartsWith(AskPrefix);
-            if (isReq) id = id.Substring(AskPrefix.Length);
+            bool isSeasonReq = id.StartsWith(AskSeasonPrefix);
+            bool isReq = id.StartsWith(AskPrefix) || isSeasonReq;
+            int requestedSeason = 0;
+            if (isSeasonReq)
+            {
+                var seasonParts = id.Substring(AskSeasonPrefix.Length).Split(':');
+                int tmdbSeasonId;
+                if (seasonParts.Length != 4 || seasonParts[0] != "t" || seasonParts[2] != "s" ||
+                    !int.TryParse(seasonParts[1], out tmdbSeasonId) ||
+                    !int.TryParse(seasonParts[3], out requestedSeason) || requestedSeason <= 0)
+                    throw new InvalidOperationException("Onbekend seizoensaanvraagitem: " + id);
+                id = seasonParts[0] + ":" + tmdbSeasonId;
+            }
+            else if (id.StartsWith(AskPrefix)) id = id.Substring(AskPrefix.Length);
             else if (id.StartsWith(TrailerPrefix)) id = id.Substring(TrailerPrefix.Length);
 
             bool tv = false;
@@ -735,19 +891,25 @@ namespace Emby.Plugins.Discover
                 // (zie RequestOnPlay). De kaart toont de situatie van nu: "Aangevraagd" of "Staat al in Radarr/Sonarr".
                 try
                 {
+                    DiscoverDiagnostics.Add(isSeasonReq
+                        ? "seizoensaanvraagclip voor seizoen " + requestedSeason
+                        : "aanvraagclip voor alle seizoenen");
                     TmdbItem info = FindInCache(tv, tmdbId);
                     if (info == null)
                         info = tv ? await _tmdb.GetTv(tmdbId, ct).ConfigureAwait(false)
                                   : await _tmdb.GetMovie(tmdbId, ct).ConfigureAwait(false);
-                    var extra = await SafeExtra(tv, tmdbId, ct).ConfigureAwait(false);
-                    var states = await SafeStates(tv, ct).ConfigureAwait(false);
+                    var extraTask = SafeExtra(tv, tmdbId, ct);
+                    var statesTask = SafeStates(tv, ct);
+                    await Task.WhenAll(extraTask, statesTask).ConfigureAwait(false);
+                    var extra = await extraTask.ConfigureAwait(false);
+                    var states = await statesTask.ConfigureAwait(false);
                     bool hasFiles;
                     bool there = states.TryGetValue(tmdbId, out hasFiles);
 
-                    // Niet langer dan 2,5 s wachten op ffmpeg; daarna de vaste clip (de kaart wordt wel afgemaakt).
+                    // Wacht tot de staande kaart klaar is (bij een koude start duurt ffmpeg enkele seconden); pas daarna de vaste liggende clip.
                     var cardTask = RequestCard.Create(info, extra, tv, there, CancellationToken.None);
                     _ = cardTask.ContinueWith(x => { var ignored = x.Exception; }, TaskContinuationOptions.OnlyOnFaulted);
-                    var first = await Task.WhenAny(cardTask, Task.Delay(2500, ct)).ConfigureAwait(false);
+                    var first = await Task.WhenAny(cardTask, Task.Delay(30000, ct)).ConfigureAwait(false);
                     if (first != cardTask) throw new TimeoutException("kaart nog niet klaar");
                     var card = await cardTask.ConfigureAwait(false);
                     DiscoverDiagnostics.Add("kaartclip: " + card);
@@ -775,20 +937,30 @@ namespace Emby.Plugins.Discover
                 }
             }
 
-            string ytKey = null;
             if (!isReq)
-            try
             {
-                ytKey = await _tmdb.GetYoutubeTrailerKey(tv, tmdbId, ct).ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                _logger.Error("Discover: trailer ophalen mislukt voor {0}: {1}", id, ex.Message);
-                DiscoverDiagnostics.Add("FOUT trailer " + id + ": " + ex.Message);
-            }
+                // Trailer-item: speelt ALTIJD de trailer of geeft een eerlijke fout. Nooit de "Aangevraagd"-clip,
+                // want die lijkt op een aanvraag terwijl er niets is aangevraagd.
+                string ytKey;
+                try
+                {
+                    ytKey = await _tmdb.GetYoutubeTrailerKey(tv, tmdbId, ct).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    if (ex is OperationCanceledException) throw;
+                    _logger.Error("Discover: trailer ophalen mislukt voor {0}: {1}", id, ex.Message);
+                    DiscoverDiagnostics.Add("FOUT trailer " + id + ": " + ex.Message);
+                    throw new InvalidOperationException("Trailer ophalen mislukt: " + ex.Message);
+                }
 
-            if (!string.IsNullOrEmpty(ytKey))
-            {
+                if (string.IsNullOrEmpty(ytKey))
+                {
+                    DiscoverDiagnostics.Add("geen YouTube-trailer voor " + id);
+                    _logger.Info("Discover: geen YouTube-trailer voor {0}", id);
+                    throw new InvalidOperationException("Geen trailer beschikbaar voor deze titel.");
+                }
+
                 var path = "https://www.youtube.com/watch?v=" + ytKey;
                 DiscoverDiagnostics.Add("trailer: " + id + " -> " + path);
                 _logger.Info("Discover: trailer voor {0}: {1}", id, path);
@@ -809,13 +981,7 @@ namespace Emby.Plugins.Discover
                 };
             }
 
-            // Geen trailer op TMDB: speel een korte bevestigingsclip i.p.v. een harde fout,
-            // zodat de Afspelen-knop niet "kapot" lijkt. Aanvragen blijft via de knop.
-            if (!isReq)
-            {
-                DiscoverDiagnostics.Add("geen YouTube-trailer voor " + id);
-                _logger.Info("Discover: geen YouTube-trailer voor {0}", id);
-            }
+            // Alleen een aanvraagitem komt hier terecht (kaartclip mislukt): speel de vaste bevestigingsclip.
             string clip;
             try
             {
@@ -832,8 +998,8 @@ namespace Emby.Plugins.Discover
             {
                 new MediaSourceInfo
                 {
-                    Id = isReq ? "discover-requested" : "discover-no-trailer",
-                    Name = isReq ? "Aangevraagd" : "Geen trailer",
+                    Id = "discover-requested",
+                    Name = "Aangevraagd",
                     Path = clip,
                     Protocol = MediaProtocol.File,
                     Container = "mp4",
@@ -846,8 +1012,8 @@ namespace Emby.Plugins.Discover
         }
 
 
-        /// <summary>Vraagt een titel aan bij Radarr/Sonarr (series: alle seizoenen). Geeft "Aangevraagd" of "Stond al in ...".</summary>
-        internal static async Task<string> RequestTitle(TmdbClient tmdb, ArrClient arr, bool tv, int tmdbId, CancellationToken ct)
+        /// <summary>Vraagt een titel aan bij Radarr/Sonarr; null seasons behoudt de bestaande all-seasons-aanvraag.</summary>
+        internal static async Task<string> RequestTitle(TmdbClient tmdb, ArrClient arr, bool tv, int tmdbId, int[] seasons, CancellationToken ct)
         {
             bool added;
             if (tv)
@@ -856,7 +1022,7 @@ namespace Emby.Plugins.Discover
                 var ext = await tmdb.GetTvExternalIds(tmdbId, ct).ConfigureAwait(false);
                 if (ext == null || ext.tvdb_id == null)
                     throw new InvalidOperationException("Geen TVDB-id bij deze serie; Sonarr kan hem niet toevoegen.");
-                added = await arr.AddSeries(tmdbId, ext.tvdb_id.Value, t.name ?? t.title, null, ct).ConfigureAwait(false);
+                added = await arr.AddSeries(tmdbId, ext.tvdb_id.Value, t.name ?? t.title, seasons, ct).ConfigureAwait(false);
             }
             else
             {
@@ -864,7 +1030,11 @@ namespace Emby.Plugins.Discover
                 added = await arr.AddMovie(tmdbId, m.title ?? m.name, YearOf(m.release_date) ?? 0, ct).ConfigureAwait(false);
             }
             DiscoverDiagnostics.CountRequest(true);
-            return added ? "Aangevraagd" : "Stond al in " + (tv ? "Sonarr" : "Radarr");
+            return added
+                ? (seasons != null && seasons.Length > 0
+                    ? "Aangevraagd seizoen " + string.Join(", ", seasons)
+                    : "Aangevraagd")
+                : "Stond al in " + (tv ? "Sonarr" : "Radarr");
         }
 
         // ---------- Koppeling met het knop-script ----------
@@ -916,6 +1086,15 @@ namespace Emby.Plugins.Discover
             {10765, new[]{"Sci-fi & fantasie","Sci-Fi & Fantasy","Science-Fiction & Fantasy"}}, {10766, new[]{"Soap","Soap","Seifenoper"}}, {10767, new[]{"Talkshow","Talk","Talkshow"}},
             {10768, new[]{"Oorlog & politiek","War & Politics","Krieg & Politik"}}, {37, new[]{"Western","Western","Western"}}
         };
+
+        internal static string LocalizedGenreName(int genreId, bool tv, string fallback)
+        {
+            string[] names;
+            var map = tv ? TvGenres : MovieGenres;
+            if (!map.TryGetValue(genreId, out names)) return fallback;
+            int column = DiscoverLanguage.IsDutch ? 0 : DiscoverLanguage.IsGerman ? 2 : 1;
+            return names[column];
+        }
 
         /// <summary>Beschrijving uit de lijst met de releasedatum eraan voorop (geen extra TMDB-call).</summary>
         private static string WithDate(TmdbItem i, bool tv)
