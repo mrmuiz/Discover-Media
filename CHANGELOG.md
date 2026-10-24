@@ -5,6 +5,7 @@ Release notes per version (in Dutch; the project started as a private build). Ne
 ## Version 1.0.40.0-beta
 - Trailer-afspelen speelt nooit meer de "Aangevraagd"-bevestigingsclip af. Is er geen trailer of lukt het ophalen niet, dan meldt Emby een eerlijke fout en wordt er niets aangevraagd of gecachet.
 - Trailer zoeken is robuuster: ook Engelse en taalloze TMDB-video's, bij series ook de video's van seizoen 1, met een nieuwe poging bij een tijdelijke TMDB-fout. Fouten staan in de diagnose.
+- Heeft de seizoenslijst van een serie geen poster voor een seizoen, dan vraagt de plugin het seizoen (en zijn afbeeldingen) rechtstreeks bij TMDB op. Is er echt geen poster, dan wordt de staande serieposter getoond in plaats van de liggende achtergrond.
 - Het driepuntjesmenu (en de hover-knoppen) verdwijnt van de aanvraag-/trailertegels in de kanaallijst.
 
 ## Version 1.0.38.0-beta
