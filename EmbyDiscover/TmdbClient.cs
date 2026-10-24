@@ -109,6 +109,19 @@ namespace Emby.Plugins.Discover
         public List<TmdbVideo> results { get; set; }
     }
 
+    public class TmdbImage
+    {
+        public string file_path { get; set; }
+        public string iso_639_1 { get; set; }
+        public double vote_average { get; set; }
+        public int width { get; set; }
+    }
+
+    public class TmdbImagesPage
+    {
+        public List<TmdbImage> posters { get; set; }
+    }
+
     public class TmdbSeasonBrief
     {
         public int season_number { get; set; }
@@ -600,6 +613,47 @@ namespace Emby.Plugins.Discover
                 }
             }
             return item;
+        }
+
+        /// <summary>
+        /// Zoekt de poster van één seizoen rechtstreeks bij TMDB, voor als de seizoenslijst van de serie er geen heeft:
+        /// eerst het seizoen zelf (ingestelde taal, dan Engels), daarna de seizoensafbeeldingen (taal, Engels, taalloos).
+        /// Geeft null als er echt geen poster is.
+        /// </summary>
+        public async Task<string> GetSeasonPosterPath(int id, int seasonNumber, CancellationToken ct)
+        {
+            try
+            {
+                var detail = await GetTvSeasonDetail(id, seasonNumber, ct).ConfigureAwait(false);
+                if (!string.IsNullOrWhiteSpace(detail?.poster_path)) return detail.poster_path;
+            }
+            catch (Exception ex)
+            {
+                if (ex is OperationCanceledException) throw;
+                DiscoverDiagnostics.Add("TMDB seizoensposter " + id + "/s" + seasonNumber + " (seizoen) mislukt: " + ex.Message);
+            }
+
+            try
+            {
+                string lang = Language();
+                string shortLang = lang.Length >= 2 ? lang.Substring(0, 2).ToLowerInvariant() : "en";
+                var images = await Get<TmdbImagesPage>("/tv/" + id + "/season/" + seasonNumber + "/images",
+                    "&include_image_language=" + shortLang + ",en,null", FallbackLanguage, ct).ConfigureAwait(false);
+                var posters = (images?.posters ?? new List<TmdbImage>())
+                    .Where(x => !string.IsNullOrWhiteSpace(x.file_path)).ToList();
+                var pick = posters.Where(x => string.Equals(x.iso_639_1, shortLang, StringComparison.OrdinalIgnoreCase))
+                               .OrderByDescending(x => x.vote_average).FirstOrDefault()
+                           ?? posters.Where(x => string.Equals(x.iso_639_1, "en", StringComparison.OrdinalIgnoreCase))
+                               .OrderByDescending(x => x.vote_average).FirstOrDefault()
+                           ?? posters.OrderByDescending(x => x.vote_average).FirstOrDefault();
+                if (pick != null) return pick.file_path;
+            }
+            catch (Exception ex)
+            {
+                if (ex is OperationCanceledException) throw;
+                DiscoverDiagnostics.Add("TMDB seizoensposter " + id + "/s" + seasonNumber + " (afbeeldingen) mislukt: " + ex.Message);
+            }
+            return null;
         }
 
         public async Task<TmdbWatchProviderCountry> GetTvWatchProviders(int id, CancellationToken ct)

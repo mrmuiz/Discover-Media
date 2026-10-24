@@ -3,14 +3,14 @@
  * Verbergt ook "Media informatie" op Discover/Trailers-detailpagina's. */
 (function () {
     'use strict';
-    if (window.__discoverRequestButtonVersion === '1.0.37.76-beta') { return; }
+    if (window.__discoverRequestButtonVersion === '1.0.40.0-beta') { return; }
     if (window.__discoverRequestButton) {
         console.warn('[Discover] oudere knopcode is nog actief; vernieuw de webclient om dubbele handlers te voorkomen.');
         return;
     }
     window.__discoverRequestButton = true;
-    window.__discoverRequestButtonVersion = '1.0.37.76-beta';
-    console.log('[Discover] request-button script geladen v1.0.37.76-beta');
+    window.__discoverRequestButtonVersion = '1.0.40.0-beta';
+    console.log('[Discover] request-button script geladen v1.0.40.0-beta');
 
     var uiLanguage = 'nl';
     function text(dutch, english, german) {
@@ -41,7 +41,7 @@
                     'color:#ffd666;background:rgba(0,0,0,.7);padding:4px 8px;border-radius:4px;pointer-events:none;white-space:pre-wrap;';
                 document.body.appendChild(el);
             }
-            el.textContent = 'Discover v1.0.37.76-beta | ' + msg;
+            el.textContent = 'Discover v1.0.40.0-beta | ' + msg;
         } catch (e) { }
     }
     var isAdmin = false;
@@ -74,10 +74,28 @@
             'body.discover-ask-page [class*="verview"] { white-space: pre-line !important; line-height: 1.55 !important; }',
             'body.discover-ask-page [class*="verview"], body.discover-ask-page [class*="clamp"] {',
             '  -webkit-line-clamp: unset !important; line-clamp: unset !important; max-height: none !important; overflow: visible !important; }',
+            'body.discover-season-ask-page .itemDetailPage [class*="overview" i], body.discover-season-ask-page .itemDetailPage [class*="clamp" i] {',
+            '  display: block !important; -webkit-line-clamp: unset !important; line-clamp: unset !important;',
+            '  max-height: none !important; height: auto !important; overflow: visible !important; white-space: pre-line !important; }',
             'body.discover-ask-page .discover-ask-hidden { display: none !important; }',
+            '.discover-web-ask-hidden { display: none !important; }',
             'body.discover-ask-play .itemDetailPage .btnPlay { background: #22a559 !important; color: #fff !important; border-radius: 2em !important; }',
             '.discover-folder-card [class*="cardOverlayFab"], .discover-folder-card [class*="cardOverlayButton"],',
             '.discover-folder-card .itemSelectionPanel { display: none !important; }',
+            '.discover-channel-landscape-card [class*="cardOverlayFab"], .discover-channel-landscape-card [class*="cardOverlayButton"],',
+            '.discover-channel-landscape-card .itemSelectionPanel { display: none !important; }',
+            '.discover-season-request-card [class*="cardOverlayFab"], .discover-season-request-card [class*="cardOverlayButton"],',
+            '.discover-season-request-card .itemSelectionPanel { display: none !important; }',
+            '.discover-channel-landscape-card .cardScalable { aspect-ratio: 16 / 9 !important; height: auto !important; padding: 0 !important; }',
+            '.discover-season-request-card .cardScalable { aspect-ratio: 2 / 3 !important; height: auto !important; padding: 0 !important; }',
+            '.discover-season-info { box-sizing: border-box; margin-top: 12px; overflow: hidden; border: 1px solid #344154; border-radius: 8px; background: #111a2a; color: #e8edf6; font-size: 12px; line-height: 1.3; }',
+            '.discover-season-info-rating { display: flex; justify-content: flex-end; padding: 9px 12px; color: #eef3fb; font-weight: 700; }',
+            '.discover-season-info-row { display: flex; justify-content: space-between; gap: 10px; padding: 7px 12px; border-top: 1px solid #344154; }',
+            '.discover-season-info-label { font-weight: 700; }',
+            '.discover-season-info-value { color: #b9c7dc; text-align: right; }',
+            '.discover-season-info-providers { padding: 8px 12px; border-top: 1px solid #344154; }',
+            '.discover-season-info-provider-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }',
+            '.discover-season-info-provider { padding: 3px 7px; border-radius: 4px; background: #26364c; color: #dce7f5; }',
             'body.discover-folder-page .btnPlay, body.discover-folder-page .btnShuffle, body.discover-folder-page .btnQueue { display: none !important; }',
             '.btnDiscoverRequest {',
             '  background: #ffb400 !important; color: #111 !important;',
@@ -103,7 +121,7 @@
             diagnosticsLoaded = true;
             diagnosticsRequest = false;
             diagnosticsRetryAfter = 0;
-            if (diagnosticsEnabled && lastDiagnostic) { dbg(lastDiagnostic); }
+            if (diagnosticsEnabled) { dbg(lastDiagnostic || 'request-button script actief'); }
             else if (!diagnosticsEnabled) { dbg(null); }
             Array.prototype.forEach.call(document.querySelectorAll('.btnDiscoverRequest'), function (btn) {
                 if (btn._info) { render(btn, btn._info); }
@@ -222,7 +240,11 @@
 
     var negCount = {};
     var askIds = {};
+    var seasonAskIds = {};
     var askStatus = {};      // id -> 0 niet aangevraagd, 1 aangevraagd, 2 beschikbaar (live uit Resolve)
+    var seasonCardIds = {};
+    var seasonCardCache = {};
+    var seasonCardPending = {};
     var askLast = null;
     var trailerIds = {};
 
@@ -256,7 +278,7 @@
             var pathStr = paths.join(' ');
             var ch = (item.ChannelName || '') + ' ' + pathStr + ' ' + (item.Id || '');
             var mine = !!(item.ChannelId)
-                || /discover|trailer|youtube\.com|youtu\.be/i.test(ch)
+                || /discover|trailer|youtube\.com|youtu\.be|ask20season:/i.test(ch)
                 || item.Type === 'Trailer'
                 || item.ExtraType === 'Trailer'
                 || (item.Id && /^(m|t):/.test(String(item.Id)));
@@ -283,6 +305,21 @@
                     schedule();
                     return null;
                 }, function () { schedule(); return null; });
+            }
+            var seasonAskName = /^[\u2713\u23F3]?\s*(?:Aanvragen Seizoen|Request Season|Staffel anfragen|Seizoen|Season|Staffel)\s+\d+/i.test(nm);
+            if (seasonAskName) {
+                askIds[id] = true;
+                seasonAskIds[id] = true;
+                askStatus[id] = 0;
+                var seasonProviderIds = item.ProviderIds || {};
+                var seriesTmdbId = parseInt(seasonProviderIds.Tmdb || seasonProviderIds.tmdb || 0, 10) || 0;
+                if (seriesTmdbId > 0) {
+                    seasonCardIds[id] = seriesTmdbId;
+                    loadSeasonCardInfo(id, seriesTmdbId);
+                }
+                dbg('seizoensaanvraag herkend: ' + nm);
+                schedule();
+                return null;
             }
             var domMine = domLooksLikeDiscover();
             mine = mine || domMine;
@@ -368,7 +405,9 @@
     function showSeasonPicker(info, onConfirm) {
         var seasons = (info.Seasons || []).filter(function (s) { return s.Number > 0 || s.EpisodeCount > 0; });
         if (seasons.length === 0) {
-            onConfirm(null);
+            toast(text('Seizoensgegevens niet beschikbaar; er is niets aangevraagd.',
+                'Season data is unavailable; nothing was requested.',
+                'Staffeldaten nicht verfügbar; es wurde nichts angefordert.'), true);
             return;
         }
 
@@ -405,7 +444,7 @@
 
             var cb = document.createElement('input');
             cb.type = 'checkbox';
-            cb.checked = s.Number > 0;
+            cb.checked = false;
             cb.value = String(s.Number);
             cb.style.cssText = 'width:1.15em;height:1.15em;accent-color:#22a559;';
             checks.push(cb);
@@ -514,7 +553,7 @@
             e.stopImmediatePropagation();
             if (!info.Found || info.Status > 0 || btn.disabled) { return; }
 
-            if (info.Type === 'tv' && info.Seasons && info.Seasons.length > 1) {
+            if (info.Type === 'tv') {
                 showSeasonPicker(info, function (selected) {
                     doRequest(btn, info, selected);
                 });
@@ -630,8 +669,8 @@
     var misses = 0;
 
     // Verbergt het blok "Media informatie" (pad van de clip/YouTube-link) op Discover-pagina's.
-    function hideMediaInfo() {
-        if (diagnosticsEnabled) { return; }
+    function hideMediaInfo(force) {
+        if (diagnosticsEnabled && !force) { return; }
         var pages = document.querySelectorAll('.itemDetailPage');
         for (var p = 0; p < pages.length; p++) {
             if (!visible(pages[p])) { continue; }
@@ -707,6 +746,133 @@
         }
     }
 
+    function hideSeasonMetadata() {
+        var page = document.querySelector('.itemDetailPage');
+        if (!page) { return; }
+        var labels = page.querySelectorAll('h1, h2, h3, h4, h5, div, span, label, p');
+        for (var i = 0; i < labels.length; i++) {
+            var label = labels[i];
+            var name = (label.textContent || '').replace(/\s+/g, ' ').trim();
+            if (/^(over|about)$/i.test(name)) {
+                label.style.setProperty('display', 'none', 'important');
+                continue;
+            }
+            if (!/^(links?|externe links|external links|media informatie|media information)$/i.test(name)) { continue; }
+
+            var section = label.closest ? label.closest('.detailVerticalSection, .verticalSection, section') : null;
+            if (!section || section === page || section.querySelector('[class*="overview" i]')) {
+                section = label.parentElement;
+            }
+            if (section && section !== page && !section.querySelector('[class*="overview" i]')) {
+                section.style.setProperty('display', 'none', 'important');
+            } else {
+                label.style.setProperty('display', 'none', 'important');
+            }
+        }
+    }
+
+    function seasonInfoLabel(key) {
+        var labels = {
+            status: text('Status', 'Status', 'Status'),
+            firstAirDate: text('Eerste uitzenddatum', 'First Air Date', 'Erstausstrahlung'),
+            originalLanguage: text('Oorspronkelijke taal', 'Original Language', 'Originalsprache'),
+            productionCountry: text('Productieland', 'Production Country', 'Produktionsland'),
+            network: text('Netwerk', 'Network', 'Sender'),
+            streamingOn: text('Nu te streamen', 'Currently Streaming On', 'Derzeit im Stream')
+        };
+        return labels[key];
+    }
+
+    function appendSeasonInfoRow(card, label, value) {
+        if (!value) { return; }
+        var row = document.createElement('div');
+        row.className = 'discover-season-info-row';
+        var title = document.createElement('span');
+        title.className = 'discover-season-info-label';
+        title.textContent = label;
+        var content = document.createElement('span');
+        content.className = 'discover-season-info-value';
+        content.textContent = value;
+        row.appendChild(title);
+        row.appendChild(content);
+        card.appendChild(row);
+    }
+
+    function renderSeasonCard(id) {
+        var tmdbId = seasonCardIds[id];
+        var info = seasonCardCache[tmdbId];
+        if (!tmdbId || !info || itemIdFromHash() !== id) { return; }
+        var page = document.querySelector('.itemDetailPage');
+        if (!page || !visible(page)) { return; }
+        var poster = page.querySelector('.detailImageContainer');
+        if (!poster) {
+            var image = page.querySelector('.itemDetailImage img, .cardImageContainer img');
+            poster = image && image.closest ? image.closest('.card') || image.parentElement : null;
+        }
+        if (!poster || !poster.parentElement) { return; }
+
+        var card = page.querySelector('.discover-season-info');
+        if (!card) {
+            card = document.createElement('div');
+            card.className = 'discover-season-info';
+        }
+        card.setAttribute('data-series-id', String(tmdbId));
+        card.textContent = '';
+        var width = poster.getBoundingClientRect().width;
+        card.style.width = width > 0 ? Math.round(width) + 'px' : 'min(100%, 340px)';
+
+        if (info.TmdbRating > 0) {
+            var rating = document.createElement('div');
+            rating.className = 'discover-season-info-rating';
+            rating.textContent = 'TMDB  ' + info.TmdbRating + '%';
+            card.appendChild(rating);
+        }
+        appendSeasonInfoRow(card, seasonInfoLabel('status'), info.Status);
+        appendSeasonInfoRow(card, seasonInfoLabel('firstAirDate'), info.FirstAirDate);
+        appendSeasonInfoRow(card, seasonInfoLabel('originalLanguage'), info.OriginalLanguage);
+        appendSeasonInfoRow(card, seasonInfoLabel('productionCountry'), info.ProductionCountry);
+        appendSeasonInfoRow(card, seasonInfoLabel('network'), info.Network);
+        if (info.StreamingOn && info.StreamingOn.length) {
+            var providers = document.createElement('div');
+            providers.className = 'discover-season-info-providers';
+            var title = document.createElement('div');
+            title.className = 'discover-season-info-label';
+            title.textContent = seasonInfoLabel('streamingOn');
+            var list = document.createElement('div');
+            list.className = 'discover-season-info-provider-list';
+            info.StreamingOn.forEach(function (provider) {
+                var chip = document.createElement('span');
+                chip.className = 'discover-season-info-provider';
+                chip.textContent = provider;
+                list.appendChild(chip);
+            });
+            providers.appendChild(title);
+            providers.appendChild(list);
+            card.appendChild(providers);
+        }
+        if (poster.nextSibling !== card) { poster.parentElement.insertBefore(card, poster.nextSibling); }
+    }
+
+    function loadSeasonCardInfo(itemId, tmdbId) {
+        if (seasonCardCache[tmdbId]) { renderSeasonCard(itemId); return; }
+        if (seasonCardPending[tmdbId]) { return; }
+        var c = api();
+        if (!c) { return; }
+        seasonCardPending[tmdbId] = true;
+        c.ajax({
+            type: 'GET',
+            url: c.getUrl('Discover/SeriesCard', { TmdbId: tmdbId }),
+            dataType: 'json'
+        }).then(function (info) {
+            seasonCardCache[tmdbId] = info || {};
+            delete seasonCardPending[tmdbId];
+            renderSeasonCard(itemId);
+        }, function (error) {
+            delete seasonCardPending[tmdbId];
+            console.warn('[Discover] seriegegevens laden mislukt voor TMDB ' + tmdbId, error);
+        });
+    }
+
     // Afspelen/Aanvragen alleen tonen als de titel nog niet is aangevraagd of beschikbaar.
     function syncAskPlay(id) {
         var hidden = document.querySelectorAll('.discover-ask-hidden');
@@ -719,19 +885,30 @@
         if (play) { play.classList.add('discover-ask-hidden'); }
     }
 
-    // De beschrijving staat standaard ingeklapt met een knop "Meer". Die knop opent een venster van Emby (de popup);
-    // vroeger klikte de plugin zelf op "Meer", waardoor het venster ongevraagd opende. Nu wordt de knop alleen verborgen
-    // en de tekst met CSS (zie injectCss) volledig getoond.
+    // Seizoensbeschrijvingen worden uitgeklapt en de link "Meer" wordt verborgen, zonder de detailpopup te openen.
     function expandOverview() {
-        var els = document.querySelectorAll('button, a, span, div');
-        for (var i = 0; i < els.length; i++) {
-            var el = els[i];
-            if (el.children.length !== 0 || !visible(el)) { continue; }
-            var t = (el.textContent || '').trim();
-            if (!/^(meer|more|minder|less)$/i.test(t)) { continue; }
-            if (el.closest && el.closest('.dcRoot, .btnDiscoverRequest')) { continue; }
-            var target = el.closest ? (el.closest('button, a') || el) : el;
-            target.classList.add('discover-hide');
+        var page = document.querySelector('.itemDetailPage');
+        if (page && document.body.classList.contains('discover-season-ask-page')) {
+            var blocks = page.querySelectorAll('[class]');
+            for (var i = 0; i < blocks.length; i++) {
+                var className = typeof blocks[i].className === 'string' ? blocks[i].className.toLowerCase() : '';
+                if (className.indexOf('overview') < 0 && className.indexOf('clamp') < 0) { continue; }
+                blocks[i].style.setProperty('display', 'block', 'important');
+                blocks[i].style.setProperty('-webkit-line-clamp', 'unset', 'important');
+                blocks[i].style.setProperty('line-clamp', 'unset', 'important');
+                blocks[i].style.setProperty('max-height', 'none', 'important');
+                blocks[i].style.setProperty('height', 'auto', 'important');
+                blocks[i].style.setProperty('overflow', 'visible', 'important');
+                blocks[i].style.setProperty('white-space', 'pre-line', 'important');
+            }
+        }
+        var controls = document.querySelectorAll('button, a, [role="button"]');
+        for (var j = 0; j < controls.length; j++) {
+            var control = controls[j];
+            if (!visible(control) || (control.closest && control.closest('.dcRoot, .btnDiscoverRequest'))) { continue; }
+            var label = [control.textContent, control.getAttribute('aria-label'), control.getAttribute('title')]
+                .join(' ').replace(/\s+/g, ' ').trim();
+            if (/^(meer|more|minder|less)$/i.test(label)) { control.classList.add('discover-hide'); }
         }
     }
 
@@ -751,8 +928,8 @@
         sec.style.setProperty('display', 'none', 'important');
     }
 
-    function hideFilePathLines(withMeta, onlyPages) {
-        if (diagnosticsEnabled) { return; }
+    function hideFilePathLines(withMeta, onlyPages, force) {
+        if (diagnosticsEnabled && !force) { return; }
         var pages = document.querySelectorAll('.itemDetailPage');
         var roots = [];
         for (var p = 0; p < pages.length; p++) { if (visible(pages[p])) { roots.push(pages[p]); } }
@@ -819,23 +996,26 @@
         }
     }
 
-    // Aanvraag- en trailerpagina: overbodige knoppen en het blok "Over" verdwijnen.
-    // Alleen op de aanvraagpagina heet Afspelen ook echt Aanvragen.
-    function applyAskPage(renamePlay) {
+    // Op aanvraag- en trailerdetails wordt Afspelen duidelijk benoemd; overige knoppen en secties verdwijnen.
+    function applyAskPage(renamePlay, preserveOverview) {
         if (renamePlay) {
             var play = findPlayButton(document.body);
             if (play) {
                 var span = play.querySelector('.detailButton-text') || play.querySelector('span');
-                if (span && span.textContent !== 'Aanvragen') { span.textContent = 'Aanvragen'; }
-                play.setAttribute('title', 'Aanvragen');
-                play.setAttribute('aria-label', 'Aanvragen');
+                var label = renamePlay === 'ask'
+                    ? text('Aanvragen', 'Request', 'Anfragen')
+                    : text('Trailer', 'Trailer', 'Trailer');
+                if (span && span.textContent !== label) { span.textContent = label; }
+                play.setAttribute('title', label);
+                play.setAttribute('aria-label', label);
             }
         }
-        hideOverSection();
-        hideMediaInfo();
+        if (preserveOverview) { hideSeasonMetadata(); }
+        else { hideOverSection(); }
+        hideMediaInfo(preserveOverview);
         hideExtraButtons();
-        hideSectionsByLabel();
-        hideFilePathLines(true);
+        if (!preserveOverview) { hideSectionsByLabel(); }
+        hideFilePathLines(true, false, preserveOverview);
         expandOverview();
     }
 
@@ -845,6 +1025,13 @@
     // een Discover-map) worden daarom verborgen; je opent een map alleen nog door erop te klikken.
     var chPromise = null;
     var cardSeen = {};      // id -> true (Discover-map), false (andere), 'p' (wordt opgezocht)
+    var requestTileInfo = {}; // id -> request/trailer metadata, null when not a Discover channel item
+    var requestTilePending = {};
+    var requestTileRetry = {};
+    var seasonLibraryStates = {};
+    var seasonLibraryCacheAt = {};
+    var seasonLibraryPending = {};
+    var seasonLibraryRetry = {};
     var folderPage = {};    // id van de huidige pagina -> true/false
 
     function discoverChannelId() {
@@ -853,7 +1040,9 @@
         if (!c) { return Promise.resolve(null); }
         chPromise = Promise.resolve(c.getJSON(c.getUrl('Channels', { UserId: c.getCurrentUserId() }))).then(function (r) {
             var items = (r && r.Items) || [];
-            for (var i = 0; i < items.length; i++) { if (items[i].Name === 'Discover') { return items[i].Id; } }
+            for (var i = 0; i < items.length; i++) {
+                if (/^Discover(?: Media)?$/i.test(items[i].Name || '')) { return items[i].Id; }
+            }
             return null;
         }, function () { chPromise = null; return null; });
         return chPromise;
@@ -880,6 +1069,258 @@
                 schedule();
             });
         }).then(null, function () { ids.forEach(function (x) { delete cardSeen[x]; }); });
+    }
+
+    function requestTileName(name) {
+        var value = String(name || '').replace(/^[\u2713\u23F3]\s*/, '');
+        var season = /^(?:Aanvragen Seizoen|Request Season|Staffel anfragen|Seizoen|Season|Staffel)\s+(\d+)/i.exec(value);
+        if (season) { return { kind: 'season', title: value, number: parseInt(season[1], 10) }; }
+        var trailer = /^Trailer:\s*(.+)$/i.exec(value);
+        if (trailer) { return { kind: 'trailer', title: trailer[1].trim() }; }
+        var ask = /^(?:Aanvragen|Anfragen|Request):\s*(.+)$/i.exec(value);
+        return ask ? { kind: 'ask', title: ask[1].trim() } : null;
+    }
+
+    function restoreRequestTileLabel(card) {
+        var node = card.__discoverTileLabelNode;
+        if (node && card.contains(node) && card.__discoverOriginalTileLabel !== undefined) {
+            node.nodeValue = card.__discoverOriginalTileLabel;
+        }
+        card.__discoverTileLabelNode = null;
+        card.__discoverOriginalTileLabel = undefined;
+    }
+
+    function restoreSeasonTileLabel(card) {
+        var node = card.__discoverSeasonLabelNode;
+        if (node && card.contains(node) && card.__discoverOriginalSeasonLabel !== undefined) {
+            node.nodeValue = card.__discoverOriginalSeasonLabel;
+        }
+        card.__discoverSeasonLabelNode = null;
+        card.__discoverOriginalSeasonLabel = undefined;
+    }
+
+    function setSeasonTileStatus(card, info, seasonNumber) {
+        var node = card.__discoverSeasonLabelNode;
+        if (!node || !card.contains(node)) {
+            card.__discoverSeasonLabelNode = null;
+            card.__discoverOriginalSeasonLabel = undefined;
+            var walker = document.createTreeWalker(card, NodeFilter.SHOW_TEXT, null, false);
+            while ((node = walker.nextNode())) {
+                if (/^\s*(?:[\u2713\u23F3]\s*)?(?:Aanvragen Seizoen|Request Season|Staffel anfragen|Seizoen|Season|Staffel)\s+\d+/i.test(node.nodeValue || '')) { break; }
+            }
+            if (!node) { return; }
+            card.__discoverSeasonLabelNode = node;
+            card.__discoverOriginalSeasonLabel = node.nodeValue;
+        }
+        var states = seasonLibraryStates[info.tmdbId];
+        var availableInEmby = !!(states && states[seasonNumber]);
+        var requestedInSonarr = /^\s*\u23F3|\u23F3\s*$/.test(info.name || '');
+        var prefix = availableInEmby ? '\u2713 ' : requestedInSonarr ? '\u23F3 ' : '';
+        var leadingWhitespace = /^\s*/.exec(card.__discoverOriginalSeasonLabel)[0];
+        node.nodeValue = leadingWhitespace + prefix + text('Seizoen ', 'Season ', 'Staffel ') + seasonNumber;
+    }
+
+    function syncSeasonLibraryStatus(tmdbId) {
+        var c = api();
+        if (!c || !tmdbId ||
+            (seasonLibraryStates[tmdbId] && Date.now() - (seasonLibraryCacheAt[tmdbId] || 0) < 60000) ||
+            seasonLibraryPending[tmdbId] ||
+            Date.now() < (seasonLibraryRetry[tmdbId] || 0)) { return; }
+        seasonLibraryPending[tmdbId] = true;
+        var uid = c.getCurrentUserId();
+        c.getJSON(c.getUrl('Users/' + uid + '/Items', {
+            AnyProviderIdEquals: 'Tmdb.' + tmdbId,
+            IncludeItemTypes: 'Series',
+            Recursive: true,
+            Fields: 'ProviderIds',
+            Limit: 20
+        })).then(function (r) {
+            var seriesItems = ((r && r.Items) || []).filter(function (item) {
+                var ids = item.ProviderIds || {};
+                return String(ids.Tmdb || ids.tmdb || '') === String(tmdbId);
+            });
+            if (!seriesItems.length) {
+                seasonLibraryStates[tmdbId] = {};
+                return null;
+            }
+            return Promise.all(seriesItems.map(function (series) {
+                return c.getJSON(c.getUrl('Users/' + uid + '/Items', {
+                    ParentId: series.Id,
+                    IncludeItemTypes: 'Episode',
+                    Recursive: true,
+                    Fields: 'ParentIndexNumber',
+                    Limit: 5000
+                }));
+            })).then(function (episodeLists) {
+                var states = {};
+                episodeLists.forEach(function (episodes) {
+                    ((episodes && episodes.Items) || []).forEach(function (item) {
+                        var number = parseInt(item.ParentIndexNumber, 10);
+                        if (number > 0) { states[number] = true; }
+                    });
+                });
+                seasonLibraryStates[tmdbId] = states;
+            });
+        }).then(function () {
+            delete seasonLibraryPending[tmdbId];
+            delete seasonLibraryRetry[tmdbId];
+            seasonLibraryCacheAt[tmdbId] = Date.now();
+            applyRequestTilePresentation();
+        }, function (error) {
+            delete seasonLibraryPending[tmdbId];
+            seasonLibraryRetry[tmdbId] = Date.now() + 30000;
+            console.warn('[Discover] Emby-seizoensstatus ophalen mislukt voor TMDB ' + tmdbId, error);
+        });
+    }
+
+    function setRequestTileLabel(card) {
+        var node = card.__discoverTileLabelNode;
+        if (!node || !card.contains(node)) {
+            card.__discoverTileLabelNode = null;
+            card.__discoverOriginalTileLabel = undefined;
+            var walker = document.createTreeWalker(card, NodeFilter.SHOW_TEXT, null, false);
+            while ((node = walker.nextNode())) {
+                if (/^\s*Trailer:/i.test(node.nodeValue || '')) { break; }
+            }
+            if (!node) { return; }
+            card.__discoverTileLabelNode = node;
+            card.__discoverOriginalTileLabel = node.nodeValue;
+        }
+        var prefix = text('Aanvragen: ', 'Request: ', 'Anfragen: ');
+        node.nodeValue = card.__discoverOriginalTileLabel.replace(/^(\s*)Trailer:\s*/i, '$1' + prefix);
+    }
+
+    function applyRequestTilePresentation() {
+        var cards = document.querySelectorAll('.card[data-id]');
+        var candidates = [];
+        var groups = Object.create(null);
+        var seasonCardsByParent = [];
+        for (var i = 0; i < cards.length; i++) {
+            var card = cards[i];
+            var id = card.getAttribute('data-id');
+            var info = requestTileInfo[id];
+            card.classList.remove('discover-web-ask-hidden');
+            card.classList.remove('discover-channel-landscape-card');
+            card.classList.remove('discover-season-request-card');
+            if (!info || !info.name || !info.parentId) {
+                restoreRequestTileLabel(card);
+                restoreSeasonTileLabel(card);
+                continue;
+            }
+            var parsed = requestTileName(info.name);
+            if (!parsed) {
+                restoreRequestTileLabel(card);
+                restoreSeasonTileLabel(card);
+                continue;
+            }
+            if (parsed.kind === 'season') {
+                card.classList.add('discover-season-request-card');
+                restoreRequestTileLabel(card);
+                setSeasonTileStatus(card, info, parsed.number);
+                syncSeasonLibraryStatus(info.tmdbId);
+                if (card.parentNode) {
+                    var parentEntry = null;
+                    for (var parentIndex = 0; parentIndex < seasonCardsByParent.length; parentIndex++) {
+                        if (seasonCardsByParent[parentIndex].parent === card.parentNode) {
+                            parentEntry = seasonCardsByParent[parentIndex];
+                            break;
+                        }
+                    }
+                    if (!parentEntry) {
+                        parentEntry = { parent: card.parentNode, cards: [] };
+                        seasonCardsByParent.push(parentEntry);
+                    }
+                    parentEntry.cards.push({ card: card, number: parsed.number, order: i });
+                }
+                continue;
+            }
+            restoreSeasonTileLabel(card);
+            var key = info.parentId + '\n' + parsed.title.toLocaleLowerCase();
+            var entry = groups[key] || (groups[key] = { ask: [], trailer: [] });
+            entry[parsed.kind].push({ card: card });
+            candidates.push({ card: card, kind: parsed.kind, key: key });
+        }
+        for (var j = 0; j < candidates.length; j++) {
+            var candidate = candidates[j];
+            var pair = groups[candidate.key];
+            if (pair.ask.length !== 1 || pair.trailer.length !== 1) {
+                restoreRequestTileLabel(candidate.card);
+                continue;
+            }
+            candidate.card.classList.add('discover-channel-landscape-card');
+            if (candidate.kind === 'ask') {
+                candidate.card.classList.add('discover-web-ask-hidden');
+            } else {
+                setRequestTileLabel(candidate.card);
+            }
+        }
+        seasonCardsByParent.forEach(function (entry) {
+            var siblingCards = [];
+            for (var k = 0; k < cards.length; k++) {
+                if (cards[k].parentNode !== entry.parent) { continue; }
+                var siblingId = cards[k].getAttribute('data-id');
+                var siblingInfo = requestTileInfo[siblingId];
+                var siblingSeason = siblingInfo && requestTileName(siblingInfo.name);
+                if (!siblingSeason || siblingSeason.kind !== 'season') { return; }
+                siblingCards.push({ card: cards[k], number: siblingSeason.number });
+            }
+            if (siblingCards.length < 2) { return; }
+            siblingCards.sort(function (a, b) { return a.number - b.number; });
+            siblingCards.forEach(function (item) { entry.parent.appendChild(item.card); });
+        });
+    }
+
+    function syncRequestTileCards() {
+        var c = api();
+        if (!c) { return; }
+        var cards = document.querySelectorAll('.card[data-id]');
+        var ids = [];
+        for (var i = 0; i < cards.length; i++) {
+            var id = cards[i].getAttribute('data-id');
+            if (!id || !/(?:Trailer|Aanvragen|Anfragen|Request):\s*\S+|(?:Aanvragen Seizoen|Request Season|Staffel anfragen|Seizoen|Season|Staffel)\s+\d+/i.test(cards[i].textContent || '')) { continue; }
+            if (requestTileInfo[id] === undefined && !requestTilePending[id] &&
+                Date.now() >= (requestTileRetry[id] || 0)) {
+                requestTilePending[id] = true;
+                ids.push(id);
+            }
+        }
+        applyRequestTilePresentation();
+        if (!ids.length) { return; }
+        discoverChannelId().then(function (chId) {
+            if (!chId) {
+                ids.forEach(function (id) {
+                    delete requestTilePending[id];
+                    requestTileRetry[id] = Date.now() + 5000;
+                });
+                return null;
+            }
+            return Promise.resolve(c.getJSON(c.getUrl('Users/' + c.getCurrentUserId() + '/Items', {
+                Ids: ids.join(','), Fields: 'ChannelInfo,ParentId,ProviderIds'
+            }))).then(function (r) {
+                var found = {};
+                ((r && r.Items) || []).forEach(function (item) {
+                    if (item.ChannelId === chId) {
+                        var providerIds = item.ProviderIds || {};
+                        found[item.Id] = {
+                            name: item.Name || '',
+                            parentId: item.ParentId || '',
+                            tmdbId: parseInt(providerIds.Tmdb || providerIds.tmdb || 0, 10) || 0
+                        };
+                    }
+                });
+                ids.forEach(function (id) {
+                    requestTileInfo[id] = found[id] || null;
+                    delete requestTilePending[id];
+                    delete requestTileRetry[id];
+                });
+                applyRequestTilePresentation();
+            });
+        }).then(null, function () {
+            ids.forEach(function (id) {
+                delete requestTilePending[id];
+                requestTileRetry[id] = Date.now() + 5000;
+            });
+        });
     }
 
     function syncFolderPage(id) {
@@ -928,13 +1369,23 @@
         }
         checkAdmin();
         markFolderCards();
+        syncRequestTileCards();
         syncFolderPage(id);
         syncBodyClass(id);
         var ask = !!(id && askIds[id]);
+        var seasonAsk = !!(id && seasonAskIds[id]);
         var trl = !!(id && trailerIds[id]);
         if (document.body) {
             document.body.classList.toggle('discover-ask-page', ask || trl);
             document.body.classList.toggle('discover-ask-play', ask);
+            document.body.classList.toggle('discover-season-ask-page', seasonAsk);
+        }
+        if (seasonAsk) { renderSeasonCard(id); }
+        else {
+            var oldSeasonCards = document.querySelectorAll('.discover-season-info');
+            for (var sc = 0; sc < oldSeasonCards.length; sc++) {
+                if (oldSeasonCards[sc].parentNode) { oldSeasonCards[sc].parentNode.removeChild(oldSeasonCards[sc]); }
+            }
         }
         if (id !== askLast) {
             // Nieuwe pagina: status opnieuw ophalen (Emby hergebruikt de pagina en de status kan veranderd zijn).
@@ -942,7 +1393,7 @@
             if (id && askIds[id]) { delete lookups[id]; delete askStatus[id]; }
         }
         if (ask || trl) {
-            applyAskPage(ask);
+            applyAskPage(ask ? 'ask' : 'trailer', seasonAsk);
             dbg((ask ? 'aanvraagdetailpagina herkend' : 'trailerdetailpagina herkend') +
                 '; ' + buttonDiagnostic(id));
         }

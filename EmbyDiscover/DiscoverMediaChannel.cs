@@ -346,9 +346,25 @@ namespace Emby.Plugins.Discover
                             "/seizoen " + seasonNumber + ": " + ex.Message);
                     }
                 }
+                // De seizoenslijst van de serie mist soms een poster die het seizoen zelf wel heeft: dan het seizoen rechtstreeks opvragen.
+                if (string.IsNullOrWhiteSpace(season.poster_path))
+                {
+                    try
+                    {
+                        var seasonPoster = await _tmdb.GetSeasonPosterPath(tmdbId, seasonNumber, ct).ConfigureAwait(false);
+                        if (!string.IsNullOrWhiteSpace(seasonPoster)) season.poster_path = seasonPoster;
+                        else DiscoverDiagnostics.Add("geen seizoensposter bij TMDB voor " + tmdbId + "/seizoen " + seasonNumber + " (serieposter gebruikt)");
+                    }
+                    catch (Exception ex)
+                    {
+                        if (ex is OperationCanceledException) throw;
+                        DiscoverDiagnostics.Add("seizoensposter ophalen mislukt voor " + tmdbId + "/seizoen " + seasonNumber + ": " + ex.Message);
+                    }
+                }
+                // Seizoenstegels zijn staand (2:3): is er echt geen seizoensposter, dan de serieposter, pas daarna de liggende achtergrond.
                 var image = !string.IsNullOrEmpty(season.poster_path)
                     ? TmdbClient.PosterUrl(season.poster_path)
-                    : background;
+                    : (!string.IsNullOrEmpty(detail.poster_path) ? TmdbClient.PosterUrl(detail.poster_path) : background);
                 var countText = season.episode_count > 0
                     ? DiscoverLanguage.Text(
                         season.episode_count == 1 ? "1 aflevering" : season.episode_count + " afleveringen",
