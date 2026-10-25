@@ -7,7 +7,9 @@ Release notes per version (in Dutch; the project started as a private build). Ne
 - Sonarr v4 of v5 voor serie-aanvragen (getest met v4 en v5; oudere versies worden niet ondersteund). De plugin probeert `/api/v5` en valt terug op `/api/v3`.
 - Series die per seizoen worden aangevraagd worden nu direct na de aanvraag gemonitord en gezocht in Sonarr: de plugin stuurt alle seizoenen mee (gekozen = gemonitord, rest = niet) met `monitorNewItems: none`, zet daarna precies de gekozen seizoenen en hun afleveringen op gemonitord (rest uit) en start een zoekopdracht (`SeriesSearch`, zoekt alleen de gemonitorde afleveringen).
 - De bevestigingsclip toont alleen nog een grote poster met daaronder groot de status (Aangevraagd / Staat al in Radarr of Sonarr) en wat is aangevraagd (Film, Serie · alle seizoenen of Seizoen N), zodat het ook op een tv of telefoon leesbaar is. Bij een seizoen staat de poster van dat seizoen erop. Titel, beschrijving, cast, regie en genres zijn weggelaten.
-- Technisch: seizoenitems en de seizoenmap hebben nieuwe id's (`ask22season`, `ask22seasons`) en de kanaal-DataVersion is 68, zodat Emby geen oude seizoenplaatjes meer hergebruikt.
+- De aanvraag- en trailertegel (en bij series de seizoenmap) hebben nu de tekst "Aanvragen" resp. "Trailer" op de afbeelding, zodat je ze direct uit elkaar houdt. Lukt het maken van de afbeelding niet, dan blijft de gewone achtergrond staan.
+- Seizoenitems die al in Sonarr staan zeggen dat nu in de beschrijving: "al aangevraagd" (⏳), "gedeeltelijk beschikbaar" of "staat al in je bibliotheek" (✓, ook achter de seizoensnaam als alle afleveringen er zijn). Opnieuw aanvragen kan nog steeds.
+- Technisch: seizoenitems en de seizoenmap hebben nieuwe id's (`ask22season`, `ask22seasons`) en de kanaal-DataVersion is 70, zodat Emby geen oude seizoenplaatjes meer hergebruikt.
 
 ## Version 1.0.40.0-beta
 - Trailer-afspelen speelt nooit meer de "Aangevraagd"-bevestigingsclip af. Is er geen trailer of lukt het ophalen niet, dan meldt Emby een eerlijke fout en wordt er niets aangevraagd of gecachet.
