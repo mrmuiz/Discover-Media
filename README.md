@@ -8,7 +8,7 @@
   Browse movies and series from TMDB in Emby, watch trailers, and send requests to Radarr or Sonarr.
 </p>
 
-> **Status: stable.** The current version is **1.1.1**, built against the latest published Emby SDK package, `MediaBrowser.Server.Core` 4.11.0.5-beta6. It has been tested with Emby Server 4.11.0.10; other Emby versions may work but have not been individually tested. Please report problems through [Issues](../../issues) and include the relevant diagnostics (see [Troubleshooting](#troubleshooting)).
+> **Status: stable.** The current version is **1.1.3**, built against the Emby SDK package `MediaBrowser.Server.Core` 4.10.0.1-beta so that one dll runs on both Emby Server 4.10.2 and 4.11 (beta). It has been installed on both; other Emby versions may work but have not been individually tested. Please report problems through [Issues](../../issues) and include the relevant diagnostics (see [Troubleshooting](#troubleshooting)).
 
 ## Screenshots
 
@@ -63,7 +63,7 @@
 
 ## Requirements
 
-- Emby Server. The plugin is built against `MediaBrowser.Server.Core` 4.11.0.5-beta6; testing has used Emby Server 4.11.0.10.
+- Emby Server 4.10.2 or newer (4.11 beta included). The plugin is built against `MediaBrowser.Server.Core` 4.10.0.1-beta; it has been installed on Emby Server 4.10.2.0 and on the 4.11 beta.
 - A [TMDB API key](https://www.themoviedb.org/settings/api).
 - Radarr for movie requests and/or Sonarr for series requests. Series requests require Sonarr v4 or v5 (tested with both; older versions are not supported).
 - Emby's bundled `ffmpeg` is used to create some channel artwork and the request confirmation clip.
@@ -104,6 +104,7 @@ The request confirmation clip shows a large poster with the status (Requested / 
 | Sonarr URL and API key | Sends series requests to Sonarr. |
 | Quality profile and root folder | Selects the destination settings used for requests. Choose values returned by **Test connection**. |
 | Show Diagnostics | Optional yellow debug message and technical media information on item pages. **Off by default.** |
+| Show the Trailer tile | Shows the "Trailer: title" tile next to "Request" in the channel. **On by default.** Turn it off to keep only the request tile. |
 
 API keys are stored in the plugin configuration and masked in the settings form by default.
 

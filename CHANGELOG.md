@@ -1,6 +1,5 @@
-## Version 1.1.2
+## Version 1.1.3
 
-- Fix: the green checkmark (watched) now works per season. Each season item has its own key (`DiscoverSeasonTmdb` = `<series-id>-s<season>`) instead of the shared Tmdb id, so playing (requesting) one season no longer marks all seasons as watched. The trailer tile and the request tile are unchanged.
-- Trailer tile: it can be switched on or off in the plugin settings ("Show the Trailer tile next to Request in the channel", added in 1.1.1, default on). Preparation for a trailer tile per season (`ShowSeasonTrailerTile`, default off, no checkbox in the settings yet).
-- Fix: the diagnostics on the Discover page showed the request-button script as v1.1.0 while the server was v1.1.2.0, which looked like an outdated script. The script version is now 1.1.2, so both match.
-- Technical: channel version 72, the scripts keep the same resource names.
+- Fix: the diagnostics on the Discover page still showed the request-button script as v1.1.0 while the plugin was newer. The plugin version and the script version are now the same everywhere (1.1.3), so the yellow diagnostics lines match.
+- Compatibility: the plugin is now built against the Emby SDK package `MediaBrowser.Server.Core` 4.10.0.1-beta (was 4.11.0.5-beta6), so the same dll loads on Emby Server 4.10.2 and on the 4.11 beta. Before, Emby Server 4.10.2 could not load the plugin ("Could not load file or assembly MediaBrowser.Model, Version=4.11.0.5"). Installing was seen on both versions; not every function has been tested extensively on both.
+- Technical: no functional changes, channel version and resource names stay the same.
