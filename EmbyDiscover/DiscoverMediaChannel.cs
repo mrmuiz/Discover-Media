@@ -59,7 +59,7 @@ namespace Emby.Plugins.Discover
         public string HomePageUrl => "";
 
         // Ophogen als Emby oude (bewaarde) kanaalinhoud blijft tonen.
-        public string DataVersion => "68";
+        public string DataVersion => "70";
         public ChannelParentalRating ParentalRating => ChannelParentalRating.GeneralAudience;
         public bool IsEnabledFor(string userId) => true;
 
@@ -278,6 +278,22 @@ namespace Emby.Plugins.Discover
                 PremiereDate = item.PremiereDate
             };
             if (genres.Count > 0) trailer.Genres = genres;
+
+            // Zet de tekst "Aanvragen" resp. "Trailer" op de tegelafbeelding, zodat je de twee tegels direct uit elkaar houdt.
+            // Lukt dat niet (of duurt het te lang), dan blijft de gewone achtergrond staan.
+            if (!string.IsNullOrEmpty(t.backdrop_path))
+            {
+                var tileKey = "rq" + (tv ? "t" : "m") + tmdbId;
+                var askTile = FolderTile.Create(tileKey + "ask", DiscoverLanguage.Text("Aanvragen", "Request", "Anfragen"),
+                    item.ImageUrl, CancellationToken.None);
+                var trailerTile = FolderTile.Create(tileKey + "tr", DiscoverLanguage.Text("Trailer", "Trailer", "Trailer"),
+                    item.ImageUrl, CancellationToken.None);
+                var askFile = await TileWithin(askTile, TimeSpan.FromSeconds(8)).ConfigureAwait(false);
+                var trailerFile = await TileWithin(trailerTile, TimeSpan.FromSeconds(8)).ConfigureAwait(false);
+                if (askFile != null) item.ImageUrl = askFile;
+                if (trailerFile != null) trailer.ImageUrl = trailerFile;
+            }
+
             if (tv)
             {
                 // The Aanvragen: <series> folder is the season selector; do not add a whole-series request tile.
@@ -373,16 +389,37 @@ namespace Emby.Plugins.Discover
                         season.episode_count == 1 ? "1 episode" : season.episode_count + " episodes",
                         season.episode_count == 1 ? "1 Folge" : season.episode_count + " Folgen")
                     : null;
-                var overview = DiscoverLanguage.Text(
-                    "Druk op \u25B6 om alleen seizoen " + seasonNumber + " aan te vragen.",
-                    "Press \u25B6 to request season " + seasonNumber + " only.",
-                    "Drücke auf \u25B6, um nur Staffel " + seasonNumber + " anzufordern.");
+                // Staat het seizoen al in Sonarr, dan zeg dat erbij; opnieuw aanvragen kan nog steeds.
+                bool allFiles = hasFiles && sonarrSeason.statistics.episodeCount > 0 &&
+                    sonarrSeason.statistics.episodeFileCount >= sonarrSeason.statistics.episodeCount;
+                string overview;
+                if (allFiles)
+                    overview = DiscoverLanguage.Text(
+                        "\u2713 Dit seizoen staat al in je bibliotheek. Druk op \u25B6 om het opnieuw aan te vragen.",
+                        "\u2713 This season is already in your library. Press \u25B6 to request it again.",
+                        "\u2713 Diese Staffel ist bereits in deiner Bibliothek. Drücke auf \u25B6, um sie erneut anzufordern.");
+                else if (hasFiles)
+                    overview = DiscoverLanguage.Text(
+                        "\u2713 Gedeeltelijk beschikbaar: een deel van de afleveringen staat al in je bibliotheek. Druk op \u25B6 om het seizoen opnieuw aan te vragen.",
+                        "\u2713 Partially available: some episodes are already in your library. Press \u25B6 to request the season again.",
+                        "\u2713 Teilweise verfügbar: Einige Folgen befinden sich bereits in deiner Bibliothek. Drücke auf \u25B6, um die Staffel erneut anzufordern.");
+                else if (showHourglass)
+                    overview = DiscoverLanguage.Text(
+                        "\u23F3 Dit seizoen is al aangevraagd en staat in Sonarr. Druk op \u25B6 om het opnieuw aan te vragen.",
+                        "\u23F3 This season has already been requested from Sonarr. Press \u25B6 to request it again.",
+                        "\u23F3 Diese Staffel wurde bereits bei Sonarr angefordert. Drücke auf \u25B6, um sie erneut anzufordern.");
+                else
+                    overview = DiscoverLanguage.Text(
+                        "Druk op \u25B6 om alleen seizoen " + seasonNumber + " aan te vragen.",
+                        "Press \u25B6 to request season " + seasonNumber + " only.",
+                        "Drücke auf \u25B6, um nur Staffel " + seasonNumber + " anzufordern.");
                 if (!string.IsNullOrWhiteSpace(countText)) overview += "\n" + countText + ".";
                 if (!string.IsNullOrWhiteSpace(season.overview)) overview += "\n\n" + season.overview.Trim();
 
                 var displayName = DiscoverLanguage.Text("Seizoen ", "Season ", "Staffel ") +
                     seasonNumber.ToString(CultureInfo.InvariantCulture);
-                if (showHourglass) displayName += " \u23F3";
+                if (allFiles) displayName += " \u2713";
+                else if (showHourglass) displayName += " \u23F3";
 
                 items.Add(new ChannelItemInfo
                 {
@@ -553,6 +590,22 @@ namespace Emby.Plugins.Discover
                 items.Add(folder);
             }
             return new ChannelItemResult { Items = items, TotalRecordCount = items.Count };
+        }
+
+        // Wacht hoogstens 'max' op een tegelafbeelding; daarna gaat het maken op de achtergrond door en wordt null gegeven.
+        private static async Task<string> TileWithin(Task<string> creation, TimeSpan max)
+        {
+            try
+            {
+                await Task.WhenAny(creation, Task.Delay(max)).ConfigureAwait(false);
+                if (creation.IsCompleted) return await creation.ConfigureAwait(false);
+                _ = ObserveTileCreation(creation, "aanvraag/trailer");
+            }
+            catch (Exception ex)
+            {
+                DiscoverDiagnostics.Add("tegelafbeelding aanvraag/trailer mislukt: " + ex.Message);
+            }
+            return null;
         }
 
         private static async Task ObserveTileCreation(Task<string> creation, string text)
