@@ -8,7 +8,7 @@
   Browse movies and series from TMDB in Emby, watch trailers, and send requests to Radarr or Sonarr.
 </p>
 
-> **Status: stable.** The current version is **1.1.0**, built against the latest published Emby SDK package, `MediaBrowser.Server.Core` 4.11.0.5-beta6. It has been tested with Emby Server 4.11.0.10; other Emby versions may work but have not been individually tested. Please report problems through [Issues](../../issues) and include the relevant diagnostics (see [Troubleshooting](#troubleshooting)).
+> **Status: stable.** The current version is **1.1.1**, built against the latest published Emby SDK package, `MediaBrowser.Server.Core` 4.11.0.5-beta6. It has been tested with Emby Server 4.11.0.10; other Emby versions may work but have not been individually tested. Please report problems through [Issues](../../issues) and include the relevant diagnostics (see [Troubleshooting](#troubleshooting)).
 
 ## Screenshots
 

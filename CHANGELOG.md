@@ -2,6 +2,15 @@
 
 Release notes per version (in Dutch; the project started as a private build). Newest first.
 
+## Version 1.1.1
+- Fix: bij het aanvragen van een seizoen dat nog nooit is aangevraagd kreeg je soms de vaste, liggende clip zonder poster en info, terwijl een seizoen dat al in Sonarr stond wel de nette staande kaart kreeg. Oorzaak: de kaart van zo'n seizoen werd pas op het moment van Afspelen gemaakt (seizoenkaarten werden nooit vooraf gemaakt) en moest dan wachten achter een rij vooraf gemaakte kaarten; duurde het langer dan 30 seconden, dan werd de vaste clip gespeeld. Bovendien werd ook een door Emby afgebroken verzoek als "te lang" gezien.
+- De kaarten van alle seizoenen worden nu al op de achtergrond gemaakt zodra de seizoenlijst opent.
+- Een kaart die je nu nodig hebt hoeft niet meer te wachten op vooraf gemaakte kaarten (aparte wachtrij voor de achtergrond; hooguit twee ffmpeg's tegelijk, een kaart wordt nooit dubbel gemaakt).
+- Het maken van een kaart is ongeveer 4x sneller: ffmpeg maakt eerst één stilstaand beeld en zet dat daarna om naar de clip (de langzame zoom en blur op elk beeldje is vervallen). De wachttijd voor een kaart is 60 seconden.
+- Bij het afspelen van een aanvraag worden de status, de extra info en de seizoensposter nu tegelijk opgehaald (eerst na elkaar), en de poster en achtergrond van de kaart worden tegelijk gedownload. Dat scheelt wachttijd bij een koude kaart.
+- Na het aanvragen van een serie of seizoen wordt de bewaarde Sonarr-lijst niet meer weggegooid: alleen die ene serie wordt eraan toegevoegd. De eerstvolgende klik hoeft dus niet de hele serielijst opnieuw op te halen. Lukt het bijwerken niet, dan wordt de cache gewist zoals voorheen.
+- Technisch: CardVersion 6, dus bewaarde kaarten worden eenmalig opnieuw gemaakt.
+
 ## Version 1.1.0
 - Eerste stabiele release: de plugin is niet langer een beta (versie 1.1.0, geen `-beta`-achtervoegsel meer).
 - Sonarr v4 of v5 voor serie-aanvragen (getest met v4 en v5; oudere versies worden niet ondersteund). De plugin probeert `/api/v5` en valt terug op `/api/v3`.
