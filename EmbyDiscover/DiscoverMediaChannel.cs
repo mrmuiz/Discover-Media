@@ -421,6 +421,10 @@ namespace Emby.Plugins.Discover
                 if (allFiles) displayName += " \u2713";
                 else if (showHourglass) displayName += " \u23F3";
 
+                // De bevestigingskaart van dit seizoen alvast maken (op de achtergrond): zo staat de kaart met poster en
+                // status klaar zodra je op Afspelen drukt, ook voor een seizoen dat nog nooit is aangevraagd.
+                PrewarmCard(detail, null, true, sonarrSeasons.Count > 0, seasonNumber, season.poster_path);
+
                 items.Add(new ChannelItemInfo
                 {
                     Id = AskSeasonPrefix + "t:" + tmdbId + ":s:" + seasonNumber,
@@ -443,6 +447,17 @@ namespace Emby.Plugins.Discover
             return new ChannelItemResult { Items = items, TotalRecordCount = items.Count };
         }
 
+        private async Task<string> SafeSeasonPoster(int tmdbId, int season, CancellationToken ct)
+        {
+            try { return await _tmdb.GetSeasonPosterPath(tmdbId, season, ct).ConfigureAwait(false); }
+            catch (Exception ex)
+            {
+                if (ex is OperationCanceledException) throw;
+                DiscoverDiagnostics.Add("seizoensposter voor kaart " + tmdbId + "/seizoen " + season + ": " + ex.Message);
+                return null;
+            }
+        }
+
         private async Task<TmdbExtra> SafeExtra(bool tv, int tmdbId, CancellationToken ct)
         {
             try { return await _tmdb.GetExtraCached(tv, tmdbId, ct).ConfigureAwait(false); }
@@ -454,11 +469,11 @@ namespace Emby.Plugins.Discover
             }
         }
 
-        private static void PrewarmCard(TmdbItem t, TmdbExtra extra, bool tv, bool alreadyThere)
+        private static void PrewarmCard(TmdbItem t, TmdbExtra extra, bool tv, bool alreadyThere, int season = 0, string posterPath = null)
         {
             Task.Run(async () =>
             {
-                try { await RequestCard.Create(t, extra, tv, alreadyThere, CancellationToken.None).ConfigureAwait(false); }
+                try { await RequestCard.Create(t, extra, tv, alreadyThere, CancellationToken.None, season, posterPath, true).ConfigureAwait(false); }
                 catch (Exception ex) { DiscoverDiagnostics.Add("kaart vooraf maken mislukt: " + ex.Message); }
             });
         }
@@ -969,30 +984,29 @@ namespace Emby.Plugins.Discover
                     if (info == null)
                         info = tv ? await _tmdb.GetTv(tmdbId, ct).ConfigureAwait(false)
                                   : await _tmdb.GetMovie(tmdbId, ct).ConfigureAwait(false);
+                    // Alles tegelijk ophalen: extra info (TMDB), status (Radarr/Sonarr) en bij een seizoen de seizoensposter (TMDB).
                     var extraTask = SafeExtra(tv, tmdbId, ct);
                     var statesTask = SafeStates(tv, ct);
-                    await Task.WhenAll(extraTask, statesTask).ConfigureAwait(false);
+                    var posterTask = isSeasonReq ? SafeSeasonPoster(tmdbId, requestedSeason, ct) : Task.FromResult<string>(null);
+                    await Task.WhenAll(extraTask, statesTask, posterTask).ConfigureAwait(false);
                     var extra = await extraTask.ConfigureAwait(false);
                     var states = await statesTask.ConfigureAwait(false);
+                    string seasonPoster = await posterTask.ConfigureAwait(false);
                     bool hasFiles;
                     bool there = states.TryGetValue(tmdbId, out hasFiles);
 
                     // Wacht tot de staande kaart klaar is (bij een koude start duurt ffmpeg enkele seconden); pas daarna de vaste liggende clip.
                     // Bij een seizoensaanvraag staat op de kaart de poster van dat seizoen (als TMDB er een heeft).
-                    string seasonPoster = null;
-                    if (isSeasonReq)
-                    {
-                        try { seasonPoster = await _tmdb.GetSeasonPosterPath(tmdbId, requestedSeason, ct).ConfigureAwait(false); }
-                        catch (Exception ex)
-                        {
-                            if (ex is OperationCanceledException) throw;
-                            DiscoverDiagnostics.Add("seizoensposter voor kaart " + tmdbId + "/seizoen " + requestedSeason + ": " + ex.Message);
-                        }
-                    }
                     var cardTask = RequestCard.Create(info, extra, tv, there, CancellationToken.None, requestedSeason, seasonPoster);
                     _ = cardTask.ContinueWith(x => { var ignored = x.Exception; }, TaskContinuationOptions.OnlyOnFaulted);
-                    var first = await Task.WhenAny(cardTask, Task.Delay(30000, ct)).ConfigureAwait(false);
-                    if (first != cardTask) throw new TimeoutException("kaart nog niet klaar");
+                    var first = await Task.WhenAny(cardTask, Task.Delay(60000, ct)).ConfigureAwait(false);
+                    if (first != cardTask)
+                    {
+                        // Emby heeft het verzoek zelf afgebroken (bv. detailpagina gesloten): geen vaste clip teruggeven,
+                        // de kaart wordt op de achtergrond afgemaakt en staat bij de volgende keer klaar.
+                        ct.ThrowIfCancellationRequested();
+                        throw new TimeoutException("kaart nog niet klaar");
+                    }
                     var card = await cardTask.ConfigureAwait(false);
                     DiscoverDiagnostics.Add("kaartclip: " + card);
                     return new List<MediaSourceInfo>

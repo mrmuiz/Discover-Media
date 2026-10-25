@@ -204,6 +204,49 @@ namespace Emby.Plugins.Discover
             return new List<RecentEntry>(tv ? _seriesRecent : _movieRecent);
         }
 
+        /// <summary>Zet een net toegevoegde serie in de bewaarde Sonarr-gegevens. false = niet gelukt, wis dan de cache.</summary>
+        private bool TryAddToSeriesCache(string createdJson, int tmdbId, int tvdbId)
+        {
+            try
+            {
+                var dto = _json.DeserializeFromString<SonarrSeriesDto>(createdJson);
+                if (dto == null || dto.id <= 0) return false;
+                var cache = _seriesCache;
+                if (cache == null) return true;   // niets bewaard: de volgende keer wordt de lijst toch vers opgehaald
+
+                var cacheCopy = new Dictionary<int, bool>(cache);
+                cacheCopy[tmdbId] = dto.statistics != null && dto.statistics.episodeFileCount > 0;
+
+                var byNumber = new Dictionary<int, SonarrSeasonDto>();
+                if (dto.seasons != null)
+                    foreach (var season in dto.seasons)
+                        if (season != null && season.seasonNumber > 0) byNumber[season.seasonNumber] = season;
+
+                lock (_seriesCacheLock)
+                {
+                    var seasonCopy = new Dictionary<int, Dictionary<int, SonarrSeasonDto>>(_seriesSeasonCache);
+                    seasonCopy[tmdbId] = byNumber;
+                    _seriesSeasonCache = seasonCopy;
+                    var partialCopy = new HashSet<int>(_seriesPartial);
+                    partialCopy.Remove(tmdbId);
+                    _seriesPartial = partialCopy;
+                }
+                var tvdbCopy = new HashSet<int>(_seriesTvdbIds);
+                if (tvdbId > 0) tvdbCopy.Add(tvdbId);
+                _seriesTvdbIds = tvdbCopy;
+                var recent = new List<RecentEntry>(_seriesRecent);
+                recent.Insert(0, new RecentEntry { TmdbId = tmdbId, HasFile = false, Added = dto.added });
+                _seriesRecent = recent;
+                _seriesCache = cacheCopy;   // als laatste: _seriesCacheAt blijft staan, na de gewone 5 minuten volgt een verse lijst
+                return true;
+            }
+            catch (Exception ex)
+            {
+                DiscoverDiagnostics.Add("Sonarr-cache bijwerken mislukt, cache gewist: " + ex.Message);
+                return false;
+            }
+        }
+
         public static void InvalidateCaches()
         {
             _movieCache = null;
@@ -310,7 +353,10 @@ namespace Emby.Plugins.Discover
                        ",\"addOptions\":" + addOptions + "}";
 
             var created = await Send(HttpMethod.Post, cfg.SonarrUrl, cfg.SonarrApiKey, "/api/v3/series", body, ct).ConfigureAwait(false);
-            InvalidateCaches();
+            // Alleen deze serie in de bewaarde lijst zetten in plaats van de hele Sonarr-lijst weg te gooien: anders moet de
+            // eerstvolgende klik de complete serielijst opnieuw ophalen (traag bij een grote bibliotheek). Lukt dat niet, dan
+            // valt het terug op het wissen van de cache.
+            if (!TryAddToSeriesCache(created, tmdbId, tvdbId)) InvalidateCaches();
 
             if (seasons != null && seasons.Length > 0)
             {

@@ -22,17 +22,26 @@ namespace Emby.Plugins.Discover
         public const int Seconds = 12;
 
         // Ophogen als de opmaak verandert, dan worden bewaarde clips niet meer hergebruikt.
-        private const int CardVersion = 5;
+        private const int CardVersion = 6;
 
         private const int W = 720;
         private const int H = 1080;
 
         private static readonly HttpClient Http = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
-        // Eén ffmpeg tegelijk: een Pi of NAS wordt anders traag bij meerdere aanvragen.
-        private static readonly SemaphoreSlim Gate = new SemaphoreSlim(1, 1);
+        // Maximaal twee ffmpeg's tegelijk (een Pi of NAS wordt anders traag). Een kaart die iemand nu nodig heeft
+        // (Afspelen / detailpagina) hoeft alleen op een van die twee plekken te wachten. Kaarten die op de achtergrond
+        // vooraf gemaakt worden gebruiken er hooguit een, via BackgroundGate. Zo staat een kaart die nu nodig is nooit
+        // achter een rij voorbereide kaarten (dat gaf een time-out en dus de vaste clip zonder info).
+        private static readonly SemaphoreSlim Gate = new SemaphoreSlim(2, 2);
+        private static readonly SemaphoreSlim BackgroundGate = new SemaphoreSlim(1, 1);
+        // Kaarten die al worden gemaakt, zodat twee aanroepen voor dezelfde kaart niet dubbel renderen.
+        private static readonly object InFlightLock = new object();
+        private static readonly Dictionary<string, Task<string>> InFlightNow = new Dictionary<string, Task<string>>();
+        private static readonly Dictionary<string, Task<string>> InFlightBackground = new Dictionary<string, Task<string>>();
 
-        /// <summary>Geeft het pad van de clip voor deze titel (uit de bewaarde clips of net gemaakt).</summary>
-        public static async Task<string> Create(TmdbItem t, TmdbExtra x, bool tv, bool alreadyThere, CancellationToken ct, int season = 0, string posterPath = null)
+        /// <summary>Geeft het pad van de clip voor deze titel (uit de bewaarde clips of net gemaakt).
+        /// background=true: vooraf maken op de achtergrond (wacht op een vrije plek en houdt een kaart die nu nodig is niet op).</summary>
+        public static async Task<string> Create(TmdbItem t, TmdbExtra x, bool tv, bool alreadyThere, CancellationToken ct, int season = 0, string posterPath = null, bool background = false)
         {
             var ffmpeg = FindFfmpeg();
             if (ffmpeg == null)
@@ -44,37 +53,65 @@ namespace Emby.Plugins.Discover
                 tv ? "t" : "m", t.id, season, alreadyThere ? "dup" : "new", CardVersion));
             if (File.Exists(final) && new FileInfo(final).Length > 0) return final;
 
-            await Gate.WaitAsync(ct).ConfigureAwait(false);
+            Task<string> task;
+            Dictionary<string, Task<string>> own = background ? InFlightBackground : InFlightNow;
+            lock (InFlightLock)
+            {
+                if (!InFlightNow.TryGetValue(final, out task) && (!background || !InFlightBackground.TryGetValue(final, out task)))
+                {
+                    task = Build(ffmpeg, dir, final, t, tv, alreadyThere, season, posterPath, background);
+                    own[final] = task;
+                }
+            }
+            try { return await task.ConfigureAwait(false); }
+            finally
+            {
+                lock (InFlightLock)
+                {
+                    Task<string> cur;
+                    if (task.IsCompleted && own.TryGetValue(final, out cur) && ReferenceEquals(cur, task)) own.Remove(final);
+                }
+            }
+        }
+
+        private static async Task<string> Build(string ffmpeg, string dir, string final, TmdbItem t, bool tv, bool alreadyThere, int season, string posterPath, bool background)
+        {
+            if (background) await BackgroundGate.WaitAsync().ConfigureAwait(false);
             try
             {
-                if (File.Exists(final) && new FileInfo(final).Length > 0) return final;
-
-                var work = Path.Combine(dir, "w-" + Guid.NewGuid().ToString("N"));
-                Directory.CreateDirectory(work);
+                await Gate.WaitAsync().ConfigureAwait(false);
                 try
                 {
-                    await Render(ffmpeg, work, t, tv, alreadyThere, season, posterPath, ct).ConfigureAwait(false);
-                    var made = Path.Combine(work, "out.mp4");
-                    if (!File.Exists(made) || new FileInfo(made).Length == 0)
-                        throw new InvalidOperationException("ffmpeg maakte geen bestand");
-                    if (File.Exists(final)) File.Delete(final);
-                    File.Move(made, final);
-                }
-                finally
-                {
-                    try { Directory.Delete(work, true); } catch { }
-                }
+                    if (File.Exists(final) && new FileInfo(final).Length > 0) return final;
 
-                // Oude clips opruimen (60 dagen).
-                try
-                {
-                    foreach (var f in Directory.GetFiles(dir, "card-*.mp4"))
-                        if (File.GetLastWriteTimeUtc(f) < DateTime.UtcNow.AddDays(-60)) File.Delete(f);
+                    var work = Path.Combine(dir, "w-" + Guid.NewGuid().ToString("N"));
+                    Directory.CreateDirectory(work);
+                    try
+                    {
+                        await Render(ffmpeg, work, t, tv, alreadyThere, season, posterPath, CancellationToken.None).ConfigureAwait(false);
+                        var made = Path.Combine(work, "out.mp4");
+                        if (!File.Exists(made) || new FileInfo(made).Length == 0)
+                            throw new InvalidOperationException("ffmpeg maakte geen bestand");
+                        if (File.Exists(final)) File.Delete(final);
+                        File.Move(made, final);
+                    }
+                    finally
+                    {
+                        try { Directory.Delete(work, true); } catch { }
+                    }
+
+                    // Oude clips opruimen (60 dagen).
+                    try
+                    {
+                        foreach (var f in Directory.GetFiles(dir, "card-*.mp4"))
+                            if (File.GetLastWriteTimeUtc(f) < DateTime.UtcNow.AddDays(-60)) File.Delete(f);
+                    }
+                    catch { }
+                    return final;
                 }
-                catch { }
-                return final;
+                finally { Gate.Release(); }
             }
-            finally { Gate.Release(); }
+            finally { if (background) BackgroundGate.Release(); }
         }
 
         private const int PX = 100, PY = 44, PW = 520, PH = 780;   // poster (2:3), groot
@@ -86,14 +123,16 @@ namespace Emby.Plugins.Discover
             CopyResource("Poppins-Regular.ttf", Path.Combine(work, "regular.ttf"));
             CopyResource("card-grad.png", Path.Combine(work, "grad.png"));
 
-            // Bij een seizoen de seizoensposter als die er is, anders de serieposter.
-            bool hasPoster = await Download(TmdbClient.PosterUrl(string.IsNullOrEmpty(posterPath) ? t.poster_path : posterPath),
-                Path.Combine(work, "poster.jpg"), ct).ConfigureAwait(false);
-            if (!hasPoster && !string.IsNullOrEmpty(posterPath))
-                hasPoster = await Download(TmdbClient.PosterUrl(t.poster_path), Path.Combine(work, "poster.jpg"), ct).ConfigureAwait(false);
+            // Poster en achtergrond tegelijk ophalen. Bij een seizoen de seizoensposter als die er is, anders de serieposter.
+            string posterFile = Path.Combine(work, "poster.jpg");
             string bdUrl = string.IsNullOrEmpty(t.backdrop_path) ? null : "https://image.tmdb.org/t/p/w780" + t.backdrop_path;
-            bool hasBackdrop = bdUrl != null &&
-                await Download(bdUrl, Path.Combine(work, "backdrop.jpg"), ct).ConfigureAwait(false);
+            var posterTask = Download(TmdbClient.PosterUrl(string.IsNullOrEmpty(posterPath) ? t.poster_path : posterPath), posterFile, ct);
+            var backdropTask = bdUrl == null ? Task.FromResult(false) : Download(bdUrl, Path.Combine(work, "backdrop.jpg"), ct);
+            await Task.WhenAll(posterTask, backdropTask).ConfigureAwait(false);
+            bool hasPoster = await posterTask.ConfigureAwait(false);
+            if (!hasPoster && !string.IsNullOrEmpty(posterPath))
+                hasPoster = await Download(TmdbClient.PosterUrl(t.poster_path), posterFile, ct).ConfigureAwait(false);
+            bool hasBackdrop = await backdropTask.ConfigureAwait(false);
 
             // ---- Teksten: alleen status en wat is aangevraagd (groot), plus de titel als er geen poster is ----
             string arr = tv ? "Sonarr" : "Radarr";
@@ -121,13 +160,15 @@ namespace Emby.Plugins.Discover
             int badgeY = hasPoster ? PY + PH + 46 : 700;
             int whatY = badgeY + 118;
 
-            // ---- ffmpeg ----
+            // ---- ffmpeg, stap 1: een enkel stilstaand beeld (achtergrond, poster en tekst) ----
+            // Vroeger werd de zoom en blur op elk van de 120 beeldjes herhaald; dat duurde op een NAS of Pi te lang
+            // (time-out, dus de vaste clip zonder poster). Nu wordt het beeld een keer gemaakt.
             var a = new StringBuilder();
             a.Append("-y -hide_banner -loglevel error ");
             int next = 0;
             Func<string, int> addImg = file =>
             {
-                a.Append("-loop 1 -framerate 10 -t " + Seconds + " -i " + file + " ");
+                a.Append("-i " + file + " ");
                 return next++;
             };
             int bgIdx;
@@ -136,22 +177,19 @@ namespace Emby.Plugins.Discover
             else if (hasPoster) bgIdx = addImg("poster.jpg");
             else
             {
-                a.Append("-f lavfi -t " + Seconds + " -i color=c=0x1B2540:s=" + W + "x" + H + ":r=10 ");
+                a.Append("-f lavfi -i color=c=0x1B2540:s=" + W + "x" + H + ":r=1 ");
                 bgIdx = next++;
             }
             int gradIdx = addImg("grad.png");
             int shadowIdx = -1, posterIdx = -1, maskIdx = -1;
             if (hasPoster) { shadowIdx = addImg("shadow.png"); posterIdx = addImg("poster.jpg"); maskIdx = addImg("mask.png"); }
-            a.Append("-f lavfi -t " + Seconds + " -i anullsrc=r=44100:cl=stereo ");
-            int audioIdx = next++;
 
             var f = new StringBuilder();
             if (bgIsImage)
             {
-                // Rustige zoom (Ken Burns) op de achtergrond; zonder echte achtergrond (alleen poster) extra vaag.
-                f.Append("[" + bgIdx + ":v]scale=1080:1620:force_original_aspect_ratio=increase,crop=1080:1620," +
-                         "zoompan=z='1+0.0005*on':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:s=" + W + "x" + H + ":fps=10," +
-                         (hasBackdrop ? "boxblur=3:1" : "boxblur=28:3") + ",setsar=1,format=yuv420p[bg];");
+                // Achtergrond vullen en vervagen; zonder echte achtergrond (alleen poster) extra vaag.
+                f.Append("[" + bgIdx + ":v]scale=" + W + ":" + H + ":force_original_aspect_ratio=increase,crop=" + W + ":" + H + "," +
+                         (hasBackdrop ? "boxblur=2:1" : "boxblur=19:3") + ",setsar=1,format=yuv420p[bg];");
             }
             else f.Append("[" + bgIdx + ":v]setsar=1,format=yuv420p[bg];");
 
@@ -174,18 +212,33 @@ namespace Emby.Plugins.Discover
             f.Append(DrawTextX("bold.ttf", "badge.txt", 46, "white", "(w-text_w)/2", badgeY.ToString(),
                 ":box=1:boxcolor=" + boxColor + ":boxborderw=22") + ",");
             f.Append(DrawTextX("regular.ttf", "what.txt", 44, "white", "(w-text_w)/2", whatY.ToString(), "") + ",");
-            f.Append("fade=t=in:st=0:d=0.5,fade=t=out:st=" + (Seconds - 0.6).ToString("0.0", CultureInfo.InvariantCulture) + ":d=0.6,format=yuv420p");
-            f.Append("[v]");
+            f.Append("format=rgb24[v]");
 
             a.Append("-filter_complex \"" + f + "\" ");
-            a.Append("-map [v] -map " + audioIdx + ":a ");
-            a.Append("-c:v libx264 -preset veryfast -crf 20 -pix_fmt yuv420p -r 10 -g 20 ");
-            a.Append("-c:a aac -b:a 32k -shortest -movflags +faststart out.mp4");
+            a.Append("-map [v] -frames:v 1 frame.png");
+            await RunFfmpeg(ffmpeg, work, a.ToString(), 60000).ConfigureAwait(false);
+            if (!File.Exists(Path.Combine(work, "frame.png")) || new FileInfo(Path.Combine(work, "frame.png")).Length == 0)
+                throw new InvalidOperationException("ffmpeg maakte het kaartbeeld niet");
 
+            // ---- stap 2: het beeld als clip van <Seconds> seconden met in- en uitfaden ----
+            var c = new StringBuilder();
+            c.Append("-y -hide_banner -loglevel error ");
+            c.Append("-loop 1 -framerate 10 -t " + Seconds + " -i frame.png ");
+            c.Append("-f lavfi -t " + Seconds + " -i anullsrc=r=44100:cl=stereo ");
+            c.Append("-vf \"fade=t=in:st=0:d=0.5,fade=t=out:st=" + (Seconds - 0.6).ToString("0.0", CultureInfo.InvariantCulture) +
+                     ":d=0.6,format=yuv420p\" ");
+            c.Append("-map 0:v -map 1:a ");
+            c.Append("-c:v libx264 -preset veryfast -tune stillimage -crf 20 -pix_fmt yuv420p -r 10 -g 20 ");
+            c.Append("-c:a aac -b:a 32k -shortest -movflags +faststart out.mp4");
+            await RunFfmpeg(ffmpeg, work, c.ToString(), 90000).ConfigureAwait(false);
+        }
+
+        private static async Task RunFfmpeg(string ffmpeg, string work, string args, int timeoutMs)
+        {
             var psi = new ProcessStartInfo
             {
                 FileName = ffmpeg,
-                Arguments = a.ToString(),
+                Arguments = args,
                 WorkingDirectory = work,
                 UseShellExecute = false,
                 CreateNoWindow = true,
@@ -201,11 +254,11 @@ namespace Emby.Plugins.Discover
                 };
                 p.Start();
                 p.BeginErrorReadLine();
-                bool done = await Task.Run(() => p.WaitForExit(90000)).ConfigureAwait(false);
+                bool done = await Task.Run(() => p.WaitForExit(timeoutMs)).ConfigureAwait(false);
                 if (!done)
                 {
                     try { p.Kill(); } catch { }
-                    throw new TimeoutException("ffmpeg duurde langer dan 90 seconden");
+                    throw new TimeoutException("ffmpeg duurde langer dan " + (timeoutMs / 1000) + " seconden");
                 }
                 p.WaitForExit();
                 if (p.ExitCode != 0)
