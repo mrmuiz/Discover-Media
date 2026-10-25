@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -74,6 +75,24 @@ namespace Emby.Plugins.Discover
     public class DiscoverInfoResult
     {
         public List<string> Lines { get; set; } = new List<string>();
+    }
+
+    [Route("/Discover/SeriesCard", "GET", Summary = "Seriegegevens voor de seizoensdetailkaart")]
+    [Authenticated]
+    public class DiscoverSeriesCardRequest : IReturn<DiscoverSeriesCardResult>
+    {
+        public int TmdbId { get; set; }
+    }
+
+    public class DiscoverSeriesCardResult
+    {
+        public string Status { get; set; }
+        public string FirstAirDate { get; set; }
+        public string OriginalLanguage { get; set; }
+        public string ProductionCountry { get; set; }
+        public string Network { get; set; }
+        public int TmdbRating { get; set; }
+        public List<string> StreamingOn { get; set; } = new List<string>();
     }
 
     public class DiscoverSeasonInfo
@@ -286,7 +305,9 @@ namespace Emby.Plugins.Discover
                 RequestErrors = DiscoverDiagnostics.RequestErrors,
                 ClipPath = clipPath,
                 ClipError = clipError,
-                ButtonScript = DiscoverDiagnostics.ButtonScript,
+                ButtonScript = DiscoverLanguage.Text("OK Emby-pluginresource; open Discover om het script in deze browser te laden.",
+                    "OK Emby plugin resource; open Discover to load the script in this browser.",
+                    "OK Emby-Pluginressource; öffne Discover, um das Skript in diesem Browser zu laden."),
                 Events = DiscoverDiagnostics.Snapshot()
             };
         }
@@ -422,7 +443,8 @@ namespace Emby.Plugins.Discover
                 var itemsTask = _tmdb.BrowsePages(tv, filter, page, page + 1, CancellationToken.None);
                 await Task.WhenAll(states, itemsTask).ConfigureAwait(false);
                 row.Items = itemsTask.Result
-                    .Where(x => !x.adult && !string.IsNullOrEmpty(x.poster_path))
+                    .Where(x => !x.adult && !string.IsNullOrEmpty(x.poster_path) &&
+                        (!tv || TmdbClient.IsDutchOrUsTv(x)))
                     .Select(x => ToDto(x, tv, states.Result))
                     .ToList();
             }
@@ -441,7 +463,15 @@ namespace Emby.Plugins.Discover
             {
                 var genres = await _tmdb.GetGenres(kind == "genre_tv", CancellationToken.None).ConfigureAwait(false);
                 foreach (var g in genres)
-                    tiles.Add(new DiscoverTileDto { Id = g.id.ToString(), Name = g.name, Color = Palette[Math.Abs(g.id) % Palette.Length] });
+                {
+                    bool tv = kind == "genre_tv";
+                    tiles.Add(new DiscoverTileDto
+                    {
+                        Id = g.id.ToString(),
+                        Name = DiscoverMediaChannel.LocalizedGenreName(g.id, tv, g.name),
+                        Color = Palette[Math.Abs(g.id) % Palette.Length]
+                    });
+                }
                 return tiles;
             }
 
@@ -527,6 +557,7 @@ namespace Emby.Plugins.Discover
                     else if (string.Equals(x.media_type, "movie", StringComparison.OrdinalIgnoreCase)) tv = false;
                     else continue; // personen e.d.
                 }
+                if (tv && !TmdbClient.IsDutchOrUsTv(x)) continue;
                 res.Add(ToDto(x, tv, tv ? ts : ms));
             }
             return res;
@@ -590,6 +621,52 @@ namespace Emby.Plugins.Discover
                 DiscoverDiagnostics.Add("FOUT info " + request.Type + "/" + request.TmdbId + ": " + ex.Message);
             }
             return res;
+        }
+
+        public async Task<object> Get(DiscoverSeriesCardRequest request)
+        {
+            var result = new DiscoverSeriesCardResult();
+            if (request.TmdbId <= 0 || string.IsNullOrWhiteSpace(Plugin.GetCurrentConfiguration().TmdbApiKey))
+                return result;
+            try
+            {
+                var detailTask = _tmdb.GetTvDetail(request.TmdbId, CancellationToken.None);
+                var extraTask = _tmdb.GetExtraCached(true, request.TmdbId, CancellationToken.None);
+                var providerTask = _tmdb.GetTvWatchProviders(request.TmdbId, CancellationToken.None);
+                await Task.WhenAll(detailTask, extraTask).ConfigureAwait(false);
+                var detail = await detailTask.ConfigureAwait(false);
+                var extra = await extraTask.ConfigureAwait(false);
+                TmdbWatchProviderCountry providers = null;
+                try { providers = await providerTask.ConfigureAwait(false); }
+                catch (Exception ex)
+                {
+                    if (ex is OperationCanceledException) throw;
+                    DiscoverDiagnostics.Add("TMDB streamingdiensten " + request.TmdbId + " mislukt: " + ex.Message);
+                }
+
+                if (detail == null) return result;
+                result.Status = LocalizedSeriesStatus(extra?.status);
+                DateTime firstAirDate;
+                if (InfoText.TryDate(detail.first_air_date, out firstAirDate))
+                    result.FirstAirDate = InfoText.LongDate(firstAirDate);
+                result.OriginalLanguage = LanguageName(detail.original_language);
+                result.ProductionCountry = CountryNames(detail.origin_country);
+                result.Network = extra?.networks == null ? null : string.Join(", ",
+                    extra.networks.Where(x => !string.IsNullOrWhiteSpace(x?.name))
+                        .Select(x => x.name.Trim()).Distinct().Take(3));
+                result.TmdbRating = (int)Math.Round((extra?.vote_average ?? detail.vote_average) * 10);
+                if (providers != null)
+                    result.StreamingOn = (providers.flatrate ?? new List<TmdbNamed>())
+                        .Concat(providers.free ?? new List<TmdbNamed>())
+                        .Concat(providers.ads ?? new List<TmdbNamed>())
+                        .Where(x => !string.IsNullOrWhiteSpace(x?.name))
+                        .Select(x => x.name.Trim()).Distinct().Take(5).ToList();
+            }
+            catch (Exception ex)
+            {
+                DiscoverDiagnostics.Add("FOUT seriekaart " + request.TmdbId + ": " + ex.Message);
+            }
+            return result;
         }
 
         public async Task<object> Get(DiscoverResolveRequest request)
@@ -831,6 +908,55 @@ namespace Emby.Plugins.Discover
 
         private static string TitleOf(TmdbItem i, bool tv) =>
             tv ? (i.name ?? i.title ?? "?") : (i.title ?? i.name ?? "?");
+
+        private static string LocalizedSeriesStatus(string status)
+        {
+            if (string.IsNullOrWhiteSpace(status)) return null;
+            if (DiscoverLanguage.IsDutch)
+            {
+                switch (status)
+                {
+                    case "Returning Series": return "Lopend";
+                    case "Ended": return "Beëindigd";
+                    case "Canceled": return "Geannuleerd";
+                    case "In Production": return "In productie";
+                    case "Planned": return "Gepland";
+                    case "Pilot": return "Pilot";
+                }
+            }
+            else if (DiscoverLanguage.IsGerman)
+            {
+                switch (status)
+                {
+                    case "Returning Series": return "Laufende Serie";
+                    case "Ended": return "Beendet";
+                    case "Canceled": return "Abgebrochen";
+                    case "In Production": return "In Produktion";
+                    case "Planned": return "Geplant";
+                    case "Pilot": return "Pilotfolge";
+                }
+            }
+            return status;
+        }
+
+        private static string LanguageName(string language)
+        {
+            if (string.IsNullOrWhiteSpace(language)) return null;
+            try { return CultureInfo.GetCultureInfo(language).EnglishName; }
+            catch (CultureNotFoundException) { return language.ToUpperInvariant(); }
+        }
+
+        private static string CountryNames(IEnumerable<string> countries)
+        {
+            if (countries == null) return null;
+            var names = new List<string>();
+            foreach (var country in countries.Where(x => !string.IsNullOrWhiteSpace(x)).Distinct().Take(3))
+            {
+                try { names.Add(new RegionInfo(country).EnglishName); }
+                catch (ArgumentException) { names.Add(country.ToUpperInvariant()); }
+            }
+            return names.Count == 0 ? null : string.Join(", ", names);
+        }
 
         private static DiscoverItemDto ToDto(TmdbItem i, bool tv, Dictionary<int, bool> states)
         {

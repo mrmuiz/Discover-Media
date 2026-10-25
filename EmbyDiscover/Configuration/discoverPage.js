@@ -19,7 +19,7 @@ define([], function () {
 
     // Laadt het Aanvragen-knop-script ook vanaf deze pagina (Emby is een single-page app: het blijft actief
     // tot je de pagina volledig herlaadt). Zo werkt de knop ook als index.html door een andere plugin is overschreven.
-    var diag = { load: 'nog niet geprobeerd', status: '' };
+    var diag = { load: text('nog niet geprobeerd', 'not tried yet', 'noch nicht versucht'), status: '' };
     var diagEl = null;
 
     function showDiag() {
@@ -33,7 +33,7 @@ define([], function () {
     // Load as an external script so Emby's Content-Security-Policy does not block inline execution.
     function loadButtonScript() {
         if (window.__discoverRequestButtonVersion === '1.1.0') {
-            diag.load = 'script is al actief v1.1.0';
+            diag.load = text('script is al actief v1.1.0', 'script already active v1.1.0', 'Skript bereits aktiv v1.1.0');
             showDiag();
             return;
         }
@@ -44,7 +44,7 @@ define([], function () {
         ];
         var n = 0;
         (function next() {
-            if (n >= urls.length) { diag.load += ' (alle adressen mislukt)'; showDiag(); return; }
+            if (n >= urls.length) { diag.load += text(' (alle adressen mislukt)', ' (all addresses failed)', ' (alle Adressen fehlgeschlagen)'); showDiag(); return; }
             var u = urls[n++];
             var script = document.createElement('script');
             script.id = 'discover-request-button-external';
@@ -52,17 +52,17 @@ define([], function () {
             script.async = true;
             script.onload = function () {
                 if (window.__discoverRequestButtonVersion === '1.1.0') {
-                    diag.load = 'OK via extern script ' + u;
+                    diag.load = text('OK via extern script ', 'OK via external script ', 'OK über externes Skript ') + u;
                     showDiag();
                 } else {
-                    diag.load = 'verouderd script bleef actief (' +
-                        (window.__discoverRequestButtonVersion || 'geen versienummer') + '): ' + u;
+                    diag.load = text('verouderd script bleef actief (', 'outdated script stayed active (', 'veraltetes Skript blieb aktiv (') +
+                        (window.__discoverRequestButtonVersion || text('geen versienummer', 'no version number', 'keine Versionsnummer')) + '): ' + u;
                     script.parentNode.removeChild(script);
                     next();
                 }
             };
             script.onerror = function () {
-                diag.load = 'script laden mislukt: ' + u;
+                diag.load = text('script laden mislukt: ', 'loading script failed: ', 'Skript laden fehlgeschlagen: ') + u;
                 if (script.parentNode) { script.parentNode.removeChild(script); }
                 next();
             };
@@ -76,9 +76,9 @@ define([], function () {
         loadButtonScript();
         api('GET', 'Discover/Status').then(function (r) {
             diagEl.style.display = r.ShowDiagnostics ? '' : 'none';
-            diag.status = 'v' + (r.PluginVersion || '?') + ' | pluginresource: ' + (r.ButtonScript || 'unknown');
+            diag.status = 'v' + (r.PluginVersion || '?') + ' | ' + text('pluginresource: ', 'plugin resource: ', 'Pluginressource: ') + (r.ButtonScript || text('onbekend', 'unknown', 'unbekannt'));
             showDiag();
-        }, function () { diag.status = 'status ophalen mislukt'; showDiag(); });
+        }, function () { diag.status = text('status ophalen mislukt', 'could not fetch status', 'Status konnte nicht abgerufen werden'); showDiag(); });
         setTimeout(showDiag, 1500);
         var content = view.querySelector('.dcContent');
         var input = view.querySelector('.dcSearchInput');

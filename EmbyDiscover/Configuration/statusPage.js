@@ -8,6 +8,112 @@ define(['emby-button'], function () {
         return language === 'de' ? (german || english) : language === 'en' ? english : dutch;
     }
 
+    // Vertaling van de activiteitenregels (de server schrijft ze in het Nederlands). Elke regel: [patroon, Engels, Duits].
+    // De tijd ("HH:mm:ss  ") blijft staan; foutmeldingen van Emby/TMDB/Radarr/Sonarr zelf blijven zoals ze zijn.
+    var EVENT_MAP = [
+        [/^opgevraagd: map=(.*) start=(.*) limit=(.*) key=(.*) taal=(.*)$/, 'requested: map=$1 start=$2 limit=$3 key=$4 language=$5', 'abgerufen: map=$1 start=$2 limit=$3 key=$4 Sprache=$5'],
+        [/^teruggegeven: map=(.*) items=(.*) totaal=(.*)$/, 'returned: map=$1 items=$2 total=$3', 'zurückgegeben: map=$1 items=$2 gesamt=$3'],
+        [/^onbekende map, leeg teruggegeven: /, 'unknown folder, returned empty: ', 'unbekannter Ordner, leer zurückgegeben: '],
+        [/^FOUT: geen TMDB-key ingesteld/, 'ERROR: no TMDB key set', 'FEHLER: kein TMDB-Schlüssel eingestellt'],
+        [/^FOUT bij map /, 'ERROR in folder ', 'FEHLER im Ordner '],
+        [/^titel voor aanvraag-item (.*) mislukt: /, 'title for request item $1 failed: ', 'Titel für Anfrage-Element $1 fehlgeschlagen: '],
+        [/^seizoensstatus uit Sonarr ophalen mislukt voor /, 'fetching season status from Sonarr failed for ', 'Staffelstatus von Sonarr abrufen fehlgeschlagen für '],
+        [/^seizoensbeschrijving ophalen mislukt voor (.*)\/seizoen (.*): /, 'fetching season description failed for $1/season $2: ', 'Staffelbeschreibung abrufen fehlgeschlagen für $1/Staffel $2: '],
+        [/^geen seizoensposter bij TMDB voor (.*)\/seizoen (.*) \(serieposter gebruikt\)/, 'no season poster at TMDB for $1/season $2 (series poster used)', 'kein Staffelposter bei TMDB für $1/Staffel $2 (Serienposter verwendet)'],
+        [/^seizoensposter ophalen mislukt voor (.*)\/seizoen (.*): /, 'fetching season poster failed for $1/season $2: ', 'Staffelposter abrufen fehlgeschlagen für $1/Staffel $2: '],
+        [/^extra info (.*) mislukt: /, 'extra info $1 failed: ', 'Zusatzinfo $1 fehlgeschlagen: '],
+        [/^kaart vooraf maken mislukt: /, 'preparing card failed: ', 'Karte vorab erstellen fehlgeschlagen: '],
+        [/^achtergrondlijst ophalen mislukt: /, 'fetching backdrop list failed: ', 'Hintergrundliste abrufen fehlgeschlagen: '],
+        [/^root-artwork na 5 seconden uitgesteld; kanaal wordt direct teruggegeven/, 'root artwork postponed after 5 seconds; channel returned immediately', 'Root-Artwork nach 5 Sekunden zurückgestellt; Kanal wird sofort zurückgegeben'],
+        [/^tegelafbeelding aanvraag\/trailer mislukt: /, 'request/trailer tile image failed: ', 'Kachelbild Anfrage/Trailer fehlgeschlagen: '],
+        [/^tegelafbeelding '(.*)' mislukt: /, "tile image '$1' failed: ", "Kachelbild '$1' fehlgeschlagen: "],
+        [/^achtergronden (.*) mislukt: /, 'backdrops $1 failed: ', 'Hintergründe $1 fehlgeschlagen: '],
+        [/^genre-achtergrond (.*) mislukt: /, 'genre backdrop $1 failed: ', 'Genre-Hintergrund $1 fehlgeschlagen: '],
+        [/^genretegel '(.*)' mislukt: /, "genre tile '$1' failed: ", "Genre-Kachel '$1' fehlgeschlagen: "],
+        [/^trailer afspelen: /, 'playing trailer: ', 'Trailer wird abgespielt: '],
+        [/^seizoensaanvraagclip voor seizoen (.*)$/, 'season request clip for season $1', 'Staffel-Anfrageclip für Staffel $1'],
+        [/^aanvraagclip voor alle seizoenen/, 'request clip for all seasons', 'Anfrageclip für alle Staffeln'],
+        [/^seizoensposter voor kaart (.*)\/seizoen (.*): /, 'season poster for card $1/season $2: ', 'Staffelposter für Karte $1/Staffel $2: '],
+        [/^kaartclip: /, 'card clip: ', 'Kartenclip: '],
+        [/^kaartclip (.*): (.*) \(vaste clip gebruikt\)$/, 'card clip $1: $2 (fixed clip used)', 'Kartenclip $1: $2 (feste Clip verwendet)'],
+        [/^FOUT trailer /, 'ERROR trailer ', 'FEHLER Trailer '],
+        [/^geen YouTube-trailer voor /, 'no YouTube trailer for ', 'kein YouTube-Trailer für '],
+        [/^FOUT clip: /, 'ERROR clip: ', 'FEHLER Clip: '],
+        [/^FOUT TMDB-talenlijst: /, 'ERROR TMDB language list: ', 'FEHLER TMDB-Sprachliste: '],
+        [/^TMDB-talenlijst geladen: (.*) talen/, 'TMDB language list loaded: $1 languages', 'TMDB-Sprachliste geladen: $1 Sprachen'],
+        [/^plaatje op de achtergrond vernieuwen mislukt: /, 'refreshing image in the background failed: ', 'Bild im Hintergrund aktualisieren fehlgeschlagen: '],
+        [/^mapplaatje '(.*)': ffmpeg niet gevonden \(plaatje zonder tekst gebruikt\)/, "folder image '$1': ffmpeg not found (image without text used)", "Ordnerbild '$1': ffmpeg nicht gefunden (Bild ohne Text verwendet)"],
+        [/^mapplaatje '(.*)': effen achtergrond gebruikt/, "folder image '$1': plain background used", "Ordnerbild '$1': einfarbiger Hintergrund verwendet"],
+        [/^mapplaatje '(.*)': achtergrond niet opgehaald \(plaatje zonder tekst gebruikt\)/, "folder image '$1': background not fetched (image without text used)", "Ordnerbild '$1': Hintergrund nicht abgerufen (Bild ohne Text verwendet)"],
+        [/^mapplaatje '(.*)': opmaak (\d+) mislukt: /, "folder image '$1': layout $2 failed: ", "Ordnerbild '$1': Layout $2 fehlgeschlagen: "],
+        [/^mapplaatje '(.*)' gemaakt: /, "folder image '$1' created: ", "Ordnerbild '$1' erstellt: "],
+        [/^mapplaatje '(.*)' mislukt: (.*) \(plaatje zonder tekst gebruikt\)$/, "folder image '$1' failed: $2 (image without text used)", "Ordnerbild '$1' fehlgeschlagen: $2 (Bild ohne Text verwendet)"],
+        [/^logotegel '(.*)' mislukt: (.*) \(logo zonder opmaak gebruikt\)$/, "logo tile '$1' failed: $2 (logo without layout used)", "Logo-Kachel '$1' fehlgeschlagen: $2 (Logo ohne Layout verwendet)"],
+        [/^achtergrond voor mapplaatje niet opgehaald: /, 'background for folder image not fetched: ', 'Hintergrund für Ordnerbild nicht abgerufen: '],
+        [/^afbeelding voor kaartclip niet opgehaald: /, 'image for card clip not fetched: ', 'Bild für Kartenclip nicht abgerufen: '],
+        [/^FOUT opgeslagen plugininstellingen laden: /, 'ERROR loading saved plugin settings: ', 'FEHLER beim Laden der gespeicherten Plugin-Einstellungen: '],
+        [/^map '(.*)' niet beschrijfbaar: /, "folder '$1' not writable: ", "Ordner '$1' nicht beschreibbar: "],
+        [/^clip schrijven mislukt in '(.*)': /, "writing clip failed in '$1': ", "Clip schreiben fehlgeschlagen in '$1': "],
+        [/^aanvraag bij afspelen: onbekend seizoen-id /, 'request on play: unknown season id ', 'Anfrage beim Abspielen: unbekannte Staffel-ID '],
+        [/^aanvraag bij afspelen: onbekend id /, 'request on play: unknown id ', 'Anfrage beim Abspielen: unbekannte ID '],
+        [/^aanvraag via Afspelen: /, 'request via Play: ', 'Anfrage über Abspielen: '],
+        [/^FOUT aanvraag \(Afspelen\) /, 'ERROR request (Play) ', 'FEHLER Anfrage (Abspielen) '],
+        [/^FOUT PlaybackStart: /, 'ERROR PlaybackStart: ', 'FEHLER PlaybackStart: '],
+        [/^TMDB (.*) verversen op de achtergrond mislukt: /, 'TMDB $1 refresh in the background failed: ', 'TMDB $1 Aktualisierung im Hintergrund fehlgeschlagen: '],
+        [/^TMDB (.*) \(extra pagina\) mislukt: /, 'TMDB $1 (extra page) failed: ', 'TMDB $1 (zusätzliche Seite) fehlgeschlagen: '],
+        [/^TMDB logo (.*) mislukt: /, 'TMDB logo $1 failed: ', 'TMDB-Logo $1 fehlgeschlagen: '],
+        [/^TMDB extra's (.*) mislukt: /, 'TMDB extras $1 failed: ', 'TMDB-Extras $1 fehlgeschlagen: '],
+        [/^TMDB Engelse seizoensbeschrijving (.*) mislukt: /, 'TMDB English season description $1 failed: ', 'TMDB englische Staffelbeschreibung $1 fehlgeschlagen: '],
+        [/^TMDB seizoensbeschrijving (.*) \((.*)\) mislukt: /, 'TMDB season description $1 ($2) failed: ', 'TMDB-Staffelbeschreibung $1 ($2) fehlgeschlagen: '],
+        [/^TMDB seizoensposter (.*) \(seizoen\) mislukt: /, 'TMDB season poster $1 (season) failed: ', 'TMDB-Staffelposter $1 (Staffel) fehlgeschlagen: '],
+        [/^TMDB seizoensposter (.*) \(afbeeldingen\) mislukt: /, 'TMDB season poster $1 (images) failed: ', 'TMDB-Staffelposter $1 (Bilder) fehlgeschlagen: '],
+        [/^TMDB video's (.*) \((.*)\) poging (\d+) mislukt: /, 'TMDB videos $1 ($2) attempt $3 failed: ', 'TMDB-Videos $1 ($2) Versuch $3 fehlgeschlagen: '],
+        [/^TMDB detail (.*) mislukt: /, 'TMDB detail $1 failed: ', 'TMDB-Details $1 fehlgeschlagen: '],
+        [/^TMDB streamingdiensten (.*) mislukt: /, 'TMDB streaming services $1 failed: ', 'TMDB-Streamingdienste $1 fehlgeschlagen: '],
+        [/^Sonarr: (\d+) serie\(s\) zonder tmdbId, die krijgen geen status op de Discover-pagina \(ververs ze in Sonarr\)\./, 'Sonarr: $1 series without a tmdbId; they get no status on the Discover page (refresh them in Sonarr).', 'Sonarr: $1 Serie(n) ohne tmdbId; sie erhalten keinen Status auf der Discover-Seite (in Sonarr aktualisieren).'],
+        [/^Sonarr seizoenen opzoeken mislukt \(alleen gekozen seizoenen meegestuurd\): /, 'looking up Sonarr seasons failed (only the chosen seasons were sent): ', 'Sonarr-Staffeln nachschlagen fehlgeschlagen (nur gewählte Staffeln gesendet): '],
+        [/^Sonarr gaf geen serie-id terug voor (.*); seizoenen niet extra gecontroleerd$/, 'Sonarr returned no series id for $1; seasons not checked further', 'Sonarr gab keine Serien-ID zurück für $1; Staffeln nicht weiter geprüft'],
+        [/^Sonarr afleveringen ophalen \(/, 'fetching Sonarr episodes failed (', 'Sonarr-Folgen abrufen fehlgeschlagen ('],
+        [/^Sonarr kent de afleveringen van (.*) nog niet; monitoring niet gecontroleerd$/, 'Sonarr does not know the episodes of $1 yet; monitoring not checked', 'Sonarr kennt die Folgen von $1 noch nicht; Überwachung nicht geprüft'],
+        [/^Sonarr seizoen (\d+) monitoren \(/, 'monitoring Sonarr season $1 failed (', 'Überwachung von Sonarr-Staffel $1 fehlgeschlagen ('],
+        [/^Sonarr afleveringen monitoren \(/, 'monitoring Sonarr episodes failed (', 'Überwachung der Sonarr-Folgen fehlgeschlagen ('],
+        [/^Sonarr zoeken \(/, 'Sonarr search failed (', 'Sonarr-Suche fehlgeschlagen ('],
+        [/^Sonarr (.*): seizoen (.*) gemonitord \((\d+) afleveringen aangezet, (\d+) uitgezet\) en zoekopdracht \(SeriesSearch\) gestart$/, 'Sonarr $1: season $2 monitored ($3 episodes turned on, $4 turned off) and search (SeriesSearch) started', 'Sonarr $1: Staffel $2 überwacht ($3 Folgen aktiviert, $4 deaktiviert) und Suche (SeriesSearch) gestartet'],
+        [/^FOUT seizoensmonitoring /, 'ERROR season monitoring ', 'FEHLER Staffelüberwachung '],
+        [/^FOUT home laden: /, 'ERROR loading home: ', 'FEHLER beim Laden der Startseite: '],
+        [/^FOUT rij /, 'ERROR row ', 'FEHLER Zeile '],
+        [/^rij (.*) pagina (\d+): /, 'row $1 page $2: ', 'Zeile $1 Seite $2: '],
+        [/^browse (.*) pagina (\d+): /, 'browse $1 page $2: ', 'Durchsuchen $1 Seite $2: '],
+        [/^FOUT recent /, 'ERROR recent ', 'FEHLER zuletzt '],
+        [/^FOUT zoeken: /, 'ERROR searching: ', 'FEHLER bei der Suche: '],
+        [/^FOUT info /, 'ERROR info ', 'FEHLER Info '],
+        [/^FOUT seriekaart /, 'ERROR series card ', 'FEHLER Serienkarte '],
+        [/^knop: TMDB film /, 'button: TMDB movie ', 'Schaltfläche: TMDB-Film '],
+        [/^knop: TMDB serie /, 'button: TMDB series ', 'Schaltfläche: TMDB-Serie '],
+        [/^knop: geen TMDB-item gevonden voor /, 'button: no TMDB item found for ', 'Schaltfläche: kein TMDB-Eintrag gefunden für '],
+        [/^knop: seizoenen ophalen mislukt: /, 'button: fetching seasons failed: ', 'Schaltfläche: Staffeln abrufen fehlgeschlagen: '],
+        [/^FOUT knop \(resolve\): /, 'ERROR button (resolve): ', 'FEHLER Schaltfläche (resolve): '],
+        [/^FOUT aanvraag \(webpagina\): /, 'ERROR request (web page): ', 'FEHLER Anfrage (Webseite): '],
+        [/^FOUT verwijderen: /, 'ERROR removing: ', 'FEHLER beim Entfernen: '],
+        [/^serie (\d+): /, 'series $1: ', 'Serie $1: '],
+        [/^film (\d+): /, 'movie $1: ', 'Film $1: '],
+        [/^FOUT status /, 'ERROR status ', 'FEHLER Status '],
+        [/^FOUT TMDB /, 'ERROR TMDB ', 'FEHLER TMDB ']
+    ];
+
+    function translateEvent(e) {
+        if (language === 'nl') { return e; }
+        var m = /^(\d\d:\d\d:\d\d {2})([\s\S]*)$/.exec(e);
+        var prefix = m ? m[1] : '';
+        var msg = m ? m[2] : e;
+        for (var i = 0; i < EVENT_MAP.length; i++) {
+            if (EVENT_MAP[i][0].test(msg)) {
+                return prefix + msg.replace(EVENT_MAP[i][0], language === 'de' ? EVENT_MAP[i][2] : EVENT_MAP[i][1]);
+            }
+        }
+        return e;
+    }
+
     function setLanguage(locale) {
         var value = String(locale || '').toLowerCase();
         language = value.indexOf('de') === 0 ? 'de' : value.indexOf('nl') === 0 ? 'nl' : 'en';
@@ -32,6 +138,11 @@ define(['emby-button'], function () {
             type: 'POST', url: ApiClient.getUrl(path), data: JSON.stringify(data),
             contentType: 'application/json', dataType: 'json'
         });
+    }
+
+    function isDiscoverChannel(channel) {
+        var name = String(channel && channel.Name || '').trim();
+        return /discover/i.test(name) || /^films\s*&\s*series\s+aanvragen$/i.test(name);
     }
 
     function errText(e) {
@@ -147,9 +258,9 @@ define(['emby-button'], function () {
             return step(lines, text('Kanalen ophalen', 'Get channels', 'Kanäle abrufen'), function () {
                 return getJson('Channels', { UserId: adminId }).then(function (r) {
                     var names = (r.Items || []).map(function (c) { return c.Name; });
-                    var found = (r.Items || []).filter(function (c) { return /discover/i.test(c.Name || ''); })[0];
+                    var found = (r.Items || []).filter(isDiscoverChannel)[0];
                     if (found) { ok(lines, text('Kanaal "', 'Channel "', 'Kanal "') + found.Name + text('" is bekend bij Emby en zichtbaar voor jou.', '" is listed by Emby and visible to you.', '" ist bei Emby bekannt und für dich sichtbar.')); }
-                    else { bad(lines, text('Kanaal "Discover Media" ontbreekt in de kanalenlijst. Bekende kanalen: ', 'Channel "Discover Media" is missing from the channel list. Known channels: ', 'Kanal "Discover Media" fehlt in der Kanalliste. Bekannte Kanäle: ') + (names.join(', ') || text('(geen)', '(none)', '(keine)'))); }
+                    else { bad(lines, text('Discover-kanaal (Discover Media of Films & Series Aanvragen) ontbreekt in de kanalenlijst. Bekende kanalen: ', 'Discover channel (Discover Media or Films & Series Aanvragen) is missing from the channel list. Known channels: ', 'Discover-Kanal (Discover Media oder Films & Series Aanvragen) fehlt in der Kanalliste. Bekannte Kanäle: ') + (names.join(', ') || text('(geen)', '(none)', '(keine)'))); }
                 });
             });
         }).then(function () {
@@ -162,7 +273,7 @@ define(['emby-button'], function () {
             lines.push('== ' + text('Wie ziet het kanaal?', 'Who can see the channel?', 'Wer kann den Kanal sehen?') + ' ==');
             return Promise.all(users.map(function (u) {
                 return getJson('Channels', { UserId: u.Id }).then(function (r) {
-                    var has = (r.Items || []).some(function (c) { return /discover/i.test(c.Name || ''); });
+                    var has = (r.Items || []).some(isDiscoverChannel);
                     return { name: u.Name, has: has };
                 }, function () { return { name: u.Name, has: null }; });
             })).then(function (res) {
@@ -172,7 +283,7 @@ define(['emby-button'], function () {
                 ok(lines, withCount + text(' van ', ' of ', ' von ') + res.length + text(' gebruikers zien het kanaal.', ' users can see the channel.', ' Benutzern kann den Kanal sehen.'));
                 if (without.length) {
                     bad(lines, text('Geen toegang tot het kanaal: ', 'No channel access: ', 'Kein Zugriff auf den Kanal: ') + without.join(', '));
-                    info(lines, text('Oplossen: Gebruiker > Toegang > Kanalen: "Alle kanalen" aanzetten of Discover Media toevoegen.', 'Fix: User > Access > Channels: enable "All channels" or add Discover Media.', 'Lösung: Benutzer > Zugriff > Kanäle: "Alle Kanäle" aktivieren oder Discover Media hinzufügen.'));
+                    info(lines, text('Oplossen: Gebruiker > Toegang > Kanalen: "Alle kanalen" aanzetten of Discover Media / Films & Series Aanvragen toevoegen.', 'Fix: User > Access > Channels: enable "All channels" or add Discover Media / Films & Series Aanvragen.', 'Lösung: Benutzer > Zugriff > Kanäle: "Alle Kanäle" aktivieren oder Discover Media / Films & Series Aanvragen hinzufügen.'));
                 }
                 if (unknown.length) { info(lines, text('Niet te controleren: ', 'Could not check: ', 'Nicht überprüfbar: ') + unknown.join(', ')); }
             });
@@ -180,18 +291,10 @@ define(['emby-button'], function () {
             lines.push('');
             lines.push('== ' + text('Recente activiteit van het kanaal', 'Recent channel activity', 'Letzte Kanalaktivität') + ' ==');
             var r = window.__discoverStatus;
-            if (!r || !r.Events || !r.Events.length) { info(lines, text('(nog niets - open het kanaal Discover Media in Emby en controleer opnieuw)', '(nothing yet - open the Discover Media channel in Emby and check again)', '(noch nichts - öffne den Kanal Discover Media in Emby und prüfe erneut)')); }
+            if (!r || !r.Events || !r.Events.length) { info(lines, text('(nog niets - open het Discover-kanaal in Emby en controleer opnieuw)', '(nothing yet - open the Discover channel in Emby and check again)', '(noch nichts - öffne den Discover-Kanal in Emby und prüfe erneut)')); }
             else {
                 r.Events.forEach(function (e) {
-                    if (language !== 'nl') {
-                        e = e.replace('teruggegeven:', text('teruggegeven:', 'returned:', 'zurückgegeben:'))
-                            .replace('opgevraagd:', text('opgevraagd:', 'requested:', 'abgerufen:'))
-                            .replace('mislukt:', text('mislukt:', 'failed:', 'fehlgeschlagen:'))
-                            .replace('FOUT ', text('FOUT ', 'ERROR ', 'FEHLER '))
-                            .replace('taal=', text('taal=', 'language=', 'Sprache='))
-                            .replace('TMDB-talenlijst geladen: ', text('TMDB-talenlijst geladen: ', 'TMDB language list loaded: ', 'TMDB-Sprachliste geladen: '))
-                            .replace(' talen', text(' talen', ' languages', ' Sprachen'));
-                    }
+                    e = translateEvent(e);
                     info(lines, e);
                 });
             }

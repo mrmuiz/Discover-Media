@@ -10,7 +10,7 @@
     }
     window.__discoverRequestButton = true;
     window.__discoverRequestButtonVersion = '1.1.0';
-    console.log('[Discover] request-button script geladen v1.1.0');
+    console.log('[Discover] request-button script loaded v1.1.0');
 
     var uiLanguage = 'nl';
     function text(dutch, english, german) {
