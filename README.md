@@ -18,16 +18,36 @@
   <img src="docs/screenshots/discover-home.png" alt="Emby Discover home page showing recently added titles, recent requests and trending movies and series" width="100%">
 </p>
 
-**Discover Media channel** — browse the available lists and collections.
+**Discover Media channel** — browse the available lists and collections. Every folder has its own tile in the Seerr style.
 
 <p align="center">
-  <img src="docs/screenshots/discover-categories.png" alt="Discover Media channel with movie and series genres, popular and trending lists, studios and upcoming titles" width="100%">
+  <img src="docs/screenshots/discover-media-channel.jpg" alt="Discover Media channel with movie and series genres, popular, trending and upcoming lists, and studios" width="100%">
 </p>
 
-**Movie genres** — open a genre to browse matching titles.
+**Series genres** — open a genre to browse matching titles. Movie genres, studios and networks work the same way.
 
 <p align="center">
-  <img src="docs/screenshots/discover-movie-genres.png" alt="Movie Genres page with illustrated genre tiles" width="100%">
+  <img src="docs/screenshots/discover-series-genres.jpg" alt="Series Genres page with illustrated genre tiles" width="100%">
+</p>
+
+**Request and Trailer** — every title has a Request tile and a Trailer tile, labelled on the image.
+
+<p align="center">
+  <img src="docs/screenshots/discover-request-trailer-tiles.jpg" alt="Request and Trailer tiles of a series" width="60%">
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/discover-trailer-page.jpg" alt="Trailer detail page with title information" width="100%">
+</p>
+
+**Seasons** — for series you choose which season to request; seasons that are already in Sonarr are marked.
+
+<p align="center">
+  <img src="docs/screenshots/discover-seasons.jpg" alt="Season list of a series with season posters and status icons" width="60%">
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/discover-season-detail.jpg" alt="Season detail page with the Play button to request that season" width="80%">
 </p>
 
 ## What it does
@@ -37,7 +57,9 @@
 - Lets users request movies through Radarr and series through Sonarr.
 - Shows a trailer and a separate **Request** button on supported web-client detail pages. On series, the button opens a season picker. In the channel's browser view, a matched duplicate Request tile is hidden and its Trailer tile is renamed **Request**; native apps keep the original Trailer and Request items.
 - Provides a Play-based request flow for Android, TV and other clients that cannot run the web button script.
-- Shows whether a title is already requested or available when that status can be matched in Radarr or Sonarr.
+- Shows whether a title is already requested or available when that status can be matched in Radarr or Sonarr. Season items say whether the season is already requested, partially available or in your library; requesting again is still possible.
+- The Request and Trailer tiles carry the text "Request" and "Trailer" on their image so they are easy to tell apart.
+- Follows the plugin language (Dutch, English or German) in the channel, on the Discover page and in the status and diagnostics pages.
 
 ## Requirements
 
@@ -69,14 +91,14 @@ For Docker, do not use `localhost` for Radarr or Sonarr unless those services sh
 - In the channel browser view, the combined **Request** tile opens a detail page with **Trailer** playback and the **Request** button.
 - Open folders and tiles to browse them; do not press Play on a folder.
 
-The per-title request confirmation video remains landscape on all clients. Emby's media-info callback does not expose the requesting client or device, so the plugin cannot safely choose a portrait version only for mobile browsers while preserving the current desktop and native-app behavior.
+The request confirmation clip shows a large poster with the status (Requested / Already in Radarr or Sonarr) and what was requested (Movie, Series, or Season N), so it stays readable on a TV or phone. For a season, the season's poster is used.
 
 ## Configuration
 
 | Setting | Purpose |
 |---|---|
 | TMDB API key | Provides titles, artwork and metadata. |
-| Plugin language | Defaults to following Emby's server UI language; Dutch and English can also be selected manually. |
+| Plugin language | Defaults to following Emby's server UI language; Dutch, English and German can also be selected manually. |
 | TMDB language | Defaults to following Emby's server UI language (`nl-NL` for Dutch and `en-US` otherwise); a TMDB language can also be selected manually. |
 | Radarr URL and API key | Sends movie requests to Radarr. |
 | Sonarr URL and API key | Sends series requests to Sonarr. |

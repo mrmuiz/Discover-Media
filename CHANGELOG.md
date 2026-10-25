@@ -9,7 +9,8 @@ Release notes per version (in Dutch; the project started as a private build). Ne
 - De bevestigingsclip toont alleen nog een grote poster met daaronder groot de status (Aangevraagd / Staat al in Radarr of Sonarr) en wat is aangevraagd (Film, Serie · alle seizoenen of Seizoen N), zodat het ook op een tv of telefoon leesbaar is. Bij een seizoen staat de poster van dat seizoen erop. Titel, beschrijving, cast, regie en genres zijn weggelaten.
 - De aanvraag- en trailertegel (en bij series de seizoenmap) hebben nu de tekst "Aanvragen" resp. "Trailer" op de afbeelding, zodat je ze direct uit elkaar houdt. Lukt het maken van de afbeelding niet, dan blijft de gewone achtergrond staan.
 - Seizoenitems die al in Sonarr staan zeggen dat nu in de beschrijving: "al aangevraagd" (⏳), "gedeeltelijk beschikbaar" of "staat al in je bibliotheek" (✓, ook achter de seizoensnaam als alle afleveringen er zijn). Opnieuw aanvragen kan nog steeds.
-- Technisch: seizoenitems en de seizoenmap hebben nieuwe id's (`ask22season`, `ask22seasons`) en de kanaal-DataVersion is 70, zodat Emby geen oude seizoenplaatjes meer hergebruikt.
+- De diagnoseregel op de Discover-pagina en de lijst "Recente activiteit van het kanaal" op de statuspagina volgen nu volledig de pluginstaal (Nederlands, Engels of Duits); een deel stond nog vast in het Nederlands en "totaal=" werd ten onrechte "tolanguage=".
+- Technisch: seizoenitems en de seizoenmap hebben nieuwe id's (`ask22season`, `ask22seasons`) en de kanaal-DataVersion is 70, zodat Emby geen oude seizoenplaatjes meer hergebruikt. De scripts van de Discover- en statuspagina hebben nieuwe resourcenamen (`discoveruijs1100`, `discoverstatusjs1100`), zodat de browser geen oude scripts uit de cache gebruikt.
 
 ## Version 1.0.40.0-beta
 - Trailer-afspelen speelt nooit meer de "Aangevraagd"-bevestigingsclip af. Is er geen trailer of lukt het ophalen niet, dan meldt Emby een eerlijke fout en wordt er niets aangevraagd of gecachet.
