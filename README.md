@@ -8,7 +8,7 @@
   Browse movies and series from TMDB in Emby, watch trailers, and send requests to Radarr or Sonarr.
 </p>
 
-> **Status: beta.** The current test build is **1.0.37.74-beta**, built against Emby SDK 4.9.1.90. It is intended for testing with Emby Server 4.11.0.9; other Emby versions may work but have not been individually tested. Please report problems through [Issues](../../issues) and include the relevant diagnostics (see [Troubleshooting](#troubleshooting)).
+> **Status: stable.** The current version is **1.1.0**, built against the latest published Emby SDK package, `MediaBrowser.Server.Core` 4.11.0.5-beta6. It has been tested with Emby Server 4.11.0.10; other Emby versions may work but have not been individually tested. Please report problems through [Issues](../../issues) and include the relevant diagnostics (see [Troubleshooting](#troubleshooting)).
 
 ## Screenshots
 
@@ -35,22 +35,22 @@
 - Adds a **Discover Media** channel with trending, popular and upcoming movies and series, genre lists, studios and networks.
 - Provides a **Discover** page in the Emby web client with browsing and search.
 - Lets users request movies through Radarr and series through Sonarr.
-- Shows a trailer and a separate **Request** button on supported web-client detail pages. On a Request item, the Emby **Play** button is used to submit the request.
+- Shows a trailer and a separate **Request** button on supported web-client detail pages. On series, the button opens a season picker. In the channel's browser view, a matched duplicate Request tile is hidden and its Trailer tile is renamed **Request**; native apps keep the original Trailer and Request items.
 - Provides a Play-based request flow for Android, TV and other clients that cannot run the web button script.
 - Shows whether a title is already requested or available when that status can be matched in Radarr or Sonarr.
 
 ## Requirements
 
-- Emby Server. The plugin is built against `MediaBrowser.Server.Core` 4.9.1.90; testing has used Emby Server 4.11.0.9.
+- Emby Server. The plugin is built against `MediaBrowser.Server.Core` 4.11.0.5-beta6; testing has used Emby Server 4.11.0.10.
 - A [TMDB API key](https://www.themoviedb.org/settings/api).
-- Radarr for movie requests and/or Sonarr for series requests.
+- Radarr for movie requests and/or Sonarr for series requests. Series requests require Sonarr v4 or v5 (tested with both; older versions are not supported).
 - Emby's bundled `ffmpeg` is used to create some channel artwork and the request confirmation clip.
 
 ## Install
 
 1. Download `Emby.Plugins.Discover.dll` from the [latest release](../../releases/latest).
 2. Stop Emby, then copy the DLL into the Emby data directory's `plugins` folder. For Docker installations, this is usually `<Emby config folder>/plugins` (inside the container: `/config/plugins`).
-3. Remove older copies of the Discover DLL from that folder so only one version remains.
+3. Remove older **DLL files only** from that folder so only one version remains. Do not remove Discover's saved plugin settings; Emby stores them separately and the plugin ID stays the same between DLL versions.
 4. Start Emby.
 5. Open **Dashboard > Plugins > Discover**, configure the TMDB key and Radarr/Sonarr connection details, test the connections, select the quality profile and root folder, and save.
 6. Give the intended users access to channels in their Emby user settings.
@@ -63,10 +63,13 @@ For Docker, do not use `localhost` for Radarr or Sonarr unless those services sh
 ## Use
 
 - Open **Discover Media** and browse a list, genre, studio or network.
-- In the web client, open a title and choose **Request** where the separate web button is available. On a series, choose the seasons to monitor when prompted.
-- To request from a Request item—including on TV/Android clients—open the item and press **Play** (shown as **Aanvragen** on the detail page).
-- To watch a trailer, open its **Trailer** item and press **Play**.
+- In the web client, open a title's **Request** tile (shown as **Trailer** on its detail page) and choose **Request** to select seasons. No seasons are selected by default. The Trailer action uses Emby's player. If both matching tiles cannot be verified in that list, the browser leaves both unchanged.
+- In native TV/Android apps, open the **Request** folder for a series and choose the **Season N** item; its **Play** action requests only that season.
+- In the web client, season tiles show the short **Season N** label and are ordered numerically, independently of their status icons.
+- In the channel browser view, the combined **Request** tile opens a detail page with **Trailer** playback and the **Request** button.
 - Open folders and tiles to browse them; do not press Play on a folder.
+
+The per-title request confirmation video remains landscape on all clients. Emby's media-info callback does not expose the requesting client or device, so the plugin cannot safely choose a portrait version only for mobile browsers while preserving the current desktop and native-app behavior.
 
 ## Configuration
 
@@ -107,6 +110,7 @@ Use the source ZIP attached to the same release to build that exact version:
 
 ```bash
 dotnet build EmbyDiscover/EmbyDiscover.csproj -c Release
+```
 
 The output DLL is `EmbyDiscover/bin/Release/netstandard2.0/Emby.Plugins.Discover.dll`.
 

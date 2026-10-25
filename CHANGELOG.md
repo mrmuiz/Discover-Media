@@ -2,9 +2,17 @@
 
 Release notes per version (in Dutch; the project started as a private build). Newest first.
 
+## Version 1.1.0
+- Eerste stabiele release: de plugin is niet langer een beta (versie 1.1.0, geen `-beta`-achtervoegsel meer).
+- Sonarr v4 of v5 voor serie-aanvragen (getest met v4 en v5; oudere versies worden niet ondersteund). De plugin probeert `/api/v5` en valt terug op `/api/v3`.
+- Series die per seizoen worden aangevraagd worden nu direct na de aanvraag gemonitord en gezocht in Sonarr: de plugin stuurt alle seizoenen mee (gekozen = gemonitord, rest = niet) met `monitorNewItems: none`, zet daarna precies de gekozen seizoenen en hun afleveringen op gemonitord (rest uit) en start een zoekopdracht (`SeriesSearch`, zoekt alleen de gemonitorde afleveringen).
+- De bevestigingsclip toont alleen nog een grote poster met daaronder groot de status (Aangevraagd / Staat al in Radarr of Sonarr) en wat is aangevraagd (Film, Serie · alle seizoenen of Seizoen N), zodat het ook op een tv of telefoon leesbaar is. Bij een seizoen staat de poster van dat seizoen erop. Titel, beschrijving, cast, regie en genres zijn weggelaten.
+- Technisch: seizoenitems en de seizoenmap hebben nieuwe id's (`ask22season`, `ask22seasons`) en de kanaal-DataVersion is 68, zodat Emby geen oude seizoenplaatjes meer hergebruikt.
+
 ## Version 1.0.40.0-beta
 - Trailer-afspelen speelt nooit meer de "Aangevraagd"-bevestigingsclip af. Is er geen trailer of lukt het ophalen niet, dan meldt Emby een eerlijke fout en wordt er niets aangevraagd of gecachet.
 - Trailer zoeken is robuuster: ook Engelse en taalloze TMDB-video's, bij series ook de video's van seizoen 1, met een nieuwe poging bij een tijdelijke TMDB-fout. Fouten staan in de diagnose.
+- Series die per seizoen worden aangevraagd worden nu echt gemonitord in Sonarr: de plugin stuurt niet langer `monitor: none` mee (dat zette alle seizoenen weer uit).
 - Heeft de seizoenslijst van een serie geen poster voor een seizoen, dan vraagt de plugin het seizoen (en zijn afbeeldingen) rechtstreeks bij TMDB op. Is er echt geen poster, dan wordt de staande serieposter getoond in plaats van de liggende achtergrond.
 - Het driepuntjesmenu (en de hover-knoppen) verdwijnt van de aanvraag-/trailertegels in de kanaallijst.
 
