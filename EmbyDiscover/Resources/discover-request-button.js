@@ -3,14 +3,14 @@
  * Verbergt ook "Media informatie" op Discover/Trailers-detailpagina's. */
 (function () {
     'use strict';
-    if (window.__discoverRequestButtonVersion === '1.1.0') { return; }
+    if (window.__discoverRequestButtonVersion === '1.1.2') { return; }
     if (window.__discoverRequestButton) {
         console.warn('[Discover] oudere knopcode is nog actief; vernieuw de webclient om dubbele handlers te voorkomen.');
         return;
     }
     window.__discoverRequestButton = true;
-    window.__discoverRequestButtonVersion = '1.1.0';
-    console.log('[Discover] request-button script loaded v1.1.0');
+    window.__discoverRequestButtonVersion = '1.1.2';
+    console.log('[Discover] request-button script loaded v1.1.2');
 
     var uiLanguage = 'nl';
     function text(dutch, english, german) {
@@ -41,7 +41,7 @@
                     'color:#ffd666;background:rgba(0,0,0,.7);padding:4px 8px;border-radius:4px;pointer-events:none;white-space:pre-wrap;';
                 document.body.appendChild(el);
             }
-            el.textContent = 'Discover v1.1.0 | ' + msg;
+            el.textContent = 'Discover v1.1.2 | ' + msg;
         } catch (e) { }
     }
     var isAdmin = false;
@@ -312,7 +312,7 @@
                 seasonAskIds[id] = true;
                 askStatus[id] = 0;
                 var seasonProviderIds = item.ProviderIds || {};
-                var seriesTmdbId = parseInt(seasonProviderIds.Tmdb || seasonProviderIds.tmdb || 0, 10) || 0;
+                var seriesTmdbId = parseInt(seasonProviderIds.Tmdb || seasonProviderIds.tmdb || String(seasonProviderIds.DiscoverSeasonTmdb || '').split('-')[0] || 0, 10) || 0;
                 if (seriesTmdbId > 0) {
                     seasonCardIds[id] = seriesTmdbId;
                     loadSeasonCardInfo(id, seriesTmdbId);
@@ -332,6 +332,19 @@
             var name = String(item.Name || '').replace(/^[\u2713\u23F3]\s+/, '');
             var pid = item.ProviderIds || {};
             var tmdb = parseInt(pid.Tmdb || pid.tmdb || 0, 10) || 0;
+            // Seizoentrailer: de sleutel is "<serie-id>-s<seizoen>"; de knop Aanvragen vraagt dan alleen dat seizoen aan.
+            var seasonTrailer = /^(\d+)-s(\d+)$/.exec(String(pid.DiscoverTrailerTmdb || ''));
+            if (seasonTrailer && trailerIds[id]) {
+                var stSeries = parseInt(seasonTrailer[1], 10), stSeason = parseInt(seasonTrailer[2], 10);
+                return c.ajax({
+                    type: 'GET',
+                    url: c.getUrl('Discover/Resolve', { Name: name, Year: 0, Overview: '', TmdbId: stSeries, Season: stSeason }),
+                    dataType: 'json'
+                }).then(function (r) {
+                    if (r && r.Found) { r.PresetSeason = stSeason; return r; }
+                    return { Found: false };
+                });
+            }
             if (!tmdb && item.Id) {
                 var mm = /^(?:m|t):(\d+)$/.exec(String(item.Id));
                 if (mm) tmdb = parseInt(mm[1], 10);
@@ -553,7 +566,9 @@
             e.stopImmediatePropagation();
             if (!info.Found || info.Status > 0 || btn.disabled) { return; }
 
-            if (info.Type === 'tv') {
+            if (info.Type === 'tv' && info.PresetSeason > 0) {
+                doRequest(btn, info, [info.PresetSeason]);
+            } else if (info.Type === 'tv') {
                 showSeasonPicker(info, function (selected) {
                     doRequest(btn, info, selected);
                 });
@@ -1076,7 +1091,11 @@
         var season = /^(?:Aanvragen Seizoen|Request Season|Staffel anfragen|Seizoen|Season|Staffel)\s+(\d+)/i.exec(value);
         if (season) { return { kind: 'season', title: value, number: parseInt(season[1], 10) }; }
         var trailer = /^Trailer:\s*(.+)$/i.exec(value);
-        if (trailer) { return { kind: 'trailer', title: trailer[1].trim() }; }
+        if (trailer) {
+            var seasonTrailer = /^(?:Seizoen|Season|Staffel)\s+(\d+)\s*$/i.exec(trailer[1].trim());
+            if (seasonTrailer) { return { kind: 'seasontrailer', title: trailer[1].trim(), number: parseInt(seasonTrailer[1], 10) }; }
+            return { kind: 'trailer', title: trailer[1].trim() };
+        }
         var ask = /^(?:Aanvragen|Anfragen|Request):\s*(.+)$/i.exec(value);
         return ask ? { kind: 'ask', title: ask[1].trim() } : null;
     }
@@ -1234,6 +1253,19 @@
                 }
                 continue;
             }
+            if (parsed.kind === 'seasontrailer') {
+                card.classList.add('discover-season-request-card');
+                restoreRequestTileLabel(card);
+                restoreSeasonTileLabel(card);
+                if (card.parentNode) {
+                    var stEntry = null;
+                    for (var stIndex = 0; stIndex < seasonCardsByParent.length; stIndex++) {
+                        if (seasonCardsByParent[stIndex].parent === card.parentNode) { stEntry = seasonCardsByParent[stIndex]; break; }
+                    }
+                    if (!stEntry) { seasonCardsByParent.push({ parent: card.parentNode, cards: [] }); }
+                }
+                continue;
+            }
             restoreSeasonTileLabel(card);
             var key = info.parentId + '\n' + parsed.title.toLocaleLowerCase();
             var entry = groups[key] || (groups[key] = { ask: [], trailer: [] });
@@ -1261,8 +1293,8 @@
                 var siblingId = cards[k].getAttribute('data-id');
                 var siblingInfo = requestTileInfo[siblingId];
                 var siblingSeason = siblingInfo && requestTileName(siblingInfo.name);
-                if (!siblingSeason || siblingSeason.kind !== 'season') { return; }
-                siblingCards.push({ card: cards[k], number: siblingSeason.number });
+                if (!siblingSeason || (siblingSeason.kind !== 'season' && siblingSeason.kind !== 'seasontrailer')) { return; }
+                siblingCards.push({ card: cards[k], number: siblingSeason.number * 2 + (siblingSeason.kind === 'season' ? 1 : 0) });
             }
             if (siblingCards.length < 2) { return; }
             siblingCards.sort(function (a, b) { return a.number - b.number; });
@@ -1304,7 +1336,7 @@
                         found[item.Id] = {
                             name: item.Name || '',
                             parentId: item.ParentId || '',
-                            tmdbId: parseInt(providerIds.Tmdb || providerIds.tmdb || 0, 10) || 0
+                            tmdbId: parseInt(providerIds.Tmdb || providerIds.tmdb || String(providerIds.DiscoverSeasonTmdb || '').split('-')[0] || 0, 10) || 0
                         };
                     }
                 });
