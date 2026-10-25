@@ -18,7 +18,7 @@ namespace Emby.Plugins.Discover
     internal static class FolderTile
     {
         // Ophogen als de opmaak verandert, dan worden bewaarde plaatjes niet meer hergebruikt.
-        private const int TileVersion = 4;
+        private const int TileVersion = 5;
 
         private const int W = 1280;
         private const int H = 720;
@@ -76,7 +76,7 @@ namespace Emby.Plugins.Discover
         private static HttpClient CreateHttp()
         {
             var c = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
-            try { c.DefaultRequestHeaders.UserAgent.ParseAdd("EmbyDiscover/1.0-beta"); } catch { }
+            try { c.DefaultRequestHeaders.UserAgent.ParseAdd("EmbyDiscover/1.1"); } catch { }
             return c;
         }
 

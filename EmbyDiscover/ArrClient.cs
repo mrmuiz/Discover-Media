@@ -15,6 +15,7 @@ namespace Emby.Plugins.Discover
     public class SonarrStatsDto { public int episodeFileCount { get; set; } public int episodeCount { get; set; } }
     public class SonarrSeasonDto { public int seasonNumber { get; set; } public bool monitored { get; set; } public SonarrStatsDto statistics { get; set; } }
     public class SonarrSeriesDto { public int id { get; set; } public int tmdbId { get; set; } public int tvdbId { get; set; } public string added { get; set; } public SonarrStatsDto statistics { get; set; } public List<SonarrSeasonDto> seasons { get; set; } }
+    public class SonarrEpisodeDto { public int id { get; set; } public int seasonNumber { get; set; } public bool monitored { get; set; } public bool hasFile { get; set; } }
     public class RecentEntry { public int TmdbId { get; set; } public bool HasFile { get; set; } public string Added { get; set; } }
 
     /// <summary>Praat met Radarr (films) en Sonarr v4 (series).</summary>
@@ -305,12 +306,94 @@ namespace Emby.Plugins.Discover
             var body = "{\"title\":\"" + Esc(title) + "\",\"tvdbId\":" + tvdbId +
                        ",\"qualityProfileId\":" + profile + ",\"rootFolderPath\":\"" + Esc(root) + "\"" +
                        ",\"monitored\":true,\"seasonFolder\":true,\"seriesType\":\"standard\"" +
-                       (seasonsJson != null ? ",\"seasons\":" + seasonsJson : "") +
+                       (seasonsJson != null ? ",\"seasons\":" + seasonsJson + ",\"monitorNewItems\":\"none\"" : "") +
                        ",\"addOptions\":" + addOptions + "}";
 
-            await Send(HttpMethod.Post, cfg.SonarrUrl, cfg.SonarrApiKey, "/api/v3/series", body, ct).ConfigureAwait(false);
+            var created = await Send(HttpMethod.Post, cfg.SonarrUrl, cfg.SonarrApiKey, "/api/v3/series", body, ct).ConfigureAwait(false);
             InvalidateCaches();
+
+            if (seasons != null && seasons.Length > 0)
+            {
+                int newId = 0;
+                try { var dto = _json.DeserializeFromString<SonarrSeriesDto>(created); if (dto != null) newId = dto.id; }
+                catch { }
+                if (newId > 0)
+                {
+                    var chosen = seasons.Distinct().ToArray();
+                    var ignored = Task.Run(() => FinishSeasonRequest(newId, chosen, title));
+                }
+                else DiscoverDiagnostics.Add("Sonarr gaf geen serie-id terug voor " + title + "; seizoenen niet extra gecontroleerd");
+            }
             return true;
+        }
+
+        /// <summary>Sonarr v5 heeft /api/v5; oudere versies alleen /api/v3. Eerst v5, bij een fout v3.</summary>
+        private static async Task<string> SendApi(HttpMethod method, string path, string body)
+        {
+            var cfg = Plugin.GetCurrentConfiguration();
+            try { return await Send(method, cfg.SonarrUrl, cfg.SonarrApiKey, "/api/v5" + path, body, CancellationToken.None).ConfigureAwait(false); }
+            catch (Exception) { return await Send(method, cfg.SonarrUrl, cfg.SonarrApiKey, "/api/v3" + path, body, CancellationToken.None).ConfigureAwait(false); }
+        }
+
+        /// <summary>
+        /// Draait op de achtergrond na het toevoegen van een serie met gekozen seizoenen: wacht tot Sonarr de afleveringen kent,
+        /// zet dan precies de gekozen seizoenen en hun afleveringen op gemonitord (de rest uit) en start de zoekopdracht.
+        /// Dat gebeurt expliciet omdat de seizoensvlaggen bij het toevoegen niet altijd op de afleveringen doorwerken.
+        /// </summary>
+        private async Task FinishSeasonRequest(int seriesId, int[] seasons, string title)
+        {
+            try
+            {
+                var selected = new HashSet<int>(seasons);
+                List<SonarrEpisodeDto> eps = null;
+                for (int i = 0; i < 60; i++)
+                {
+                    // Snel pollen: de zoekopdracht moet vrijwel direct na het toevoegen starten (totaal maximaal ca. 90 s wachten).
+                    await Task.Delay(i == 0 ? 1000 : 1500).ConfigureAwait(false);
+                    try
+                    {
+                        var t = await SendApi(HttpMethod.Get, "/episode?seriesId=" + seriesId, null).ConfigureAwait(false);
+                        eps = _json.DeserializeFromString<List<SonarrEpisodeDto>>(t);
+                    }
+                    catch (Exception ex) { DiscoverDiagnostics.Add("Sonarr afleveringen ophalen (" + title + "): " + ex.Message); }
+                    if (eps != null && eps.Count > 0) break;
+                }
+                if (eps == null || eps.Count == 0)
+                {
+                    DiscoverDiagnostics.Add("Sonarr kent de afleveringen van " + title + " nog niet; monitoring niet gecontroleerd");
+                    return;
+                }
+
+                // Seizoensvlag (alleen Sonarr v5 heeft dit endpoint; bij een fout gaan we gewoon door met de afleveringen).
+                foreach (var n in selected)
+                {
+                    try { await SendApi(HttpMethod.Put, "/series/" + seriesId + "/season", "{\"seasonNumber\":" + n + ",\"monitored\":true}").ConfigureAwait(false); }
+                    catch (Exception ex) { DiscoverDiagnostics.Add("Sonarr seizoen " + n + " monitoren (" + title + "): " + ex.Message); }
+                }
+
+                var on = eps.Where(e => selected.Contains(e.seasonNumber) && !e.monitored).Select(e => e.id).ToList();
+                var off = eps.Where(e => !selected.Contains(e.seasonNumber) && e.monitored).Select(e => e.id).ToList();
+                try
+                {
+                    if (on.Count > 0)
+                        await SendApi(HttpMethod.Put, "/episode/monitor", "{\"episodeIds\":[" + string.Join(",", on) + "],\"monitored\":true}").ConfigureAwait(false);
+                    if (off.Count > 0)
+                        await SendApi(HttpMethod.Put, "/episode/monitor", "{\"episodeIds\":[" + string.Join(",", off) + "],\"monitored\":false}").ConfigureAwait(false);
+                }
+                catch (Exception ex) { DiscoverDiagnostics.Add("Sonarr afleveringen monitoren (" + title + "): " + ex.Message); }
+
+                // SeriesSearch zoekt alleen de gemonitorde afleveringen: dat zijn nu precies de gekozen seizoenen.
+                try { await SendApi(HttpMethod.Post, "/command", "{\"name\":\"SeriesSearch\",\"seriesId\":" + seriesId + "}").ConfigureAwait(false); }
+                catch (Exception ex) { DiscoverDiagnostics.Add("Sonarr zoeken (" + title + "): " + ex.Message); }
+
+                InvalidateCaches();
+                DiscoverDiagnostics.Add("Sonarr " + title + ": seizoen " + string.Join(", ", selected.OrderBy(x => x)) +
+                    " gemonitord (" + on.Count + " afleveringen aangezet, " + off.Count + " uitgezet) en zoekopdracht (SeriesSearch) gestart");
+            }
+            catch (Exception ex)
+            {
+                DiscoverDiagnostics.Add("FOUT seizoensmonitoring " + title + ": " + ex.Message);
+            }
         }
 
         // ---------- Verwijderen / aanvraag annuleren ----------

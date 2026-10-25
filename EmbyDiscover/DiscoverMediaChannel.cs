@@ -925,7 +925,18 @@ namespace Emby.Plugins.Discover
                     bool there = states.TryGetValue(tmdbId, out hasFiles);
 
                     // Wacht tot de staande kaart klaar is (bij een koude start duurt ffmpeg enkele seconden); pas daarna de vaste liggende clip.
-                    var cardTask = RequestCard.Create(info, extra, tv, there, CancellationToken.None);
+                    // Bij een seizoensaanvraag staat op de kaart de poster van dat seizoen (als TMDB er een heeft).
+                    string seasonPoster = null;
+                    if (isSeasonReq)
+                    {
+                        try { seasonPoster = await _tmdb.GetSeasonPosterPath(tmdbId, requestedSeason, ct).ConfigureAwait(false); }
+                        catch (Exception ex)
+                        {
+                            if (ex is OperationCanceledException) throw;
+                            DiscoverDiagnostics.Add("seizoensposter voor kaart " + tmdbId + "/seizoen " + requestedSeason + ": " + ex.Message);
+                        }
+                    }
+                    var cardTask = RequestCard.Create(info, extra, tv, there, CancellationToken.None, requestedSeason, seasonPoster);
                     _ = cardTask.ContinueWith(x => { var ignored = x.Exception; }, TaskContinuationOptions.OnlyOnFaulted);
                     var first = await Task.WhenAny(cardTask, Task.Delay(30000, ct)).ConfigureAwait(false);
                     if (first != cardTask) throw new TimeoutException("kaart nog niet klaar");

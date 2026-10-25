@@ -11,8 +11,9 @@ using System.Threading.Tasks;
 namespace Emby.Plugins.Discover
 {
     /// <summary>
-    /// Maakt per titel een bevestigingsclip van <see cref="Seconds"/> seconden met poster, titel, jaar,
-    /// beoordeling en beschrijving (gewone ffmpeg-aanroep, lettertype zit in de DLL).
+    /// Maakt per aanvraag een bevestigingsclip van <see cref="Seconds"/> seconden: een grote poster met daaronder groot
+    /// de status (Aangevraagd / Staat al in ...) en wat is aangevraagd (Film, Serie of Seizoen N). Bewust weinig tekst,
+    /// zodat het ook op een tv of telefoon leesbaar blijft (gewone ffmpeg-aanroep, lettertype zit in de DLL).
     /// Lukt iets niet (geen ffmpeg, geen schrijfrechten, ...), dan gooit Create een exception en speelt
     /// het kanaal de vaste clip, zoals voorheen.
     /// </summary>
@@ -21,17 +22,17 @@ namespace Emby.Plugins.Discover
         public const int Seconds = 12;
 
         // Ophogen als de opmaak verandert, dan worden bewaarde clips niet meer hergebruikt.
-        private const int CardVersion = 2;
+        private const int CardVersion = 5;
 
-        private const int W = 1280;
-        private const int H = 720;
+        private const int W = 720;
+        private const int H = 1080;
 
         private static readonly HttpClient Http = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
         // Eén ffmpeg tegelijk: een Pi of NAS wordt anders traag bij meerdere aanvragen.
         private static readonly SemaphoreSlim Gate = new SemaphoreSlim(1, 1);
 
         /// <summary>Geeft het pad van de clip voor deze titel (uit de bewaarde clips of net gemaakt).</summary>
-        public static async Task<string> Create(TmdbItem t, TmdbExtra x, bool tv, bool alreadyThere, CancellationToken ct)
+        public static async Task<string> Create(TmdbItem t, TmdbExtra x, bool tv, bool alreadyThere, CancellationToken ct, int season = 0, string posterPath = null)
         {
             var ffmpeg = FindFfmpeg();
             if (ffmpeg == null)
@@ -39,8 +40,8 @@ namespace Emby.Plugins.Discover
                     "ffmpeg niet gevonden; zet FfmpegPath in Emby.Plugins.Discover.xml");
 
             var dir = Plugin.Instance.WorkDir("discover-cards");
-            var final = Path.Combine(dir, string.Format("card-{0}{1}-{2}-v{3}.mp4",
-                tv ? "t" : "m", t.id, alreadyThere ? "dup" : "new", CardVersion));
+            var final = Path.Combine(dir, string.Format("card-{0}{1}-s{2}-{3}-v{4}.mp4",
+                tv ? "t" : "m", t.id, season, alreadyThere ? "dup" : "new", CardVersion));
             if (File.Exists(final) && new FileInfo(final).Length > 0) return final;
 
             await Gate.WaitAsync(ct).ConfigureAwait(false);
@@ -52,7 +53,7 @@ namespace Emby.Plugins.Discover
                 Directory.CreateDirectory(work);
                 try
                 {
-                    await Render(ffmpeg, work, t, x, tv, alreadyThere, ct).ConfigureAwait(false);
+                    await Render(ffmpeg, work, t, tv, alreadyThere, season, posterPath, ct).ConfigureAwait(false);
                     var made = Path.Combine(work, "out.mp4");
                     if (!File.Exists(made) || new FileInfo(made).Length == 0)
                         throw new InvalidOperationException("ffmpeg maakte geen bestand");
@@ -76,111 +77,49 @@ namespace Emby.Plugins.Discover
             finally { Gate.Release(); }
         }
 
-        private const int PX = 80, PY = 105, PW = 340, PH = 510;   // poster
-        private const int PadShadow = 60;
+        private const int PX = 100, PY = 44, PW = 520, PH = 780;   // poster (2:3), groot
+        private const int PadShadow = 36;
 
-        private static async Task Render(string ffmpeg, string work, TmdbItem t, TmdbExtra x, bool tv, bool alreadyThere, CancellationToken ct)
+        private static async Task Render(string ffmpeg, string work, TmdbItem t, bool tv, bool alreadyThere, int season, string posterPath, CancellationToken ct)
         {
             CopyResource("Poppins-Bold.ttf", Path.Combine(work, "bold.ttf"));
             CopyResource("Poppins-Regular.ttf", Path.Combine(work, "regular.ttf"));
             CopyResource("card-grad.png", Path.Combine(work, "grad.png"));
 
-            bool hasPoster = await Download(TmdbClient.PosterUrl(t.poster_path), Path.Combine(work, "poster.jpg"), ct).ConfigureAwait(false);
+            // Bij een seizoen de seizoensposter als die er is, anders de serieposter.
+            bool hasPoster = await Download(TmdbClient.PosterUrl(string.IsNullOrEmpty(posterPath) ? t.poster_path : posterPath),
+                Path.Combine(work, "poster.jpg"), ct).ConfigureAwait(false);
+            if (!hasPoster && !string.IsNullOrEmpty(posterPath))
+                hasPoster = await Download(TmdbClient.PosterUrl(t.poster_path), Path.Combine(work, "poster.jpg"), ct).ConfigureAwait(false);
             string bdUrl = string.IsNullOrEmpty(t.backdrop_path) ? null : "https://image.tmdb.org/t/p/w780" + t.backdrop_path;
             bool hasBackdrop = bdUrl != null &&
                 await Download(bdUrl, Path.Combine(work, "backdrop.jpg"), ct).ConfigureAwait(false);
 
-            // ---- Teksten ----
+            // ---- Teksten: alleen status en wat is aangevraagd (groot), plus de titel als er geen poster is ----
             string arr = tv ? "Sonarr" : "Radarr";
             string title = tv ? (t.name ?? t.title ?? "?") : (t.title ?? t.name ?? "?");
-            var date = tv ? t.first_air_date : t.release_date;
-
-            var meta = new List<string>();
-            if (!string.IsNullOrEmpty(date) && date.Length >= 4) meta.Add(date.Substring(0, 4));
-            meta.Add(DiscoverLanguage.Text(tv ? "Serie" : "Film", tv ? "Series" : "Movie", tv ? "Serie" : "Film"));
-            string length = LengthOf(t, x, tv);
-            if (length != null) meta.Add(length);
-            bool hasRating = t.vote_average > 0;
-            string rating = hasRating ? t.vote_average.ToString("0.0", CultureInfo.InvariantCulture).Replace('.', ',') : null;
-            if (hasRating) meta.Insert(0, rating);
-
-            var genres = new List<string>();
-            if (x != null && x.genres != null)
-                foreach (var g in x.genres) if (!string.IsNullOrWhiteSpace(g.name) && genres.Count < 4) genres.Add(g.name.Trim());
-
-            string overviewRaw = (t.overview ?? "").Replace("\r", " ").Replace("\n", " ").Trim();
-            if (overviewRaw.Length == 0 && x != null && !string.IsNullOrWhiteSpace(x.tagline)) overviewRaw = x.tagline.Trim();
-
-            // Regie / maker en cast: echte inhoud van de titel, ook als er geen beschrijving is.
-            var credits = new List<KeyValuePair<string, string>>();
-            if (x != null)
-            {
-                var makers = new List<string>();
-                if (tv)
-                {
-                    if (x.created_by != null) foreach (var c in x.created_by) if (!string.IsNullOrWhiteSpace(c.name) && makers.Count < 2) makers.Add(c.name);
-                }
-                else if (x.credits != null && x.credits.crew != null)
-                {
-                    foreach (var c in x.credits.crew)
-                        if (c.job == "Director" && !string.IsNullOrWhiteSpace(c.name) && !makers.Contains(c.name) && makers.Count < 2) makers.Add(c.name);
-                }
-                if (makers.Count > 0) credits.Add(new KeyValuePair<string, string>(
-                    tv ? DiscoverLanguage.Text("MAKER", "CREATED BY", "ERSTELLT VON") : DiscoverLanguage.Text("REGIE", "DIRECTOR", "REGIE"),
-                    string.Join(", ", makers)));
-                var cast = new List<string>();
-                if (x.credits != null && x.credits.cast != null)
-                    foreach (var c in x.credits.cast) if (!string.IsNullOrWhiteSpace(c.name) && cast.Count < 5) cast.Add(c.name);
-                if (cast.Count > 0) credits.Add(new KeyValuePair<string, string>("CAST", string.Join(", ", cast)));
-            }
-
             string badge = alreadyThere
                 ? DiscoverLanguage.Text("Staat al in ", "Already in ", "Bereits in ") + arr
                 : DiscoverLanguage.Text("Aangevraagd", "Requested", "Angefordert");
-            string pillFile = alreadyThere ? (tv ? "card-pill-dup-sonarr.png" : "card-pill-dup-radarr.png") : "card-pill-new.png";
-            string sub = alreadyThere
-                ? DiscoverLanguage.Text("Er is niets dubbel aangevraagd.", "Nothing was requested twice.", "Es wurde nichts doppelt angefordert.")
-                : DiscoverLanguage.Text("Zodra de download klaar is, staat hij in je bibliotheek.",
-                    "It will be in your library when the download is complete.",
-                    "Sobald der Download abgeschlossen ist, ist der Titel in deiner Bibliothek.");
-            CopyResource(pillFile, Path.Combine(work, "pill.png"));
+            string what = season > 0
+                ? DiscoverLanguage.Text("Seizoen " + season, "Season " + season, "Staffel " + season)
+                : tv
+                    ? DiscoverLanguage.Text("Serie \u00B7 alle seizoenen", "Series \u00B7 all seasons", "Serie \u00B7 alle Staffeln")
+                    : DiscoverLanguage.Text("Film", "Movie", "Film");
+            string boxColor = alreadyThere ? "0x2F6FDB" : "0x22A559";
+
             if (hasPoster)
             {
                 CopyResource("card-mask.png", Path.Combine(work, "mask.png"));
                 CopyResource("card-shadow.png", Path.Combine(work, "shadow.png"));
             }
-            if (hasRating) CopyResource("card-star.png", Path.Combine(work, "star.png"));
 
-            // ---- Opmaak (pixels op 1280x720) ----
-            int textX = hasPoster ? 480 : 90;
-            int textW = W - textX - 80;
-            var titleLines = WrapPx(title, textW, 54, true, 2);
-            int titleLineCount = titleLines.Split('\n').Length;
-
-            int pillY = titleLineCount == 1 ? 96 : 70;
-            int titleY = pillY + 56 + 26;
-            int metaY = titleY + titleLineCount * 74 + 8;
-            int genreY = metaY + 46;
-            int y = genreY + (genres.Count > 0 ? 58 : 6);
-
-            int creditRows = credits.Count;
-            int subY = 662;
-            int creditsBlock = creditRows * 40 + (creditRows > 0 ? 18 : 0);
-            int overviewBottom = subY - 26 - creditsBlock;
-            int overviewMax = Math.Max(0, (overviewBottom - y) / 41);
-            if (overviewMax < 2 && creditRows > 1) { credits.RemoveAt(credits.Count - 1); creditRows--; creditsBlock = 58; overviewBottom = subY - 26 - creditsBlock; overviewMax = Math.Max(0, (overviewBottom - y) / 41); }
-            string overview = overviewMax > 0 && overviewRaw.Length > 0
-                ? WrapPx(overviewRaw, textW, 25, false, Math.Min(overviewMax, 6)) : "";
-            int overviewLines = overview.Length == 0 ? 0 : overview.Split('\n').Length;
-            int creditsY = y + overviewLines * 41 + (overviewLines > 0 ? 20 : 0);
-
-            WriteText(Path.Combine(work, "title.txt"), titleLines);
-            WriteText(Path.Combine(work, "meta.txt"), string.Join("   ·   ", meta.GetRange(hasRating ? 1 : 0, meta.Count - (hasRating ? 1 : 0)).ToArray()));
-            WriteText(Path.Combine(work, "rating.txt"), rating ?? "");
-            WriteText(Path.Combine(work, "genres.txt"), string.Join("   ·   ", genres.ToArray()));
-            WriteText(Path.Combine(work, "overview.txt"), overview);
             WriteText(Path.Combine(work, "badge.txt"), badge);
-            WriteText(Path.Combine(work, "sub.txt"), sub);
+            WriteText(Path.Combine(work, "what.txt"), what);
+            WriteText(Path.Combine(work, "title.txt"), WrapPx(title, 600, 52, true, 3));
+
+            int badgeY = hasPoster ? PY + PH + 46 : 700;
+            int whatY = badgeY + 118;
 
             // ---- ffmpeg ----
             var a = new StringBuilder();
@@ -201,10 +140,8 @@ namespace Emby.Plugins.Discover
                 bgIdx = next++;
             }
             int gradIdx = addImg("grad.png");
-            int shadowIdx = -1, posterIdx = -1, maskIdx = -1, starIdx = -1;
+            int shadowIdx = -1, posterIdx = -1, maskIdx = -1;
             if (hasPoster) { shadowIdx = addImg("shadow.png"); posterIdx = addImg("poster.jpg"); maskIdx = addImg("mask.png"); }
-            if (hasRating) starIdx = addImg("star.png");
-            int pillIdx = addImg("pill.png");
             a.Append("-f lavfi -t " + Seconds + " -i anullsrc=r=44100:cl=stereo ");
             int audioIdx = next++;
 
@@ -212,7 +149,7 @@ namespace Emby.Plugins.Discover
             if (bgIsImage)
             {
                 // Rustige zoom (Ken Burns) op de achtergrond; zonder echte achtergrond (alleen poster) extra vaag.
-                f.Append("[" + bgIdx + ":v]scale=1920:1080:force_original_aspect_ratio=increase,crop=1920:1080," +
+                f.Append("[" + bgIdx + ":v]scale=1080:1620:force_original_aspect_ratio=increase,crop=1080:1620," +
                          "zoompan=z='1+0.0005*on':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:s=" + W + "x" + H + ":fps=10," +
                          (hasBackdrop ? "boxblur=3:1" : "boxblur=28:3") + ",setsar=1,format=yuv420p[bg];");
             }
@@ -222,43 +159,21 @@ namespace Emby.Plugins.Discover
             string cur = "b1";
             if (hasPoster)
             {
-                f.Append("[" + shadowIdx + ":v]format=rgba[sh];[" + cur + "][sh]overlay=" + (PX - PadShadow) + ":" + (PY - PadShadow + 14) + ":format=auto[b2];");
+                // Rand en schaduw zijn gemaakt voor 380x570; ze worden naar de grotere poster geschaald.
+                f.Append("[" + shadowIdx + ":v]scale=" + (PW + 72) + ":" + (PH + 72) + ",format=rgba[sh];[" + cur + "][sh]overlay=" +
+                         (PX - 36) + ":" + (PY - 36 + 14) + ":format=auto[b2];");
                 f.Append("[" + posterIdx + ":v]scale=" + PW + ":" + PH + ":force_original_aspect_ratio=increase,crop=" + PW + ":" + PH + ",format=rgba[pp];");
-                f.Append("[" + maskIdx + ":v]format=gray[mk];[pp][mk]alphamerge[pr];");
+                f.Append("[" + maskIdx + ":v]scale=" + PW + ":" + PH + ",format=gray[mk];[pp][mk]alphamerge[pr];");
                 f.Append("[b2][pr]overlay=" + PX + ":" + PY + ":format=auto[b3];");
                 cur = "b3";
             }
-            if (hasRating)
-            {
-                f.Append("[" + starIdx + ":v]format=rgba[sr];[" + cur + "][sr]overlay=" + textX + ":" + (metaY + 5) + ":format=auto[b4];");
-                cur = "b4";
-            }
-            f.Append("[" + pillIdx + ":v]format=rgba[pl];[" + cur + "][pl]overlay=" + textX + ":" + pillY + ":format=auto[b5];");
 
-            f.Append("[b5]");
-            f.Append(DrawText("bold.ttf", "badge.txt", 26, "white", textX + 58, pillY + "+(56-text_h)/2", 0) + ",");
-            f.Append(DrawText("bold.ttf", "title.txt", 54, "white", textX, titleY.ToString(), 4) + ",");
-            int metaTextX = hasRating ? textX + 36 : textX;
-            if (hasRating)
-            {
-                f.Append(DrawText("bold.ttf", "rating.txt", 28, "0xFFC24B", metaTextX, metaY.ToString(), 0) + ",");
-                metaTextX += (int)Math.Round(Measure(rating, 28, true)) + 26;
-            }
-            f.Append(DrawText("regular.ttf", "meta.txt", 28, "0xE3E8F5", metaTextX, metaY.ToString(), 0) + ",");
-            if (genres.Count > 0)
-                f.Append(DrawText("regular.ttf", "genres.txt", 24, "0xFFD27A", textX, genreY.ToString(), 0) + ",");
-            if (overview.Length > 0)
-                f.Append(DrawText("regular.ttf", "overview.txt", 25, "white@0.92", textX, y.ToString(), 5) + ",");
-            for (int i = 0; i < credits.Count; i++)
-            {
-                string lf = "clabel" + i + ".txt", vf = "cvalue" + i + ".txt";
-                WriteText(Path.Combine(work, lf), credits[i].Key);
-                WriteText(Path.Combine(work, vf), WrapPx(credits[i].Value, textW - 120, 22, false, 1));
-                int cy = creditsY + i * 40;
-                f.Append(DrawText("bold.ttf", lf, 18, "0xFFD27A", textX, (cy + 3).ToString(), 0) + ",");
-                f.Append(DrawText("regular.ttf", vf, 22, "0xE3E8F5", textX + 120, cy.ToString(), 0) + ",");
-            }
-            f.Append(DrawText("regular.ttf", "sub.txt", 21, "0xAEB6CC", textX, subY.ToString(), 0) + ",");
+            f.Append("[" + cur + "]");
+            if (!hasPoster)
+                f.Append(DrawTextX("bold.ttf", "title.txt", 52, "white", "(w-text_w)/2", "260", ":line_spacing=6") + ",");
+            f.Append(DrawTextX("bold.ttf", "badge.txt", 46, "white", "(w-text_w)/2", badgeY.ToString(),
+                ":box=1:boxcolor=" + boxColor + ":boxborderw=22") + ",");
+            f.Append(DrawTextX("regular.ttf", "what.txt", 44, "white", "(w-text_w)/2", whatY.ToString(), "") + ",");
             f.Append("fade=t=in:st=0:d=0.5,fade=t=out:st=" + (Seconds - 0.6).ToString("0.0", CultureInfo.InvariantCulture) + ":d=0.6,format=yuv420p");
             f.Append("[v]");
 
@@ -303,11 +218,11 @@ namespace Emby.Plugins.Discover
             }
         }
 
-        // x en y mogen een expressie zijn (bv. "96+(56-text_h)/2"). Geen komma's gebruiken in expressies.
-        private static string DrawText(string font, string file, int size, string color, int x, string y, int spacing)
+        // x en y mogen een expressie zijn (bv. "(w-text_w)/2"). Geen komma's gebruiken in expressies.
+        private static string DrawTextX(string font, string file, int size, string color, string x, string y, string extra)
         {
             return "drawtext=fontfile=" + font + ":textfile=" + file + ":expansion=none:fontsize=" + size +
-                   ":fontcolor=" + color + ":x=" + x + ":y=" + y + ":line_spacing=" + spacing;
+                   ":fontcolor=" + color + ":x=" + x + ":y=" + y + extra;
         }
 
         // ---------- Hulpjes ----------
