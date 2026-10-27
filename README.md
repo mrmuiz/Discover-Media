@@ -50,6 +50,24 @@
   <img src="docs/screenshots/discover-season-detail.jpg" alt="Season detail page with the Play button to request that season" width="80%">
 </p>
 
+**More like this** — on movie and series pages, TMDB recommendations you don't have yet, each with a Request button. The same layout is used for the collection row on movie pages.
+
+<p align="center">
+  <img src="docs/screenshots/discover-more-like-this.jpg" alt="More like this row on a movie page with posters and Request buttons" width="100%">
+</p>
+
+**Not in your library** — on actor and director pages, their other movies and series from TMDB. Series open the season picker.
+
+<p align="center">
+  <img src="docs/screenshots/discover-person-section.jpg" alt="Not in your library section on an actor page listing series and movies with Request buttons" width="100%">
+</p>
+
+**Requesting from a row** — the button turns into the status (Requested / Available) and a confirmation appears. Click a poster or title to open that title.
+
+<p align="center">
+  <img src="docs/screenshots/discover-request-from-row.png" alt="Request button changed to Requested with a confirmation message" width="60%">
+</p>
+
 ## What it does
 
 - Adds a **Discover Media** channel with trending, popular and upcoming movies and series, genre lists, studios and networks.
@@ -58,7 +76,7 @@
 - Shows a trailer and a separate **Request** button on supported web-client detail pages. On series, the button opens a season picker. In the channel's browser view, a matched duplicate Request tile is hidden and its Trailer tile is renamed **Request**; native apps keep the original Trailer and Request items.
 - Adds a **Not in your library** section to actor and director pages in the web client, listing their other movies and series from TMDB with a Request button (open **Discover** once in that browser first, so the button script is loaded).
 - Adds a **Collection** row to movie pages in the web client: the other movies from the same TMDB collection that are not in your library, with a Request button.
-- Adds a **More like this** row to movie and series pages in the web client: TMDB recommendations that are not in your library, with a Request button (series open the season picker). Each of these rows, and the actor/director section, can be switched off in the plugin settings. Clicking a poster or title in these rows opens Discover for that title: the channel page with the Request and Trailer tiles when the title is in the channel, otherwise an info popup with Request and (unless the trailer tile is switched off) Trailer buttons.
+- Adds a **More like this** row to movie and series pages in the web client: TMDB recommendations that are not in your library, with a Request button (series open the season picker). Each of these rows, and the actor/director section, can be switched off in the plugin settings. Clicking a poster or title in these rows (or on the Discover page) opens that title: the movie or series itself when it is in your Emby library, otherwise its folder in the channel with the Request and Trailer tiles, otherwise an info popup with Request and (unless the trailer tile is switched off) Trailer buttons.
 - Provides a Play-based request flow for Android, TV and other clients that cannot run the web button script.
 - Shows whether a title is already requested or available when that status can be matched in Radarr or Sonarr. Season items say whether the season is already requested, partially available or in your library; requesting again is still possible.
 - The Request and Trailer tiles carry the text "Request" and "Trailer" on their image so they are easy to tell apart.
