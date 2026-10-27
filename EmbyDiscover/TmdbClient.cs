@@ -155,7 +155,7 @@ namespace Emby.Plugins.Discover
     public class TmdbGenreList { public List<TmdbGenre> genres { get; set; } }
     public class TmdbLogoInfo { public int id { get; set; } public string name { get; set; } public string logo_path { get; set; } }
 
-    internal class TmdbClient
+    internal partial class TmdbClient
     {
         private static readonly Dictionary<string, string> LogoCache = new Dictionary<string, string>();
 

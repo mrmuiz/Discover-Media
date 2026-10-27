@@ -3,23 +3,20 @@
  * Verbergt ook "Media informatie" op Discover/Trailers-detailpagina's. */
 (function () {
     'use strict';
-    if (window.__discoverRequestButtonVersion === '1.3.3.1') { return; }
+    if (window.__discoverRequestButtonVersion === '1.3.4.0') { return; }
     if (window.__discoverRequestButton) {
         console.warn('[Discover] oudere knopcode is nog actief; vernieuw de webclient om dubbele handlers te voorkomen.');
         return;
     }
     window.__discoverRequestButton = true;
-    window.__discoverRequestButtonVersion = '1.3.3.1';
-    console.log('[Discover] request-button script loaded v1.3.3.1');
+    window.__discoverRequestButtonVersion = '1.3.4.0';
+    console.log('[Discover] request-button script loaded v1.3.4.0');
 
     var uiLanguage = 'nl';
     function text(dutch, english, german) {
         return uiLanguage === 'de' ? (german || english) : uiLanguage === 'en' ? english : dutch;
     }
     var diagnosticsEnabled = false;
-    var showPersonSection = true;
-    var showCollectionSection = true;
-    var showRelatedSection = true;
     var lastDiagnostic = null;
     var diagnosticsLoaded = false;
     var diagnosticsRequest = false;
@@ -44,7 +41,7 @@
                     'color:#ffd666;background:rgba(0,0,0,.7);padding:4px 8px;border-radius:4px;pointer-events:none;white-space:pre-wrap;';
                 document.body.appendChild(el);
             }
-            el.textContent = 'Discover v1.3.3.1 | ' + msg;
+            el.textContent = 'Discover v1.3.4.0 | ' + msg;
         } catch (e) { }
     }
     var isAdmin = false;
@@ -100,6 +97,21 @@
             '.discover-season-info-provider-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }',
             '.discover-season-info-provider { padding: 3px 7px; border-radius: 4px; background: #26364c; color: #dce7f5; }',
             'body.discover-folder-page .btnPlay, body.discover-folder-page .btnShuffle, body.discover-folder-page .btnQueue { display: none !important; }',
+            '.discover-row-section { margin: 1.5em 0 .5em; }',
+            '.discover-row-title { margin: 0 0 .7em !important; font-size: 1.35em !important; font-weight: 600 !important; }',
+            '.discover-row-scroller { display: flex; gap: 1em; overflow-x: auto; padding: 0 0 1em; scroll-snap-type: x proximity; }',
+            '.discover-row-card { flex: 0 0 auto; width: 9.5em; scroll-snap-align: start; }',
+            '.discover-row-poster { display: block; border-radius: .6em; overflow: hidden; background: #222; aspect-ratio: 2 / 3; }',
+            '.discover-row-poster img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .2s; }',
+            '.discover-row-poster:hover img, .discover-row-poster:focus img { transform: scale(1.04); }',
+            '.discover-row-name { margin-top: .5em; font-size: .95em; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }',
+            '.discover-row-meta { font-size: .8em; opacity: .65; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }',
+            '.discover-row-btn { display: block; width: 100%; box-sizing: border-box; margin-top: .5em; padding: .45em .6em; border: none;',
+            '  border-radius: 2em; font: inherit; font-size: .9em; font-weight: 600; cursor: pointer; background: #ffb400; color: #111; }',
+            '.discover-row-btn:focus { outline: 2px solid #fff; outline-offset: 2px; }',
+            '.discover-row-btn:disabled { cursor: default; }',
+            '.discover-row-btn.is-requested { background: #555; color: #fff; }',
+            '.discover-row-btn.is-available { background: #22a559; color: #fff; }',
             '.btnDiscoverRequest {',
             '  background: #ffb400 !important; color: #111 !important;',
             '  border: none !important; margin-left: .5em !important;',
@@ -119,9 +131,6 @@
         diagnosticsRequest = true;
         client.ajax({ type: 'GET', url: client.getUrl('Discover/Status'), dataType: 'json' }).then(function (status) {
             diagnosticsEnabled = !!(status && status.ShowDiagnostics);
-            showPersonSection = !(status && status.ShowPersonSection === false);
-            showCollectionSection = !(status && status.ShowCollectionSection === false);
-            showRelatedSection = !(status && status.ShowRelatedSection === false);
             var culture = String(status && status.PluginLanguage || '').toLowerCase();
             uiLanguage = culture.indexOf('nl') === 0 ? 'nl' : culture.indexOf('de') === 0 ? 'de' : 'en';
             diagnosticsLoaded = true;
@@ -1376,33 +1385,78 @@
         }).then(null, function () { delete folderPage[id]; });
     }
 
-    // ---- Acteurspagina: films/series van deze persoon die NIET in de bibliotheek staan, met aanvraagknop ----
-    var personChecks = {};   // itemId -> Promise<item|null>
-    var personData = {};     // itemId -> { items: [...] } zodra geladen
-    var personLoading = {};
+    // ---- Extra rijen op gewone Emby-pagina's (webclient) ----
+    // Film/serie: "Meer zoals dit" (TMDB-aanbevelingen) en voor films de collectie (filmreeks).
+    // Acteur/regisseur: "Niet in je bibliotheek" (filmografie uit TMDB).
+    // Alles wat al in de Emby-bibliotheek staat wordt weggelaten; elke kaart heeft een Aanvragen-knop.
+    var rowItemChecks = {};  // itemId -> Promise<item|null>
+    var rowData = {};        // itemId -> [{ key, title, items }]
+    var rowLoading = {};
+    var libIndexPromise = null;
+    var libIndexAt = 0;
+    var LIB_INDEX_TTL = 5 * 60 * 1000;
 
-    function stripSet(set, key) { if (key) { set[key] = true; } }
-    function titleKey(name, year) { return String(name || '').toLowerCase().replace(/[^a-z0-9]+/g, '') + '|' + (year || 0); }
-
-    function removePersonSections(keepId) {
-        var secs = document.querySelectorAll('.discover-person-section');
-        for (var i = 0; i < secs.length; i++) {
-            if (secs[i].getAttribute('data-itemid') !== keepId && secs[i].parentNode) { secs[i].parentNode.removeChild(secs[i]); }
-        }
+    function titleKey(name, year) {
+        return String(name || '').toLowerCase().replace(/[^a-z0-9]+/g, '') + '|' + (year || 0);
     }
 
-    function personStatusText(st) {
+    // Eén keer (per 5 minuten) alle films en series uit de bibliotheek ophalen, alleen de id's.
+    function loadLibraryIndex() {
+        var now = Date.now();
+        if (libIndexPromise && now - libIndexAt < LIB_INDEX_TTL) { return libIndexPromise; }
+        var c = api();
+        libIndexAt = now;
+        libIndexPromise = Promise.resolve(c.getJSON(c.getUrl('Users/' + c.getCurrentUserId() + '/Items', {
+            Recursive: true, IncludeItemTypes: 'Movie,Series', Fields: 'ProviderIds,ProductionYear',
+            EnableImages: false, EnableUserData: false
+        }))).then(function (r) {
+            var idx = {};
+            ((r && r.Items) || []).forEach(function (it) {
+                var type = it.Type === 'Series' ? 'tv' : 'movie';
+                var p = it.ProviderIds || {};
+                var t = p.Tmdb || p.tmdb;
+                if (t) { idx[type + ':' + t] = true; }
+                idx[type + ':t:' + titleKey(it.Name, it.ProductionYear)] = true;
+            });
+            return idx;
+        }, function (e) {
+            libIndexPromise = null;
+            throw e;
+        });
+        return libIndexPromise;
+    }
+
+    function inLibrary(idx, x) {
+        return !!(idx[x.Type + ':' + x.TmdbId] || idx[x.Type + ':t:' + titleKey(x.Title, x.Year)]);
+    }
+
+    function rowStatusText(st) {
         return st === 2 ? text('Beschikbaar', 'Available', 'Verfügbar') :
             st === 1 ? text('Aangevraagd', 'Requested', 'Angefordert') :
             text('Aanvragen', 'Request', 'Anfragen');
     }
 
-    function personRoleText(role) {
+    function rowRoleText(role) {
         if (!role) { return ''; }
         return role === 'Director' ? text('Regie', 'Director', 'Regie') : role;
     }
 
-    function requestPersonItem(item, btn) {
+    function styleRowButton(btn, item) {
+        btn.disabled = item.Status !== 0;
+        btn.textContent = rowStatusText(item.Status);
+        btn.className = 'discover-row-btn' + (item.Status === 2 ? ' is-available' : item.Status === 1 ? ' is-requested' : '');
+    }
+
+    // Dezelfde titel kan in meer rijen staan: alle knoppen bijwerken.
+    function refreshRowButtons(item) {
+        var bs = document.querySelectorAll('.discover-row-btn[data-key="' + item.Type + ':' + item.TmdbId + '"]');
+        for (var i = 0; i < bs.length; i++) {
+            if (bs[i]._item && bs[i]._item !== item) { bs[i]._item.Status = item.Status; }
+            styleRowButton(bs[i], bs[i]._item || item);
+        }
+    }
+
+    function requestRowItem(item, btn) {
         var c = api();
         function send(seasons) {
             btn.disabled = true;
@@ -1420,268 +1474,174 @@
                     toast(text('Mislukt: ', 'Failed: ', 'Fehlgeschlagen: ') +
                         ((r && r.Message) || text('onbekende fout', 'unknown error', 'unbekannter Fehler')), true);
                 }
-                stylePersonButton(btn, item);
+                refreshRowButtons(item);
             }, function () {
                 toast(text('Aanvraag mislukt.', 'Request failed.', 'Anfrage fehlgeschlagen.'), true);
-                stylePersonButton(btn, item);
+                refreshRowButtons(item);
             });
         }
         if (item.Type !== 'tv') { send(null); return; }
         // Series: eerst de seizoenen ophalen, dan de bestaande seizoenskeuze tonen.
         btn.disabled = true;
         c.ajax({ type: 'GET', url: c.getUrl('Discover/Seasons', { TmdbId: item.TmdbId }), dataType: 'json' }).then(function (info) {
-            stylePersonButton(btn, item);
+            styleRowButton(btn, item);
             showSeasonPicker({ Seasons: (info && info.Seasons) || [] }, send);
         }, function () {
-            stylePersonButton(btn, item);
+            styleRowButton(btn, item);
             toast(text('Seizoenen ophalen mislukt.', 'Could not load seasons.', 'Staffeln konnten nicht geladen werden.'), true);
         });
     }
 
-    function stylePersonButton(btn, item) {
-        btn.disabled = item.Status !== 0;
-        btn.textContent = personStatusText(item.Status);
-        btn.style.cssText = 'display:block;width:100%;box-sizing:border-box;margin-top:.5em;padding:.45em .6em;border:none;border-radius:2em;' +
-            'font:inherit;font-size:.9em;font-weight:600;cursor:' + (item.Status === 0 ? 'pointer' : 'default') + ';' +
-            (item.Status === 2 ? 'background:#22a559;color:#fff;' :
-             item.Status === 1 ? 'background:#555;color:#fff;' : 'background:#ffb400;color:#111;');
+    function removeRowSections(keepId) {
+        var secs = document.querySelectorAll('.discover-row-section');
+        for (var i = 0; i < secs.length; i++) {
+            if (secs[i].getAttribute('data-itemid') !== keepId && secs[i].parentNode) { secs[i].parentNode.removeChild(secs[i]); }
+        }
     }
 
-    function openDiscoverTitle(item) {
-        window.location.hash = '#!/configurationpage?name=discoverui1075&openType=' + encodeURIComponent(item.Type) +
-            '&openId=' + encodeURIComponent(item.TmdbId);
-    }
-
-    function renderPersonSection(id, items) {
-        return renderExtraSection(id, 'person', text('Niet in je bibliotheek', 'Not in your library', 'Nicht in deiner Bibliothek'), items);
-    }
-
-    // Gedeelde sectie voor acteurspagina's, collecties en aanbevelingen: rij posters met aanvraagknop.
-    function renderExtraSection(id, key, title, items) {
+    // Webclient-indeling verschilt per Emby-versie (4.11 beta: .itemView + .details-additionalContent;
+    // 4.10: .itemDetailPage + .detailPageContent). We proberen ze op volgorde.
+    function rowParent() {
         var host = null;
-        // Webclient-indeling verschilt per Emby-versie (4.11 beta: .itemView + .details-additionalContent;
-        // oudere/stabiele clients: .itemDetailPage + .detailPageContent). We proberen ze op volgorde.
         var pages = document.querySelectorAll('.itemView, .itemDetailPage, .view-item-item, [data-type="item"]');
         for (var i = 0; i < pages.length; i++) { if (visible(pages[i])) { host = pages[i]; break; } }
-        if (!host) { return false; }
+        if (!host) { return null; }
         var parent = host.querySelector('.details-additionalContent') || host.querySelector('.itemMainScrollSlider') ||
             host.querySelector('.detailPageContent');
         if (!parent) {
-            // Noodgreep: de laatste zichtbare sectie op de pagina; zet de nieuwe sectie in dezelfde ouder.
             var secs = host.querySelectorAll('.verticalSection, .detailSection, .itemsContainer');
             if (secs.length) { parent = secs[secs.length - 1].parentNode; }
         }
-        if (!parent) { parent = host; }
-        var sec = parent.querySelector('.discover-person-section[data-key="' + key + '"]');
-        if (sec && sec.getAttribute('data-itemid') === id) { return true; }
-        removePersonSections(id);
-        if (sec && sec.parentNode) { sec.parentNode.removeChild(sec); }
+        return parent || host;
+    }
 
-        sec = document.createElement('div');
-        sec.className = 'discover-person-section';
-        sec.setAttribute('data-itemid', id);
-        sec.setAttribute('data-key', key);
-        sec.style.cssText = 'margin:2em 0 1em;padding:0 3.3%;';
-        var h = document.createElement('h2');
-        h.textContent = title;
-        h.style.cssText = 'margin:0 0 .8em;font-size:1.4em;font-weight:600;';
-        sec.appendChild(h);
-        var row = document.createElement('div');
-        row.style.cssText = 'display:flex;gap:1em;overflow-x:auto;padding-bottom:1em;';
-        items.forEach(function (item) {
-            var card = document.createElement('div');
-            card.style.cssText = 'flex:0 0 auto;width:9.5em;';
-            var img = document.createElement('img');
-            img.loading = 'lazy';
-            img.src = item.Poster || '';
-            img.alt = '';
-            img.style.cssText = 'width:100%;aspect-ratio:2/3;object-fit:cover;border-radius:.6em;background:#222;display:block;cursor:pointer;';
-            var name = document.createElement('div');
-            name.textContent = item.Title;
-            name.title = item.Title;
-            name.style.cssText = 'margin-top:.5em;font-size:.95em;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;';
-            var meta = document.createElement('div');
-            var kind = item.Type === 'tv' ? text('Serie', 'Series', 'Serie') : text('Film', 'Movie', 'Film');
-            var role = personRoleText(item.Role);
-            meta.textContent = kind + (item.Year ? ' · ' + item.Year : '') + (role ? ' · ' + role : '');
-            meta.title = meta.textContent;
-            meta.style.cssText = 'font-size:.8em;opacity:.65;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
-            var btn = document.createElement('button');
-            btn.type = 'button';
-            stylePersonButton(btn, item);
-            btn.addEventListener('click', function (e) {
-                e.preventDefault(); e.stopPropagation();
-                if (item.Status === 0) { requestPersonItem(item, btn); }
-            });
-            // Klik op poster of titel: naar de Discover-pagina met meer info, Aanvragen en Trailer.
-            var openDetails = function (e) { e.preventDefault(); e.stopPropagation(); openDiscoverTitle(item); };
-            img.addEventListener('click', openDetails);
-            name.addEventListener('click', openDetails);
-            card.appendChild(img); card.appendChild(name); card.appendChild(meta); card.appendChild(btn);
-            row.appendChild(card);
+    function buildRowCard(item) {
+        var card = document.createElement('div');
+        card.className = 'discover-row-card';
+        var link = document.createElement('a');
+        link.className = 'discover-row-poster';
+        // Klik op de poster: de Discover-popup met info en trailer.
+        link.href = '#!/configurationpage?name=discoverui1075&openType=' + item.Type + '&openId=' + item.TmdbId;
+        link.title = item.Title;
+        var img = document.createElement('img');
+        img.loading = 'lazy';
+        img.src = item.Poster || '';
+        img.alt = '';
+        link.appendChild(img);
+        var name = document.createElement('div');
+        name.className = 'discover-row-name';
+        name.textContent = item.Title;
+        name.title = item.Title;
+        var meta = document.createElement('div');
+        meta.className = 'discover-row-meta';
+        var kind = item.Type === 'tv' ? text('Serie', 'Series', 'Serie') : text('Film', 'Movie', 'Film');
+        var role = rowRoleText(item.Role);
+        meta.textContent = kind + (item.Year ? ' · ' + item.Year : '') + (role ? ' · ' + role : '');
+        meta.title = meta.textContent;
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn._item = item;
+        btn.setAttribute('data-key', item.Type + ':' + item.TmdbId);
+        styleRowButton(btn, item);
+        btn.addEventListener('click', function (e) {
+            e.preventDefault(); e.stopPropagation();
+            if (item.Status === 0) { requestRowItem(item, btn); }
         });
-        sec.appendChild(row);
-        // De collectie staat altijd boven de aanbevelingen, ook als die later binnenkomen.
-        var after = key === 'collection' ? parent.querySelector('.discover-person-section[data-key="related"]') : null;
-        if (after && after.parentNode === parent) { parent.insertBefore(sec, after); } else { parent.appendChild(sec); }
+        card.appendChild(link); card.appendChild(name); card.appendChild(meta); card.appendChild(btn);
+        return card;
+    }
+
+    function renderRowSections(id, sections) {
+        var parent = rowParent();
+        if (!parent) { return false; }
+        if (parent.querySelector('.discover-row-section[data-itemid="' + id + '"]')) { return true; }
+        removeRowSections(null);
+        sections.forEach(function (s) {
+            var sec = document.createElement('div');
+            sec.className = 'discover-row-section verticalSection';
+            sec.setAttribute('data-itemid', id);
+            sec.setAttribute('data-row', s.key);
+            var h = document.createElement('h2');
+            h.className = 'discover-row-title sectionTitle';
+            h.textContent = s.title;
+            sec.appendChild(h);
+            var row = document.createElement('div');
+            row.className = 'discover-row-scroller';
+            s.items.forEach(function (item) { row.appendChild(buildRowCard(item)); });
+            sec.appendChild(row);
+            parent.appendChild(sec);
+        });
         return true;
     }
 
-    function loadPersonCredits(id, person) {
+    function loadRowsFor(id, item) {
         var c = api();
-        var uid = c.getCurrentUserId();
-        var tmdbPerson = parseInt((person.ProviderIds && (person.ProviderIds.Tmdb || person.ProviderIds.tmdb)) || '0', 10) || 0;
-
-        // Wat Emby zelf al toont: bibliotheekitems met deze persoon. Dat laten we weg.
-        var libraryReq = Promise.resolve(c.getJSON(c.getUrl('Users/' + uid + '/Items', {
-            PersonIds: id, Recursive: true, IncludeItemTypes: 'Movie,Series', Fields: 'ProviderIds', Limit: 1000
-        })));
-        var creditsReq = Promise.resolve(c.ajax({
-            type: 'GET', dataType: 'json',
-            url: c.getUrl('Discover/PersonCredits', { Name: person.Name, TmdbPersonId: tmdbPerson })
-        }));
-        return Promise.all([libraryReq, creditsReq]).then(function (res) {
-            var inLib = {};
-            ((res[0] && res[0].Items) || []).forEach(function (it) {
-                var t = it.ProviderIds && (it.ProviderIds.Tmdb || it.ProviderIds.tmdb);
-                var type = it.Type === 'Series' ? 'tv' : 'movie';
-                if (t) { stripSet(inLib, type + ':' + t); }
-                stripSet(inLib, type + ':' + titleKey(it.Name, it.ProductionYear));
+        var p = item.ProviderIds || {};
+        var tmdb = parseInt(p.Tmdb || p.tmdb || '0', 10) || 0;
+        var req;
+        if (item.Type === 'Person') {
+            req = Promise.resolve(c.ajax({
+                type: 'GET', dataType: 'json',
+                url: c.getUrl('Discover/PersonCredits', { Name: item.Name, TmdbPersonId: tmdb })
+            })).then(function (r) {
+                return [{ key: 'person', title: text('Niet in je bibliotheek', 'Not in your library', 'Nicht in deiner Bibliothek'),
+                    items: (r && r.Items) || [] }];
             });
-            var items = ((res[1] && res[1].Items) || []).filter(function (x) {
-                return !inLib[x.Type + ':' + x.TmdbId] && !inLib[x.Type + ':' + titleKey(x.Title, x.Year)];
+        } else {
+            var type = item.Type === 'Series' ? 'tv' : 'movie';
+            req = Promise.resolve(c.ajax({
+                type: 'GET', dataType: 'json',
+                url: c.getUrl('Discover/Related', {
+                    Type: type, TmdbId: tmdb, TvdbId: p.Tvdb || p.tvdb || '', ImdbId: p.Imdb || p.imdb || ''
+                })
+            })).then(function (r) {
+                var out = [];
+                var self = (r && r.TmdbId) || tmdb;
+                if (r && r.Collection) { r.Collection = r.Collection.filter(function (x) { return x.TmdbId !== self; }); }
+                if (r && r.Collection && r.Collection.length) {
+                    out.push({ key: 'collection', title: r.CollectionName || text('Collectie', 'Collection', 'Sammlung'), items: r.Collection });
+                }
+                out.push({ key: 'related', title: text('Meer zoals dit', 'More like this', 'Mehr wie dies'),
+                    items: (r && r.Recommendations) || [] });
+                return out;
             });
-            personData[id] = { items: items };
+        }
+        return Promise.all([req, loadLibraryIndex()]).then(function (res) {
+            var idx = res[1];
+            var sections = res[0].map(function (s) {
+                return { key: s.key, title: s.title, items: s.items.filter(function (x) { return !inLibrary(idx, x); }) };
+            }).filter(function (s) { return s.items.length > 0; });
+            rowData[id] = sections;
         });
     }
 
-    function syncPersonPage(id) {
-        if (!id || !api()) { removePersonSections(null); return; }
-        removePersonSections(id);
-        if (!diagnosticsLoaded) { return; }
-        if (!showPersonSection) {
-            // Uitgezet in de instellingen: alleen de acteurssectie weghalen, de overige extra's blijven.
-            var personSecs = document.querySelectorAll('.discover-person-section[data-key="person"]');
-            for (var ps = 0; ps < personSecs.length; ps++) { if (personSecs[ps].parentNode) { personSecs[ps].parentNode.removeChild(personSecs[ps]); } }
+    function syncExtraRows(id) {
+        // Niet op Discover-kanaalitems: die hebben hun eigen aanvraag- en trailerpagina.
+        if (!id || !api() || askIds[id] || seasonAskIds[id] || trailerIds[id]) { removeRowSections(null); return; }
+        removeRowSections(id);
+        if (rowData[id]) {
+            if (rowData[id].length) { renderRowSections(id, rowData[id]); }
             return;
         }
-        if (personData[id]) {
-            if (personData[id].items.length) { renderPersonSection(id, personData[id].items); }
-            return;
-        }
-        if (personLoading[id]) { return; }
+        if (rowLoading[id]) { return; }
         var c = api();
-        if (!personChecks[id]) {
-            personChecks[id] = Promise.resolve(c.getItem(c.getCurrentUserId(), id)).then(function (it) {
-                return it && it.Type === 'Person' ? it : null;
+        if (!rowItemChecks[id]) {
+            rowItemChecks[id] = Promise.resolve(c.getItem(c.getCurrentUserId(), id)).then(function (it) {
+                if (!it || it.ChannelId) { return null; }
+                return it.Type === 'Person' || it.Type === 'Movie' || it.Type === 'Series' ? it : null;
             }, function () { return null; });
         }
-        personLoading[id] = true;
-        personChecks[id].then(function (person) {
-            if (!person) { personData[id] = { items: [] }; return null; }
-            return loadPersonCredits(id, person);
+        rowLoading[id] = true;
+        rowItemChecks[id].then(function (item) {
+            if (!item) { rowData[id] = []; return null; }
+            return loadRowsFor(id, item);
         }).then(function () {
-            personLoading[id] = false;
+            rowLoading[id] = false;
             schedule();
         }, function (e) {
-            personLoading[id] = false;
-            personData[id] = { items: [] };
-            console.log('[Discover] persoonscredits mislukt', e);
-        });
-    }
-
-    // ---- Film-/seriepagina: ontbrekende collectiedelen en "Meer zoals dit", met aanvraagknop ----
-    var extrasChecks = {};   // itemId -> Promise<item|null>
-    var extrasData = {};     // itemId -> { collectionTitle, collection: [...], related: [...] } zodra geladen
-    var extrasLoading = {};
-    var librarySet = null;
-    var librarySetAt = 0;
-
-    // Alle films en series die de gebruiker in Emby heeft (TMDB-id en titel+jaar), 10 minuten onthouden.
-    function loadLibrarySet() {
-        if (librarySet && Date.now() - librarySetAt < 600000) { return librarySet; }
-        var c = api();
-        librarySetAt = Date.now();
-        librarySet = Promise.resolve(c.getJSON(c.getUrl('Users/' + c.getCurrentUserId() + '/Items', {
-            Recursive: true, IncludeItemTypes: 'Movie,Series', Fields: 'ProviderIds',
-            EnableImages: false, EnableUserData: false, EnableTotalRecordCount: false, Limit: 50000
-        }))).then(function (res) {
-            var inLib = {};
-            ((res && res.Items) || []).forEach(function (it) {
-                var t = it.ProviderIds && (it.ProviderIds.Tmdb || it.ProviderIds.tmdb);
-                var type = it.Type === 'Series' ? 'tv' : 'movie';
-                if (t) { stripSet(inLib, type + ':' + t); }
-                stripSet(inLib, type + ':' + titleKey(it.Name, it.ProductionYear));
-            });
-            return inLib;
-        }, function (e) { librarySet = null; throw e; });
-        return librarySet;
-    }
-
-    function loadExtras(id, it) {
-        var c = api();
-        var tmdb = it.ProviderIds && (it.ProviderIds.Tmdb || it.ProviderIds.tmdb);
-        var type = it.Type === 'Series' ? 'tv' : 'movie';
-        if (!tmdb) { extrasData[id] = { collectionTitle: '', collection: [], related: [] }; return Promise.resolve(); }
-        var extrasReq = Promise.resolve(c.ajax({
-            type: 'GET', dataType: 'json',
-            url: c.getUrl('Discover/ItemExtras', { Type: type, TmdbId: tmdb })
-        }));
-        return Promise.all([loadLibrarySet(), extrasReq]).then(function (res) {
-            var inLib = res[0];
-            var ex = res[1] || {};
-            function notInLibrary(x) {
-                return !inLib[x.Type + ':' + x.TmdbId] && !inLib[x.Type + ':' + titleKey(x.Title, x.Year)];
-            }
-            var coll = ex.Collection || {};
-            var rel = ex.Related || {};
-            extrasData[id] = {
-                collectionTitle: coll.Title || '',
-                collection: (coll.Items || []).filter(notInLibrary),
-                related: (rel.Items || []).filter(notInLibrary).slice(0, 20)
-            };
-        });
-    }
-
-    function renderExtras(id) {
-        var d = extrasData[id];
-        if (!d) { return; }
-        if (showCollectionSection && d.collection.length) {
-            var name = d.collectionTitle || text('Collectie', 'Collection', 'Kollektion');
-            renderExtraSection(id, 'collection',
-                name + ' \u2013 ' + text('niet in je bibliotheek', 'not in your library', 'nicht in deiner Bibliothek'),
-                d.collection);
-        }
-        if (showRelatedSection && d.related.length) {
-            renderExtraSection(id, 'related', text('Meer zoals dit', 'More like this', '\u00c4hnliche Titel'), d.related);
-        }
-    }
-
-    function syncExtrasPage(id) {
-        if (!id || !api() || !diagnosticsLoaded) { return; }
-        if (!showCollectionSection && !showRelatedSection) { return; }
-        // De aanvraag-, trailer- en seizoenpagina's van het kanaal krijgen geen extra's.
-        if (askIds[id] || trailerIds[id] || seasonAskIds[id]) { return; }
-        if (extrasData[id]) { renderExtras(id); return; }
-        if (extrasLoading[id]) { return; }
-        var c = api();
-        if (!extrasChecks[id]) {
-            extrasChecks[id] = Promise.resolve(c.getItem(c.getCurrentUserId(), id)).then(function (it) {
-                // Alleen echte bibliotheekfilms en -series; geen kanaalitems, personen of mappen.
-                return it && (it.Type === 'Movie' || it.Type === 'Series') && !it.ChannelId ? it : null;
-            }, function () { return null; });
-        }
-        extrasLoading[id] = true;
-        extrasChecks[id].then(function (it) {
-            if (!it) { extrasData[id] = { collectionTitle: '', collection: [], related: [] }; return null; }
-            return loadExtras(id, it);
-        }).then(function () {
-            extrasLoading[id] = false;
-            schedule();
-        }, function (e) {
-            extrasLoading[id] = false;
-            extrasData[id] = { collectionTitle: '', collection: [], related: [] };
-            console.log('[Discover] extra secties mislukt', e);
+            rowLoading[id] = false;
+            rowData[id] = [];
+            console.log('[Discover] extra rijen mislukt', e);
         });
     }
 
@@ -1718,8 +1678,7 @@
         markFolderCards();
         syncRequestTileCards();
         syncFolderPage(id);
-        syncPersonPage(id);
-        syncExtrasPage(id);
+        syncExtraRows(id);
         syncBodyClass(id);
         var ask = !!(id && askIds[id]);
         var seasonAsk = !!(id && seasonAskIds[id]);

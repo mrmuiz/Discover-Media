@@ -32,14 +32,14 @@ define([], function () {
 
     // Load as an external script so Emby's Content-Security-Policy does not block inline execution.
     function loadButtonScript() {
-        if (window.__discoverRequestButtonVersion === '1.3.3.1') {
-            diag.load = text('script is al actief v1.3.3.1', 'script already active v1.3.3.1', 'Skript bereits aktiv v1.3.3.1');
+        if (window.__discoverRequestButtonVersion === '1.3.4.0') {
+            diag.load = text('script is al actief v1.3.4.0', 'script already active v1.3.4.0', 'Skript bereits aktiv v1.3.4.0');
             showDiag();
             return;
         }
         var urls = [
-            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1331' }),
-            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1331' }),
+            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1340' }),
+            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1340' }),
             ApiClient.getUrl('Plugins/Discover/Script')
         ];
         var n = 0;
@@ -51,7 +51,7 @@ define([], function () {
             script.src = u + (u.indexOf('?') === -1 ? '?' : '&') + '_=' + Date.now();
             script.async = true;
             script.onload = function () {
-                if (window.__discoverRequestButtonVersion === '1.3.3.1') {
+                if (window.__discoverRequestButtonVersion === '1.3.4.0') {
                     diag.load = text('OK via extern script ', 'OK via external script ', 'OK über externes Skript ') + u;
                     showDiag();
                 } else {
@@ -108,7 +108,7 @@ define([], function () {
             var poster = i.Poster
                 ? '<img loading="lazy" src="' + esc(i.Poster) + '" alt="" />'
                 : '<div class="dcNoPoster">' + esc(i.Title) + '</div>';
-            return '<div class="dcCard" data-key="' + key(i) + '">' + poster +
+            return '<div class="dcCard focusable" tabindex="0" role="button" data-key="' + key(i) + '">' + poster +
                 '<span class="dcBadge ' + i.Type + '">' + (i.Type === 'tv' ? 'SERIE' : 'FILM') + '</span>' +
                 '<span class="dcStatus s' + i.Status + '">' + statusIcon(i.Status) + '</span></div>';
         }
@@ -117,7 +117,7 @@ define([], function () {
             var inner = t.Image
                 ? '<img class="dcTileLogo" loading="lazy" src="' + esc(t.Image) + '" alt="' + esc(t.Name) + '" />'
                 : '<span>' + esc(t.Name) + '</span>';
-            return '<div class="dcTile' + (t.Image ? ' logo' : '') + '" data-kind="' + esc(r.TileKind) + '" data-id="' + esc(t.Id) +
+            return '<div class="dcTile focusable' + (t.Image ? ' logo' : '') + '" tabindex="0" role="button" data-kind="' + esc(r.TileKind) + '" data-id="' + esc(t.Id) +
                 '" data-name="' + esc(t.Name) + '" title="' + esc(t.Name) + '" style="background:' + esc(t.Color || '#1c2640') + '">' + inner + '</div>';
         }
 
@@ -253,6 +253,7 @@ define([], function () {
             setTimeout(function () { toast.style.display = 'none'; }, 3500);
         }
 
+        var delArmed = false, delArmTimer = null; // bevestiging in de knop zelf (window.confirm werkt niet in TV-apps)
         function updateButton() {
             var b = overlay.querySelector('.dcBtn');
             var d = overlay.querySelector('.dcBtnDel');
@@ -261,6 +262,7 @@ define([], function () {
             tb.textContent = text('Trailer', 'Trailer', 'Trailer');
             if (showTrailer) { tb.classList.add('show'); } else { tb.classList.remove('show'); }
             d.disabled = false;
+            delArmed = false; clearTimeout(delArmTimer);
             if (isAdmin && current.Status === 1) { d.textContent = text('Aanvraag annuleren', 'Cancel request', 'Anfrage abbrechen'); d.classList.add('show'); }
             else if (isAdmin && current.Status === 2) { d.textContent = text('Verwijderen', 'Delete', 'Löschen'); d.classList.add('show'); }
             else { d.classList.remove('show'); }
@@ -294,8 +296,18 @@ define([], function () {
             api('GET', 'Discover/Info', { Type: i.Type, TmdbId: i.TmdbId }).then(function (r) {
                 if (current === i && r && r.Lines && r.Lines.length) { infoEl.textContent = r.Lines.join('\n'); }
             }, function () { });
+            var ob = overlay.querySelector('.dcBtnOpen');
+            ob.classList.remove('show'); ob.removeAttribute('data-id');
+            ob.textContent = text('Openen in Emby', 'Open in Emby', 'In Emby öffnen');
             updateButton();
+            lastFocus = document.activeElement;
             overlay.classList.add('open');
+            // Focus in de popup zetten, anders blijft de afstandsbediening op de kaarten erachter staan.
+            setTimeout(function () {
+                var b = overlay.querySelector('.dcBtn');
+                var t = (b && !b.disabled) ? b : overlay.querySelector('.dcClose');
+                if (t && t.focus) { t.focus(); }
+            }, 60);
         }
 
         // ---- Emby-item opzoeken (kanaal "Discover") zodat een klik naar de echte detailpagina gaat ----
@@ -404,7 +416,25 @@ define([], function () {
             }).then(null, function () { return null; });
         }
 
+        // TV-apps (LG webOS, Samsung Tizen): geen kanaalpagina's openen maar direct de popup met Aanvragen.
+        var isTvClient = /Web0S|webOS|Tizen|SMART-?TV|NetCast|HbbTV/i.test(navigator.userAgent || '');
+        var lastFocus = null;
+        if (isTvClient) { overlay.classList.add('dcTv'); }
+
         function openItem(i) {
+            if (isTvClient) {
+                // TV: de popup meteen tonen. De controle of de titel al in je bibliotheek staat loopt op de
+                // achtergrond; staat hij er al in, dan verschijnt in de popup een knop "Openen in Emby".
+                try { openModal(i); }
+                catch (err) { showToast('Popup: ' + (err && err.message ? err.message : err), true); return; }
+                findLibraryItem(i).then(function (libId) {
+                    if (!libId || current !== i) { return; }
+                    var ob = overlay.querySelector('.dcBtnOpen');
+                    ob.setAttribute('data-id', libId);
+                    ob.classList.add('show');
+                });
+                return;
+            }
             findLibraryItem(i).then(function (libId) {
                 if (libId) { goToEmbyItem(libId); return; }
                 openChannelItem(i);
@@ -419,7 +449,59 @@ define([], function () {
             }, function () { openModal(i); });
         }
 
-        function closeModal() { overlay.classList.remove('open'); current = null; }
+        function closeModal() {
+            overlay.classList.remove('open'); current = null;
+            if (lastFocus && lastFocus.focus) { try { lastFocus.focus(); } catch (e) { } }
+        }
+
+        // ---- Trailer op de TV: rechtstreeks via de YouTube-speler van Emby (de ingebedde iframe werkt niet in de TV-app) ----
+        // De YouTube-speler van Emby (canPlayUrl) herkent een item alleen via item.Url met youtube.com en leest de
+        // sleutel uit ?v=KEY. Daarom: geen server-Id, geen PlayAccessState, wel Url (en Path met dezelfde link).
+        function playTrailerOnTv(i, btn) {
+            var noTrailer = text('Geen trailer beschikbaar voor deze titel.', 'No trailer available for this title.', 'Kein Trailer für diesen Titel verfügbar.');
+            function finish() { btn.disabled = false; }
+            function fail(msg) { finish(); showToast(msg, true); }
+            function reason(e) { return (e && (e.message || e.statusText || e.name)) ? (e.message || e.statusText || e.name) : String(e); }
+            function playRemote(key) {
+                var link = 'https://www.youtube.com/watch?v=' + encodeURIComponent(key);
+                require(['playbackManager'], function (pm) {
+                    try {
+                        // Controle vooraf: pm.play vangt afspeelfouten zelf op en toont dan alleen Embys eigen "Afspeelfout".
+                        // Zo zie je hier wel waarom het niet lukt (welke spelers zijn er, en kan er een de link aan?).
+                        var players = (pm.getPlayers && pm.getPlayers()) || [];
+                        var canPlay = players.filter(function (p) {
+                            try { return p.canPlayUrl && p.canPlayUrl(link) && (!p.canPlayMediaType || p.canPlayMediaType('Video')); } catch (e) { return false; }
+                        });
+                        if (!canPlay.length) {
+                            fail(text('Geen YouTube-speler beschikbaar. Spelers: ', 'No YouTube player available. Players: ', 'Kein YouTube-Player verfügbar. Player: ') +
+                                players.map(function (p) { return p.id || p.name; }).join(', '));
+                            return;
+                        }
+                        setTimeout(finish, 15000); // knop weer vrijgeven als de speler nooit antwoordt
+                        var res = pm.play({ items: [{
+                            Name: i.Title + ' - Trailer', Type: 'Trailer', MediaType: 'Video',
+                            Url: link, Path: link, ServerId: ApiClient.serverId()
+                        }] });
+                        if (res && typeof res.then === 'function') {
+                            res.then(finish, function (e) {
+                                fail(text('Trailer afspelen mislukt: ', 'Playing trailer failed: ', 'Trailer-Wiedergabe fehlgeschlagen: ') + reason(e));
+                            });
+                        } else { finish(); }
+                    } catch (e) {
+                        fail(text('Trailer afspelen mislukt: ', 'Playing trailer failed: ', 'Trailer-Wiedergabe fehlgeschlagen: ') + reason(e));
+                    }
+                }, function (e) {
+                    fail(text('Emby-speler niet beschikbaar: ', 'Emby player not available: ', 'Emby-Player nicht verfügbar: ') + reason(e));
+                });
+            }
+            showToast(text('Trailer laden...', 'Loading trailer...', 'Trailer wird geladen...'), false);
+            api('GET', 'Discover/TrailerKey', { Type: i.Type, TmdbId: i.TmdbId }).then(function (r) {
+                if (!r || !r.Key) { fail(noTrailer); return; }
+                playRemote(r.Key);
+            }, function (e) {
+                fail(text('Trailer ophalen mislukt: ', 'Fetching trailer failed: ', 'Trailer abrufen fehlgeschlagen: ') + reason(e));
+            });
+        }
 
         // ---- events ----
         content.addEventListener('click', function (e) {
@@ -436,6 +518,24 @@ define([], function () {
             }
             if (t.closest && t.closest('.dcBack')) { loadHome(); return; }
             if (t.closest && t.closest('.dcMoreBtn')) { loadBrowse(); }
+        });
+
+        // TV / afstandsbediening: OK (Enter) op een kaart of tegel werkt als klik,
+        // en het gefocuste item scrolt netjes in beeld.
+        content.addEventListener('keydown', function (e) {
+            var k = e.key || '';
+            if (k !== 'Enter' && k !== ' ' && e.keyCode !== 13 && e.keyCode !== 32) { return; }
+            var el = e.target;
+            if (el && el.classList && (el.classList.contains('dcCard') || el.classList.contains('dcTile'))) {
+                e.preventDefault();
+                el.click();
+            }
+        });
+        content.addEventListener('focusin', function (e) {
+            var el = e.target;
+            if (el && el.classList && (el.classList.contains('dcCard') || el.classList.contains('dcTile')) && el.scrollIntoView) {
+                try { el.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch (x) { el.scrollIntoView(); }
+            }
         });
 
         // scroll-events borrelen niet op, dus in de capture-fase luisteren
@@ -492,8 +592,19 @@ define([], function () {
                 : text('De aanvraag voor "' + i.Title + '" annuleren en verwijderen uit ' + arr + '?',
                     'Cancel the request for "' + i.Title + '" and remove it from ' + arr + '?',
                     'Die Anfrage für "' + i.Title + '" abbrechen und aus ' + arr + ' entfernen?');
-            if (!window.confirm(q)) { return; }
             var d = this;
+            // Eerste klik: knop wordt 'bevestig' (6 s geldig). Tweede klik voert uit. Geen window.confirm: dat doet niets in TV-apps.
+            if (!delArmed) {
+                delArmed = true;
+                d.textContent = withFiles
+                    ? text('Bevestig: verwijderen + bestanden', 'Confirm: delete + files', 'Bestätigen: löschen + Dateien')
+                    : text('Bevestig: aanvraag annuleren', 'Confirm: cancel request', 'Bestätigen: Anfrage abbrechen');
+                showToast(q, false);
+                clearTimeout(delArmTimer);
+                delArmTimer = setTimeout(function () { if (delArmed) { updateButton(); } }, 6000);
+                return;
+            }
+            delArmed = false; clearTimeout(delArmTimer);
             d.disabled = true;
             api('POST', 'Discover/RemoveItem', null, { Type: i.Type, TmdbId: i.TmdbId, DeleteFiles: withFiles }).then(function (r) {
                 if (r && r.Success) {
@@ -521,6 +632,13 @@ define([], function () {
             }, 400);
         });
 
+        overlay.querySelector('.dcBtnOpen').addEventListener('click', function () {
+            var id = this.getAttribute('data-id');
+            if (!id) { return; }
+            closeModal();
+            goToEmbyItem(id);
+        });
+
         // ---- Trailer in de popup (YouTube-embed), alleen als de trailertegel in de instellingen aan staat ----
         var trailerOverlay = view.querySelector('.dcTrailerOverlay');
         var trailerFrame = trailerOverlay.querySelector('.dcTrailerFrame');
@@ -533,18 +651,36 @@ define([], function () {
             if (!i) { return; }
             var b = this;
             b.disabled = true;
+            if (isTvClient) { playTrailerOnTv(i, b); return; }
             api('GET', 'Discover/TrailerKey', { Type: i.Type, TmdbId: i.TmdbId }).then(function (r) {
                 b.disabled = false;
                 if (!r || !r.Key) { showToast(text('Geen trailer beschikbaar voor deze titel.', 'No trailer available for this title.', 'Kein Trailer für diesen Titel verfügbar.'), true); return; }
-                trailerFrame.src = 'https://www.youtube-nocookie.com/embed/' + encodeURIComponent(r.Key) + '?autoplay=1&rel=0';
+                trailerFrame.src = 'https://www.youtube-nocookie.com/embed/' + encodeURIComponent(r.Key) + '?autoplay=1&rel=0&playsinline=1&origin=' + encodeURIComponent(window.location.origin);
                 trailerLink.href = 'https://www.youtube.com/watch?v=' + encodeURIComponent(r.Key);
                 trailerLink.textContent = text('Werkt de trailer niet? Open op YouTube', 'Trailer not playing? Open on YouTube', 'Trailer lädt nicht? Auf YouTube öffnen');
                 trailerOverlay.classList.add('open');
+                setTimeout(function () { trailerOverlay.querySelector('.dcTrailerClose').focus(); }, 60);
             }, function () {
                 b.disabled = false;
                 showToast(text('Trailer ophalen mislukt.', 'Fetching trailer failed.', 'Trailer abrufen fehlgeschlagen.'), true);
             });
         });
+
+        // Focus blijft in de popup en de Terug-toets (webOS 461, Tizen 10009, Esc) sluit hem.
+        view.addEventListener('focusin', function (e) {
+            if (!overlay.classList.contains('open')) { return; }
+            var host = trailerOverlay.classList.contains('open') ? trailerOverlay : overlay;
+            if (!host.contains(e.target)) {
+                var t = host.querySelector('button:not([disabled])');
+                if (t) { t.focus(); }
+            }
+        });
+        view.addEventListener('keydown', function (e) {
+            var c = e.keyCode;
+            if (c !== 27 && c !== 461 && c !== 10009) { return; }
+            if (trailerOverlay.classList.contains('open')) { e.preventDefault(); e.stopPropagation(); closeTrailer(); }
+            else if (overlay.classList.contains('open')) { e.preventDefault(); e.stopPropagation(); closeModal(); }
+        }, true);
 
         // ---- Directe link vanaf een film-/seriepagina: #!/configurationpage?name=...&openType=movie&openId=123 ----
         function openFromLink() {

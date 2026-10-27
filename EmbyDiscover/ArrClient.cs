@@ -16,6 +16,8 @@ namespace Emby.Plugins.Discover
     public class SonarrSeasonDto { public int seasonNumber { get; set; } public bool monitored { get; set; } public SonarrStatsDto statistics { get; set; } }
     public class SonarrSeriesDto { public int id { get; set; } public int tmdbId { get; set; } public int tvdbId { get; set; } public string added { get; set; } public SonarrStatsDto statistics { get; set; } public List<SonarrSeasonDto> seasons { get; set; } }
     public class SonarrEpisodeDto { public int id { get; set; } public int seasonNumber { get; set; } public bool monitored { get; set; } public bool hasFile { get; set; } }
+    public class ArrQueueItemDto { public int id { get; set; } public int movieId { get; set; } public int seriesId { get; set; } }
+    public class ArrQueueDto { public List<ArrQueueItemDto> records { get; set; } }
     public class RecentEntry { public int TmdbId { get; set; } public bool HasFile { get; set; } public string Added { get; set; } }
 
     /// <summary>Praat met Radarr (films) en Sonarr v4 (series).</summary>
@@ -444,6 +446,44 @@ namespace Emby.Plugins.Discover
 
         // ---------- Verwijderen / aanvraag annuleren ----------
 
+        /// <summary>
+        /// Haalt lopende downloads van deze film/serie uit de Radarr/Sonarr-wachtrij en verwijdert ze ook
+        /// uit de downloadclient (SABnzbd e.d.). Zonder dit blijft de download doorlopen nadat de film of
+        /// serie uit Radarr/Sonarr is gehaald. Fouten hier breken het annuleren niet af.
+        /// </summary>
+        private async Task PurgeQueue(string baseUrl, string apiKey, bool movie, int itemId, CancellationToken ct)
+        {
+            string name = movie ? "Radarr" : "Sonarr";
+            try
+            {
+                var text = await Send(HttpMethod.Get, baseUrl, apiKey, "/api/v3/queue?page=1&pageSize=1000", null, ct).ConfigureAwait(false);
+                var q = _json.DeserializeFromString<ArrQueueDto>(text);
+                var items = (q != null && q.records != null ? q.records : new List<ArrQueueItemDto>())
+                    .Where(x => movie ? x.movieId == itemId : x.seriesId == itemId).ToList();
+
+                foreach (var it in items)
+                {
+                    try
+                    {
+                        await Send(HttpMethod.Delete, baseUrl, apiKey,
+                            "/api/v3/queue/" + it.id + "?removeFromClient=true&blocklist=false", null, ct).ConfigureAwait(false);
+                    }
+                    catch (Exception ex)
+                    {
+                        if (ex is OperationCanceledException) throw;
+                        DiscoverDiagnostics.Add("FOUT wachtrij-item " + it.id + " verwijderen in " + name + ": " + ex.Message);
+                    }
+                }
+                if (items.Count > 0)
+                    DiscoverDiagnostics.Add(name + ": " + items.Count + " download(s) uit de wachtrij en downloadclient gehaald");
+            }
+            catch (Exception ex)
+            {
+                if (ex is OperationCanceledException) throw;
+                DiscoverDiagnostics.Add("FOUT wachtrij opruimen in " + name + ": " + ex.Message);
+            }
+        }
+
         /// <returns>true = verwijderd uit Radarr, false = stond er niet in.</returns>
         public async Task<bool> RemoveMovie(int tmdbId, bool deleteFiles, CancellationToken ct)
         {
@@ -455,6 +495,7 @@ namespace Emby.Plugins.Discover
             var m = list.FirstOrDefault(x => x.tmdbId == tmdbId);
             if (m == null) { InvalidateCaches(); return false; }
 
+            await PurgeQueue(cfg.RadarrUrl, cfg.RadarrApiKey, true, m.id, ct).ConfigureAwait(false);
             await Send(HttpMethod.Delete, cfg.RadarrUrl, cfg.RadarrApiKey,
                 "/api/v3/movie/" + m.id + "?deleteFiles=" + (deleteFiles ? "true" : "false") + "&addImportExclusion=false",
                 null, ct).ConfigureAwait(false);
@@ -473,6 +514,7 @@ namespace Emby.Plugins.Discover
             var sr = list.FirstOrDefault(x => x.tmdbId == tmdbId);
             if (sr == null) { InvalidateCaches(); return false; }
 
+            await PurgeQueue(cfg.SonarrUrl, cfg.SonarrApiKey, false, sr.id, ct).ConfigureAwait(false);
             await Send(HttpMethod.Delete, cfg.SonarrUrl, cfg.SonarrApiKey,
                 "/api/v3/series/" + sr.id + "?deleteFiles=" + (deleteFiles ? "true" : "false") + "&addImportListExclusion=false",
                 null, ct).ConfigureAwait(false);

@@ -471,8 +471,8 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         });
 
         view.querySelector('.btnStatus').addEventListener('click', function () {
-            if (window.Dashboard && Dashboard.navigate) { Dashboard.navigate('configurationpage?name=discoverstatus1078'); }
-            else { window.location.hash = '#!/configurationpage?name=discoverstatus1078'; }
+            if (window.Dashboard && Dashboard.navigate) { Dashboard.navigate('configurationpage?name=discoverstatus1079'); }
+            else { window.location.hash = '#!/configurationpage?name=discoverstatus1079'; }
         });
 
         view.addEventListener('viewshow', function () {

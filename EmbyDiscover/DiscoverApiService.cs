@@ -77,6 +77,35 @@ namespace Emby.Plugins.Discover
         public List<string> Lines { get; set; } = new List<string>();
     }
 
+    [Route("/Discover/TrailerKey", "GET", Summary = "YouTube-sleutel van de trailer van een film of serie")]
+    [Authenticated]
+    public class DiscoverTrailerKeyRequest : IReturn<DiscoverTrailerKeyResult>
+    {
+        /// <summary>"movie" of "tv"</summary>
+        public string Type { get; set; }
+        public int TmdbId { get; set; }
+    }
+
+    public class DiscoverTrailerKeyResult
+    {
+        public string Key { get; set; }
+    }
+
+    [Route("/Discover/Title", "GET", Summary = "Eén film of serie (voor een directe link naar de popup)")]
+    [Authenticated]
+    public class DiscoverTitleRequest : IReturn<DiscoverTitleResult>
+    {
+        /// <summary>"movie" of "tv"</summary>
+        public string Type { get; set; }
+        public int TmdbId { get; set; }
+    }
+
+    public class DiscoverTitleResult
+    {
+        public bool Found { get; set; }
+        public DiscoverItemDto Item { get; set; }
+    }
+
     [Route("/Discover/SeriesCard", "GET", Summary = "Seriegegevens voor de seizoensdetailkaart")]
     [Authenticated]
     public class DiscoverSeriesCardRequest : IReturn<DiscoverSeriesCardResult>
@@ -596,6 +625,46 @@ namespace Emby.Plugins.Discover
             return row;
         }
 
+
+        public async Task<object> Get(DiscoverTrailerKeyRequest request)
+        {
+            var res = new DiscoverTrailerKeyResult();
+            bool tv = string.Equals(request.Type, "tv", StringComparison.OrdinalIgnoreCase);
+            if (request.TmdbId <= 0 || string.IsNullOrWhiteSpace(Plugin.GetCurrentConfiguration().TmdbApiKey)) return res;
+            try
+            {
+                res.Key = await _tmdb.GetYoutubeTrailerKey(tv, request.TmdbId, CancellationToken.None).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                if (ex is OperationCanceledException) throw;
+                DiscoverDiagnostics.Add("FOUT trailer " + request.Type + "/" + request.TmdbId + ": " + ex.Message);
+                throw; // de knop toont dan "Trailer ophalen mislukt" in plaats van "geen trailer"
+            }
+            return res;
+        }
+
+        public async Task<object> Get(DiscoverTitleRequest request)
+        {
+            var res = new DiscoverTitleResult();
+            try
+            {
+                bool tv = string.Equals(request.Type, "tv", StringComparison.OrdinalIgnoreCase);
+                if (request.TmdbId <= 0 || string.IsNullOrWhiteSpace(Plugin.GetCurrentConfiguration().TmdbApiKey)) return res;
+                var hit = tv ? await _tmdb.GetTv(request.TmdbId, CancellationToken.None).ConfigureAwait(false)
+                             : await _tmdb.GetMovie(request.TmdbId, CancellationToken.None).ConfigureAwait(false);
+                if (hit == null) return res;
+                var states = await SafeStates(tv).ConfigureAwait(false);
+                res.Item = ToDto(hit, tv, states);
+                res.Found = true;
+            }
+            catch (Exception ex)
+            {
+                if (ex is OperationCanceledException) throw;
+                DiscoverDiagnostics.Add("FOUT titel " + request.Type + "/" + request.TmdbId + ": " + ex.Message);
+            }
+            return res;
+        }
 
         public async Task<object> Get(DiscoverInfoRequest request)
         {

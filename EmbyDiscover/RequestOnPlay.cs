@@ -59,7 +59,7 @@ namespace Emby.Plugins.Discover
                 {
                     try
                     {
-                        var msg = await DiscoverMediaChannel.RequestTitle(_tmdb, _arr, tv, tmdbId, CancellationToken.None).ConfigureAwait(false);
+                        var msg = await DiscoverMediaChannel.RequestTitle(_tmdb, _arr, tv, tmdbId, null, CancellationToken.None).ConfigureAwait(false);
                         DiscoverDiagnostics.Add("aanvraag via Afspelen: " + ext + " -> " + msg);
                         _logger.Info("Discover: aanvraag via Afspelen {0}: {1}", ext, msg);
                     }
