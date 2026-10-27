@@ -32,14 +32,14 @@ define([], function () {
 
     // Load as an external script so Emby's Content-Security-Policy does not block inline execution.
     function loadButtonScript() {
-        if (window.__discoverRequestButtonVersion === '1.1.3') {
-            diag.load = text('script is al actief v1.1.3', 'script already active v1.1.3', 'Skript bereits aktiv v1.1.3');
+        if (window.__discoverRequestButtonVersion === '1.3.3.1') {
+            diag.load = text('script is al actief v1.3.3.1', 'script already active v1.3.3.1', 'Skript bereits aktiv v1.3.3.1');
             showDiag();
             return;
         }
         var urls = [
-            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1081' }),
-            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1081' }),
+            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1331' }),
+            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1331' }),
             ApiClient.getUrl('Plugins/Discover/Script')
         ];
         var n = 0;
@@ -51,7 +51,7 @@ define([], function () {
             script.src = u + (u.indexOf('?') === -1 ? '?' : '&') + '_=' + Date.now();
             script.async = true;
             script.onload = function () {
-                if (window.__discoverRequestButtonVersion === '1.1.3') {
+                if (window.__discoverRequestButtonVersion === '1.3.3.1') {
                     diag.load = text('OK via extern script ', 'OK via external script ', 'OK über externes Skript ') + u;
                     showDiag();
                 } else {
@@ -76,6 +76,7 @@ define([], function () {
         loadButtonScript();
         api('GET', 'Discover/Status').then(function (r) {
             diagEl.style.display = r.ShowDiagnostics ? '' : 'none';
+            showTrailer = r.ShowTrailerTile !== false;
             diag.status = 'v' + (r.PluginVersion || '?') + ' | ' + text('pluginresource: ', 'plugin resource: ', 'Pluginressource: ') + (r.ButtonScript || text('onbekend', 'unknown', 'unbekannt'));
             showDiag();
         }, function () { diag.status = text('status ophalen mislukt', 'could not fetch status', 'Status konnte nicht abgerufen werden'); showDiag(); });
@@ -90,6 +91,7 @@ define([], function () {
         var searchTimer = null;
         var loaded = false;
         var isAdmin = false;
+        var showTrailer = true;
         try {
             ApiClient.getCurrentUser().then(function (u) {
                 isAdmin = !!(u && u.Policy && u.Policy.IsAdministrator);
@@ -255,6 +257,9 @@ define([], function () {
             var b = overlay.querySelector('.dcBtn');
             var d = overlay.querySelector('.dcBtnDel');
             if (!current) { return; }
+            var tb = overlay.querySelector('.dcBtnTrailer');
+            tb.textContent = text('Trailer', 'Trailer', 'Trailer');
+            if (showTrailer) { tb.classList.add('show'); } else { tb.classList.remove('show'); }
             d.disabled = false;
             if (isAdmin && current.Status === 1) { d.textContent = text('Aanvraag annuleren', 'Cancel request', 'Anfrage abbrechen'); d.classList.add('show'); }
             else if (isAdmin && current.Status === 2) { d.textContent = text('Verwijderen', 'Delete', 'Löschen'); d.classList.add('show'); }
@@ -301,31 +306,49 @@ define([], function () {
             return ApiClient.ajax({ type: 'GET', url: ApiClient.getUrl(path, query || {}), dataType: 'json' });
         }
 
+        var rootFolders = null;  // [{ id, name, tv }] van het kanaal, voor het zoeken in genremappen
+
+        function norm(t) {
+            return String(t || '').replace(/^[✓⏳]\s*/, '').trim().toLowerCase();
+        }
+
+        function mapItems(map, tv, list) {
+            list.forEach(function (it) {
+                var t = it.ProviderIds && (it.ProviderIds.Tmdb || it.ProviderIds.tmdb);
+                if (t) { map[(tv ? 'tv:' : 'movie:') + t] = it.Id; }
+                // Reserve: op titel (+ jaar), voor als Emby de provider-id's niet meegeeft.
+                var n = norm(it.Name);
+                if (n) {
+                    map[(tv ? 'tv' : 'movie') + '#' + n + '#' + (it.ProductionYear || '')] = it.Id;
+                }
+            });
+        }
+
         function buildEmbyMap() {
             if (mapPromise) { return mapPromise; }
             var uid = ApiClient.getCurrentUserId();
             mapPromise = getJson('Channels', { UserId: uid }).then(function (r) {
                 var ch = ((r && r.Items) || []).filter(function (c) { return /discover/i.test(c.Name || ''); })[0];
                 if (!ch) { throw new Error('kanaal niet gevonden'); }
+                channelId = ch.Id;
                 return getJson('Channels/' + ch.Id + '/Items', { UserId: uid, Limit: 50 }).then(function (root) {
                     var folders = (root && root.Items) || [];
-                    return Promise.all(folders.map(function (f) {
-                        var tv = /serie/i.test(f.Name || '');
+                    rootFolders = folders.map(function (f) {
+                        return { id: f.Id, name: f.Name || '', tv: /serie/i.test(f.Name || '') };
+                    });
+                    // Alleen de titellijsten; genre- en studiomappen bevatten weer mappen (die ophalen is traag).
+                    var lists = rootFolders.filter(function (f) { return !/genre|studio/i.test(f.name); });
+                    return Promise.all(lists.map(function (f) {
                         return getJson('Channels/' + ch.Id + '/Items', {
-                            UserId: uid, FolderId: f.Id, Fields: 'ProviderIds', Limit: 300
+                            UserId: uid, FolderId: f.id, Fields: 'ProviderIds', Limit: 300
                         }).then(function (res) {
-                            return { tv: tv, items: (res && res.Items) || [] };
-                        }, function () { return { tv: tv, items: [] }; });
+                            return { tv: f.tv, items: (res && res.Items) || [] };
+                        }, function () { return { tv: f.tv, items: [] }; });
                     }));
                 });
             }).then(function (lists) {
                 var map = {};
-                lists.forEach(function (l) {
-                    l.items.forEach(function (it) {
-                        var t = it.ProviderIds && (it.ProviderIds.Tmdb || it.ProviderIds.tmdb);
-                        if (t) { map[(l.tv ? 'tv:' : 'movie:') + t] = it.Id; }
-                    });
-                });
+                lists.forEach(function (l) { mapItems(map, l.tv, l.items); });
                 embyMap = map;
                 return map;
             });
@@ -333,14 +356,66 @@ define([], function () {
             return mapPromise;
         }
 
-        function openItem(i) {
-            buildEmbyMap().then(function (map) {
-                var id = map[key(i)];
-                if (id) {
-                    window.location.hash = '#!/item?id=' + encodeURIComponent(id) + '&serverId=' + encodeURIComponent(ApiClient.serverId());
-                } else {
-                    openModal(i); // niet in het kanaal (bijv. zoekresultaat): kleine popup
+        var channelId = null;
+
+        function lookup(map, i) {
+            return map[key(i)] ||
+                map[i.Type + '#' + norm(i.Title) + '#' + (i.Year || '')] || null;
+        }
+
+        function goToEmbyItem(id) {
+            var fallback = function () {
+                window.location.hash = '#!/item?id=' + encodeURIComponent(id) + '&serverId=' + encodeURIComponent(ApiClient.serverId());
+            };
+            // Laat Emby zelf de juiste route kiezen (een kanaalmap opent anders als lege kanaalpagina).
+            ApiClient.getItem(ApiClient.getCurrentUserId(), id).then(function (item) {
+                try {
+                    require(['appRouter'], function (router) {
+                        try { router.showItem(item); } catch (e) { fallback(); }
+                    }, fallback);
+                } catch (e) { fallback(); }
+            }, fallback);
+        }
+
+        // Staat de titel al in je eigen Emby-bibliotheek (film of serie), dan openen we die.
+        function findLibraryItem(i) {
+            var uid = ApiClient.getCurrentUserId();
+            var tv = i.Type === 'tv';
+            var base = {
+                Recursive: true, IncludeItemTypes: tv ? 'Series' : 'Movie',
+                Fields: 'ProviderIds', Limit: 20
+            };
+            function pick(res) {
+                var list = (res && res.Items) || [];
+                for (var k = 0; k < list.length; k++) {
+                    var t = list[k].ProviderIds && (list[k].ProviderIds.Tmdb || list[k].ProviderIds.tmdb);
+                    if (t && String(t) === String(i.TmdbId)) { return list[k].Id; }
                 }
+                return null;
+            }
+            var byId = {}; for (var a in base) { byId[a] = base[a]; }
+            byId.AnyProviderIdEquals = 'tmdb.' + i.TmdbId;
+            return getJson('Users/' + uid + '/Items', byId).then(function (res) {
+                var id = pick(res);
+                if (id) { return id; }
+                var bySearch = {}; for (var b in base) { bySearch[b] = base[b]; }
+                bySearch.SearchTerm = i.Title;
+                return getJson('Users/' + uid + '/Items', bySearch).then(pick);
+            }).then(null, function () { return null; });
+        }
+
+        function openItem(i) {
+            findLibraryItem(i).then(function (libId) {
+                if (libId) { goToEmbyItem(libId); return; }
+                openChannelItem(i);
+            });
+        }
+
+        function openChannelItem(i) {
+            buildEmbyMap().then(function (map) {
+                var id = lookup(map, i);
+                if (id) { goToEmbyItem(id); return; }
+                openModal(i); // niet in bibliotheek of hoofdlijsten: kleine popup
             }, function () { openModal(i); });
         }
 
@@ -446,8 +521,49 @@ define([], function () {
             }, 400);
         });
 
+        // ---- Trailer in de popup (YouTube-embed), alleen als de trailertegel in de instellingen aan staat ----
+        var trailerOverlay = view.querySelector('.dcTrailerOverlay');
+        var trailerFrame = trailerOverlay.querySelector('.dcTrailerFrame');
+        var trailerLink = trailerOverlay.querySelector('.dcTrailerLink');
+        function closeTrailer() { trailerOverlay.classList.remove('open'); trailerFrame.src = 'about:blank'; }
+        trailerOverlay.querySelector('.dcTrailerClose').addEventListener('click', closeTrailer);
+        trailerOverlay.addEventListener('click', function (e) { if (e.target === trailerOverlay) { closeTrailer(); } });
+        overlay.querySelector('.dcBtnTrailer').addEventListener('click', function () {
+            var i = current;
+            if (!i) { return; }
+            var b = this;
+            b.disabled = true;
+            api('GET', 'Discover/TrailerKey', { Type: i.Type, TmdbId: i.TmdbId }).then(function (r) {
+                b.disabled = false;
+                if (!r || !r.Key) { showToast(text('Geen trailer beschikbaar voor deze titel.', 'No trailer available for this title.', 'Kein Trailer für diesen Titel verfügbar.'), true); return; }
+                trailerFrame.src = 'https://www.youtube-nocookie.com/embed/' + encodeURIComponent(r.Key) + '?autoplay=1&rel=0';
+                trailerLink.href = 'https://www.youtube.com/watch?v=' + encodeURIComponent(r.Key);
+                trailerLink.textContent = text('Werkt de trailer niet? Open op YouTube', 'Trailer not playing? Open on YouTube', 'Trailer lädt nicht? Auf YouTube öffnen');
+                trailerOverlay.classList.add('open');
+            }, function () {
+                b.disabled = false;
+                showToast(text('Trailer ophalen mislukt.', 'Fetching trailer failed.', 'Trailer abrufen fehlgeschlagen.'), true);
+            });
+        });
+
+        // ---- Directe link vanaf een film-/seriepagina: #!/configurationpage?name=...&openType=movie&openId=123 ----
+        function openFromLink() {
+            var m = /[?&]openType=(movie|tv)&openId=(\d+)/.exec(window.location.hash || '');
+            if (!m) { return; }
+            // Parameters weghalen, anders brengt de terugknop je weer naar dezelfde titel.
+            try { history.replaceState(null, '', window.location.href.replace(/&openType=[^&]*&openId=\d+/, '')); } catch (e) { }
+            api('GET', 'Discover/Title', { Type: m[1], TmdbId: parseInt(m[2], 10) }).then(function (r) {
+                if (!r || !r.Found || !r.Item) { showToast(text('Titel niet gevonden.', 'Title not found.', 'Titel nicht gefunden.'), true); return; }
+                items[key(r.Item)] = r.Item;
+                openItem(r.Item);
+            }, function () {
+                showToast(text('Titel laden mislukt.', 'Loading title failed.', 'Titel konnte nicht geladen werden.'), true);
+            });
+        }
+
         view.addEventListener('viewshow', function () {
             if (!loaded) { loadHome(); }
+            openFromLink();
         });
     };
 });

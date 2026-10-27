@@ -118,12 +118,12 @@ namespace Emby.Plugins.Discover
                 },
                 new PluginPageInfo
                 {
-                    Name = "discoveruijs1100",
+                    Name = "discoveruijs1331",
                     EmbeddedResourcePath = GetType().Namespace + ".Configuration.discoverPage.js"
                 },
                 new PluginPageInfo
                 {
-                    Name = "discoverbuttonjs1081",
+                    Name = "discoverbuttonjs1331",
                     EmbeddedResourcePath = GetType().Namespace + ".Resources.discover-request-button.js"
                 },
                 new PluginPageInfo
@@ -138,7 +138,7 @@ namespace Emby.Plugins.Discover
                 },
                 new PluginPageInfo
                 {
-                    Name = "discoverconfigjs1079",
+                    Name = "discoverconfigjs1300",
                     EmbeddedResourcePath = GetType().Namespace + ".Configuration.configPage.js"
                 }
             };

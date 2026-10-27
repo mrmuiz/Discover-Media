@@ -5,7 +5,7 @@
     <title>Discover</title>
 </head>
 <body>
-<div data-role="page" class="page type-interior discoverUiPage" data-controller="__plugin/discoveruijs1100">
+<div data-role="page" class="page type-interior discoverUiPage" data-controller="__plugin/discoveruijs1331">
 <style>
 .dcRoot { padding: 5.5em 3% 4em; color: #fff; background:#0b1426; height:100vh; overflow-y:auto; box-sizing:border-box; }
 .dcModal, .dcModal h2, .dcModal .dcOverview { color:#fff; }
@@ -43,6 +43,13 @@
 .dcBtnRow { display:flex; gap:.7em; flex-wrap:wrap; align-items:center; }
 .dcBtnDel { background:#c62828; color:#fff; border:0; border-radius:2em; padding:.8em 1.6em; font-weight:700; font-size:1em; cursor:pointer; display:none; }
 .dcBtnDel.show { display:inline-block; }
+.dcBtnTrailer { background:rgba(255,255,255,.12); color:#fff; border:1px solid rgba(255,255,255,.3); border-radius:2em; padding:.8em 1.6em; font-weight:700; font-size:1em; cursor:pointer; display:none; }
+.dcBtnTrailer.show { display:inline-block; }
+.dcBtnTrailer:hover { background:#ffb400; color:#111; }
+.dcTrailerOverlay { position:fixed; inset:0; background:rgba(0,0,0,.9); z-index:10002; display:none; flex-direction:column; align-items:center; justify-content:center; padding:1em; }
+.dcTrailerOverlay.open { display:flex; }
+.dcTrailerFrame { width:min(960px,100%); aspect-ratio:16/9; border:0; border-radius:.7em; background:#000; }
+.dcTrailerLink { margin-top:1em; color:#ffd666; }
 .dcBtnDel[disabled] { opacity:.6; cursor:default; }
 .dcBtn[disabled] { background:#33415c; color:#cdd; cursor:default; }
 .dcClose { position:absolute; top:.6em; right:.9em; z-index:2; background:rgba(0,0,0,.55); color:#fff; border:0; border-radius:50%; width:2.2em; height:2.2em; font-size:1.1em; cursor:pointer; }
@@ -81,10 +88,15 @@
                     <div class="dcMeta"></div>
                     <div class="dcInfo"></div>
                     <div class="dcOverview"></div>
-                    <div class="dcBtnRow"><button type="button" class="dcBtn"></button><button type="button" class="dcBtnDel"></button></div>
+                    <div class="dcBtnRow"><button type="button" class="dcBtn"></button><button type="button" class="dcBtnTrailer"></button><button type="button" class="dcBtnDel"></button></div>
                 </div>
             </div>
         </div>
+    </div>
+    <div class="dcTrailerOverlay">
+        <button type="button" class="dcClose dcTrailerClose">&#10005;</button>
+        <iframe class="dcTrailerFrame" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>
+        <a class="dcTrailerLink" target="_blank" rel="noopener"></a>
     </div>
     <div class="dcToast"></div>
 </div>
