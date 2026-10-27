@@ -181,6 +181,10 @@ namespace Emby.Plugins.Discover
         public string Overview { get; set; }
         /// <summary>0 = niet aangevraagd, 1 = aangevraagd, 2 = beschikbaar</summary>
         public int Status { get; set; }
+        /// <summary>Alleen in "Mijn aanvragen": pending, denied, failed, requested, downloading, partial, available.</summary>
+        public string RequestState { get; set; }
+        /// <summary>Downloadvoortgang 0-100 bij RequestState downloading.</summary>
+        public int Progress { get; set; }
     }
 
     public class DiscoverTileDto
@@ -227,10 +231,16 @@ namespace Emby.Plugins.Discover
         public bool Success { get; set; }
         public string Message { get; set; }
         public int Status { get; set; }
+        /// <summary>De aanvraag wacht op goedkeuring van een beheerder.</summary>
+        public bool Pending { get; set; }
     }
 
-    public class DiscoverApiService : IService
+    public class DiscoverApiService : IService, IRequiresRequest
     {
+        /// <summary>Het lopende HTTP-verzoek (door Emby gezet); daaruit halen we de ingelogde gebruiker.</summary>
+        public IRequest Request { get; set; }
+        private readonly IAuthorizationContext _auth;
+
         private class RowDef
         {
             public string Key; public string Title; public string Path; public bool Tv; public bool Mixed;
@@ -307,8 +317,10 @@ namespace Emby.Plugins.Discover
         private readonly ArrClient _arr;
         private readonly ILogger _logger;
 
-        public DiscoverApiService(ILogManager logManager, IJsonSerializer json)
+        public DiscoverApiService(ILogManager logManager, IJsonSerializer json, IAuthorizationContext auth)
         {
+            _auth = auth;
+            RequestStore.Init(json);
             _logger = logManager.GetLogger("Discover");
             _tmdb = new TmdbClient(json);
             _arr = new ArrClient(json);
@@ -363,6 +375,8 @@ namespace Emby.Plugins.Discover
 
                 var tasks = Defs.Select(d => BuildRow(d, ms, ts)).ToList();
                 var rows = await Task.WhenAll(tasks).ConfigureAwait(false);
+                var mine = await MyRequestsRow(ms, ts).ConfigureAwait(false);
+                if (mine != null) resp.Rows.Add(mine);
                 foreach (var r in rows) if (r != null) resp.Rows.Add(r);
             }
             catch (Exception ex)
@@ -409,6 +423,58 @@ namespace Emby.Plugins.Discover
                 DiscoverDiagnostics.Add("FOUT rij " + d.Key + ": " + ex.Message);
             }
             return row;
+        }
+
+        /// <summary>Rij "Mijn aanvragen" met de actuele status van wat de ingelogde gebruiker zelf heeft aangevraagd.</summary>
+        private async Task<DiscoverRow> MyRequestsRow(Dictionary<int, bool> ms, Dictionary<int, bool> ts)
+        {
+            try
+            {
+                Requester me = null;
+                try { me = Requester.From(_auth.GetAuthorizationInfo(Request)?.User); } catch { }
+                if (me == null) return null;
+                var mine = RequestStore.ForUser(me.Id).OrderByDescending(r => r.Created).Take(40).ToList();
+                if (mine.Count == 0) return null;
+
+                var mq = mine.Any(r => r.Type == "movie" && r.State == RequestStates.Sent) ? SafeQueue(false) : Task.FromResult(new Dictionary<int, int>());
+                var tq = mine.Any(r => r.Type == "tv" && r.State == RequestStates.Sent) ? SafeQueue(true) : Task.FromResult(new Dictionary<int, int>());
+                await Task.WhenAll(mq, tq).ConfigureAwait(false);
+
+                var row = new DiscoverRow
+                {
+                    Key = "my_requests",
+                    Title = DiscoverLanguage.Text("Mijn aanvragen", "My requests", "Meine Anfragen"),
+                    NextPage = 0
+                };
+                foreach (var r in mine)
+                {
+                    bool tv = r.Type == "tv";
+                    int progress;
+                    var state = RequestsApiService.LiveStatus(r, tv ? ts : ms, tv ? tq.Result : mq.Result, out progress);
+                    row.Items.Add(new DiscoverItemDto
+                    {
+                        TmdbId = r.TmdbId, Type = r.Type, Title = r.Title ?? "?", Year = r.Year, Poster = r.Poster,
+                        Status = state == "available" || state == "partial" ? 2 : state == "denied" || state == "failed" ? 0 : 1,
+                        RequestState = state, Progress = progress
+                    });
+                }
+                return row;
+            }
+            catch (Exception ex)
+            {
+                DiscoverDiagnostics.Add("FOUT rij mijn aanvragen: " + ex.Message);
+                return null;
+            }
+        }
+
+        private async Task<Dictionary<int, int>> SafeQueue(bool tv)
+        {
+            try { return await _arr.GetQueueProgress(tv, CancellationToken.None).ConfigureAwait(false); }
+            catch (Exception ex)
+            {
+                DiscoverDiagnostics.Add("FOUT wachtrij " + (tv ? "Sonarr" : "Radarr") + ": " + ex.Message);
+                return new Dictionary<int, int>();
+            }
         }
 
         private static string LocalizedRowTitle(string key)
@@ -875,33 +941,17 @@ namespace Emby.Plugins.Discover
             try
             {
                 bool tv = string.Equals(request.Type, "tv", StringComparison.OrdinalIgnoreCase);
-                bool added;
-                if (tv)
-                {
-                    var t = await _tmdb.GetTv(request.TmdbId, CancellationToken.None).ConfigureAwait(false);
-                    var ext = await _tmdb.GetTvExternalIds(request.TmdbId, CancellationToken.None).ConfigureAwait(false);
-                    if (ext?.tvdb_id == null)
-                        throw new InvalidOperationException("Geen TVDB-id bij deze serie; Sonarr kan hem niet toevoegen.");
-                    added = await _arr.AddSeries(request.TmdbId, ext.tvdb_id.Value, t.name ?? t.title, request.Seasons, CancellationToken.None).ConfigureAwait(false);
-                }
-                else
-                {
-                    var m = await _tmdb.GetMovie(request.TmdbId, CancellationToken.None).ConfigureAwait(false);
-                    added = await _arr.AddMovie(request.TmdbId, m.title ?? m.name, YearOf(m.release_date), CancellationToken.None).ConfigureAwait(false);
-                }
+                Requester who = null;
+                try { who = Requester.From(_auth.GetAuthorizationInfo(Request)?.User); }
+                catch (Exception ex) { DiscoverDiagnostics.Add("aanvraag: gebruiker onbekend: " + ex.Message); }
 
-                res.Success = true;
-                res.Status = 1;
-                string seasonNote = "";
-                if (tv && request.Seasons != null && request.Seasons.Length > 0)
-                    seasonNote = " (" + DiscoverLanguage.Text("seizoen ", "season ", "Staffel ") +
-                        string.Join(", ", request.Seasons.OrderBy(x => x)) + ")";
-                res.Message = added
-                    ? DiscoverLanguage.Text("Aangevraagd", "Requested", "Angefordert") + seasonNote
-                    : DiscoverLanguage.Text("Stond al in ", "Already in ", "Bereits in ") + (tv ? "Sonarr" : "Radarr");
-                _logger.Info("Discover: {0} {1} {2}", tv ? "serie" : "film", request.TmdbId, res.Message);
-                DiscoverDiagnostics.Add((tv ? "serie " : "film ") + request.TmdbId + ": " + res.Message);
-                DiscoverDiagnostics.CountRequest(true);
+                var outcome = await RequestFlow.Submit(_tmdb, _arr, who, tv, request.TmdbId, request.Seasons, CancellationToken.None).ConfigureAwait(false);
+                res.Success = outcome.Success;
+                res.Status = outcome.Status;
+                res.Pending = outcome.Pending;
+                res.Message = outcome.Message;
+                _logger.Info("Discover: {0} {1} {2} ({3})", tv ? "serie" : "film", request.TmdbId, res.Message, who?.Name ?? "?");
+                DiscoverDiagnostics.Add((tv ? "serie " : "film ") + request.TmdbId + ": " + res.Message + (who == null ? "" : " (" + who.Name + ")"));
             }
             catch (Exception ex)
             {

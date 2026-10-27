@@ -5,7 +5,7 @@
     <title>Discover</title>
 </head>
 <body>
-<div data-role="page" class="page type-interior discoverUiPage" data-controller="__plugin/discoveruijs1340">
+<div data-role="page" class="page type-interior discoverUiPage" data-controller="__plugin/discoveruijs1400">
 <style>
 .dcRoot { padding: 5.5em 3% 4em; color: #fff; background:#0b1426; height:100vh; overflow-y:auto; box-sizing:border-box; }
 .dcModal, .dcModal h2, .dcModal .dcOverview { color:#fff; }
@@ -30,6 +30,13 @@
 .dcStatus { position:absolute; top:.45em; right:.45em; width:1.6em; height:1.6em; border-radius:50%; display:none; align-items:center; justify-content:center; font-size:.8em; }
 .dcStatus.s1 { display:flex; background:#d99a00; }
 .dcStatus.s2 { display:flex; background:#22a559; }
+.dcReq { position:absolute; left:0; right:0; bottom:0; padding:.45em .5em; font-size:.75em; font-weight:700; text-align:center; color:#fff; background:rgba(85,85,85,.92); }
+.dcReq.st-pending { background:rgba(255,180,0,.95); color:#111; }
+.dcReq.st-downloading { background:rgba(29,111,209,.95); }
+.dcReq.st-available, .dcReq.st-partial { background:rgba(34,165,89,.95); }
+.dcReq.st-denied, .dcReq.st-failed { background:rgba(198,40,40,.95); }
+.dcReqBar { display:block; height:3px; margin-top:.3em; border-radius:2px; background:rgba(255,255,255,.3); overflow:hidden; }
+.dcReqBar span { display:block; height:100%; background:#fff; }
 .dcOverlay { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,.75); z-index:10000; display:none; align-items:center; justify-content:center; padding:1em; }
 .dcOverlay.open { display:flex; }
 .dcModal { position:relative; width:900px; max-width:100%; width:min(900px,100%); max-height:92vh; overflow:auto; background:#0b1426; border:1px solid rgba(255,255,255,.15); border-radius:1em; }

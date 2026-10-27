@@ -8,7 +8,7 @@
   Browse movies and series from TMDB in Emby, watch trailers, and send requests to Radarr or Sonarr.
 </p>
 
-> **Status: stable.** The current version is **1.3.4.0**, built against the Emby SDK package `MediaBrowser.Server.Core` 4.10.0.1-beta so that one dll runs on both Emby Server 4.10.2 and 4.11 (beta). It has been installed on both; other Emby versions may work but have not been individually tested. Please report problems through [Issues](../../issues) and include the relevant diagnostics (see [Troubleshooting](#troubleshooting)).
+> **Status: stable.** The current version is **1.4.0.0**, built against the Emby SDK package `MediaBrowser.Server.Core` 4.10.0.1-beta so that one dll runs on both Emby Server 4.10.2 and 4.11 (beta). It has been installed on both; other Emby versions may work but have not been individually tested. Please report problems through [Issues](../../issues) and include the relevant diagnostics (see [Troubleshooting](#troubleshooting)).
 
 ## Screenshots
 
@@ -77,6 +77,9 @@
 - Adds a **Not in your library** section to actor and director pages in the web client, listing their other movies and series from TMDB with a Request button (open **Discover** once in that browser first, so the button script is loaded).
 - Adds a **Collection** row to movie pages in the web client: the other movies from the same TMDB collection that are not in your library, with a Request button.
 - Adds a **More like this** row to movie and series pages in the web client: TMDB recommendations that are not in your library, with a Request button (series open the season picker). Clicking a poster in these rows opens that title in the Discover popup with its info and trailer.
+- Keeps track of who requested what. Administrators manage all requests in the plugin settings: approve, deny or remove them, and set per user whether requests need approval and how many requests are allowed per 7 days.
+- Shows a **My requests** row on the Discover page with the live status of each request, including download progress from Radarr and Sonarr.
+- Notifies the person who made a request when it becomes available: a pop-up in the Emby apps they are signed in to, and an Emby notification that can be forwarded by e-mail, push or webhook.
 - Provides a Play-based request flow for Android, TV and other clients that cannot run the web button script.
 - Shows whether a title is already requested or available when that status can be matched in Radarr or Sonarr. Season items say whether the season is already requested, partially available or in your library; requesting again is still possible.
 - The Request and Trailer tiles carry the text "Request" and "Trailer" on their image so they are easy to tell apart.

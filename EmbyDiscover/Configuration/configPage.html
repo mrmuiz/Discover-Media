@@ -5,11 +5,37 @@
     <title>Discover</title>
 </head>
 <body>
-<div data-role="page" class="page type-interior pluginConfigurationPage discoverConfigPage" data-require="emby-input,emby-button,emby-select,emby-checkbox" data-controller="__plugin/discoverconfigjs1300">
+<div data-role="page" class="page type-interior pluginConfigurationPage discoverConfigPage" data-require="emby-input,emby-button,emby-select,emby-checkbox" data-controller="__plugin/discoverconfigjs1400">
         <style>
         .discoverConfigPage .keyWrap { position: relative; }
         .discoverConfigPage .keyWrap input { padding-right: 2.8em; }
         .discoverConfigPage .keyWrap .btnToggleKey { position: absolute; right: .2em; bottom: .15em; margin: 0; }
+        .discoverConfigPage .dreq-section { margin-top: 2.5em; }
+        .discoverConfigPage .dreq-tabs { display: flex; gap: .5em; flex-wrap: wrap; margin: .5em 0 1em; }
+        .discoverConfigPage .dreq-tab { border: 1px solid rgba(128,128,128,.4); background: transparent; color: inherit; border-radius: 2em; padding: .35em 1em; font: inherit; cursor: pointer; }
+        .discoverConfigPage .dreq-tab.active { background: #52b54b; border-color: #52b54b; color: #fff; }
+        .discoverConfigPage .dreq-list { display: flex; flex-direction: column; gap: .6em; }
+        .discoverConfigPage .dreq-row { display: flex; gap: .9em; align-items: center; padding: .6em; border-radius: .6em; background: rgba(128,128,128,.1); }
+        .discoverConfigPage .dreq-row img { width: 3em; aspect-ratio: 2 / 3; object-fit: cover; border-radius: .3em; background: #222; flex: 0 0 auto; }
+        .discoverConfigPage .dreq-main { flex: 1 1 auto; min-width: 0; }
+        .discoverConfigPage .dreq-title { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .discoverConfigPage .dreq-meta { font-size: .85em; opacity: .7; }
+        .discoverConfigPage .dreq-actions { display: flex; gap: .4em; flex-wrap: wrap; justify-content: flex-end; }
+        .discoverConfigPage .dreq-actions button { margin: 0; }
+        .discoverConfigPage .dreq-chip { display: inline-block; padding: .15em .7em; border-radius: 2em; font-size: .8em; font-weight: 600; white-space: nowrap; }
+        .discoverConfigPage .dreq-chip.pending { background: #ffb400; color: #111; }
+        .discoverConfigPage .dreq-chip.requested { background: #555; color: #fff; }
+        .discoverConfigPage .dreq-chip.downloading { background: #1d6fd1; color: #fff; }
+        .discoverConfigPage .dreq-chip.available, .discoverConfigPage .dreq-chip.partial { background: #22a559; color: #fff; }
+        .discoverConfigPage .dreq-chip.denied, .discoverConfigPage .dreq-chip.failed { background: #c62828; color: #fff; }
+        .discoverConfigPage .dreq-bar { height: 4px; border-radius: 2px; background: rgba(128,128,128,.3); margin-top: .35em; overflow: hidden; max-width: 14em; }
+        .discoverConfigPage .dreq-bar span { display: block; height: 100%; background: #1d6fd1; }
+        .discoverConfigPage .dreq-users { width: 100%; border-collapse: collapse; }
+        .discoverConfigPage .dreq-users th, .discoverConfigPage .dreq-users td { text-align: left; padding: .5em .4em; border-bottom: 1px solid rgba(128,128,128,.25); }
+        .discoverConfigPage .dreq-users input[type=number] { width: 5em; padding: .3em; font: inherit; background: rgba(128,128,128,.15); color: inherit; border: 1px solid rgba(128,128,128,.4); border-radius: .3em; }
+        .discoverConfigPage .dreq-users input[type=checkbox] { width: 1.2em; height: 1.2em; }
+        .discoverConfigPage .dreq-empty { opacity: .7; padding: .5em 0; }
+        @media (max-width: 600px) { .discoverConfigPage .dreq-row { flex-wrap: wrap; } .discoverConfigPage .dreq-actions { width: 100%; justify-content: flex-start; } }
     </style>
     <div data-role="content">
         <div class="content-primary">
@@ -109,6 +135,21 @@
                     <div class="fieldDescription" style="margin-top:.5em;">Controleert plugin, kanaal, TMDB, Radarr, Sonarr en gebruikerstoegang. Handig om twee servers te vergelijken.</div>
                 </div>
             </form>
+
+            <div class="dreq-section" id="discoverRequestsPanel">
+                <h2 class="dreq-h-requests">Aanvragen</h2>
+                <div class="dreq-tabs">
+                    <button type="button" class="dreq-tab active" data-filter="pending">Wacht op goedkeuring</button>
+                    <button type="button" class="dreq-tab" data-filter="active">Lopend</button>
+                    <button type="button" class="dreq-tab" data-filter="all">Alle</button>
+                    <button type="button" class="dreq-tab dreq-refresh" data-filter="">&#8635;</button>
+                </div>
+                <div class="dreq-list" id="dreqList"><div class="dreq-empty">...</div></div>
+
+                <h3 class="dreq-h-users" style="margin-top:2em;">Gebruikers</h3>
+                <div class="fieldDescription dreq-users-help">Eerst goedkeuren: aanvragen van deze gebruiker wachten op een beheerder. Limiet: maximaal aantal aanvragen per 7 dagen (0 = onbeperkt). Beheerders hebben geen goedkeuring of limiet nodig.</div>
+                <div style="overflow-x:auto;"><table class="dreq-users" id="dreqUsers"></table></div>
+            </div>
         </div>
     </div>
 </div>

@@ -420,6 +420,249 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         });
     }
 
+    // ---- Beheerpaneel: aanvragen goedkeuren/weigeren/verwijderen en regels per gebruiker ----
+    var requestsPanel = (function () {
+        var data = null;
+        var filter = 'pending';
+        var timer = null;
+
+        function t(nl, en, de) { return languageText(nl, en, de); }
+
+        function call(type, path, body) {
+            var opts = { type: type, url: ApiClient.getUrl(path), dataType: 'json' };
+            if (body) { opts.data = JSON.stringify(body); opts.contentType = 'application/json'; }
+            return Promise.resolve(ApiClient.ajax(opts));
+        }
+
+        function toast(msg) {
+            if (window.require) {
+                try { require(['toast'], function (tst) { tst(msg); }); return; } catch (e) { }
+            }
+            if (window.Dashboard && Dashboard.alert) { Dashboard.alert(msg); }
+        }
+
+        function statusLabel(r) {
+            switch (r.Status) {
+                case 'pending': return t('Wacht op goedkeuring', 'Waiting for approval', 'Wartet auf Freigabe');
+                case 'denied': return t('Geweigerd', 'Denied', 'Abgelehnt');
+                case 'failed': return t('Mislukt', 'Failed', 'Fehlgeschlagen');
+                case 'downloading': return t('Downloaden ', 'Downloading ', 'Lädt ') + (r.Progress || 0) + '%';
+                case 'partial': return t('Gedeeltelijk beschikbaar', 'Partially available', 'Teilweise verfügbar');
+                case 'available': return t('Beschikbaar', 'Available', 'Verfügbar');
+                default: return t('Aangevraagd', 'Requested', 'Angefragt');
+            }
+        }
+
+        function fmtDate(iso) {
+            var d = new Date(iso);
+            if (isNaN(d.getTime())) { return ''; }
+            try { return d.toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }); }
+            catch (e) { return d.toLocaleString(); }
+        }
+
+        function button(label, primary, onClick) {
+            var b = document.createElement('button');
+            b.setAttribute('is', 'emby-button');
+            b.type = 'button';
+            b.className = 'raised' + (primary ? ' button-submit' : '');
+            b.innerHTML = '<span></span>';
+            b.querySelector('span').textContent = label;
+            b.addEventListener('click', function () { b.disabled = true; onClick(b); });
+            return b;
+        }
+
+        function act(path, body, okMsg) {
+            return call('POST', path, body).then(function (r) {
+                toast((r && r.Message) || okMsg);
+                return load();
+            }, function (err) {
+                toast(t('Mislukt: ', 'Failed: ', 'Fehlgeschlagen: ') + ajaxErrorMessage(err));
+                return load();
+            });
+        }
+
+        function renderList(view) {
+            var list = el(view, 'dreqList');
+            list.innerHTML = '';
+            var items = (data && data.Items) || [];
+            items = items.filter(function (r) {
+                if (filter === 'pending') { return r.Status === 'pending'; }
+                if (filter === 'active') { return r.Status === 'requested' || r.Status === 'downloading' || r.Status === 'pending'; }
+                return true;
+            });
+            if (!items.length) {
+                var e = document.createElement('div');
+                e.className = 'dreq-empty';
+                e.textContent = filter === 'pending'
+                    ? t('Geen aanvragen die op goedkeuring wachten.', 'No requests waiting for approval.', 'Keine Anfragen warten auf Freigabe.')
+                    : t('Geen aanvragen.', 'No requests.', 'Keine Anfragen.');
+                list.appendChild(e);
+                return;
+            }
+            items.forEach(function (r) {
+                var row = document.createElement('div');
+                row.className = 'dreq-row';
+                var img = document.createElement('img');
+                img.loading = 'lazy'; img.alt = ''; img.src = r.Poster || '';
+                row.appendChild(img);
+
+                var main = document.createElement('div');
+                main.className = 'dreq-main';
+                var title = document.createElement('div');
+                title.className = 'dreq-title';
+                title.textContent = (r.Title || '?') + (r.Year ? ' (' + r.Year + ')' : '');
+                title.title = title.textContent;
+                var meta = document.createElement('div');
+                meta.className = 'dreq-meta';
+                var kind = r.Type === 'tv' ? t('Serie', 'Series', 'Serie') : t('Film', 'Movie', 'Film');
+                if (r.Type === 'tv') {
+                    kind += r.Seasons && r.Seasons.length
+                        ? ' · ' + t('seizoen ', 'season ', 'Staffel ') + r.Seasons.join(', ')
+                        : ' · ' + t('alle seizoenen', 'all seasons', 'alle Staffeln');
+                }
+                meta.textContent = kind + ' · ' + (r.UserName || '?') + ' · ' + fmtDate(r.Created) +
+                    (r.DecidedBy ? ' · ' + t('door ', 'by ', 'von ') + r.DecidedBy : '') +
+                    (r.Message && (r.Status === 'failed' || r.Status === 'denied') ? ' · ' + r.Message : '');
+                var chip = document.createElement('span');
+                chip.className = 'dreq-chip ' + r.Status;
+                chip.textContent = statusLabel(r);
+                main.appendChild(title); main.appendChild(meta);
+                var chipWrap = document.createElement('div');
+                chipWrap.style.marginTop = '.3em';
+                chipWrap.appendChild(chip);
+                main.appendChild(chipWrap);
+                if (r.Status === 'downloading') {
+                    var bar = document.createElement('div');
+                    bar.className = 'dreq-bar';
+                    bar.innerHTML = '<span></span>';
+                    bar.firstChild.style.width = Math.max(2, r.Progress || 0) + '%';
+                    main.appendChild(bar);
+                }
+                row.appendChild(main);
+
+                var actions = document.createElement('div');
+                actions.className = 'dreq-actions';
+                if (r.Status === 'pending' || r.Status === 'failed') {
+                    actions.appendChild(button(t('Goedkeuren', 'Approve', 'Freigeben'), true, function () {
+                        act('Discover/Requests/Approve', { Id: r.Id }, t('Goedgekeurd', 'Approved', 'Freigegeben'));
+                    }));
+                }
+                if (r.Status === 'pending') {
+                    actions.appendChild(button(t('Weigeren', 'Deny', 'Ablehnen'), false, function () {
+                        act('Discover/Requests/Deny', { Id: r.Id }, t('Geweigerd', 'Denied', 'Abgelehnt'));
+                    }));
+                }
+                actions.appendChild(button(t('Verwijderen', 'Remove', 'Entfernen'), false, function () {
+                    act('Discover/Requests/Delete', { Id: r.Id }, t('Verwijderd', 'Removed', 'Entfernt'));
+                }));
+                row.appendChild(actions);
+                list.appendChild(row);
+            });
+        }
+
+        function renderUsers(view) {
+            var table = el(view, 'dreqUsers');
+            table.innerHTML = '';
+            var head = document.createElement('tr');
+            [t('Gebruiker', 'User', 'Benutzer'), t('Eerst goedkeuren', 'Needs approval', 'Freigabe nötig'),
+             t('Limiet per week', 'Weekly limit', 'Wochenlimit'), t('Afgelopen 7 dagen', 'Last 7 days', 'Letzte 7 Tage')].forEach(function (h) {
+                var th = document.createElement('th'); th.textContent = h; head.appendChild(th);
+            });
+            table.appendChild(head);
+            ((data && data.Users) || []).forEach(function (u) {
+                var tr = document.createElement('tr');
+                var name = document.createElement('td');
+                name.textContent = u.UserName + (u.IsAdmin ? ' (' + t('beheerder', 'admin', 'Admin') + ')' : '');
+                tr.appendChild(name);
+
+                var tdA = document.createElement('td');
+                var chk = document.createElement('input');
+                chk.type = 'checkbox'; chk.checked = !!u.RequireApproval; chk.disabled = !!u.IsAdmin;
+                tdA.appendChild(chk); tr.appendChild(tdA);
+
+                var tdL = document.createElement('td');
+                var num = document.createElement('input');
+                num.type = 'number'; num.min = '0'; num.step = '1'; num.value = u.WeeklyLimit || 0; num.disabled = !!u.IsAdmin;
+                tdL.appendChild(num); tr.appendChild(tdL);
+
+                var used = document.createElement('td');
+                used.textContent = u.UsedThisWeek + (u.WeeklyLimit ? ' / ' + u.WeeklyLimit : '');
+                tr.appendChild(used);
+
+                function saveRule() {
+                    var limit = Math.max(0, parseInt(num.value, 10) || 0);
+                    num.value = limit;
+                    call('POST', 'Discover/Requests/UserRule', { UserId: u.UserId, RequireApproval: chk.checked, WeeklyLimit: limit })
+                        .then(function (r) {
+                            u.RequireApproval = chk.checked; u.WeeklyLimit = limit;
+                            used.textContent = u.UsedThisWeek + (limit ? ' / ' + limit : '');
+                            toast(u.UserName + ': ' + ((r && r.Message) || t('Opgeslagen', 'Saved', 'Gespeichert')));
+                        }, function (err) { toast(t('Opslaan mislukt: ', 'Save failed: ', 'Speichern fehlgeschlagen: ') + ajaxErrorMessage(err)); });
+                }
+                chk.addEventListener('change', saveRule);
+                num.addEventListener('change', saveRule);
+                table.appendChild(tr);
+            });
+        }
+
+        var currentView = null;
+        function load() {
+            var view = currentView;
+            if (!view) { return Promise.resolve(); }
+            return call('GET', 'Discover/Requests').then(function (r) {
+                data = r || { Items: [], Users: [] };
+                applyTexts(view);
+                var tab = view.querySelector('.dreq-tab[data-filter="pending"]');
+                if (tab) { tab.textContent = t('Wacht op goedkeuring', 'Waiting for approval', 'Wartet auf Freigabe') + ' (' + (data.PendingCount || 0) + ')'; }
+                renderList(view);
+                renderUsers(view);
+            }, function (err) {
+                el(view, 'dreqList').innerHTML = '';
+                var e = document.createElement('div');
+                e.className = 'dreq-empty';
+                e.textContent = t('Aanvragen laden mislukt: ', 'Loading requests failed: ', 'Anfragen laden fehlgeschlagen: ') + ajaxErrorMessage(err);
+                el(view, 'dreqList').appendChild(e);
+            });
+        }
+
+        function applyTexts(view) {
+            view.querySelector('.dreq-h-requests').textContent = t('Aanvragen', 'Requests', 'Anfragen');
+            view.querySelector('.dreq-h-users').textContent = t('Gebruikers', 'Users', 'Benutzer');
+            view.querySelector('.dreq-tab[data-filter="active"]').textContent = t('Lopend', 'In progress', 'Laufend');
+            view.querySelector('.dreq-tab[data-filter="all"]').textContent = t('Alle', 'All', 'Alle');
+            view.querySelector('.dreq-refresh').title = t('Vernieuwen', 'Refresh', 'Aktualisieren');
+            view.querySelector('.dreq-users-help').textContent = t(
+                'Eerst goedkeuren: aanvragen van deze gebruiker wachten op een beheerder. Limiet: maximaal aantal aanvragen per 7 dagen (0 = onbeperkt). Beheerders hebben geen goedkeuring of limiet nodig.',
+                'Needs approval: requests from this user wait for an administrator. Limit: maximum number of requests per 7 days (0 = unlimited). Administrators never need approval and have no limit.',
+                'Freigabe nötig: Anfragen dieses Benutzers warten auf einen Administrator. Limit: maximale Anzahl Anfragen pro 7 Tage (0 = unbegrenzt). Administratoren brauchen keine Freigabe und haben kein Limit.');
+        }
+
+        return {
+            init: function (view) {
+                currentView = view;
+                Array.prototype.forEach.call(view.querySelectorAll('.dreq-tab'), function (tab) {
+                    tab.addEventListener('click', function () {
+                        var f = tab.getAttribute('data-filter');
+                        if (f) {
+                            filter = f;
+                            Array.prototype.forEach.call(view.querySelectorAll('.dreq-tab'), function (x) { x.classList.toggle('active', x === tab); });
+                            renderList(view);
+                        } else { load(); }
+                    });
+                });
+                view.addEventListener('viewshow', function () {
+                    applyTexts(view);
+                    load();
+                    if (timer) { clearInterval(timer); }
+                    // Downloadvoortgang bijwerken zolang de pagina open is.
+                    timer = setInterval(function () { if (document.body.contains(view)) { load(); } else { clearInterval(timer); timer = null; } }, 30000);
+                });
+                view.addEventListener('viewhide', function () { if (timer) { clearInterval(timer); timer = null; } });
+            },
+            applyTexts: applyTexts
+        };
+    })();
+
     return function (view, params) {
         var state = { dirty: false, languageRequest: 0 };
         var form = view.querySelector('.discoverForm');
@@ -478,5 +721,6 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         view.addEventListener('viewshow', function () {
             load(view, state);
         });
+        requestsPanel.init(view);
     };
 });

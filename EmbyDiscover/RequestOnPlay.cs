@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using MediaBrowser.Controller.Library;
@@ -27,6 +28,7 @@ namespace Emby.Plugins.Discover
             _logger = logManager.GetLogger("Discover");
             _tmdb = new TmdbClient(json);
             _arr = new ArrClient(json);
+            RequestStore.Init(json);
         }
 
         public void Run()
@@ -55,11 +57,15 @@ namespace Emby.Plugins.Discover
                     return;
                 }
 
+                Requester who = null;
+                try { who = Requester.From(e.Users != null ? e.Users.FirstOrDefault() : null); } catch { }
+
                 Task.Run(async () =>
                 {
                     try
                     {
-                        var msg = await DiscoverMediaChannel.RequestTitle(_tmdb, _arr, tv, tmdbId, null, CancellationToken.None).ConfigureAwait(false);
+                        var outcome = await RequestFlow.Submit(_tmdb, _arr, who, tv, tmdbId, null, CancellationToken.None).ConfigureAwait(false);
+                        var msg = outcome.Message + (who == null ? "" : " (" + who.Name + ")");
                         DiscoverDiagnostics.Add("aanvraag via Afspelen: " + ext + " -> " + msg);
                         _logger.Info("Discover: aanvraag via Afspelen {0}: {1}", ext, msg);
                     }

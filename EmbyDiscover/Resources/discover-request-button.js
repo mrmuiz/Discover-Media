@@ -3,14 +3,14 @@
  * Verbergt ook "Media informatie" op Discover/Trailers-detailpagina's. */
 (function () {
     'use strict';
-    if (window.__discoverRequestButtonVersion === '1.3.4.0') { return; }
+    if (window.__discoverRequestButtonVersion === '1.4.0.0') { return; }
     if (window.__discoverRequestButton) {
         console.warn('[Discover] oudere knopcode is nog actief; vernieuw de webclient om dubbele handlers te voorkomen.');
         return;
     }
     window.__discoverRequestButton = true;
-    window.__discoverRequestButtonVersion = '1.3.4.0';
-    console.log('[Discover] request-button script loaded v1.3.4.0');
+    window.__discoverRequestButtonVersion = '1.4.0.0';
+    console.log('[Discover] request-button script loaded v1.4.0.0');
 
     var uiLanguage = 'nl';
     function text(dutch, english, german) {
@@ -41,7 +41,7 @@
                     'color:#ffd666;background:rgba(0,0,0,.7);padding:4px 8px;border-radius:4px;pointer-events:none;white-space:pre-wrap;';
                 document.body.appendChild(el);
             }
-            el.textContent = 'Discover v1.3.4.0 | ' + msg;
+            el.textContent = 'Discover v1.4.0.0 | ' + msg;
         } catch (e) { }
     }
     var isAdmin = false;
@@ -1443,7 +1443,8 @@
 
     function styleRowButton(btn, item) {
         btn.disabled = item.Status !== 0;
-        btn.textContent = rowStatusText(item.Status);
+        btn.textContent = item.Pending && item.Status === 1
+            ? text('Wacht op goedkeuring', 'Waiting for approval', 'Wartet auf Freigabe') : rowStatusText(item.Status);
         btn.className = 'discover-row-btn' + (item.Status === 2 ? ' is-available' : item.Status === 1 ? ' is-requested' : '');
     }
 
@@ -1469,6 +1470,7 @@
             }).then(function (r) {
                 if (r && r.Success) {
                     item.Status = 1;
+                    if (r.Pending) { item.Pending = true; }
                     toast(item.Title + ': ' + r.Message, false);
                 } else {
                     toast(text('Mislukt: ', 'Failed: ', 'Fehlgeschlagen: ') +

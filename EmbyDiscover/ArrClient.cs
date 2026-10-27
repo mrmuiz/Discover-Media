@@ -18,6 +18,17 @@ namespace Emby.Plugins.Discover
     public class SonarrEpisodeDto { public int id { get; set; } public int seasonNumber { get; set; } public bool monitored { get; set; } public bool hasFile { get; set; } }
     public class ArrQueueItemDto { public int id { get; set; } public int movieId { get; set; } public int seriesId { get; set; } }
     public class ArrQueueDto { public List<ArrQueueItemDto> records { get; set; } }
+    public class ArrTmdbRef { public int tmdbId { get; set; } }
+    public class ArrQueueProgressDto
+    {
+        public double size { get; set; }
+        public double sizeleft { get; set; }
+        public string status { get; set; }
+        public string trackedDownloadState { get; set; }
+        public ArrTmdbRef movie { get; set; }
+        public ArrTmdbRef series { get; set; }
+    }
+    public class ArrQueueProgressPage { public List<ArrQueueProgressDto> records { get; set; } }
     public class RecentEntry { public int TmdbId { get; set; } public bool HasFile { get; set; } public string Added { get; set; } }
 
     /// <summary>Praat met Radarr (films) en Sonarr v4 (series).</summary>
@@ -442,6 +453,42 @@ namespace Emby.Plugins.Discover
             {
                 DiscoverDiagnostics.Add("FOUT seizoensmonitoring " + title + ": " + ex.Message);
             }
+        }
+
+        // ---------- Downloadvoortgang (wachtrij) ----------
+        private static readonly Dictionary<bool, KeyValuePair<DateTime, Dictionary<int, int>>> _queueCache =
+            new Dictionary<bool, KeyValuePair<DateTime, Dictionary<int, int>>>();
+
+        /// <summary>
+        /// tmdbId -> voortgang in procenten (0-100) van wat er nu in de Radarr/Sonarr-wachtrij staat.
+        /// Bij een serie worden alle afleveringen in de wachtrij samengeteld. 30 seconden bewaard.
+        /// </summary>
+        public async Task<Dictionary<int, int>> GetQueueProgress(bool tv, CancellationToken ct)
+        {
+            if (tv ? !SonarrConfigured : !RadarrConfigured) return new Dictionary<int, int>();
+            lock (_queueCache)
+            {
+                KeyValuePair<DateTime, Dictionary<int, int>> hit;
+                if (_queueCache.TryGetValue(tv, out hit) && DateTime.UtcNow - hit.Key < TimeSpan.FromSeconds(30)) return hit.Value;
+            }
+            var cfg = Plugin.GetCurrentConfiguration();
+            var text = await Send(HttpMethod.Get, tv ? cfg.SonarrUrl : cfg.RadarrUrl, tv ? cfg.SonarrApiKey : cfg.RadarrApiKey,
+                "/api/v3/queue?page=1&pageSize=1000" + (tv ? "&includeSeries=true" : "&includeMovie=true"), null, ct).ConfigureAwait(false);
+            var page = _json.DeserializeFromString<ArrQueueProgressPage>(text);
+            var sums = new Dictionary<int, double[]>();
+            foreach (var r in page?.records ?? new List<ArrQueueProgressDto>())
+            {
+                int id = tv ? (r.series?.tmdbId ?? 0) : (r.movie?.tmdbId ?? 0);
+                if (id <= 0 || r.size <= 0) continue;
+                double[] s;
+                if (!sums.TryGetValue(id, out s)) sums[id] = s = new double[2];
+                s[0] += r.size; s[1] += Math.Max(0, r.sizeleft);
+            }
+            var res = new Dictionary<int, int>();
+            foreach (var kv in sums)
+                res[kv.Key] = (int)Math.Round(Math.Max(0, Math.Min(100, 100.0 * (kv.Value[0] - kv.Value[1]) / kv.Value[0])));
+            lock (_queueCache) { _queueCache[tv] = new KeyValuePair<DateTime, Dictionary<int, int>>(DateTime.UtcNow, res); }
+            return res;
         }
 
         // ---------- Verwijderen / aanvraag annuleren ----------

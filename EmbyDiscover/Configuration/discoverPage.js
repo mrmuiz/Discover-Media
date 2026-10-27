@@ -32,14 +32,14 @@ define([], function () {
 
     // Load as an external script so Emby's Content-Security-Policy does not block inline execution.
     function loadButtonScript() {
-        if (window.__discoverRequestButtonVersion === '1.3.4.0') {
-            diag.load = text('script is al actief v1.3.4.0', 'script already active v1.3.4.0', 'Skript bereits aktiv v1.3.4.0');
+        if (window.__discoverRequestButtonVersion === '1.4.0.0') {
+            diag.load = text('script is al actief v1.4.0.0', 'script already active v1.4.0.0', 'Skript bereits aktiv v1.4.0.0');
             showDiag();
             return;
         }
         var urls = [
-            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1340' }),
-            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1340' }),
+            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1400' }),
+            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1400' }),
             ApiClient.getUrl('Plugins/Discover/Script')
         ];
         var n = 0;
@@ -51,7 +51,7 @@ define([], function () {
             script.src = u + (u.indexOf('?') === -1 ? '?' : '&') + '_=' + Date.now();
             script.async = true;
             script.onload = function () {
-                if (window.__discoverRequestButtonVersion === '1.3.4.0') {
+                if (window.__discoverRequestButtonVersion === '1.4.0.0') {
                     diag.load = text('OK via extern script ', 'OK via external script ', 'OK über externes Skript ') + u;
                     showDiag();
                 } else {
@@ -110,7 +110,28 @@ define([], function () {
                 : '<div class="dcNoPoster">' + esc(i.Title) + '</div>';
             return '<div class="dcCard focusable" tabindex="0" role="button" data-key="' + key(i) + '">' + poster +
                 '<span class="dcBadge ' + i.Type + '">' + (i.Type === 'tv' ? 'SERIE' : 'FILM') + '</span>' +
-                '<span class="dcStatus s' + i.Status + '">' + statusIcon(i.Status) + '</span></div>';
+                '<span class="dcStatus s' + i.Status + '">' + statusIcon(i.Status) + '</span>' + requestStateHtml(i) + '</div>';
+        }
+
+        // Alleen in "Mijn aanvragen": status als label onderop de kaart, met voortgangsbalk tijdens het downloaden.
+        function requestStateLabel(i) {
+            switch (i.RequestState) {
+                case 'pending': return text('Wacht op goedkeuring', 'Waiting for approval', 'Wartet auf Freigabe');
+                case 'denied': return text('Geweigerd', 'Denied', 'Abgelehnt');
+                case 'failed': return text('Mislukt', 'Failed', 'Fehlgeschlagen');
+                case 'downloading': return text('Downloaden ', 'Downloading ', 'Lädt ') + (i.Progress || 0) + '%';
+                case 'partial': return text('Gedeeltelijk beschikbaar', 'Partially available', 'Teilweise verfügbar');
+                case 'available': return text('Beschikbaar', 'Available', 'Verfügbar');
+                case 'requested': return text('Aangevraagd', 'Requested', 'Angefordert');
+                default: return '';
+            }
+        }
+
+        function requestStateHtml(i) {
+            if (!i.RequestState) { return ''; }
+            var bar = i.RequestState === 'downloading'
+                ? '<span class="dcReqBar"><span style="width:' + Math.max(2, Math.min(100, i.Progress || 0)) + '%"></span></span>' : '';
+            return '<span class="dcReq st-' + esc(i.RequestState) + '">' + esc(requestStateLabel(i)) + bar + '</span>';
         }
 
         function tileHtml(r, t) {
@@ -263,10 +284,12 @@ define([], function () {
             if (showTrailer) { tb.classList.add('show'); } else { tb.classList.remove('show'); }
             d.disabled = false;
             delArmed = false; clearTimeout(delArmTimer);
-            if (isAdmin && current.Status === 1) { d.textContent = text('Aanvraag annuleren', 'Cancel request', 'Anfrage abbrechen'); d.classList.add('show'); }
+            var pending = current.RequestState === 'pending';
+            if (isAdmin && current.Status === 1 && !pending) { d.textContent = text('Aanvraag annuleren', 'Cancel request', 'Anfrage abbrechen'); d.classList.add('show'); }
             else if (isAdmin && current.Status === 2) { d.textContent = text('Verwijderen', 'Delete', 'Löschen'); d.classList.add('show'); }
             else { d.classList.remove('show'); }
             if (current.Status === 2) { b.textContent = text('Beschikbaar', 'Available', 'Verfügbar'); b.disabled = true; }
+            else if (current.Status === 1 && pending) { b.textContent = text('Wacht op goedkeuring', 'Waiting for approval', 'Wartet auf Freigabe'); b.disabled = true; }
             else if (current.Status === 1) { b.textContent = text('Aangevraagd', 'Requested', 'Angefordert'); b.disabled = true; }
             else { b.textContent = text('Aanvragen', 'Request', 'Anfragen'); b.disabled = false; }
         }
@@ -568,6 +591,7 @@ define([], function () {
             api('POST', 'Discover/RequestItem', null, { Type: i.Type, TmdbId: i.TmdbId }).then(function (r) {
                 if (r && r.Success) {
                     i.Status = 1;
+                    if (r.Pending) { i.RequestState = 'pending'; }
                     refreshCards(i);
                     showToast(i.Title + ': ' + r.Message, false);
                 } else {
