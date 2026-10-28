@@ -30,5 +30,8 @@ namespace Emby.Plugins.Discover
 
         /// <summary>Toon de tegelnaam als tekst op kanaaltegelafbeeldingen. Op false = plaatjes zonder toegevoegde tekst.</summary>
         public bool TileTextImages { get; set; } = true;
+
+        /// <summary>Toon de tegel Trailer naast Aanvragen in het kanaal en de Trailer-knop op de Discover-pagina. Uit = alleen Aanvragen.</summary>
+        public bool ShowTrailerTile { get; set; } = true;
     }
 }

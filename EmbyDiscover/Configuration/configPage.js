@@ -51,6 +51,13 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             'Toon het gele debugbericht en media-informatie op itempagina\'s',
             'Show the yellow debug message and media information on item pages',
             'Gelbe Diagnosemeldung und Medieninformationen auf Detailseiten anzeigen');
+        var trailerLabel = view.querySelector('#lbl_chkShowTrailerTile');
+        if (trailerLabel) {
+            trailerLabel.textContent = languageText(
+                'Toon de tegel Trailer naast Aanvragen (kanaal en Discover-pagina)',
+                'Show the Trailer tile next to Request (channel and Discover page)',
+                'Trailer-Kachel neben Anfragen anzeigen (Kanal und Discover-Seite)');
+        }
         label('txtRadarrUrl', 'URL (bijv. http://192.168.1.10:7878)', 'URL (e.g. http://192.168.1.10:7878)', 'URL (z. B. http://192.168.1.10:7878)');
         label('txtRadarrKey', 'API key', 'API key', 'API-Schlüssel');
         label('selRadarrProfile', 'Quality profile', 'Quality profile', 'Qualitätsprofil');
@@ -242,6 +249,7 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         }).then(function (c) {
             el(view, 'txtTmdbKey').value = c.TmdbApiKey || '';
             el(view, 'chkShowDiagnostics').checked = !!c.ShowDiagnostics;
+            el(view, 'chkShowTrailerTile').checked = c.ShowTrailerTile !== false;
             var browserLanguage = window.navigator && navigator.language;
             applyLanguage(view, c.PluginLanguage && c.PluginLanguage !== 'auto' ? c.PluginLanguage : browserLanguage);
             el(view, 'selPluginLanguage').value = c.PluginLanguage || 'auto';
@@ -292,6 +300,7 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             c.TmdbApiKey = apiKey;
             c.PluginLanguage = el(view, 'selPluginLanguage').value || 'auto';
             c.ShowDiagnostics = el(view, 'chkShowDiagnostics').checked;
+            c.ShowTrailerTile = el(view, 'chkShowTrailerTile').checked;
             c.TmdbLanguageMode = tmdbLanguage === 'auto' ? 'auto' : 'manual';
             if (tmdbLanguage !== 'auto') { c.TmdbLanguage = tmdbLanguage; }
             c.RadarrUrl = el(view, 'txtRadarrUrl').value.trim();
@@ -307,6 +316,7 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
                     if (saved.TmdbApiKey !== apiKey ||
                         saved.PluginLanguage !== c.PluginLanguage ||
                         !!saved.ShowDiagnostics !== c.ShowDiagnostics ||
+                        (saved.ShowTrailerTile !== false) !== c.ShowTrailerTile ||
                         saved.TmdbLanguageMode !== c.TmdbLanguageMode ||
                         (c.TmdbLanguageMode === 'manual' && saved.TmdbLanguage !== c.TmdbLanguage)) {
                         throw new Error('Emby heeft de TMDB-key of taalinstelling niet bevestigd als opgeslagen.');

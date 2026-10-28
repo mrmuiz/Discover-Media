@@ -59,7 +59,7 @@ namespace Emby.Plugins.Discover
         public string HomePageUrl => "";
 
         // Ophogen als Emby oude (bewaarde) kanaalinhoud blijft tonen.
-        public string DataVersion => "70";
+        public string DataVersion => Plugin.GetCurrentConfiguration().ShowTrailerTile ? "70" : "70-notrailer";
         public ChannelParentalRating ParentalRating => ChannelParentalRating.GeneralAudience;
         public bool IsEnabledFor(string userId) => true;
 
@@ -281,15 +281,18 @@ namespace Emby.Plugins.Discover
 
             // Zet de tekst "Aanvragen" resp. "Trailer" op de tegelafbeelding, zodat je de twee tegels direct uit elkaar houdt.
             // Lukt dat niet (of duurt het te lang), dan blijft de gewone achtergrond staan.
+            bool showTrailerTile = Plugin.GetCurrentConfiguration().ShowTrailerTile;
             if (!string.IsNullOrEmpty(t.backdrop_path))
             {
                 var tileKey = "rq" + (tv ? "t" : "m") + tmdbId;
                 var askTile = FolderTile.Create(tileKey + "ask", DiscoverLanguage.Text("Aanvragen", "Request", "Anfragen"),
                     item.ImageUrl, CancellationToken.None);
-                var trailerTile = FolderTile.Create(tileKey + "tr", DiscoverLanguage.Text("Trailer", "Trailer", "Trailer"),
-                    item.ImageUrl, CancellationToken.None);
+                var trailerTile = showTrailerTile
+                    ? FolderTile.Create(tileKey + "tr", DiscoverLanguage.Text("Trailer", "Trailer", "Trailer"),
+                        item.ImageUrl, CancellationToken.None)
+                    : null;
                 var askFile = await TileWithin(askTile, TimeSpan.FromSeconds(8)).ConfigureAwait(false);
-                var trailerFile = await TileWithin(trailerTile, TimeSpan.FromSeconds(8)).ConfigureAwait(false);
+                var trailerFile = trailerTile == null ? null : await TileWithin(trailerTile, TimeSpan.FromSeconds(8)).ConfigureAwait(false);
                 if (askFile != null) item.ImageUrl = askFile;
                 if (trailerFile != null) trailer.ImageUrl = trailerFile;
             }
@@ -297,18 +300,19 @@ namespace Emby.Plugins.Discover
             if (tv)
             {
                 // The Aanvragen: <series> folder is the season selector; do not add a whole-series request tile.
-                return new List<ChannelItemInfo>
-                {
-                    trailer,
-                    Folder(AskSeasonFolderPrefix + rest,
+                var seasonFolder = Folder(AskSeasonFolderPrefix + rest,
                     DiscoverLanguage.Text("Aanvragen: ", "Request: ", "Anfragen: ") + title,
                     item.ImageUrl,
                     DiscoverLanguage.Text("Kies een seizoen om alleen dat seizoen aan te vragen.",
                         "Choose a season to request only that season.",
-                        "Wähle eine Staffel aus, um nur diese anzufordern."))
-                };
+                        "Wähle eine Staffel aus, um nur diese anzufordern."));
+                return showTrailerTile
+                    ? new List<ChannelItemInfo> { trailer, seasonFolder }
+                    : new List<ChannelItemInfo> { seasonFolder };
             }
-            return new List<ChannelItemInfo> { trailer, item };
+            return showTrailerTile
+                ? new List<ChannelItemInfo> { trailer, item }
+                : new List<ChannelItemInfo> { item };
         }
 
         private async Task<ChannelItemResult> RequestSeasons(string rest, CancellationToken ct)

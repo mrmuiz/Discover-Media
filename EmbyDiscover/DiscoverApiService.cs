@@ -155,6 +155,7 @@ namespace Emby.Plugins.Discover
         public string PluginVersion { get; set; }
         public bool TmdbKeySet { get; set; }
         public bool ShowDiagnostics { get; set; }
+        public bool ShowTrailerTile { get; set; }
         public string PluginLanguage { get; set; }
         public string TmdbLanguage { get; set; }
         public bool RadarrSet { get; set; }
@@ -324,6 +325,7 @@ namespace Emby.Plugins.Discover
                 PluginVersion = typeof(Plugin).Assembly.GetName().Version.ToString(),
                 TmdbKeySet = !string.IsNullOrWhiteSpace(cfg.TmdbApiKey),
                 ShowDiagnostics = cfg.ShowDiagnostics,
+                ShowTrailerTile = cfg.ShowTrailerTile,
                 PluginLanguage = DiscoverLanguage.PluginLanguage,
                 TmdbLanguage = TmdbClient.Language(),
                 RadarrSet = ArrClient.RadarrConfigured,
