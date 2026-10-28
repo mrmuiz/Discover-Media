@@ -1,3 +1,10 @@
+## Version 1.3.5.3
+
+- Fix: de vernieuwde posters (titel/jaar/score) en de duidelijke focus werkten wel in de browser, maar **niet op de tv**. Twee oorzaken, allebei verholpen:
+  - De poster-hoogte gebruikte `aspect-ratio`, wat **niet werkt op webOS 6/Chromium 79** (LG-tv's). Vervangen door een vaste hoogte, zodat de posters en de skeleton-laadweergave overal goed renderen. Ook een flex-`gap` vervangen door marges (werkt niet op dezelfde oude browsers).
+  - De **paginanaam** (`discoverui1075`) was stabiel gebleven, waardoor de LG-WebView de oude pagina uit cache bleef tonen. De naam is nu opgehoogd (`discoverui1076`), zodat de tv de verse pagina laadt. De lader detecteert automatisch de nieuwste paginanaam, dus de tegel blijft naar Discover springen.
+- Technisch: plugin- en knop-scriptversie zijn 1.3.5.3; script-resourcenamen `discoveruijs1353` / `discoverbuttonjs1353`; UI-pagina `discoverui1076`.
+
 ## Version 1.3.5.2
 
 - Nieuw: **posters met bijschrift** op de Discover-pagina. Onder elke poster staan nu de **titel, het jaar en de TMDB-score** (met ster), zodat je in één oogopslag ziet wat een titel is zonder hem te openen. Die gegevens kwamen al van de server mee; ze worden nu getoond.
