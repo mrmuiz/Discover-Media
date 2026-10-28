@@ -1,3 +1,11 @@
+## Version 1.3.5.0
+
+- Fix: **Android TV / Fire TV remote control** on the Discover page. Emby's own focus navigation did not know the Discover rows and popup: the focus jumped behind the popup and was pulled back to the close button, so **Request** could not be reached, and the first press down opened the side menu. The page now handles the remote itself through Emby's `command` events: left/right within a row, up/down between the search bar and the rows, the focus starts on the first title, and in the popup you move between Request, Trailer, Delete and the close button. Left on the first title of a row still opens Emby's side menu; Back closes the trailer or popup first, then leaves a genre/studio overview, then the page.
+- Fix: Android TV is now recognised as a TV (Emby's `layout-tv` class, besides LG webOS and Samsung Tizen), so it gets the TV flow: tapping a title opens the popup with Request directly.
+- Fix: the popup on TV no longer falls outside the screen. Sizes are based on the screen (`vh`/`vw`) instead of fixed pixels and Emby's enlarged TV text, with margins against TV overscan; long texts are shortened so the buttons always stay visible. The scroll arrows next to the rows are hidden on TV and the confirmation appears at the top.
+- Trailers on Android TV still use the embedded YouTube player; on webOS/Tizen they keep using the Emby player.
+- Technical: plugin version and request-button script version are both 1.3.5.0; script resource names changed (`discoveruijs1350`, `discoverbuttonjs1350`) to avoid cached scripts.
+
 ## Version 1.3.4.1
 
 - Fix: the setting to turn the Trailer tile on or off was missing from the plugin settings. It is back as a checkbox ("Show the Trailer tile next to Request", on by default). With it off, the channel shows only the Request tile per title (series: only the season folder) and the Discover popup hides the Trailer button. The channel DataVersion changes with the setting, so Emby refreshes the title folders. `/Discover/Status` reports `ShowTrailerTile` again.

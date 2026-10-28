@@ -32,14 +32,14 @@ define([], function () {
 
     // Load as an external script so Emby's Content-Security-Policy does not block inline execution.
     function loadButtonScript() {
-        if (window.__discoverRequestButtonVersion === '1.3.4.1') {
-            diag.load = text('script is al actief v1.3.4.1', 'script already active v1.3.4.1', 'Skript bereits aktiv v1.3.4.1');
+        if (window.__discoverRequestButtonVersion === '1.3.5.0') {
+            diag.load = text('script is al actief v1.3.5.0', 'script already active v1.3.5.0', 'Skript bereits aktiv v1.3.5.0');
             showDiag();
             return;
         }
         var urls = [
-            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1340' }),
-            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1340' }),
+            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1350' }),
+            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1350' }),
             ApiClient.getUrl('Plugins/Discover/Script')
         ];
         var n = 0;
@@ -51,7 +51,7 @@ define([], function () {
             script.src = u + (u.indexOf('?') === -1 ? '?' : '&') + '_=' + Date.now();
             script.async = true;
             script.onload = function () {
-                if (window.__discoverRequestButtonVersion === '1.3.4.1') {
+                if (window.__discoverRequestButtonVersion === '1.3.5.0') {
                     diag.load = text('OK via extern script ', 'OK via external script ', 'OK über externes Skript ') + u;
                     showDiag();
                 } else {
@@ -150,7 +150,9 @@ define([], function () {
                     return true;
                 });
                 var grid = content.querySelector('.dcBrowseGrid');
+                var firstPage = grid && !grid.children.length;
                 if (grid && fresh.length) { grid.insertAdjacentHTML('beforeend', fresh.map(cardHtml).join('')); }
+                if (isTvClient && firstPage && grid.firstElementChild && !overlay.classList.contains('open')) { focusEl(grid.firstElementChild); }
                 b.next = (r && r.NextPage) || (b.next + 2);
                 b.loading = false;
                 if (!list.length) { b.done = true; }
@@ -228,6 +230,8 @@ define([], function () {
                 if (r.Message) { content.innerHTML = '<div class="dcMsg">' + esc(r.Message) + '</div>'; return; }
                 renderRows(r.Rows || []);
                 loaded = true;
+                // TV: meteen op de eerste kaart, behalve als je net in de zoekbalk aan het typen bent.
+                if (isTvClient && document.activeElement !== input && !overlay.classList.contains('open')) { focusFirstItem(); }
             }, function () {
                 content.innerHTML = '<div class="dcMsg">' + text(
                     'Laden mislukt. Controleer of de plugin is bijgewerkt en Emby opnieuw is gestart.',
@@ -304,8 +308,7 @@ define([], function () {
             overlay.classList.add('open');
             // Focus in de popup zetten, anders blijft de afstandsbediening op de kaarten erachter staan.
             setTimeout(function () {
-                var b = overlay.querySelector('.dcBtn');
-                var t = (b && !b.disabled) ? b : overlay.querySelector('.dcClose');
+                var t = firstModalButton(overlay);
                 if (t && t.focus) { t.focus(); }
             }, 60);
         }
@@ -416,10 +419,16 @@ define([], function () {
             }).then(null, function () { return null; });
         }
 
-        // TV-apps (LG webOS, Samsung Tizen): geen kanaalpagina's openen maar direct de popup met Aanvragen.
-        var isTvClient = /Web0S|webOS|Tizen|SMART-?TV|NetCast|HbbTV/i.test(navigator.userAgent || '');
+        // TV-apps: geen kanaalpagina's openen maar direct de popup met Aanvragen.
+        // isWebTv = LG webOS / Samsung Tizen (trailer via de Emby-speler, de ingebedde YouTube-speler werkt daar niet).
+        // isTvClient = elke TV, ook Android TV / Fire TV: Emby zet dan de klasse "layout-tv" op <html>.
+        var ua = navigator.userAgent || '';
+        var isWebTv = /Web0S|webOS|Tizen|SMART-?TV|NetCast|HbbTV/i.test(ua);
+        var de = document.documentElement;
+        var isTvClient = isWebTv || !!(de && de.classList && de.classList.contains('layout-tv')) ||
+            /Android ?TV|GoogleTV|AFT[A-Z]|BRAVIA|SHIELD Android TV/i.test(ua);
         var lastFocus = null;
-        if (isTvClient) { overlay.classList.add('dcTv'); }
+        if (isTvClient) { overlay.classList.add('dcTv'); view.classList.add('dcTvPage'); }
 
         function openItem(i) {
             if (isTvClient) {
@@ -651,7 +660,7 @@ define([], function () {
             if (!i) { return; }
             var b = this;
             b.disabled = true;
-            if (isTvClient) { playTrailerOnTv(i, b); return; }
+            if (isWebTv) { playTrailerOnTv(i, b); return; }
             api('GET', 'Discover/TrailerKey', { Type: i.Type, TmdbId: i.TmdbId }).then(function (r) {
                 b.disabled = false;
                 if (!r || !r.Key) { showToast(text('Geen trailer beschikbaar voor deze titel.', 'No trailer available for this title.', 'Kein Trailer für diesen Titel verfügbar.'), true); return; }
@@ -671,7 +680,9 @@ define([], function () {
             if (!overlay.classList.contains('open')) { return; }
             var host = trailerOverlay.classList.contains('open') ? trailerOverlay : overlay;
             if (!host.contains(e.target)) {
-                var t = host.querySelector('button:not([disabled])');
+                // Terug naar de knoppenrij (Aanvragen eerst), niet naar het kruisje: anders is Aanvragen
+                // met de afstandsbediening onbereikbaar zodra de focus even buiten de popup komt.
+                var t = firstModalButton(host);
                 if (t) { t.focus(); }
             }
         });
@@ -681,6 +692,174 @@ define([], function () {
             if (trailerOverlay.classList.contains('open')) { e.preventDefault(); e.stopPropagation(); closeTrailer(); }
             else if (overlay.classList.contains('open')) { e.preventDefault(); e.stopPropagation(); closeModal(); }
         }, true);
+
+        // ---- Afstandsbediening op TV (Android TV, Fire TV, webOS, Tizen) ----
+        // Emby stuurt elke druk op de pijltjes, OK en Terug eerst als "command"-gebeurtenis rond. Wordt die
+        // geannuleerd, dan doet Emby zelf niets. Zo regelt deze pagina de navigatie zelf: Emby's eigen
+        // ruimtelijke navigatie kent de rijen en de popup van Discover niet, sprong achter de popup en opende
+        // het zijmenu bij de eerste druk omlaag.
+        function isShown(el) { return !!(el && el.offsetParent !== null); }
+        function isUsable(el) { return isShown(el) && !el.disabled; }
+
+        function modalButtons(host) {
+            if (host === trailerOverlay) { return [trailerOverlay.querySelector('.dcTrailerClose')]; }
+            return Array.prototype.filter.call(overlay.querySelectorAll('.dcBtnRow button'), isUsable);
+        }
+        function firstModalButton(host) {
+            return modalButtons(host)[0] || host.querySelector('.dcClose');
+        }
+
+        function focusEl(el) {
+            if (!el) { return; }
+            try { el.focus({ preventScroll: true }); } catch (e) { el.focus(); }
+            if (el.scrollIntoView) {
+                try { el.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch (x) { el.scrollIntoView(false); }
+            }
+        }
+
+        // Regels van boven naar onder: zoekbalk, Terug, elke rij, rasterregels, "Meer laden".
+        function navLines() {
+            var lines = [];
+            if (isShown(input)) { lines.push([input]); }
+            var parts = content.querySelectorAll('.dcBack, .dcRow, .dcGrid, .dcMoreBtn');
+            Array.prototype.forEach.call(parts, function (p) {
+                if (!isShown(p)) { return; }
+                if (p.classList.contains('dcBack') || p.classList.contains('dcMoreBtn')) {
+                    if (isUsable(p)) { lines.push([p]); }
+                    return;
+                }
+                var kids = Array.prototype.filter.call(p.children, function (c) {
+                    return c.classList && (c.classList.contains('dcCard') || c.classList.contains('dcTile'));
+                });
+                if (!kids.length) { return; }
+                if (p.classList.contains('dcRow')) { lines.push(kids); return; }
+                // raster: per regel groeperen op hoogte
+                var byTop = [], tops = [];
+                kids.forEach(function (c) {
+                    var t = Math.round(c.offsetTop / 10);
+                    var k = tops.indexOf(t);
+                    if (k === -1) { tops.push(t); byTop.push([c]); } else { byTop[k].push(c); }
+                });
+                byTop.forEach(function (l) { lines.push(l); });
+            });
+            return lines;
+        }
+
+        function findInLines(lines, el) {
+            for (var a = 0; a < lines.length; a++) {
+                var b = lines[a].indexOf(el);
+                if (b !== -1) { return [a, b]; }
+            }
+            return null;
+        }
+
+        function closestInLine(line, x) {
+            var best = null, bestD = Infinity, w = window.innerWidth || 1920;
+            line.forEach(function (el) {
+                var r = el.getBoundingClientRect();
+                var inView = r.right > 0 && r.left < w;
+                var d = Math.abs(r.left + r.width / 2 - x) + (inView ? 0 : 1e6);
+                if (d < bestD) { bestD = d; best = el; }
+            });
+            return best;
+        }
+
+        function focusFirstItem() {
+            var lines = navLines();
+            var first = null;
+            for (var a = 0; a < lines.length && !first; a++) {
+                if (lines[a][0] !== input) { first = lines[a][0]; }
+            }
+            focusEl(first || input);
+        }
+
+        // true = afgehandeld (Emby moet niets doen)
+        function navPage(dir, active) {
+            var lines = navLines();
+            var pos = findInLines(lines, active);
+            if (!pos) { focusFirstItem(); return true; }
+            var line = lines[pos[0]], i = pos[1];
+            var r = active.getBoundingClientRect(), x = r.left + r.width / 2;
+            if (dir === 'left') {
+                if (i > 0) { focusEl(line[i - 1]); return true; }
+                return false; // helemaal links: Emby mag het zijmenu openen
+            }
+            if (dir === 'right') {
+                if (i < line.length - 1) {
+                    focusEl(line[i + 1]);
+                    var row = line[i + 1].parentNode;
+                    if (row && row.classList.contains('dcRow')) { setTimeout(function () { maybeLoadMore(row); }, 50); }
+                }
+                return true;
+            }
+            if (dir === 'up') {
+                if (pos[0] > 0) { focusEl(closestInLine(lines[pos[0] - 1], x)); return true; }
+                return false; // bovenaan: naar de kopbalk van Emby (terug, start)
+            }
+            if (dir === 'down') {
+                if (pos[0] < lines.length - 1) { focusEl(closestInLine(lines[pos[0] + 1], x)); }
+                return true;
+            }
+            return false;
+        }
+
+        function navModal(dir, active) {
+            if (trailerOverlay.classList.contains('open')) {
+                focusEl(trailerOverlay.querySelector('.dcTrailerClose'));
+                return;
+            }
+            var row = modalButtons(overlay);
+            var close = overlay.querySelector('.dcClose');
+            var i = row.indexOf(active);
+            if (active === close) {
+                if (dir === 'down' || dir === 'left') { focusEl(row[0] || close); }
+                return;
+            }
+            if (i === -1) { focusEl(row[0] || close); return; }
+            if (dir === 'left' && i > 0) { focusEl(row[i - 1]); }
+            else if (dir === 'right' && i < row.length - 1) { focusEl(row[i + 1]); }
+            else if (dir === 'up') { focusEl(close); }
+        }
+
+        var lastKeyClick = 0;
+        content.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' || e.keyCode === 13) { lastKeyClick = Date.now(); }
+        }, true);
+
+        function onCommand(e) {
+            if (!isTvClient || !document.body.contains(view) || !isShown(view.querySelector('.dcRoot'))) { return; }
+            var cmd = e.detail && e.detail.command;
+            var active = document.activeElement;
+            var trailerOpen = trailerOverlay.classList.contains('open');
+            var modalOpen = overlay.classList.contains('open') || trailerOpen;
+            if (cmd === 'back') {
+                if (trailerOpen) { e.preventDefault(); closeTrailer(); return; }
+                if (overlay.classList.contains('open')) { e.preventDefault(); closeModal(); return; }
+                if (browse) { e.preventDefault(); loadHome(); return; } // terug uit een genre-/studio-overzicht
+                return; // anders: Emby verlaat de pagina
+            }
+            if (cmd === 'select') {
+                // OK op een kaart of tegel is al als klik afgehandeld bij keydown; niet nog eens.
+                if (active && active.classList && (active.classList.contains('dcCard') || active.classList.contains('dcTile')) &&
+                    Date.now() - lastKeyClick < 1500) { e.preventDefault(); }
+                return;
+            }
+            if (cmd !== 'up' && cmd !== 'down' && cmd !== 'left' && cmd !== 'right') { return; }
+            if (modalOpen) { e.preventDefault(); navModal(cmd, active); return; }
+            // Zijmenu open of focus in de kopbalk: Emby navigeert zelf; alleen omlaag vanuit de kopbalk naar de pagina.
+            if (active && active.closest && active.closest('.mainDrawer, .navDrawer, .drawer')) { return; }
+            if (active && active.closest && active.closest('.skinHeader')) {
+                if (cmd === 'down') { e.preventDefault(); focusFirstItem(); }
+                return;
+            }
+            if (!active || active === document.body || !view.contains(active)) {
+                e.preventDefault(); focusFirstItem(); return;
+            }
+            if (navPage(cmd, active)) { e.preventDefault(); }
+        }
+
+        view.addEventListener('viewshow', function () { document.addEventListener('command', onCommand, true); });
+        view.addEventListener('viewhide', function () { document.removeEventListener('command', onCommand, true); });
 
         // ---- Directe link vanaf een film-/seriepagina: #!/configurationpage?name=...&openType=movie&openId=123 ----
         function openFromLink() {

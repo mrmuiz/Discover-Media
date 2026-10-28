@@ -5,7 +5,7 @@
     <title>Discover</title>
 </head>
 <body>
-<div data-role="page" class="page type-interior discoverUiPage" data-controller="__plugin/discoveruijs1340">
+<div data-role="page" class="page type-interior discoverUiPage" data-controller="__plugin/discoveruijs1350">
 <style>
 .dcRoot { padding: 5.5em 3% 4em; color: #fff; background:#0b1426; height:100vh; overflow-y:auto; box-sizing:border-box; }
 .dcModal, .dcModal h2, .dcModal .dcOverview { color:#fff; }
@@ -45,7 +45,25 @@
 .dcBtnRow { display:flex; flex-wrap:wrap; align-items:center; }
 .dcBtnRow > * { margin:0 .7em .7em 0; }
 .dcModalBody > img { margin-right:1.4em; }
-.dcOverlay.dcTv .dcModal { font-size:.75em; }
+/* ---- TV (Android TV, Fire TV, webOS, Tizen): compacte popup die altijd binnen beeld blijft ----
+   Tv's snijden de randen af (overscan) en Emby maakt de tekst in TV-modus groter; daarom maten in vh/vw,
+   ruime marges en ingekorte tekst, zodat de knoppen onderaan altijd zichtbaar zijn. */
+.dcOverlay.dcTv { padding:6vh 7vw; box-sizing:border-box; }
+.dcOverlay.dcTv .dcModal { font-size:.75em; width:100%; max-width:100%; max-height:88vh; overflow:hidden; display:flex; flex-direction:column; }
+.dcOverlay.dcTv .dcModalBack { position:absolute; top:0; left:0; right:0; bottom:0; height:auto; border-radius:1em; opacity:.45; }
+.dcOverlay.dcTv .dcModalBack:after { background:linear-gradient(90deg,#0b1426 25%,rgba(11,20,38,.75) 60%,rgba(11,20,38,.45)); }
+.dcOverlay.dcTv .dcModalBody { margin-top:0; padding:5vh 3vw 4vh; align-items:flex-start; min-height:0; max-height:88vh; box-sizing:border-box; }
+.dcOverlay.dcTv .dcModalBody img { width:30vh; height:45vh; flex:0 0 auto; }
+.dcOverlay.dcTv .dcModalBody > img { margin-right:2.5vw; }
+.dcOverlay.dcTv .dcModalInfo { display:flex; flex-direction:column; min-width:0; flex:1 1 auto; max-height:79vh; }
+.dcOverlay.dcTv .dcModalInfo h2 { font-size:1.6em; overflow:hidden; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; }
+.dcOverlay.dcTv .dcInfo { overflow:hidden; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:4; flex:0 0 auto; margin-bottom:.6em; }
+.dcOverlay.dcTv .dcOverview { overflow:hidden; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:4; flex:0 1 auto; min-height:0; margin-bottom:.8em; }
+.dcOverlay.dcTv .dcBtnRow { flex:0 0 auto; }
+.dcOverlay.dcTv .dcClose { top:2vh; right:1.5vw; }
+.dcTvPage .dcArrow { display:none; }
+.dcTvPage .dcToast { bottom:auto; top:7vh; }
+.dcTvPage .dcRoot { padding-left:5%; padding-right:5%; }
 .dcBtnDel { background:#c62828; color:#fff; border:0; border-radius:2em; padding:.8em 1.6em; font-weight:700; font-size:1em; cursor:pointer; display:none; }
 .dcBtnDel.show { display:inline-block; }
 .dcBtnTrailer, .dcBtnOpen { background:rgba(255,255,255,.12); color:#fff; border:1px solid rgba(255,255,255,.3); border-radius:2em; padding:.8em 1.6em; font-weight:700; font-size:1em; cursor:pointer; display:none; }
