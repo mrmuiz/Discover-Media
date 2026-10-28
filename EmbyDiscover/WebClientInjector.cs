@@ -84,7 +84,7 @@ namespace Emby.Plugins.Discover
 
             bool added = AddToIndex(indexPath);
             DiscoverDiagnostics.WebInject = (added ? "actief in " : "al actief in ") + indexPath;
-            try { _logger.Info("Discover: webclient-lader " + DiscoverDiagnostics.WebInject); } catch { }
+            try { _logger.Info("Discover: webclient-lader {0}", DiscoverDiagnostics.WebInject); } catch { }
         }
 
         private string FindIndexHtml(string configuredPath)
