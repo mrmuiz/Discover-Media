@@ -216,6 +216,11 @@ define(['emby-button'], function () {
                     else { ok(lines, text('Bevestigingsclip staat klaar: ', 'Confirmation clip is ready: ', 'Bestätigungsclip ist bereit: ') + r.ClipPath); }
                     if (r.ButtonScript && /^OK/.test(r.ButtonScript)) { ok(lines, text('Aanvragen-knop in de webclient: ', 'Request button in web client: ', 'Anfragen-Schaltfläche im Webclient: ') + translateButtonScript(r.ButtonScript)); }
                     else { bad(lines, text('Aanvragen-knop in de webclient: ', 'Request button in web client: ', 'Anfragen-Schaltfläche im Webclient: ') + translateButtonScript(r.ButtonScript || text('onbekend', 'unknown', 'unbekannt'))); }
+                    var wi = r.WebInject || text('onbekend', 'unknown', 'unbekannt');
+                    var wiLabel = text('Tegel "Discover Media" -> Discover-pagina: ', 'Tile "Discover Media" -> Discover page: ', 'Kachel „Discover Media“ -> Discover-Seite: ');
+                    if (/^(actief|al actief)/.test(wi)) { ok(lines, wiLabel + wi); }
+                    else if (/^(fout|webclient niet gevonden)/.test(wi)) { bad(lines, wiLabel + wi); }
+                    else { info(lines, wiLabel + wi); }
                     info(lines, text('Kanaal opgevraagd door Emby: ', 'Channel requests by Emby: ', 'Kanalaufrufe durch Emby: ') + r.ChannelCalls + 'x; ' + text('aanvragen gelukt/mislukt: ', 'requests succeeded/failed: ', 'Anfragen erfolgreich/fehlgeschlagen: ') + (r.Requests - r.RequestErrors) + '/' + r.RequestErrors);
                 });
             });

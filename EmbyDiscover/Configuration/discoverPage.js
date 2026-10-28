@@ -32,14 +32,14 @@ define([], function () {
 
     // Load as an external script so Emby's Content-Security-Policy does not block inline execution.
     function loadButtonScript() {
-        if (window.__discoverRequestButtonVersion === '1.3.5.0') {
-            diag.load = text('script is al actief v1.3.5.0', 'script already active v1.3.5.0', 'Skript bereits aktiv v1.3.5.0');
+        if (window.__discoverRequestButtonVersion === '1.3.5.1') {
+            diag.load = text('script is al actief v1.3.5.1', 'script already active v1.3.5.1', 'Skript bereits aktiv v1.3.5.1');
             showDiag();
             return;
         }
         var urls = [
-            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1350' }),
-            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1350' }),
+            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1351' }),
+            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1351' }),
             ApiClient.getUrl('Plugins/Discover/Script')
         ];
         var n = 0;
@@ -51,7 +51,7 @@ define([], function () {
             script.src = u + (u.indexOf('?') === -1 ? '?' : '&') + '_=' + Date.now();
             script.async = true;
             script.onload = function () {
-                if (window.__discoverRequestButtonVersion === '1.3.5.0') {
+                if (window.__discoverRequestButtonVersion === '1.3.5.1') {
                     diag.load = text('OK via extern script ', 'OK via external script ', 'OK über externes Skript ') + u;
                     showDiag();
                 } else {
@@ -660,7 +660,12 @@ define([], function () {
             if (!i) { return; }
             var b = this;
             b.disabled = true;
-            if (isWebTv) { playTrailerOnTv(i, b); return; }
+            // Keuze op herkomst, niet op "is het een tv":
+            //  - file:// = ingepakte app (officiële LG/Tizen-app, Android-APK): de ingebedde YouTube-speler
+            //    krijgt geen geldige herkomst, dus via de Emby-speler.
+            //  - http(s):// = browser of een eigen schil-app die de webclient van de server laadt: de ingebedde
+            //    speler werkt daar wel, en de Emby-speler kan in een kale webview (zonder native medialijm) hangen.
+            if (location.protocol === 'file:') { playTrailerOnTv(i, b); return; }
             api('GET', 'Discover/TrailerKey', { Type: i.Type, TmdbId: i.TmdbId }).then(function (r) {
                 b.disabled = false;
                 if (!r || !r.Key) { showToast(text('Geen trailer beschikbaar voor deze titel.', 'No trailer available for this title.', 'Kein Trailer für diesen Titel verfügbar.'), true); return; }

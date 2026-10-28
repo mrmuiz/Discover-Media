@@ -22,6 +22,16 @@ namespace Emby.Plugins.Discover
 
         public static Plugin Instance { get; private set; }
 
+        /// <summary>Versie van de plugin als tekst, voor cache-busting van de webclient-lader.</summary>
+        public static string VersionString
+        {
+            get
+            {
+                try { return typeof(Plugin).Assembly.GetName().Version.ToString(); }
+                catch { return "1.3.5.1"; }
+            }
+        }
+
         public Plugin(
             IApplicationPaths applicationPaths,
             IXmlSerializer xmlSerializer,
@@ -118,12 +128,12 @@ namespace Emby.Plugins.Discover
                 },
                 new PluginPageInfo
                 {
-                    Name = "discoveruijs1350",
+                    Name = "discoveruijs1351",
                     EmbeddedResourcePath = GetType().Namespace + ".Configuration.discoverPage.js"
                 },
                 new PluginPageInfo
                 {
-                    Name = "discoverbuttonjs1350",
+                    Name = "discoverbuttonjs1351",
                     EmbeddedResourcePath = GetType().Namespace + ".Resources.discover-request-button.js"
                 },
                 new PluginPageInfo

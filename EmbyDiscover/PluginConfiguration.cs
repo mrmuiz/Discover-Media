@@ -25,6 +25,11 @@ namespace Emby.Plugins.Discover
         /// <summary>Optioneel: map van de Emby-webclient (met index.html) als die niet vanzelf gevonden wordt.</summary>
         public string DashboardUiPath { get; set; } = "";
 
+        /// <summary>Als dit aan staat, zet de plugin een klein lader-script in de index.html van de Emby-webclient,
+        /// zodat een tik op de tegel/menu-ingang "Discover Media" meteen de Discover-pagina opent (ook in de browser
+        /// en in schil-apps zoals de LG-app) en de Aanvragen-knop overal werkt. Standaard uit.</summary>
+        public bool InjectWebClientLoader { get; set; } = false;
+
         /// <summary>Optioneel: volledig pad naar ffmpeg, voor de bevestigingskaart per titel. Leeg = zoeken op gangbare plekken.</summary>
         public string FfmpegPath { get; set; } = "";
 

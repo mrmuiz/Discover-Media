@@ -58,6 +58,20 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
                 'Show the Trailer tile next to Request (channel and Discover page)',
                 'Trailer-Kachel neben Anfragen anzeigen (Kanal und Discover-Seite)');
         }
+        var injectLabel = view.querySelector('#lbl_chkInjectWebClientLoader');
+        if (injectLabel) {
+            injectLabel.textContent = languageText(
+                'Tegel "Discover Media" opent meteen de Discover-pagina (past de Emby-webclient aan; werkt ook in de browser en in schil-apps zoals de LG-app)',
+                'The "Discover Media" tile opens the Discover page directly (modifies the Emby web client; also works in the browser and in shell apps such as the LG app)',
+                'Kachel „Discover Media“ öffnet direkt die Discover-Seite (ändert den Emby-Webclient; funktioniert auch im Browser und in Shell-Apps wie der LG-App)');
+        }
+        var injectDesc = view.querySelector('#desc_chkInjectWebClientLoader');
+        if (injectDesc) {
+            injectDesc.textContent = languageText(
+                'Zet een klein lader-script in index.html van de webclient. Wordt bij elke serverstart opnieuw toegepast en netjes verwijderd als je dit weer uitzet. Staat de webclient op een andere plek, vul dan het pad in bij "Pad webclient" (leeg = automatisch zoeken).',
+                'Adds a small loader script to the web client index.html. Re-applied on every server start and cleanly removed when you turn this off. If the web client lives elsewhere, set its path under "Web client path" (empty = search automatically).',
+                'Fügt ein kleines Loader-Skript in die index.html des Webclients ein. Wird bei jedem Serverstart erneut angewendet und sauber entfernt, wenn du dies wieder ausschaltest. Liegt der Webclient woanders, trage den Pfad unter „Webclient-Pfad“ ein (leer = automatisch suchen).');
+        }
         label('txtRadarrUrl', 'URL (bijv. http://192.168.1.10:7878)', 'URL (e.g. http://192.168.1.10:7878)', 'URL (z. B. http://192.168.1.10:7878)');
         label('txtRadarrKey', 'API key', 'API key', 'API-Schlüssel');
         label('selRadarrProfile', 'Quality profile', 'Quality profile', 'Qualitätsprofil');
@@ -250,6 +264,7 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             el(view, 'txtTmdbKey').value = c.TmdbApiKey || '';
             el(view, 'chkShowDiagnostics').checked = !!c.ShowDiagnostics;
             el(view, 'chkShowTrailerTile').checked = c.ShowTrailerTile !== false;
+            el(view, 'chkInjectWebClientLoader').checked = !!c.InjectWebClientLoader;
             var browserLanguage = window.navigator && navigator.language;
             applyLanguage(view, c.PluginLanguage && c.PluginLanguage !== 'auto' ? c.PluginLanguage : browserLanguage);
             el(view, 'selPluginLanguage').value = c.PluginLanguage || 'auto';
@@ -301,6 +316,7 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             c.PluginLanguage = el(view, 'selPluginLanguage').value || 'auto';
             c.ShowDiagnostics = el(view, 'chkShowDiagnostics').checked;
             c.ShowTrailerTile = el(view, 'chkShowTrailerTile').checked;
+            c.InjectWebClientLoader = el(view, 'chkInjectWebClientLoader').checked;
             c.TmdbLanguageMode = tmdbLanguage === 'auto' ? 'auto' : 'manual';
             if (tmdbLanguage !== 'auto') { c.TmdbLanguage = tmdbLanguage; }
             c.RadarrUrl = el(view, 'txtRadarrUrl').value.trim();
@@ -317,6 +333,7 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
                         saved.PluginLanguage !== c.PluginLanguage ||
                         !!saved.ShowDiagnostics !== c.ShowDiagnostics ||
                         (saved.ShowTrailerTile !== false) !== c.ShowTrailerTile ||
+                        !!saved.InjectWebClientLoader !== c.InjectWebClientLoader ||
                         saved.TmdbLanguageMode !== c.TmdbLanguageMode ||
                         (c.TmdbLanguageMode === 'manual' && saved.TmdbLanguage !== c.TmdbLanguage)) {
                         throw new Error('Emby heeft de TMDB-key of taalinstelling niet bevestigd als opgeslagen.');
