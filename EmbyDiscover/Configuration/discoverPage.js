@@ -32,14 +32,14 @@ define([], function () {
 
     // Load as an external script so Emby's Content-Security-Policy does not block inline execution.
     function loadButtonScript() {
-        if (window.__discoverRequestButtonVersion === '1.3.5.1') {
-            diag.load = text('script is al actief v1.3.5.1', 'script already active v1.3.5.1', 'Skript bereits aktiv v1.3.5.1');
+        if (window.__discoverRequestButtonVersion === '1.3.5.2') {
+            diag.load = text('script is al actief v1.3.5.2', 'script already active v1.3.5.2', 'Skript bereits aktiv v1.3.5.2');
             showDiag();
             return;
         }
         var urls = [
-            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1351' }),
-            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1351' }),
+            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1352' }),
+            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1352' }),
             ApiClient.getUrl('Plugins/Discover/Script')
         ];
         var n = 0;
@@ -51,7 +51,7 @@ define([], function () {
             script.src = u + (u.indexOf('?') === -1 ? '?' : '&') + '_=' + Date.now();
             script.async = true;
             script.onload = function () {
-                if (window.__discoverRequestButtonVersion === '1.3.5.1') {
+                if (window.__discoverRequestButtonVersion === '1.3.5.2') {
                     diag.load = text('OK via extern script ', 'OK via external script ', 'OK über externes Skript ') + u;
                     showDiag();
                 } else {
@@ -108,9 +108,28 @@ define([], function () {
             var poster = i.Poster
                 ? '<img loading="lazy" src="' + esc(i.Poster) + '" alt="" />'
                 : '<div class="dcNoPoster">' + esc(i.Title) + '</div>';
-            return '<div class="dcCard focusable" tabindex="0" role="button" data-key="' + key(i) + '">' + poster +
-                '<span class="dcBadge ' + i.Type + '">' + (i.Type === 'tv' ? 'SERIE' : 'FILM') + '</span>' +
-                '<span class="dcStatus s' + i.Status + '">' + statusIcon(i.Status) + '</span></div>';
+            var sub = [];
+            if (typeof i.Rating === 'number' && i.Rating > 0) { sub.push('<span class="dcStar">&#9733; ' + i.Rating.toFixed(1) + '</span>'); }
+            if (i.Year) { sub.push('<span>' + i.Year + '</span>'); }
+            return '<div class="dcCard focusable" tabindex="0" role="button" data-key="' + key(i) + '">' +
+                '<div class="dcPoster">' + poster +
+                '<span class="dcBadge ' + i.Type + '">' + (i.Type === 'tv' ? text('SERIE', 'SERIES', 'SERIE') : text('FILM', 'MOVIE', 'FILM')) + '</span>' +
+                '<span class="dcStatus s' + i.Status + '">' + statusIcon(i.Status) + '</span></div>' +
+                '<div class="dcCap"><div class="dcCapT">' + esc(i.Title) + '</div>' +
+                (sub.length ? '<div class="dcCapSub">' + sub.join('') + '</div>' : '') +
+                '</div></div>';
+        }
+
+        // Skeleton tijdens het laden (voelt sneller dan "Laden...").
+        function skelCards(n) {
+            var cards = '';
+            for (var c = 0; c < (n || 8); c++) { cards += '<div class="dcSkel"><div class="dcSkelP"></div><div class="dcSkelT"></div></div>'; }
+            return cards;
+        }
+        function skeletonHtml(rows) {
+            var out = '';
+            for (var r = 0; r < (rows || 3); r++) { out += '<div class="dcRowTitle" style="opacity:.35"> </div><div class="dcSkelRow">' + skelCards(8) + '</div>'; }
+            return out;
         }
 
         function tileHtml(r, t) {
@@ -222,7 +241,7 @@ define([], function () {
 
         function loadHome() {
             browse = null;
-            content.innerHTML = '<div class="dcMsg">' + text('Laden...', 'Loading...', 'Wird geladen...') + '</div>';
+            content.innerHTML = skeletonHtml(3);
             api('GET', 'Discover/Home').then(function (r) {
                 var culture = String(r.Language || '').toLowerCase();
                 uiLanguage = culture.indexOf('nl') === 0 ? 'nl' : culture.indexOf('de') === 0 ? 'de' : 'en';
@@ -242,6 +261,7 @@ define([], function () {
 
         function doSearch(q) {
             browse = null;
+            content.innerHTML = '<div class="dcRowTitle">' + text('Zoeken...', 'Searching...', 'Suchen...') + '</div><div class="dcSkelRow">' + skelCards(8) + '</div>';
             api('GET', 'Discover/Search', { Query: q }).then(function (r) {
                 var list = r.Items || [];
                 content.innerHTML = list.length

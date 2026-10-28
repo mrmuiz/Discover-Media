@@ -1,3 +1,11 @@
+## Version 1.3.5.2
+
+- Nieuw: **posters met bijschrift** op de Discover-pagina. Onder elke poster staan nu de **titel, het jaar en de TMDB-score** (met ster), zodat je in één oogopslag ziet wat een titel is zonder hem te openen. Die gegevens kwamen al van de server mee; ze worden nu getoond.
+- Nieuw: **duidelijkere focus op tv**. De geselecteerde poster wordt groter, krijgt een heldere amberkleurige rand en de titel kleurt mee, zodat je op een tv-scherm altijd ziet waar je staat.
+- Nieuw: **nette laadweergave** (skeleton-posters met een subtiele animatie) in plaats van de tekst "Laden...", zowel op de startpagina als tijdens het zoeken. Voelt sneller.
+- Alleen de weergave van de Discover-pagina is aangepast; navigatie met de afstandsbediening, de popup en het aanvragen blijven ongewijzigd.
+- Technisch: plugin- en knop-scriptversie zijn 1.3.5.2; script-resourcenamen gewijzigd (`discoveruijs1352`, `discoverbuttonjs1352`) om gecachte scripts te vermijden.
+
 ## Version 1.3.5.1
 
 - Fix: **trailers in shell apps (LG webOS / Samsung Tizen / the Android Discover app) no longer hang.** The choice is now made on origin, not on "is this a TV". A shell app that loads the Emby web client over `http(s)` from the server (the LG app, a browser on a TV) uses the embedded YouTube player, because the Emby player can freeze in a bare webview without native media glue. Only a truly packaged app served from `file://` (the official LG/Tizen app, the Android APK) keeps using the Emby player, because the embedded YouTube player has no valid origin there.

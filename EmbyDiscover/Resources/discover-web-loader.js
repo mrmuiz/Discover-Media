@@ -16,7 +16,7 @@
 
     var CHANNEL_NAME = 'Discover Media';
     var KNOWN_UI = ['discoverui1075'];
-    var KNOWN_BTN = ['discoverbuttonjs1351', 'discoverbuttonjs1350', 'discoverbuttonjs1340'];
+    var KNOWN_BTN = ['discoverbuttonjs1352', 'discoverbuttonjs1351', 'discoverbuttonjs1350', 'discoverbuttonjs1340'];
 
     function log(m) { try { console.log('[Discover web] ' + m); } catch (e) { } }
     function api() {
