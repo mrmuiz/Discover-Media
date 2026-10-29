@@ -32,14 +32,14 @@ define([], function () {
 
     // Load as an external script so Emby's Content-Security-Policy does not block inline execution.
     function loadButtonScript() {
-        if (window.__discoverRequestButtonVersion === '1.3.5.4') {
-            diag.load = text('script is al actief v1.3.5.4', 'script already active v1.3.5.4', 'Skript bereits aktiv v1.3.5.4');
+        if (window.__discoverRequestButtonVersion === '1.3.6.0') {
+            diag.load = text('script is al actief v1.3.6.0', 'script already active v1.3.6.0', 'Skript bereits aktiv v1.3.6.0');
             showDiag();
             return;
         }
         var urls = [
-            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1354' }),
-            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1354' }),
+            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1360' }),
+            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1360' }),
             ApiClient.getUrl('Plugins/Discover/Script')
         ];
         var n = 0;
@@ -51,7 +51,7 @@ define([], function () {
             script.src = u + (u.indexOf('?') === -1 ? '?' : '&') + '_=' + Date.now();
             script.async = true;
             script.onload = function () {
-                if (window.__discoverRequestButtonVersion === '1.3.5.4') {
+                if (window.__discoverRequestButtonVersion === '1.3.6.0') {
                     diag.load = text('OK via extern script ', 'OK via external script ', 'OK über externes Skript ') + u;
                     showDiag();
                 } else {

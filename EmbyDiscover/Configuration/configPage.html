@@ -69,6 +69,17 @@
                     </label>
                     <div class="fieldDescription" id="desc_chkInjectWebClientLoader">Zet een klein lader-script in index.html van de webclient. Wordt bij elke serverstart opnieuw toegepast en netjes verwijderd als je dit weer uitzet. Staat de webclient op een andere plek, vul dan het pad in bij "Pad webclient" (leeg = automatisch zoeken).</div>
                 </div>
+                <div class="checkboxContainer">
+                    <label class="emby-checkbox-label">
+                        <input is="emby-checkbox" type="checkbox" id="chkNativeShellMode" />
+                        <span class="checkboxLabel" id="lbl_chkNativeShellMode">webOS app-modus (NativeShell): laat een tv-schil zich 1-op-1 als de Emby-app gedragen (afsluitmenu, Server/Gebruiker wisselen)</span>
+                        <span class="emby-checkbox-outline">
+                            <span class="emby-checkbox-on"><i class="md-icon">check</i></span>
+                            <span class="emby-checkbox-off"></span>
+                        </span>
+                    </label>
+                    <div class="fieldDescription" id="desc_chkNativeShellMode">Alleen op webOS/Tizen actief; browsers merken er niets van. Zet Emby's "app-modus" aan zodat Back het afsluitmenu toont, net als de officiele app. Het afspelen blijft via de browser. Werkt de tv niet goed (wit scherm of afspelen hapert), zet dit dan weer uit vanaf de PC-browser.</div>
+                </div>
 
                 <div>
                     <button is="emby-button" type="button" class="raised btnTestTmdb"><span>Test TMDB-key</span></button>

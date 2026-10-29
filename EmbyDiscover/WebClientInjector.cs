@@ -21,6 +21,10 @@ namespace Emby.Plugins.Discover
         private const string StartMark = "<!--discover-loader-start-->";
         private const string EndMark = "<!--discover-loader-end-->";
 
+        private const string NsFile = "discover-nativeshell.js";
+        private const string NsStart = "<!--discover-ns-start-->";
+        private const string NsEnd = "<!--discover-ns-end-->";
+
         private readonly ILogger _logger;
 
         public WebClientInjector(ILogManager logManager)
@@ -42,12 +46,13 @@ namespace Emby.Plugins.Discover
 
         private void Apply()
         {
-            bool enabled = false;
+            bool loaderOn = false, nsOn = false;
             string configuredPath = "";
             try
             {
                 var cfg = Plugin.GetCurrentConfiguration();
-                enabled = cfg.InjectWebClientLoader;
+                loaderOn = cfg.InjectWebClientLoader;
+                nsOn = cfg.NativeShellMode;
                 configuredPath = cfg.DashboardUiPath ?? "";
             }
             catch { }
@@ -55,36 +60,90 @@ namespace Emby.Plugins.Discover
             string indexPath = FindIndexHtml(configuredPath);
             if (indexPath == null)
             {
-                DiscoverDiagnostics.WebInject = enabled
+                string msg = (loaderOn || nsOn)
                     ? "webclient niet gevonden; vul het pad van de webclient-map (met index.html) in bij de instellingen"
                     : "uit";
+                DiscoverDiagnostics.WebInject = msg;
+                DiscoverDiagnostics.NativeShell = msg;
                 return;
             }
 
+            DiscoverDiagnostics.WebInject = ApplyLoader(indexPath, loaderOn);
+            DiscoverDiagnostics.NativeShell = ApplyNativeShell(indexPath, nsOn);
+            try { _logger.Info("Discover: webclient-injectie tegel={0}; app-modus={1}", DiscoverDiagnostics.WebInject, DiscoverDiagnostics.NativeShell); } catch { }
+        }
+
+        // Lader (tegel -> Discover + knop globaal): een extern <script> voor </body>.
+        private string ApplyLoader(string indexPath, bool enabled)
+        {
             string dir = Path.GetDirectoryName(indexPath);
             string loaderPath = Path.Combine(dir, LoaderFile);
-
             if (!enabled)
             {
                 bool removed = RemoveFromIndex(indexPath);
                 try { if (File.Exists(loaderPath)) File.Delete(loaderPath); } catch { }
-                DiscoverDiagnostics.WebInject = removed ? "verwijderd uit " + indexPath : "uit";
-                return;
+                return removed ? "verwijderd uit " + indexPath : "uit";
             }
-
-            // lader-bestand (opnieuw) schrijven
-            using (var src = GetType().Assembly.GetManifestResourceStream(GetType().Namespace + ".Resources." + LoaderFile))
+            try
             {
-                if (src == null) { DiscoverDiagnostics.WebInject = "fout: lader ontbreekt in de DLL"; return; }
-                var tmp = loaderPath + "." + Guid.NewGuid().ToString("N") + ".tmp";
-                using (var dst = File.Create(tmp)) { src.CopyTo(dst); }
-                if (File.Exists(loaderPath)) File.Delete(loaderPath);
-                File.Move(tmp, loaderPath);
+                using (var src = GetType().Assembly.GetManifestResourceStream(GetType().Namespace + ".Resources." + LoaderFile))
+                {
+                    if (src == null) { return "fout: lader ontbreekt in de DLL"; }
+                    var tmp = loaderPath + "." + Guid.NewGuid().ToString("N") + ".tmp";
+                    using (var dst = File.Create(tmp)) { src.CopyTo(dst); }
+                    if (File.Exists(loaderPath)) File.Delete(loaderPath);
+                    File.Move(tmp, loaderPath);
+                }
+                bool added = AddToIndex(indexPath);
+                return (added ? "actief in " : "al actief in ") + indexPath;
             }
+            catch (Exception ex) { return "fout: " + ex.Message; }
+        }
 
-            bool added = AddToIndex(indexPath);
-            DiscoverDiagnostics.WebInject = (added ? "actief in " : "al actief in ") + indexPath;
-            try { _logger.Info("Discover: webclient-lader {0}", DiscoverDiagnostics.WebInject); } catch { }
+        // NativeShell (webOS app-modus): inline <script> VROEG in <head>, zodat Emby de app-modus kiest.
+        private string ApplyNativeShell(string indexPath, bool enabled)
+        {
+            try
+            {
+                bool bom;
+                string html = ReadText(indexPath, out bom);
+                string cleaned = StripBlock(html, NsStart, NsEnd);
+                if (!enabled)
+                {
+                    if (cleaned == html) { return "uit"; }
+                    WriteText(indexPath, cleaned, bom);
+                    return "verwijderd uit " + indexPath;
+                }
+                string shim;
+                using (var src = GetType().Assembly.GetManifestResourceStream(GetType().Namespace + ".Resources." + NsFile))
+                {
+                    if (src == null) { return "fout: NativeShell ontbreekt in de DLL"; }
+                    using (var r = new StreamReader(src, Encoding.UTF8)) { shim = r.ReadToEnd(); }
+                }
+                int head = cleaned.IndexOf("<head", StringComparison.OrdinalIgnoreCase);
+                int headEnd = head >= 0 ? cleaned.IndexOf('>', head) : -1;
+                string block = NsStart + "<script>\n" + shim + "\n</scr" + "ipt>" + NsEnd;
+                string result = headEnd >= 0
+                    ? cleaned.Substring(0, headEnd + 1) + "\n" + block + cleaned.Substring(headEnd + 1)
+                    : block + cleaned;
+                if (result == html) { return "al actief in " + indexPath; }
+                WriteText(indexPath, result, bom);
+                return "actief in " + indexPath;
+            }
+            catch (Exception ex) { return "fout: " + ex.Message; }
+        }
+
+        private string StripBlock(string html, string start, string end)
+        {
+            int a = html.IndexOf(start, StringComparison.Ordinal);
+            int b = html.IndexOf(end, StringComparison.Ordinal);
+            if (a >= 0 && b > a)
+            {
+                int e = b + end.Length;
+                string before = html.Substring(0, a).TrimEnd('\r', '\n', ' ', '\t');
+                return before + html.Substring(e);
+            }
+            return html;
         }
 
         private string FindIndexHtml(string configuredPath)

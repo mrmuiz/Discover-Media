@@ -72,6 +72,20 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
                 'Adds a small loader script to the web client index.html. Re-applied on every server start and cleanly removed when you turn this off. If the web client lives elsewhere, set its path under "Web client path" (empty = search automatically).',
                 'Fügt ein kleines Loader-Skript in die index.html des Webclients ein. Wird bei jedem Serverstart erneut angewendet und sauber entfernt, wenn du dies wieder ausschaltest. Liegt der Webclient woanders, trage den Pfad unter „Webclient-Pfad“ ein (leer = automatisch suchen).');
         }
+        var nsLabel = view.querySelector('#lbl_chkNativeShellMode');
+        if (nsLabel) {
+            nsLabel.textContent = languageText(
+                'webOS app-modus (NativeShell): laat een tv-schil zich 1-op-1 als de Emby-app gedragen (afsluitmenu, Server/Gebruiker wisselen)',
+                'webOS app mode (NativeShell): make a TV shell behave 1:1 like the Emby app (exit menu, change server/user)',
+                'webOS-App-Modus (NativeShell): eine TV-Hülle verhält sich 1:1 wie die Emby-App (Beenden-Menü, Server/Benutzer wechseln)');
+        }
+        var nsDesc = view.querySelector('#desc_chkNativeShellMode');
+        if (nsDesc) {
+            nsDesc.textContent = languageText(
+                'Alleen op webOS/Tizen actief; browsers merken er niets van. Zet Emby\'s "app-modus" aan zodat Back het afsluitmenu toont, net als de officiele app. Het afspelen blijft via de browser. Werkt de tv niet goed (wit scherm of afspelen hapert), zet dit dan weer uit vanaf de PC-browser.',
+                'Only active on webOS/Tizen; browsers are unaffected. Turns on Emby\'s "app mode" so Back shows the exit menu, like the official app. Playback stays via the browser. If the TV misbehaves (blank screen or playback issues), turn this off again from the PC browser.',
+                'Nur auf webOS/Tizen aktiv; Browser sind nicht betroffen. Aktiviert Embys „App-Modus“, damit Zurück das Beenden-Menü zeigt, wie die offizielle App. Die Wiedergabe läuft weiter über den Browser. Wenn der Fernseher Probleme macht (schwarzer Bildschirm oder Wiedergabefehler), schalte dies über den PC-Browser wieder aus.');
+        }
         label('txtRadarrUrl', 'URL (bijv. http://192.168.1.10:7878)', 'URL (e.g. http://192.168.1.10:7878)', 'URL (z. B. http://192.168.1.10:7878)');
         label('txtRadarrKey', 'API key', 'API key', 'API-Schlüssel');
         label('selRadarrProfile', 'Quality profile', 'Quality profile', 'Qualitätsprofil');
@@ -265,6 +279,7 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             el(view, 'chkShowDiagnostics').checked = !!c.ShowDiagnostics;
             el(view, 'chkShowTrailerTile').checked = c.ShowTrailerTile !== false;
             el(view, 'chkInjectWebClientLoader').checked = !!c.InjectWebClientLoader;
+            el(view, 'chkNativeShellMode').checked = !!c.NativeShellMode;
             var browserLanguage = window.navigator && navigator.language;
             applyLanguage(view, c.PluginLanguage && c.PluginLanguage !== 'auto' ? c.PluginLanguage : browserLanguage);
             el(view, 'selPluginLanguage').value = c.PluginLanguage || 'auto';
@@ -317,6 +332,7 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             c.ShowDiagnostics = el(view, 'chkShowDiagnostics').checked;
             c.ShowTrailerTile = el(view, 'chkShowTrailerTile').checked;
             c.InjectWebClientLoader = el(view, 'chkInjectWebClientLoader').checked;
+            c.NativeShellMode = el(view, 'chkNativeShellMode').checked;
             c.TmdbLanguageMode = tmdbLanguage === 'auto' ? 'auto' : 'manual';
             if (tmdbLanguage !== 'auto') { c.TmdbLanguage = tmdbLanguage; }
             c.RadarrUrl = el(view, 'txtRadarrUrl').value.trim();
@@ -334,6 +350,7 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
                         !!saved.ShowDiagnostics !== c.ShowDiagnostics ||
                         (saved.ShowTrailerTile !== false) !== c.ShowTrailerTile ||
                         !!saved.InjectWebClientLoader !== c.InjectWebClientLoader ||
+                        !!saved.NativeShellMode !== c.NativeShellMode ||
                         saved.TmdbLanguageMode !== c.TmdbLanguageMode ||
                         (c.TmdbLanguageMode === 'manual' && saved.TmdbLanguage !== c.TmdbLanguage)) {
                         throw new Error('Emby heeft de TMDB-key of taalinstelling niet bevestigd als opgeslagen.');

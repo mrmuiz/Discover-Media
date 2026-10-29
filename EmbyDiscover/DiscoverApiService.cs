@@ -168,6 +168,7 @@ namespace Emby.Plugins.Discover
         public string ClipError { get; set; }
         public string ButtonScript { get; set; }
         public string WebInject { get; set; }
+        public string NativeShell { get; set; }
         public List<string> Events { get; set; } = new List<string>();
     }
 
@@ -341,6 +342,7 @@ namespace Emby.Plugins.Discover
                     "OK Emby plugin resource; open Discover to load the script in this browser.",
                     "OK Emby-Pluginressource; öffne Discover, um das Skript in diesem Browser zu laden."),
                 WebInject = DiscoverDiagnostics.WebInject,
+                NativeShell = DiscoverDiagnostics.NativeShell,
                 Events = DiscoverDiagnostics.Snapshot()
             };
         }
