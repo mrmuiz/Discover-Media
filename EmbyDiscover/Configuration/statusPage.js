@@ -221,11 +221,6 @@ define(['emby-button'], function () {
                     if (/^(actief|al actief)/.test(wi)) { ok(lines, wiLabel + wi); }
                     else if (/^(fout|webclient niet gevonden)/.test(wi)) { bad(lines, wiLabel + wi); }
                     else { info(lines, wiLabel + wi); }
-                    var ns = r.NativeShell || text('onbekend', 'unknown', 'unbekannt');
-                    var nsLabel = text('webOS app-modus (NativeShell): ', 'webOS app mode (NativeShell): ', 'webOS-App-Modus (NativeShell): ');
-                    if (/^(actief|al actief)/.test(ns)) { ok(lines, nsLabel + ns); }
-                    else if (/^(fout|webclient niet gevonden)/.test(ns)) { bad(lines, nsLabel + ns); }
-                    else { info(lines, nsLabel + ns); }
                     info(lines, text('Kanaal opgevraagd door Emby: ', 'Channel requests by Emby: ', 'Kanalaufrufe durch Emby: ') + r.ChannelCalls + 'x; ' + text('aanvragen gelukt/mislukt: ', 'requests succeeded/failed: ', 'Anfragen erfolgreich/fehlgeschlagen: ') + (r.Requests - r.RequestErrors) + '/' + r.RequestErrors);
                 });
             });

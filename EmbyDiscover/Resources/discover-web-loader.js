@@ -1,7 +1,7 @@
 /* Discover Media - lader voor de Emby-webclient (server-kant).
  *
  * De plugin zet dit script in de index.html van de webclient op de server, zodat het op ELKE
- * pagina draait (browser en eigen schil-apps zoals de LG-app). Het doet twee dingen:
+ * pagina draait (de browser en apps die de webclient van de server laden). Het doet twee dingen:
  *   1. Een tik op de tegel/menu-ingang "Discover Media" (het kanaal) opent meteen de Discover-pagina.
  *   2. Het Aanvragen-knop-script wordt globaal geladen, zodat de knop ook op gewone Emby-detailpagina's
  *      werkt zonder dat je eerst Discover hoeft te openen.
@@ -15,8 +15,8 @@
     window.__discoverWebLoader = 1;
 
     var CHANNEL_NAME = 'Discover Media';
-    var KNOWN_UI = ['discoverui1076', 'discoverui1075'];
-    var KNOWN_BTN = ['discoverbuttonjs1360', 'discoverbuttonjs1354', 'discoverbuttonjs1353', 'discoverbuttonjs1352', 'discoverbuttonjs1351', 'discoverbuttonjs1350', 'discoverbuttonjs1340'];
+    var KNOWN_UI = ['discoverui1077', 'discoverui1076', 'discoverui1075'];
+    var KNOWN_BTN = ['discoverbuttonjs1370', 'discoverbuttonjs1360', 'discoverbuttonjs1354', 'discoverbuttonjs1353', 'discoverbuttonjs1352', 'discoverbuttonjs1351', 'discoverbuttonjs1350', 'discoverbuttonjs1340'];
 
     function log(m) { try { console.log('[Discover web] ' + m); } catch (e) { } }
     function api() {

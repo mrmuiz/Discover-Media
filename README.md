@@ -8,7 +8,7 @@
   Browse movies and series from TMDB in Emby, watch trailers, and send requests to Radarr or Sonarr.
 </p>
 
-> **Status: stable.** The current version is **1.3.4.1**, built against the Emby SDK package `MediaBrowser.Server.Core` 4.10.0.1-beta so that one dll runs on both Emby Server 4.10.2 and 4.11 (beta). It has been installed on both; other Emby versions may work but have not been individually tested. Please report problems through [Issues](../../issues) and include the relevant diagnostics (see [Troubleshooting](#troubleshooting)).
+> **Status: stable.** The current version is **1.3.4.2**, built against the Emby SDK package `MediaBrowser.Server.Core` 4.10.0.1-beta so that one dll runs on both Emby Server 4.10.2 and 4.11 (beta). It has been installed on both; other Emby versions may work but have not been individually tested. Please report problems through [Issues](../../issues) and include the relevant diagnostics (see [Troubleshooting](#troubleshooting)).
 
 ## Screenshots
 
@@ -82,6 +82,18 @@
 - The Request and Trailer tiles carry the text "Request" and "Trailer" on their image so they are easy to tell apart.
 - Follows the plugin language (Dutch, English or German) in the channel, on the Discover page and in the status and diagnostics pages.
 
+## Which Emby apps get what
+
+| | Web client (browser) | Official Emby apps (LG, Samsung, Android TV, mobile, ...) |
+|---|---|---|
+| **Discover Media** channel: browse, Request and Trailer tiles | Yes | Yes |
+| Requesting through Radarr / Sonarr | Yes | Yes (press Play on the Request item) |
+| **Discover** page with search and popup | Yes | No |
+| Request button, *More like this*, *Collection* and *Not in your library* on normal detail pages | Yes | No |
+| Tile opens the Discover page directly (optional setting) | Yes | No |
+
+The official Emby apps ship their own built-in client, which a plugin cannot extend. In those apps everything goes through the **Discover Media** channel, which works everywhere.
+
 ## Requirements
 
 - Emby Server 4.10.2 or newer (4.11 beta included). The plugin is built against `MediaBrowser.Server.Core` 4.10.0.1-beta; it has been installed on Emby Server 4.10.2.0 and on the 4.11 beta.
@@ -99,7 +111,7 @@
 6. Give the intended users access to channels in their Emby user settings.
 7. **For the first channel load, run the Internet Channels refresh once:** open **Dashboard > Scheduled Tasks > Internet Channels** and start **Refresh Internet Channels**. The initial refresh can take several minutes or longer. Leave it running until it finishes; be patient and do not repeatedly start the task.
 
-The request-button script is embedded in the plugin DLL and is loaded by the browser when **Discover** is opened. The plugin does **not** edit `index.html` or other Emby web-client files, require write access to Emby's installation folders, or install a separate JavaScript file. After a browser hard refresh (`Ctrl+F5`), open **Discover** again to load the button script in that browser. Native Emby apps do not run browser scripts and use the Play-based request flow in the **Discover Media** channel.
+The request-button script is embedded in the plugin DLL and is loaded by the browser when **Discover** is opened. By default the plugin does **not** edit `index.html` or other Emby web-client files and needs no write access to Emby's installation folders. Only the optional setting **Tile opens the Discover page** adds a small loader script to the web client's `index.html` (see [Configuration](#configuration)). After a browser hard refresh (`Ctrl+F5`), open **Discover** again to load the button script in that browser. Native Emby apps do not run browser scripts and use the Play-based request flow in the **Discover Media** channel.
 
 For Docker, do not use `localhost` for Radarr or Sonarr unless those services share the Emby container's network namespace. Use an address that Emby can reach, such as a service/container name on the same Docker network or the host's LAN address.
 
@@ -126,6 +138,8 @@ The request confirmation clip shows a large poster with the status (Requested / 
 | Quality profile and root folder | Selects the destination settings used for requests. Choose values returned by **Test connection**. |
 | Show Diagnostics | Optional yellow debug message and technical media information on item pages. **Off by default.** |
 | Show the Trailer tile | Shows the "Trailer: title" tile next to "Request" in the channel. **On by default.** Turn it off to keep only the request tile. |
+| Tile opens the Discover page | Web client only. A tap on the **Discover Media** tile opens the Discover page directly, and the Request button works on detail pages without opening Discover first. Adds a small loader to the web client's `index.html`, re-applied on every server start and removed when turned off. **Off by default.** |
+| Web client path | Only needed when the web client folder (with `index.html`) is not found automatically. Leave empty. |
 
 API keys are stored in the plugin configuration and masked in the settings form by default.
 
@@ -146,6 +160,7 @@ Other common causes:
 
 - The user cannot see the channel: grant channel access in that user's Emby settings.
 - Radarr or Sonarr cannot be reached from Emby: verify the URL from the server/container, not just from a desktop browser.
+- **Tile opens the Discover page** reports "Access denied" (Docker): Emby's web client folder is read-only for the Emby user. Make it writable once and restart Emby, for example `docker exec -u 0 emby chmod -R u+rwX,g+rwX /system/dashboard-ui && docker restart emby` (adjust the container name). An Emby image update (for example through Watchtower) resets this, so repeat it after updating.
 - Old channel artwork or entries remain cached: run **Refresh Internet Channels** and wait for completion; Emby may retain channel items between requests.
 
 ## Build

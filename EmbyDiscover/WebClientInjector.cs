@@ -21,7 +21,7 @@ namespace Emby.Plugins.Discover
         private const string StartMark = "<!--discover-loader-start-->";
         private const string EndMark = "<!--discover-loader-end-->";
 
-        private const string NsFile = "discover-nativeshell.js";
+        // Restant van 1.3.6.0 (webOS app-modus, verwijderd): wordt bij elke start opgeruimd.
         private const string NsStart = "<!--discover-ns-start-->";
         private const string NsEnd = "<!--discover-ns-end-->";
 
@@ -46,13 +46,12 @@ namespace Emby.Plugins.Discover
 
         private void Apply()
         {
-            bool loaderOn = false, nsOn = false;
+            bool loaderOn = false;
             string configuredPath = "";
             try
             {
                 var cfg = Plugin.GetCurrentConfiguration();
                 loaderOn = cfg.InjectWebClientLoader;
-                nsOn = cfg.NativeShellMode;
                 configuredPath = cfg.DashboardUiPath ?? "";
             }
             catch { }
@@ -60,17 +59,15 @@ namespace Emby.Plugins.Discover
             string indexPath = FindIndexHtml(configuredPath);
             if (indexPath == null)
             {
-                string msg = (loaderOn || nsOn)
+                DiscoverDiagnostics.WebInject = loaderOn
                     ? "webclient niet gevonden; vul het pad van de webclient-map (met index.html) in bij de instellingen"
                     : "uit";
-                DiscoverDiagnostics.WebInject = msg;
-                DiscoverDiagnostics.NativeShell = msg;
                 return;
             }
 
             DiscoverDiagnostics.WebInject = ApplyLoader(indexPath, loaderOn);
-            DiscoverDiagnostics.NativeShell = ApplyNativeShell(indexPath, nsOn);
-            try { _logger.Info("Discover: webclient-injectie tegel={0}; app-modus={1}", DiscoverDiagnostics.WebInject, DiscoverDiagnostics.NativeShell); } catch { }
+            string ns = RemoveNativeShell(indexPath);
+            try { _logger.Info("Discover: webclient-lader {0}; oude app-modus-shim {1}", DiscoverDiagnostics.WebInject, ns); } catch { }
         }
 
         // Lader (tegel -> Discover + knop globaal): een extern <script> voor </body>.
@@ -100,35 +97,18 @@ namespace Emby.Plugins.Discover
             catch (Exception ex) { return "fout: " + ex.Message; }
         }
 
-        // NativeShell (webOS app-modus): inline <script> VROEG in <head>, zodat Emby de app-modus kiest.
-        private string ApplyNativeShell(string indexPath, bool enabled)
+        // De webOS app-modus (NativeShell-shim, 1.3.6.0) is geschrapt. Stond die nog in de index.html,
+        // dan halen we hem hier weg, zodat er na de update niets van achterblijft.
+        private string RemoveNativeShell(string indexPath)
         {
             try
             {
                 bool bom;
                 string html = ReadText(indexPath, out bom);
                 string cleaned = StripBlock(html, NsStart, NsEnd);
-                if (!enabled)
-                {
-                    if (cleaned == html) { return "uit"; }
-                    WriteText(indexPath, cleaned, bom);
-                    return "verwijderd uit " + indexPath;
-                }
-                string shim;
-                using (var src = GetType().Assembly.GetManifestResourceStream(GetType().Namespace + ".Resources." + NsFile))
-                {
-                    if (src == null) { return "fout: NativeShell ontbreekt in de DLL"; }
-                    using (var r = new StreamReader(src, Encoding.UTF8)) { shim = r.ReadToEnd(); }
-                }
-                int head = cleaned.IndexOf("<head", StringComparison.OrdinalIgnoreCase);
-                int headEnd = head >= 0 ? cleaned.IndexOf('>', head) : -1;
-                string block = NsStart + "<script>\n" + shim + "\n</scr" + "ipt>" + NsEnd;
-                string result = headEnd >= 0
-                    ? cleaned.Substring(0, headEnd + 1) + "\n" + block + cleaned.Substring(headEnd + 1)
-                    : block + cleaned;
-                if (result == html) { return "al actief in " + indexPath; }
-                WriteText(indexPath, result, bom);
-                return "actief in " + indexPath;
+                if (cleaned == html) { return "niet aanwezig"; }
+                WriteText(indexPath, cleaned, bom);
+                return "verwijderd uit " + indexPath;
             }
             catch (Exception ex) { return "fout: " + ex.Message; }
         }

@@ -18,8 +18,6 @@ namespace Emby.Plugins.Discover
         public static string ButtonScript = "OK Emby-pluginresource; open Discover om het script in deze browser te laden.";
         /// <summary>Resultaat van het (optioneel) in de webclient-index.html zetten van de lader (tegel -> Discover).</summary>
         public static string WebInject = "uit";
-        /// <summary>Resultaat van het (optioneel) inzetten van de NativeShell-shim (webOS app-modus).</summary>
-        public static string NativeShell = "uit";
 
         public static void Add(string text)
         {
