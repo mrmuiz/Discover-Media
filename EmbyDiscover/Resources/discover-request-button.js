@@ -3,14 +3,14 @@
  * Verbergt ook "Media informatie" op Discover/Trailers-detailpagina's. */
 (function () {
     'use strict';
-    if (window.__discoverRequestButtonVersion === '1.3.5.3') { return; }
+    if (window.__discoverRequestButtonVersion === '1.3.5.4') { return; }
     if (window.__discoverRequestButton) {
         console.warn('[Discover] oudere knopcode is nog actief; vernieuw de webclient om dubbele handlers te voorkomen.');
         return;
     }
     window.__discoverRequestButton = true;
-    window.__discoverRequestButtonVersion = '1.3.5.3';
-    console.log('[Discover] request-button script loaded v1.3.5.3');
+    window.__discoverRequestButtonVersion = '1.3.5.4';
+    console.log('[Discover] request-button script loaded v1.3.5.4');
 
     var uiLanguage = 'nl';
     function text(dutch, english, german) {
@@ -41,7 +41,7 @@
                     'color:#ffd666;background:rgba(0,0,0,.7);padding:4px 8px;border-radius:4px;pointer-events:none;white-space:pre-wrap;';
                 document.body.appendChild(el);
             }
-            el.textContent = 'Discover v1.3.5.3 | ' + msg;
+            el.textContent = 'Discover v1.3.5.4 | ' + msg;
         } catch (e) { }
     }
     var isAdmin = false;
@@ -1657,7 +1657,26 @@
         } catch (e) { }
     }
 
+    // Op Emby's instellingen-/dashboard-/pluginpagina's heeft dit script niets te doen. Daar laten we
+    // alles rusten (observer uit), zodat de trage tv-remote er niet door gehinderd wordt.
+    function isIdleRoute() {
+        var h = (window.location.hash || '').toLowerCase().replace(/^#!?/, '');
+        return /^\/(configurationpage|dashboard|settings|mypreferences|user(?:edit|new|profiles?|library|parental|password)|device|dlna|livetv(?:status|guide|tuner|setup|guideprovider)|metadata|library(?:display|setup)?|encoding|playback|streaming|notification|scheduledtask|serveractivity|log|apikey|networking|branding|plugin|repositor|about|quickconnect|wizard)/.test(h);
+    }
+
+    function removeOurUi() {
+        try {
+            var nodes = document.querySelectorAll('.btnDiscoverRequest, .btnDiscoverRemove, .discover-season-info');
+            for (var i = 0; i < nodes.length; i++) { if (nodes[i].parentNode) { nodes[i].parentNode.removeChild(nodes[i]); } }
+            if (document.body) {
+                document.body.classList.remove('discover-item-page', 'discover-ask-page', 'discover-ask-play', 'discover-season-ask-page', 'discover-folder-page');
+            }
+            removeHero();
+        } catch (e) { }
+    }
+
     function tick() {
+        if (isIdleRoute()) { return; }
         var id = itemIdFromHash();
         if (!diagnosticsLoaded || id !== diagnosticsItemId) {
             diagnosticsItemId = id;
@@ -1739,16 +1758,30 @@
         timer = setTimeout(function () { timer = null; try { tick(); } catch (e) { dbg('SCRIPTFOUT: ' + e.message); console.log('[Discover] fout', e); } }, 120);
     }
 
-    function start() {
+    var bodyObserver = null;
+    function connectObserver() {
+        if (bodyObserver || !document.body) { return; }
         try {
-            // De YouTube-link (en de regel erbij) meteen bij elke wijziging verbergen, nog voordat de pagina getekend wordt;
-            // wachten op schedule() (120 ms + opzoeken van het item) gaf een flits.
-            new MutationObserver(function () {
+            // De YouTube-link (en de regel erbij) meteen bij elke wijziging verbergen, nog voordat de pagina getekend wordt.
+            bodyObserver = new MutationObserver(function () {
                 try { hideFilePathLines(false, true); } catch (e) { }
                 schedule();
-            }).observe(document.body, { childList: true, subtree: true });
-        } catch (e) { }
-        window.addEventListener('hashchange', schedule);
+            });
+            bodyObserver.observe(document.body, { childList: true, subtree: true });
+        } catch (e) { bodyObserver = null; }
+    }
+    function disconnectObserver() {
+        if (bodyObserver) { try { bodyObserver.disconnect(); } catch (e) { } bodyObserver = null; }
+    }
+    // Observer alleen op gewone pagina's; op instellingen/dashboard volledig uit (anders hapert de tv-remote).
+    function applyRouteState() {
+        if (isIdleRoute()) { disconnectObserver(); removeOurUi(); }
+        else { connectObserver(); schedule(); }
+    }
+
+    function start() {
+        applyRouteState();
+        window.addEventListener('hashchange', applyRouteState);
         // Na een klik op Afspelen/Aanvragen op de aanvraagpagina de status even later opnieuw ophalen.
         document.addEventListener('click', function (e) {
             var id = itemIdFromHash();
@@ -1757,10 +1790,9 @@
             if (!t) { return; }
             setTimeout(function () { delete lookups[id]; delete askStatus[id]; schedule(); }, 5000);
         }, true);
-        document.addEventListener('viewshow', schedule, true);
-        document.addEventListener('click', function () { schedule(); }, true);
-        setInterval(schedule, 2000);
-        schedule();
+        document.addEventListener('viewshow', applyRouteState, true);
+        document.addEventListener('click', function () { if (!isIdleRoute()) { schedule(); } }, true);
+        setInterval(function () { if (!isIdleRoute()) { schedule(); } }, 2000);
     }
 
     if (document.body) { start(); } else { document.addEventListener('DOMContentLoaded', start); }
