@@ -851,8 +851,15 @@ define([], function () {
             if (e.key === 'Enter' || e.keyCode === 13) { lastKeyClick = Date.now(); }
         }, true);
 
+        // Alleen reageren als we daadwerkelijk op de Discover-pagina staan. Zo kan deze afvanger nooit de
+        // afstandsbediening "opslokken" op Emby's eigen pagina's (bijv. Instellingen), ook niet als Emby bij
+        // het verlaten geen viewhide stuurt en de command-listener blijft hangen.
+        function onDiscoverRoute() {
+            var h = (location.hash || '').toLowerCase();
+            return h.indexOf('configurationpage') !== -1 && h.indexOf('discoverui') !== -1;
+        }
         function onCommand(e) {
-            if (!isTvClient || !document.body.contains(view) || !isShown(view.querySelector('.dcRoot'))) { return; }
+            if (!isTvClient || !onDiscoverRoute() || !document.body.contains(view) || !isShown(view.querySelector('.dcRoot'))) { return; }
             var cmd = e.detail && e.detail.command;
             var active = document.activeElement;
             var trailerOpen = trailerOverlay.classList.contains('open');
