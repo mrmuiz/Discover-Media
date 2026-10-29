@@ -1,6 +1,7 @@
 ## Version 1.3.5.4
 
 - Fix: op een **LG/webOS-tv** werd de **Settings-/dashboardbediening met de afstandsbediening** traag/onbestuurbaar (je kwam er wel in maar niet meer uit) sinds de tegel->Discover-injectie. Oorzaak: het globaal geladen aanvraagknop-script had een pagina-brede waarnemer (MutationObserver) die ook op Emby's eigen instellingenpagina's bleef draaien; op de trage tv-browser hield dat de remote op. Het script laat die pagina's (instellingen, dashboard, pluginpagina's) nu volledig met rust: de waarnemer wordt daar uitgeschakeld en er wordt niets gescand. Daardoor reageert de remote er weer normaal en brengt Terug (een paar keer) weer gewoon het Emby-afsluitmenu in beeld. Alleen in de browser merkte je dit niet; dit raakt alleen trage tv's.
+- Fix (tweede oorzaak, zelfde versie): op de tv deed de afstandsbediening in Settings soms **helemaal niets** (toetsen werden opgeslokt). De Discover-pagina vangt op tv de pijltjes/Terug af via een command-afvanger op document-niveau; als Emby bij het verlaten van de pagina geen `viewhide` stuurt, bleef die afvanger hangen en slokte hij de remote op Emby's eigen pagina's op. Er is nu een harde route-grens: de afvanger doet niets tenzij de URL écht de Discover-pagina is. Daardoor werkt de remote op Settings weer en komt Terug weer bij het afsluitmenu.
 - Technisch: plugin- en knop-scriptversie zijn 1.3.5.4; script-resourcenamen `discoveruijs1354` / `discoverbuttonjs1354`.
 
 ## Version 1.3.5.3
