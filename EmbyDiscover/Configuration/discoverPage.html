@@ -5,7 +5,7 @@
     <title>Discover</title>
 </head>
 <body>
-<div data-role="page" class="page type-interior discoverUiPage" data-controller="__plugin/discoveruijs1370">
+<div data-role="page" class="page type-interior discoverUiPage" data-controller="__plugin/discoveruijs1371">
 <style>
 .dcRoot { padding: 5.5em 3% 4em; color: #fff; background:#0b1426; height:100vh; overflow-y:auto; box-sizing:border-box; }
 .dcModal, .dcModal h2, .dcModal .dcOverview { color:#fff; }
@@ -72,12 +72,17 @@
 .dcOverlay.dcTv .dcModalInfo { display:flex; flex-direction:column; min-width:0; flex:1 1 auto; max-height:79vh; }
 .dcOverlay.dcTv .dcModalInfo h2 { font-size:1.6em; overflow:hidden; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; }
 .dcOverlay.dcTv .dcInfo { overflow:hidden; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:4; flex:0 0 auto; margin-bottom:.6em; }
-.dcOverlay.dcTv .dcOverview { overflow:hidden; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:4; flex:0 1 auto; min-height:0; margin-bottom:.8em; }
+.dcOverlay.dcTv .dcOverview { overflow-x:hidden; overflow-y:auto; flex:0 1 auto; min-height:3em; margin-bottom:.8em; padding-right:.6em; scroll-behavior:smooth; }
+.dcOverlay.dcTv .dcOverview::-webkit-scrollbar { width:.35em; }
+.dcOverlay.dcTv .dcOverview::-webkit-scrollbar-thumb { background:rgba(255,255,255,.35); border-radius:.2em; }
+.dcOverlay.dcTv .dcOverview.dcMoreBelow { -webkit-mask-image:linear-gradient(180deg,#000 75%,transparent); mask-image:linear-gradient(180deg,#000 75%,transparent); }
 .dcOverlay.dcTv .dcBtnRow { flex:0 0 auto; }
 .dcOverlay.dcTv .dcClose { top:2vh; right:1.5vw; }
 .dcTvPage .dcArrow { display:none; }
 .dcTvPage .dcToast { bottom:auto; top:7vh; }
-.dcTvPage .dcRoot { padding-left:5%; padding-right:5%; }
+/* Op tv is Emby's kop (.skinHeader, 9.125em met de paginatitel "Discover Media") hoger dan de
+   5.5em die .dcRoot standaard vrijhoudt; daardoor viel de titel over de zoekbalk. Extra ruimte boven. */
+.dcTvPage .dcRoot { padding-left:5%; padding-right:5%; padding-top:9.75em; }
 .dcBtnDel { background:#c62828; color:#fff; border:0; border-radius:2em; padding:.8em 1.6em; font-weight:700; font-size:1em; cursor:pointer; display:none; }
 .dcBtnDel.show { display:inline-block; }
 .dcBtnTrailer, .dcBtnOpen { background:rgba(255,255,255,.12); color:#fff; border:1px solid rgba(255,255,255,.3); border-radius:2em; padding:.8em 1.6em; font-weight:700; font-size:1em; cursor:pointer; display:none; }

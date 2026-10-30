@@ -2,8 +2,8 @@ define([], function () {
     'use strict';
 
     var uiLanguage = 'nl';
-    function text(dutch, english, german) {
-        return uiLanguage === 'de' ? (german || english) : uiLanguage === 'en' ? english : dutch;
+    function text(dutch, english, german, norwegian) {
+        return uiLanguage === 'de' ? (german || english) : uiLanguage === 'no' ? (norwegian || english) : uiLanguage === 'en' ? english : dutch;
     }
 
     function esc(s) {
@@ -32,14 +32,14 @@ define([], function () {
 
     // Load as an external script so Emby's Content-Security-Policy does not block inline execution.
     function loadButtonScript() {
-        if (window.__discoverRequestButtonVersion === '1.3.4.2') {
-            diag.load = text('script is al actief v1.3.4.2', 'script already active v1.3.4.2', 'Skript bereits aktiv v1.3.4.2');
+        if (window.__discoverRequestButtonVersion === '1.3.4.4') {
+            diag.load = text('script is al actief v1.3.4.4', 'script already active v1.3.4.4', 'Skript bereits aktiv v1.3.4.4');
             showDiag();
             return;
         }
         var urls = [
-            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1370' }),
-            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1370' }),
+            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1371' }),
+            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1371' }),
             ApiClient.getUrl('Plugins/Discover/Script')
         ];
         var n = 0;
@@ -51,7 +51,7 @@ define([], function () {
             script.src = u + (u.indexOf('?') === -1 ? '?' : '&') + '_=' + Date.now();
             script.async = true;
             script.onload = function () {
-                if (window.__discoverRequestButtonVersion === '1.3.4.2') {
+                if (window.__discoverRequestButtonVersion === '1.3.4.4') {
                     diag.load = text('OK via extern script ', 'OK via external script ', 'OK über externes Skript ') + u;
                     showDiag();
                 } else {
@@ -83,7 +83,7 @@ define([], function () {
         setTimeout(showDiag, 1500);
         var content = view.querySelector('.dcContent');
         var input = view.querySelector('.dcSearchInput');
-        input.placeholder = text('Films en series zoeken', 'Search movies and series', 'Filme und Serien suchen');
+        input.placeholder = text('Films en series zoeken', 'Search movies and series', 'Filme und Serien suchen', 'Søk filmer og serier');
         var overlay = view.querySelector('.dcOverlay');
         var toast = view.querySelector('.dcToast');
         var items = {};      // sleutel -> item (gedeeld door alle kaarten)
@@ -244,8 +244,8 @@ define([], function () {
             content.innerHTML = skeletonHtml(3);
             api('GET', 'Discover/Home').then(function (r) {
                 var culture = String(r.Language || '').toLowerCase();
-                uiLanguage = culture.indexOf('nl') === 0 ? 'nl' : culture.indexOf('de') === 0 ? 'de' : 'en';
-                input.placeholder = text('Films en series zoeken', 'Search movies and series', 'Filme und Serien suchen');
+                uiLanguage = culture.indexOf('nl') === 0 ? 'nl' : culture.indexOf('de') === 0 ? 'de' : (culture.indexOf('nb') === 0 || culture.indexOf('nn') === 0 || culture.indexOf('no') === 0) ? 'no' : 'en';
+                input.placeholder = text('Films en series zoeken', 'Search movies and series', 'Filme und Serien suchen', 'Søk filmer og serier');
                 if (r.Message) { content.innerHTML = '<div class="dcMsg">' + esc(r.Message) + '</div>'; return; }
                 renderRows(r.Rows || []);
                 loaded = true;
@@ -283,7 +283,7 @@ define([], function () {
             var d = overlay.querySelector('.dcBtnDel');
             if (!current) { return; }
             var tb = overlay.querySelector('.dcBtnTrailer');
-            tb.textContent = text('Trailer', 'Trailer', 'Trailer');
+            tb.textContent = text('Trailer', 'Trailer', 'Trailer', 'Trailer');
             if (showTrailer) { tb.classList.add('show'); } else { tb.classList.remove('show'); }
             d.disabled = false;
             delArmed = false; clearTimeout(delArmTimer);
@@ -292,7 +292,7 @@ define([], function () {
             else { d.classList.remove('show'); }
             if (current.Status === 2) { b.textContent = text('Beschikbaar', 'Available', 'Verfügbar'); b.disabled = true; }
             else if (current.Status === 1) { b.textContent = text('Aangevraagd', 'Requested', 'Angefordert'); b.disabled = true; }
-            else { b.textContent = text('Aanvragen', 'Request', 'Anfragen'); b.disabled = false; }
+            else { b.textContent = text('Aanvragen', 'Request', 'Anfragen', 'Forespør'); b.disabled = false; }
         }
 
         function refreshCards(i) {
@@ -313,8 +313,12 @@ define([], function () {
             overlay.querySelector('.dcMeta').textContent =
                 text(i.Type === 'tv' ? 'Serie' : 'Film', i.Type === 'tv' ? 'Series' : 'Movie', i.Type === 'tv' ? 'Serie' : 'Film') +
                 (i.Rating ? '  \u2022  \u2605 ' + i.Rating.toFixed(1) : '');
-            overlay.querySelector('.dcOverview').textContent =
-                i.Overview || text('Geen beschrijving beschikbaar.', 'No description available.', 'Keine Beschreibung verfügbar.');
+            var ovEl = overlay.querySelector('.dcOverview');
+            ovEl.textContent =
+                i.Overview || text('Geen beschrijving beschikbaar.', 'No description available.', 'Keine Beschreibung verfügbar.', 'Ingen beskrivelse tilgjengelig.');
+            ovEl.scrollTop = 0;
+            ovEl.onscroll = function () { updateOverviewHint(ovEl); };
+            setTimeout(function () { updateOverviewHint(ovEl); }, 0);
             var infoEl = overlay.querySelector('.dcInfo');
             infoEl.textContent = '';
             api('GET', 'Discover/Info', { Type: i.Type, TmdbId: i.TmdbId }).then(function (r) {
@@ -828,6 +832,27 @@ define([], function () {
             return false;
         }
 
+        // Op tv is de beschrijving scrollbaar i.p.v. afgekapt. Vanaf de knoppen scrollt omlaag/omhoog de tekst.
+        function updateOverviewHint(el) {
+            if (!el) { return; }
+            var more = el.scrollHeight - el.scrollTop - el.clientHeight > 2;
+            el.classList.toggle('dcMoreBelow', more);
+        }
+        function scrollOverview(dir) {
+            var el = overlay.querySelector('.dcOverview');
+            if (!el || el.scrollHeight <= el.clientHeight + 2) { return false; }
+            var step = Math.max(40, Math.round(el.clientHeight * 0.6));
+            if (dir === 'down' && el.scrollTop + el.clientHeight < el.scrollHeight - 2) {
+                el.scrollTop = Math.min(el.scrollHeight, el.scrollTop + step);
+            } else if (dir === 'up' && el.scrollTop > 0) {
+                el.scrollTop = Math.max(0, el.scrollTop - step);
+            } else {
+                return false;
+            }
+            setTimeout(function () { updateOverviewHint(el); }, 350);
+            return true;
+        }
+
         function navModal(dir, active) {
             if (trailerOverlay.classList.contains('open')) {
                 focusEl(trailerOverlay.querySelector('.dcTrailerClose'));
@@ -843,7 +868,8 @@ define([], function () {
             if (i === -1) { focusEl(row[0] || close); return; }
             if (dir === 'left' && i > 0) { focusEl(row[i - 1]); }
             else if (dir === 'right' && i < row.length - 1) { focusEl(row[i + 1]); }
-            else if (dir === 'up') { focusEl(close); }
+            else if (dir === 'down') { scrollOverview('down'); }
+            else if (dir === 'up') { if (!scrollOverview('up')) { focusEl(close); } }
         }
 
         var lastKeyClick = 0;

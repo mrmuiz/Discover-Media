@@ -239,7 +239,28 @@ namespace Emby.Plugins.Discover
         }
 
         /// <summary>Haalt een pagina in de ingestelde taal op en vult gaten aan uit en-US.</summary>
+        /// <summary>Haalt titels met een uitgesloten oorspronkelijke taal weg (niet bij zoeken).</summary>
+        private static TmdbPage ApplyLanguageExclusion(string path, TmdbPage page)
+        {
+            if (page?.results == null || (path ?? "").StartsWith("/search", StringComparison.OrdinalIgnoreCase)) return page;
+            var raw = Plugin.GetCurrentConfiguration()?.ExcludedOriginalLanguages;
+            if (string.IsNullOrWhiteSpace(raw)) return page;
+            var set = new HashSet<string>(raw.Split(new[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(x => x.Trim().ToLowerInvariant()), StringComparer.OrdinalIgnoreCase);
+            if (set.Count == 0) return page;
+            return new TmdbPage
+            {
+                page = page.page, total_pages = page.total_pages, total_results = page.total_results,
+                results = page.results.Where(i => i == null || string.IsNullOrEmpty(i.original_language) || !set.Contains(i.original_language)).ToList()
+            };
+        }
+
         private async Task<TmdbPage> GetMerged(string path, string extra, CancellationToken ct)
+        {
+            return ApplyLanguageExclusion(path, await GetMergedRaw(path, extra, ct).ConfigureAwait(false));
+        }
+
+        private async Task<TmdbPage> GetMergedRaw(string path, string extra, CancellationToken ct)
         {
             var lang = Language();
             var primaryTask = Get<TmdbPage>(path, extra, lang, ct);
@@ -315,12 +336,12 @@ namespace Emby.Plugins.Discover
             }
             if (startRefresh) { var ignore = RefreshPage(key, path, extra); }
             ct.ThrowIfCancellationRequested();
-            return await task.ConfigureAwait(false);
+            return ApplyLanguageExclusion(path, await task.ConfigureAwait(false));
         }
 
         private async Task<TmdbPage> LoadPage(string key, string path, string extra)
         {
-            try { return await GetMerged(path, extra, CancellationToken.None).ConfigureAwait(false); }
+            try { return await GetMergedRaw(path, extra, CancellationToken.None).ConfigureAwait(false); }
             catch
             {
                 lock (PageCache)
@@ -336,7 +357,7 @@ namespace Emby.Plugins.Discover
         {
             try
             {
-                var t = GetMerged(path, extra, CancellationToken.None);
+                var t = GetMergedRaw(path, extra, CancellationToken.None);
                 await t.ConfigureAwait(false);
                 lock (PageCache) { PageCache[key] = new PageEntry { Task = t, At = DateTime.UtcNow }; }
             }

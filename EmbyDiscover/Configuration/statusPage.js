@@ -4,8 +4,8 @@ define(['emby-button'], function () {
     var pluginId = '7b0f3a52-4c1e-4a7b-9d2e-5f6c8a1b3d90';
     var language = 'nl';
 
-    function text(dutch, english, german) {
-        return language === 'de' ? (german || english) : language === 'en' ? english : dutch;
+    function text(dutch, english, german, norwegian) {
+        return language === 'de' ? (german || english) : language === 'no' ? (norwegian || english) : language === 'en' ? english : dutch;
     }
 
     // Vertaling van de activiteitenregels (de server schrijft ze in het Nederlands). Elke regel: [patroon, Engels, Duits].
@@ -116,7 +116,7 @@ define(['emby-button'], function () {
 
     function setLanguage(locale) {
         var value = String(locale || '').toLowerCase();
-        language = value.indexOf('de') === 0 ? 'de' : value.indexOf('nl') === 0 ? 'nl' : 'en';
+        language = value.indexOf('de') === 0 ? 'de' : value.indexOf('nl') === 0 ? 'nl' : (value.indexOf('nb') === 0 || value.indexOf('nn') === 0 || value.indexOf('no') === 0) ? 'no' : 'en';
     }
 
     function translatePage(view) {

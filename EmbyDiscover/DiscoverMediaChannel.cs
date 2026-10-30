@@ -238,7 +238,7 @@ namespace Emby.Plugins.Discover
             var item = new ChannelItemInfo
             {
                 Id = AskPrefix + rest,
-                Name = DiscoverLanguage.Text("Aanvragen: ", "Request: ", "Anfragen: ") + title,
+                Name = DiscoverLanguage.Text("Aanvragen: ", "Request: ", "Anfragen: ", "Forespør: ") + title,
                 Type = ChannelItemType.Media,
                 MediaType = ChannelMediaType.Video,
                 ContentType = ChannelMediaContentType.Clip,
@@ -285,7 +285,7 @@ namespace Emby.Plugins.Discover
             if (!string.IsNullOrEmpty(t.backdrop_path))
             {
                 var tileKey = "rq" + (tv ? "t" : "m") + tmdbId;
-                var askTile = FolderTile.Create(tileKey + "ask", DiscoverLanguage.Text("Aanvragen", "Request", "Anfragen"),
+                var askTile = FolderTile.Create(tileKey + "ask", DiscoverLanguage.Text("Aanvragen", "Request", "Anfragen", "Forespør"),
                     item.ImageUrl, CancellationToken.None);
                 var trailerTile = showTrailerTile
                     ? FolderTile.Create(tileKey + "tr", DiscoverLanguage.Text("Trailer", "Trailer", "Trailer"),
@@ -301,7 +301,7 @@ namespace Emby.Plugins.Discover
             {
                 // The Aanvragen: <series> folder is the season selector; do not add a whole-series request tile.
                 var seasonFolder = Folder(AskSeasonFolderPrefix + rest,
-                    DiscoverLanguage.Text("Aanvragen: ", "Request: ", "Anfragen: ") + title,
+                    DiscoverLanguage.Text("Aanvragen: ", "Request: ", "Anfragen: ", "Forespør: ") + title,
                     item.ImageUrl,
                     DiscoverLanguage.Text("Kies een seizoen om alleen dat seizoen aan te vragen.",
                         "Choose a season to request only that season.",
@@ -549,15 +549,15 @@ namespace Emby.Plugins.Discover
             // Keep the existing pick() order so tiles still use distinct titles.
             var specs = new[]
             {
-                new TileSpec(AskListPrefix + "trending_movie", DiscoverLanguage.Text("Trending films", "Trending Movies", "Aktuelle Filme"), "orange", pick(0, 3)),
-                new TileSpec(AskListPrefix + "popular_movie", DiscoverLanguage.Text("Populaire films", "Popular Movies", "Beliebte Filme"), "red", pick(1, 3)),
-                new TileSpec(AskListPrefix + "upcoming_movie", DiscoverLanguage.Text("Verwachte films", "Upcoming Movies", "Kommende Filme"), "purple", pick(2, 3)),
-                new TileSpec(AskGenrePrefix + "movie", DiscoverLanguage.Text("Filmgenres", "Movie Genres", "Filmgenres"), "green", pick(1, 8)),
-                new TileSpec(AskListPrefix + "trending_tv", DiscoverLanguage.Text("Trending series", "Trending Series", "Aktuelle Serien"), "yellow", pick(3, 3)),
-                new TileSpec(AskListPrefix + "popular_tv", DiscoverLanguage.Text("Populaire series", "Popular Series", "Beliebte Serien"), "pink", pick(4, 3)),
-                new TileSpec(AskListPrefix + "upcoming_tv", DiscoverLanguage.Text("Verwachte series", "Upcoming Series", "Kommende Serien"), "blue", pick(5, 3)),
-                new TileSpec(AskGenrePrefix + "tv", DiscoverLanguage.Text("Seriegenres", "Series Genres", "Seriengenres"), "lightgreen", pick(4, 8)),
-                new TileSpec(AskStudioRoot, DiscoverLanguage.Text("Studio's", "Studios", "Studios"), "black", pick(0, 8))
+                new TileSpec(AskListPrefix + "trending_movie", DiscoverLanguage.Text("Trending films", "Trending Movies", "Aktuelle Filme", "Trendende filmer"), "orange", pick(0, 3)),
+                new TileSpec(AskListPrefix + "popular_movie", DiscoverLanguage.Text("Populaire films", "Popular Movies", "Beliebte Filme", "Populære filmer"), "red", pick(1, 3)),
+                new TileSpec(AskListPrefix + "upcoming_movie", DiscoverLanguage.Text("Verwachte films", "Upcoming Movies", "Kommende Filme", "Kommende filmer"), "purple", pick(2, 3)),
+                new TileSpec(AskGenrePrefix + "movie", DiscoverLanguage.Text("Filmgenres", "Movie Genres", "Filmgenres", "Filmsjangre"), "green", pick(1, 8)),
+                new TileSpec(AskListPrefix + "trending_tv", DiscoverLanguage.Text("Trending series", "Trending Series", "Aktuelle Serien", "Trendende serier"), "yellow", pick(3, 3)),
+                new TileSpec(AskListPrefix + "popular_tv", DiscoverLanguage.Text("Populaire series", "Popular Series", "Beliebte Serien", "Populære serier"), "pink", pick(4, 3)),
+                new TileSpec(AskListPrefix + "upcoming_tv", DiscoverLanguage.Text("Verwachte series", "Upcoming Series", "Kommende Serien", "Kommende serier"), "blue", pick(5, 3)),
+                new TileSpec(AskGenrePrefix + "tv", DiscoverLanguage.Text("Seriegenres", "Series Genres", "Seriengenres", "Seriesjangre"), "lightgreen", pick(4, 8)),
+                new TileSpec(AskStudioRoot, DiscoverLanguage.Text("Studio's", "Studios", "Studios", "Studioer"), "black", pick(0, 8))
             };
 
             // Start every tile together, then allow one shared time budget for the text artwork.

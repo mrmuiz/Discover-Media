@@ -5,7 +5,7 @@
     <title>Discover</title>
 </head>
 <body>
-<div data-role="page" class="page type-interior pluginConfigurationPage discoverConfigPage" data-require="emby-input,emby-button,emby-select,emby-checkbox" data-controller="__plugin/discoverconfigjs1300">
+<div data-role="page" class="page type-interior pluginConfigurationPage discoverConfigPage" data-require="emby-input,emby-button,emby-select,emby-checkbox" data-controller="__plugin/discoverconfigjs1301">
         <style>
         .discoverConfigPage .keyWrap { position: relative; }
         .discoverConfigPage .keyWrap input { padding-right: 2.8em; }
@@ -29,6 +29,7 @@
                         <option value="nl-NL">Nederlands</option>
                         <option value="en-US">English</option>
                         <option value="de-DE">Deutsch</option>
+                        <option value="nb-NO">Norsk</option>
                     </select>
                 </div>
                 <div class="selectContainer">
@@ -37,6 +38,11 @@
                         <option value="auto">Volg de taal van Emby Server</option>
                     </select>
                     <div class="fieldDescription" id="statusTmdbLanguages">Voer een TMDB-key in en test deze om de volledige talenlijst te laden.</div>
+                </div>
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused" for="txtExcludedLangs" id="lbl_txtExcludedLangs">Talen uitsluiten (oorspronkelijke taal)</label>
+                    <input is="emby-input" type="text" id="txtExcludedLangs" spellcheck="false" placeholder="ja, ko, hi" />
+                    <div class="fieldDescription" id="desc_txtExcludedLangs">Titels met deze oorspronkelijke taal verschijnen niet in de rijen en mappen. Gebruik taalcodes, gescheiden door komma's, bijv. ja (Japans), ko (Koreaans), zh (Chinees), hi (Hindi), ta (Tamil), te (Telugu), th (Thai), tr (Turks). Zoeken toont ze nog wel.</div>
                 </div>
                 <div class="checkboxContainer">
                     <label class="emby-checkbox-label">

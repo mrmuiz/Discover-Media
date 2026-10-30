@@ -8,6 +8,7 @@ namespace Emby.Plugins.Discover
         public const string English = "en-US";
         public const string Dutch = "nl-NL";
         public const string German = "de-DE";
+        public const string Norwegian = "nb-NO";
 
         public static string PluginLanguage
         {
@@ -42,9 +43,10 @@ namespace Emby.Plugins.Discover
 
         public static bool IsDutch => PluginLanguage == Dutch;
         public static bool IsGerman => PluginLanguage == German;
+        public static bool IsNorwegian => PluginLanguage == Norwegian;
 
-        public static string Text(string dutch, string english, string german = null) =>
-            IsDutch ? dutch : IsGerman ? (german ?? english) : english;
+        public static string Text(string dutch, string english, string german = null, string norwegian = null) =>
+            IsDutch ? dutch : IsGerman ? (german ?? english) : IsNorwegian ? (norwegian ?? english) : english;
 
         public static string FromEmbyCulture(string culture) => Normalize(culture);
 
@@ -54,6 +56,9 @@ namespace Emby.Plugins.Discover
             var normalized = culture.Trim();
             if (normalized.StartsWith("nl", StringComparison.OrdinalIgnoreCase)) return Dutch;
             if (normalized.StartsWith("de", StringComparison.OrdinalIgnoreCase)) return German;
+            if (normalized.StartsWith("nb", StringComparison.OrdinalIgnoreCase) ||
+                normalized.StartsWith("nn", StringComparison.OrdinalIgnoreCase) ||
+                normalized.StartsWith("no", StringComparison.OrdinalIgnoreCase)) return Norwegian;
             return English;
         }
     }

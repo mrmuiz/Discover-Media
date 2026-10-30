@@ -38,5 +38,8 @@ namespace Emby.Plugins.Discover
 
         /// <summary>Toon de tegel Trailer naast Aanvragen in het kanaal en de Trailer-knop op de Discover-pagina. Uit = alleen Aanvragen.</summary>
         public bool ShowTrailerTile { get; set; } = true;
+
+        // Oorspronkelijke talen (ISO 639-1, komma-gescheiden, bv. "ja,ko,hi") die niet in rijen/mappen verschijnen.
+        public string ExcludedOriginalLanguages { get; set; } = "";
     }
 }

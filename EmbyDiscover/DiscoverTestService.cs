@@ -195,6 +195,41 @@ namespace Emby.Plugins.Discover
                     })
                     .GroupBy(x => x.Code, StringComparer.OrdinalIgnoreCase)
                     .Select(x => x.First())
+                    .ToList();
+
+                // TMDB's /configuration/languages geeft alleen basistalen (en, nl, ...). Regiovarianten
+                // (en-GB, pt-BR, es-MX, ...) komen uit /configuration/primary_translations. Die voegen we toe,
+                // met een nette naam uit de basistaal, zodat je ook bv. English (United Kingdom) kunt kiezen.
+                try
+                {
+                    var baseNames = options.ToDictionary(
+                        o => (o.Code.Split('-')[0]).ToLowerInvariant(),
+                        o => o.EnglishName, StringComparer.OrdinalIgnoreCase);
+                    using (var tr = await Http.GetAsync(
+                        "https://api.themoviedb.org/3/configuration/primary_translations?api_key=" +
+                        Uri.EscapeDataString(apiKey.Trim())).ConfigureAwait(false))
+                    {
+                        if (tr.IsSuccessStatusCode)
+                        {
+                            var codes = _json.DeserializeFromString<List<string>>(
+                                await tr.Content.ReadAsStringAsync().ConfigureAwait(false)) ?? new List<string>();
+                            var have = new HashSet<string>(options.Select(o => o.Code), StringComparer.OrdinalIgnoreCase);
+                            foreach (var code in codes)
+                            {
+                                if (string.IsNullOrWhiteSpace(code) || code.IndexOf('-') < 0) continue;
+                                if (have.Contains(code)) continue;
+                                var baseCode = code.Split('-')[0].ToLowerInvariant();
+                                var region = code.Split('-')[1].ToUpperInvariant();
+                                string baseName; if (!baseNames.TryGetValue(baseCode, out baseName)) baseName = baseCode;
+                                options.Add(new TmdbLanguageOption { Code = code, EnglishName = baseName + " (" + region + ")", Name = baseName + " (" + region + ")" });
+                                have.Add(code);
+                            }
+                        }
+                    }
+                }
+                catch { /* regiovarianten zijn optioneel; basislijst blijft werken */ }
+
+                options = options
                     .OrderBy(x => x.EnglishName, StringComparer.CurrentCultureIgnoreCase)
                     .ToList();
                 DiscoverDiagnostics.Add("TMDB-talenlijst geladen: " + options.Count + " talen");

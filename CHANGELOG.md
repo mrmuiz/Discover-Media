@@ -1,3 +1,15 @@
+## Version 1.3.4.4
+
+- New: **Exclude languages** setting. Titles whose original language is in this list (e.g. `ja, ko, hi`) are hidden from the Discover rows and channel folders; search still shows them. Changes apply immediately, no cache wait.
+- Fix: on TVs the popup cut the description off after four lines. It is now scrollable: with the focus on Request/Trailer, press **down** to read further and **up** to go back (up at the top still moves to the close button). A soft fade shows there is more text; the buttons always stay on screen.
+- Fix: on TVs Emby's page title ("Discover Media") overlapped the Discover search bar; the page now leaves room for Emby's taller TV header.
+- New: **Norwegian** (Norsk) as a selectable plugin language. The most visible parts (channel folders, buttons, the Discover page) are translated; anything not yet translated falls back to English.
+- New: **regional TMDB languages** (en-GB, pt-BR, es-MX, zh-TW, ...) in the TMDB language list, in addition to the base languages.
+- Fix: on TVs you can now scroll the **More like this** / actor rows with the remote (left/right between posters, up/down to the Request button); posters use a fixed height so they render on webOS.
+- New: the actor page's **Filmography** entries are now requestable: clicking a title you do not have opens the Discover popup with Request (titles already in your library open as before). A small Request badge marks the requestable entries.
+- Fix: the poster links in the extra rows pointed at an old Discover page name; they now open the current page.
+- Technical: plugin and request-button script version 1.3.4.4; resource names `discoveruijs1371`, `discoverbuttonjs1371` and page `discoverui1078`; settings page `discoverconfig1080` / `discoverconfigjs1301`.
+
 ## Version 1.3.4.2
 
 Everything below works the same for every Emby client. The **Discover Media channel** (browse, Request and Trailer tiles, requesting through Radarr/Sonarr) works in all Emby apps, including the official TV and mobile apps. The **Discover page**, the tile shortcut and the Request button / extra rows on normal detail pages run in the Emby **web client** (browser); the official Emby apps ship their own built-in client, which a plugin cannot extend, so there Discover works through the channel.

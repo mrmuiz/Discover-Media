@@ -4,8 +4,8 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
     var pluginId = "7b0f3a52-4c1e-4a7b-9d2e-5f6c8a1b3d90";
     var configLanguage = 'nl';
 
-    function languageText(dutch, english, german) {
-        return configLanguage === 'de' ? (german || english) : configLanguage === 'en' ? english : dutch;
+    function languageText(dutch, english, german, norwegian) {
+        return configLanguage === 'de' ? (german || english) : configLanguage === 'no' ? (norwegian || english) : configLanguage === 'en' ? english : dutch;
     }
 
     function languageCode(locale) {
@@ -34,7 +34,7 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
 
     function applyLanguage(view, locale) {
         var culture = String(locale || '').toLowerCase();
-        configLanguage = culture.indexOf('nl') === 0 ? 'nl' : culture.indexOf('de') === 0 ? 'de' : 'en';
+        configLanguage = culture.indexOf('nl') === 0 ? 'nl' : culture.indexOf('de') === 0 ? 'de' : (culture.indexOf('nb') === 0 || culture.indexOf('nn') === 0 || culture.indexOf('no') === 0) ? 'no' : 'en';
         var headings = view.querySelectorAll('.discoverForm h3');
         if (headings.length > 1) { headings[1].textContent = languageText('Radarr (films)', 'Radarr (movies)', 'Radarr (Filme)'); }
         if (headings.length > 2) { headings[2].textContent = languageText('Sonarr (series)', 'Sonarr (series)', 'Sonarr (Serien)'); }
@@ -51,6 +51,14 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             'Toon het gele debugbericht en media-informatie op itempagina\'s',
             'Show the yellow debug message and media information on item pages',
             'Gelbe Diagnosemeldung und Medieninformationen auf Detailseiten anzeigen');
+        var exclLabel = view.querySelector('#lbl_txtExcludedLangs');
+        if (exclLabel) {
+            exclLabel.textContent = languageText('Talen uitsluiten (oorspronkelijke taal)', 'Exclude languages (original language)', 'Sprachen ausschlie\u00dfen (Originalsprache)');
+            view.querySelector('#desc_txtExcludedLangs').textContent = languageText(
+                'Titels met deze oorspronkelijke taal verschijnen niet in de rijen en mappen. Gebruik taalcodes, gescheiden door komma\'s, bijv. ja (Japans), ko (Koreaans), zh (Chinees), hi (Hindi), ta (Tamil), te (Telugu), th (Thai), tr (Turks). Zoeken toont ze nog wel.',
+                'Titles with these original languages are hidden from rows and folders. Use language codes separated by commas, e.g. ja (Japanese), ko (Korean), zh (Chinese), hi (Hindi), ta (Tamil), te (Telugu), th (Thai), tr (Turkish). Search still shows them.',
+                'Titel mit diesen Originalsprachen werden in Reihen und Ordnern ausgeblendet. Sprachcodes durch Kommas getrennt, z. B. ja (Japanisch), ko (Koreanisch), zh (Chinesisch), hi (Hindi), ta, te, th, tr. Die Suche zeigt sie weiterhin.');
+        }
         var trailerLabel = view.querySelector('#lbl_chkShowTrailerTile');
         if (trailerLabel) {
             trailerLabel.textContent = languageText(
@@ -264,6 +272,7 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             el(view, 'txtTmdbKey').value = c.TmdbApiKey || '';
             el(view, 'chkShowDiagnostics').checked = !!c.ShowDiagnostics;
             el(view, 'chkShowTrailerTile').checked = c.ShowTrailerTile !== false;
+            el(view, 'txtExcludedLangs').value = c.ExcludedOriginalLanguages || '';
             el(view, 'chkInjectWebClientLoader').checked = !!c.InjectWebClientLoader;
             var browserLanguage = window.navigator && navigator.language;
             applyLanguage(view, c.PluginLanguage && c.PluginLanguage !== 'auto' ? c.PluginLanguage : browserLanguage);
@@ -316,6 +325,7 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             c.PluginLanguage = el(view, 'selPluginLanguage').value || 'auto';
             c.ShowDiagnostics = el(view, 'chkShowDiagnostics').checked;
             c.ShowTrailerTile = el(view, 'chkShowTrailerTile').checked;
+            c.ExcludedOriginalLanguages = (el(view, 'txtExcludedLangs').value || '').toLowerCase().split(/[\s,;]+/).filter(function (x) { return /^[a-z]{2,3}$/.test(x); }).join(',');
             c.InjectWebClientLoader = el(view, 'chkInjectWebClientLoader').checked;
             c.TmdbLanguageMode = tmdbLanguage === 'auto' ? 'auto' : 'manual';
             if (tmdbLanguage !== 'auto') { c.TmdbLanguage = tmdbLanguage; }
