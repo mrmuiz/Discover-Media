@@ -59,7 +59,7 @@ namespace Emby.Plugins.Discover
         public string HomePageUrl => "";
 
         // Ophogen als Emby oude (bewaarde) kanaalinhoud blijft tonen.
-        public string DataVersion => Plugin.GetCurrentConfiguration().ShowTrailerTile ? "70" : "70-notrailer";
+        public string DataVersion => Plugin.GetCurrentConfiguration().ShowTrailerTile ? "71" : "71-notrailer";
         public ChannelParentalRating ParentalRating => ChannelParentalRating.GeneralAudience;
         public bool IsEnabledFor(string userId) => true;
 
@@ -873,13 +873,14 @@ namespace Emby.Plugins.Discover
                 if (i.adult || string.IsNullOrEmpty(i.poster_path)) continue;
                 rank++;
                 string clean = TitleOf(i, tv);
-                string prefix = states.TryGetValue(i.id, out var hasFiles) ? (hasFiles ? "\u2713 " : "\u23F3 ") : "";
+                // Marker goes after the title so it never affects title sorting.
+                string suffix = states.TryGetValue(i.id, out var hasFiles) ? (hasFiles ? " \u2713" : " \u23F3") : "";
                 // Zoals bij het Trailers-kanaal: de titel zelf is het item (geen map). Klik je erop, dan opent
                 // de detailpagina; het ingebedde Emby-pluginresource-script voegt daar de knop "Aanvragen" toe.
                 var f = new ChannelItemInfo
                 {
                     Id = (request ? (tv ? AskTvItemPrefix : AskItemPrefix) : "") + (tv ? "t:" : "m:") + i.id,
-                    Name = prefix + clean,
+                    Name = clean + suffix,
                     Type = request ? ChannelItemType.Folder : ChannelItemType.Media,
                     MediaType = ChannelMediaType.Video,
                     ContentType = ChannelMediaContentType.Trailer,

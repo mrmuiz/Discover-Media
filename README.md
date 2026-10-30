@@ -8,7 +8,7 @@
   Browse movies and series from TMDB in Emby, watch trailers, and send requests to Radarr or Sonarr.
 </p>
 
-> **Status: stable.** The current version is **1.3.4.4**, built against the Emby SDK package `MediaBrowser.Server.Core` 4.10.0.1-beta so that one dll runs on both Emby Server 4.10.2 and 4.11 (beta). It has been installed on both; other Emby versions may work but have not been individually tested. Please report problems through [Issues](../../issues) and include the relevant diagnostics (see [Troubleshooting](#troubleshooting)).
+> **Status: stable.** The current version is **1.3.4.5**, built against the Emby SDK package `MediaBrowser.Server.Core` 4.10.0.1-beta so that one dll runs on both Emby Server 4.10.2 and 4.11 (beta). It has been installed on both; other Emby versions may work but have not been individually tested. Please report problems through [Issues](../../issues) and include the relevant diagnostics (see [Troubleshooting](#troubleshooting)).
 
 ## Screenshots
 
@@ -136,9 +136,9 @@ The request confirmation clip shows a large poster with the status (Requested / 
 | Radarr URL and API key | Sends movie requests to Radarr. |
 | Sonarr URL and API key | Sends series requests to Sonarr. |
 | Quality profile and root folder | Selects the destination settings used for requests. Choose values returned by **Test connection**. |
-| Show Diagnostics | Optional yellow debug message and technical media information on item pages. **Off by default.** |
+| Show Diagnostics | Optional yellow debug message and technical media information on item pages. **On by default** (turn it off here if you prefer the plain channel). |
 | Show the Trailer tile | Shows the "Trailer: title" tile next to "Request" in the channel. **On by default.** Turn it off to keep only the request tile. |
-| Tile opens the Discover page | Web client only. A tap on the **Discover Media** tile opens the Discover page directly, and the Request button works on detail pages without opening Discover first. Adds a small loader to the web client's `index.html`, re-applied on every server start and removed when turned off. **Off by default.** |
+| Tile opens the Discover page | Web client only. A tap on the **Discover Media** tile opens the Discover page directly, and the Request button works on detail pages without opening Discover first. Adds a small loader to the web client's `index.html`, re-applied on every server start and removed when turned off. **On by default** (turn it off here if you prefer the plain channel). |
 | Web client path | Only needed when the web client folder (with `index.html`) is not found automatically. Leave empty. |
 
 API keys are stored in the plugin configuration and masked in the settings form by default.

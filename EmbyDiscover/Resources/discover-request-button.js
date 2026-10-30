@@ -3,14 +3,14 @@
  * Verbergt ook "Media informatie" op Discover/Trailers-detailpagina's. */
 (function () {
     'use strict';
-    if (window.__discoverRequestButtonVersion === '1.3.4.4') { return; }
+    if (window.__discoverRequestButtonVersion === '1.3.4.5') { return; }
     if (window.__discoverRequestButton) {
         console.warn('[Discover] oudere knopcode is nog actief; vernieuw de webclient om dubbele handlers te voorkomen.');
         return;
     }
     window.__discoverRequestButton = true;
-    window.__discoverRequestButtonVersion = '1.3.4.4';
-    console.log('[Discover] request-button script loaded v1.3.4.4');
+    window.__discoverRequestButtonVersion = '1.3.4.5';
+    console.log('[Discover] request-button script loaded v1.3.4.5');
 
     var uiLanguage = 'nl';
     function text(dutch, english, german, norwegian) {
@@ -41,7 +41,7 @@
                     'color:#ffd666;background:rgba(0,0,0,.7);padding:4px 8px;border-radius:4px;pointer-events:none;white-space:pre-wrap;';
                 document.body.appendChild(el);
             }
-            el.textContent = 'Discover v1.3.4.4 | ' + msg;
+            el.textContent = 'Discover v1.3.4.5 | ' + msg;
         } catch (e) { }
     }
     var isAdmin = false;
@@ -1507,7 +1507,10 @@
         var host = null;
         var pages = document.querySelectorAll('.itemView, .itemDetailPage, .view-item-item, [data-type="item"]');
         for (var i = 0; i < pages.length; i++) { if (visible(pages[i])) { host = pages[i]; break; } }
-        if (!host) { return null; }
+        if (!host) {
+            var credits = document.querySelector('.mainCreditsSection');
+            return credits && visible(credits) && credits.parentNode ? credits.parentNode : null;
+        }
         var parent = host.querySelector('.details-additionalContent') || host.querySelector('.itemMainScrollSlider') ||
             host.querySelector('.detailPageContent');
         if (!parent) {

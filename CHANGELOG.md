@@ -1,3 +1,11 @@
+## Version 1.3.4.5
+
+- Fix: the status marker (checkmark / hourglass) is now placed after the title instead of before it, so it no longer affects title sorting in the channel lists. Channel DataVersion bumped so Emby refreshes cached names.
+- Change: **Tile opens the Discover page** is now on by default, and enabled once for existing installs (you can still turn it off in the settings; it is then not re-enabled). The Discover Media entry under My Media now opens the Discover page in the web client, and the extra rows load on every detail page.
+- Change: the switch takes effect immediately, no server restart needed. The web loader stays injected and reads the setting at runtime from `GET /emby/Discover/LoaderConfig` (needs the logged-in web client's token; check it in the browser console, filter "Discover web", or run `__discoverDebug()`). If the setting cannot be read, there is no redirect.
+- New: a **Channel tiles** button on the Discover page opens the channel folders (Genres, Popular Movies, ...) even when the tile redirect is on; Back from inside the channel no longer bounces to Discover.
+- Fix: on actor/person pages the "Not in your library" row also appears when Emby's page layout has no standard container. Web client only: the official Emby apps cannot run plugin scripts and cannot show this row.
+- After updating, restart Emby once and hard-refresh the browser (Ctrl+F5).
 ## Version 1.3.4.4
 
 - New: **Exclude languages** setting. Titles whose original language is in this list (e.g. `ja, ko, hi`) are hidden from the Discover rows and channel folders; search still shows them. Changes apply immediately, no cache wait.

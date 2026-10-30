@@ -33,6 +33,15 @@ namespace Emby.Plugins.Discover
         public string ImdbId { get; set; }
     }
 
+    [Route("/Discover/LoaderConfig", "GET", Summary = "Staat 'Tegel opent Discover-pagina' aan? (voor het lader-script)")]
+    [Authenticated]
+    public class DiscoverLoaderConfigRequest : IReturn<DiscoverLoaderConfigResult> { }
+
+    public class DiscoverLoaderConfigResult
+    {
+        public bool RedirectTile { get; set; }
+    }
+
     [Route("/Discover/Seasons", "GET", Summary = "Seizoenen van een serie (voor de seizoenskeuze vanuit een rij)")]
     [Authenticated]
     public class DiscoverSeasonsRequest : IReturn<DiscoverSeasonsResult>
@@ -82,6 +91,11 @@ namespace Emby.Plugins.Discover
         }
 
         private static bool TmdbReady => !string.IsNullOrWhiteSpace(Plugin.GetCurrentConfiguration().TmdbApiKey);
+
+        public object Get(DiscoverLoaderConfigRequest request)
+        {
+            return new DiscoverLoaderConfigResult { RedirectTile = Plugin.GetCurrentConfiguration().InjectWebClientLoader };
+        }
 
         public async Task<object> Get(DiscoverPersonCreditsRequest request)
         {

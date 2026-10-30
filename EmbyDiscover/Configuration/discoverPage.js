@@ -32,8 +32,8 @@ define([], function () {
 
     // Load as an external script so Emby's Content-Security-Policy does not block inline execution.
     function loadButtonScript() {
-        if (window.__discoverRequestButtonVersion === '1.3.4.4') {
-            diag.load = text('script is al actief v1.3.4.4', 'script already active v1.3.4.4', 'Skript bereits aktiv v1.3.4.4');
+        if (window.__discoverRequestButtonVersion === '1.3.4.5') {
+            diag.load = text('script is al actief v1.3.4.5', 'script already active v1.3.4.5', 'Skript bereits aktiv v1.3.4.5');
             showDiag();
             return;
         }
@@ -51,7 +51,7 @@ define([], function () {
             script.src = u + (u.indexOf('?') === -1 ? '?' : '&') + '_=' + Date.now();
             script.async = true;
             script.onload = function () {
-                if (window.__discoverRequestButtonVersion === '1.3.4.4') {
+                if (window.__discoverRequestButtonVersion === '1.3.4.5') {
                     diag.load = text('OK via extern script ', 'OK via external script ', 'OK über externes Skript ') + u;
                     showDiag();
                 } else {
@@ -84,6 +84,19 @@ define([], function () {
         var content = view.querySelector('.dcContent');
         var input = view.querySelector('.dcSearchInput');
         input.placeholder = text('Films en series zoeken', 'Search movies and series', 'Filme und Serien suchen', 'Søk filmer og serier');
+        var channelBtn = view.querySelector('.dcChannelBtn');
+        if (channelBtn) {
+            channelBtn.textContent = text('Kanaaltegels', 'Channel tiles', 'Kanalkacheln', 'Kanalfliser');
+            channelBtn.addEventListener('click', function () {
+                var uid = ApiClient.getCurrentUserId();
+                ApiClient.getJSON(ApiClient.getUrl('Channels', { UserId: uid })).then(function (r) {
+                    var ch = ((r && r.Items) || []).filter(function (c) { return /discover/i.test(c.Name || ''); })[0];
+                    if (!ch) { return; }
+                    window.__discoverStay = true;
+                    window.location.hash = '#!/list?parentid=' + encodeURIComponent(ch.Id) + '&serverId=' + encodeURIComponent(ApiClient.serverId());
+                });
+            });
+        }
         var overlay = view.querySelector('.dcOverlay');
         var toast = view.querySelector('.dcToast');
         var items = {};      // sleutel -> item (gedeeld door alle kaarten)
