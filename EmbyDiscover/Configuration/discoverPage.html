@@ -7,6 +7,19 @@
 <body>
 <div data-role="page" class="page type-interior discoverUiPage" data-controller="__plugin/discoveruijs1371">
 <style>
+/* Header on the Discover page only (body.dcDiscoverActive is set while this page is the active route): white text and icons on the dark page. The side drawer is deliberately left alone. */
+body.dcDiscoverActive .skinHeader .pageTitle,
+body.dcDiscoverActive .skinHeader .headerButton,
+body.dcDiscoverActive .skinHeader .headerButton .material-icons,
+body.dcDiscoverActive .skinHeader .headerButton .md-icon,
+body.dcDiscoverActive .skinHeader .headerButton i,
+body.dcDiscoverActive .skinHeader .headerUserButton,
+body.dcDiscoverActive .skinHeader .headerTabs .emby-tab-button { color:#fff !important; }
+body.dcDiscoverActive .skinHeader .headerButton:hover,
+body.dcDiscoverActive .skinHeader .headerButton:focus,
+body.dcDiscoverActive .skinHeader .headerButton:hover .material-icons,
+body.dcDiscoverActive .skinHeader .headerButton:focus .material-icons { color:#fff !important; background:rgba(255,255,255,.18); }
+body.dcDiscoverActive .skinHeader .headerButton svg { fill:#fff; }
 .dcRoot { padding: 5.5em 3% 4em; color: #fff; background:#0b1426; height:100vh; overflow-y:auto; box-sizing:border-box; }
 .dcModal, .dcModal h2, .dcModal .dcOverview { color:#fff; }
 .dcSearch { display:flex; align-items:center; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.15); border-radius:2em; padding:0 1.2em; margin-bottom:1.5em; }

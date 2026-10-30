@@ -929,8 +929,17 @@ define([], function () {
             if (navPage(cmd, active)) { e.preventDefault(); }
         }
 
-        view.addEventListener('viewshow', function () { document.addEventListener('command', onCommand, true); });
-        view.addEventListener('viewhide', function () { document.removeEventListener('command', onCommand, true); });
+        // Header recoloring: body class only while this page is the active route (CSS in discoverPage.html is scoped to it).
+        function syncHeader() {
+            var on = onDiscoverRoute() && document.body.contains(view);
+            document.body.classList.toggle('dcDiscoverActive', !!on);
+        }
+        if (window.__dcHeaderSync) { window.removeEventListener('hashchange', window.__dcHeaderSync); }
+        window.__dcHeaderSync = syncHeader;
+        window.addEventListener('hashchange', syncHeader);
+
+        view.addEventListener('viewshow', function () { syncHeader(); document.addEventListener('command', onCommand, true); });
+        view.addEventListener('viewhide', function () { document.body.classList.remove('dcDiscoverActive'); document.removeEventListener('command', onCommand, true); });
 
         // ---- Directe link vanaf een film-/seriepagina: #!/configurationpage?name=...&openType=movie&openId=123 ----
         function openFromLink() {
