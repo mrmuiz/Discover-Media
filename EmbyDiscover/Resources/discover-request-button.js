@@ -3,14 +3,14 @@
  * Verbergt ook "Media informatie" op Discover/Trailers-detailpagina's. */
 (function () {
     'use strict';
-    if (window.__discoverRequestButtonVersion === '1.3.4.5') { return; }
+    if (window.__discoverRequestButtonVersion === '1.3.4.6') { return; }
     if (window.__discoverRequestButton) {
         console.warn('[Discover] oudere knopcode is nog actief; vernieuw de webclient om dubbele handlers te voorkomen.');
         return;
     }
     window.__discoverRequestButton = true;
-    window.__discoverRequestButtonVersion = '1.3.4.5';
-    console.log('[Discover] request-button script loaded v1.3.4.5');
+    window.__discoverRequestButtonVersion = '1.3.4.6';
+    console.log('[Discover] request-button script loaded v1.3.4.6');
 
     var uiLanguage = 'nl';
     function text(dutch, english, german, norwegian) {
@@ -41,7 +41,7 @@
                     'color:#ffd666;background:rgba(0,0,0,.7);padding:4px 8px;border-radius:4px;pointer-events:none;white-space:pre-wrap;';
                 document.body.appendChild(el);
             }
-            el.textContent = 'Discover v1.3.4.5 | ' + msg;
+            el.textContent = 'Discover v1.3.4.6 | ' + msg;
         } catch (e) { }
     }
     var isAdmin = false;

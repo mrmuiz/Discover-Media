@@ -1,3 +1,10 @@
+## Version 1.3.4.6-beta
+
+- Fix: on phones the Request/Trailer buttons in the Discover popup now sit directly under the poster instead of below the description, where Emby's bottom bar covered them.
+- New: genre tiles on the Discover page show a photo (like Seerr) with a colour overlay; studio and network tiles are lighter so the logos are easier to read.
+- New: row titles on the Discover page (e.g. Popular series) are clickable and open the full list with "Load more".
+- Fix: on phones the Discover page scrolls far enough that the last row is not hidden behind Emby's bottom bar.
+
 ## Version 1.3.4.5
 
 - Change: the settings text for **Tile opens Discover page** is shorter and no longer wraps in a narrow column (Dutch, English, German), and now describes how it actually works: the loader stays in `index.html`, the switch takes effect right after saving, and when off the tile opens the channel tiles.
