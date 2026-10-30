@@ -32,8 +32,8 @@ define([], function () {
 
     // Load as an external script so Emby's Content-Security-Policy does not block inline execution.
     function loadButtonScript() {
-        if (window.__discoverRequestButtonVersion === '1.3.4.5') {
-            diag.load = text('script is al actief v1.3.4.5', 'script already active v1.3.4.5', 'Skript bereits aktiv v1.3.4.5');
+        if (window.__discoverRequestButtonVersion === '1.3.4.6') {
+            diag.load = text('script is al actief v1.3.4.6', 'script already active v1.3.4.6', 'Skript bereits aktiv v1.3.4.6');
             showDiag();
             return;
         }
@@ -51,7 +51,7 @@ define([], function () {
             script.src = u + (u.indexOf('?') === -1 ? '?' : '&') + '_=' + Date.now();
             script.async = true;
             script.onload = function () {
-                if (window.__discoverRequestButtonVersion === '1.3.4.5') {
+                if (window.__discoverRequestButtonVersion === '1.3.4.6') {
                     diag.load = text('OK via extern script ', 'OK via external script ', 'OK über externes Skript ') + u;
                     showDiag();
                 } else {
@@ -929,8 +929,17 @@ define([], function () {
             if (navPage(cmd, active)) { e.preventDefault(); }
         }
 
-        view.addEventListener('viewshow', function () { document.addEventListener('command', onCommand, true); });
-        view.addEventListener('viewhide', function () { document.removeEventListener('command', onCommand, true); });
+        // Header recoloring: body class only while this page is the active route (CSS in discoverPage.html is scoped to it).
+        function syncHeader() {
+            var on = onDiscoverRoute() && document.body.contains(view);
+            document.body.classList.toggle('dcDiscoverActive', !!on);
+        }
+        if (window.__dcHeaderSync) { window.removeEventListener('hashchange', window.__dcHeaderSync); }
+        window.__dcHeaderSync = syncHeader;
+        window.addEventListener('hashchange', syncHeader);
+
+        view.addEventListener('viewshow', function () { syncHeader(); document.addEventListener('command', onCommand, true); });
+        view.addEventListener('viewhide', function () { document.body.classList.remove('dcDiscoverActive'); document.removeEventListener('command', onCommand, true); });
 
         // ---- Directe link vanaf een film-/seriepagina: #!/configurationpage?name=...&openType=movie&openId=123 ----
         function openFromLink() {
