@@ -10,6 +10,8 @@
         .discoverConfigPage .keyWrap { position: relative; }
         .discoverConfigPage .keyWrap input { padding-right: 2.8em; }
         .discoverConfigPage .keyWrap .btnToggleKey { position: absolute; right: .2em; bottom: .15em; margin: 0; }
+        .discoverConfigPage .checkboxContainer .emby-checkbox-label { display: block; width: 100%; max-width: none; }
+        .discoverConfigPage .checkboxContainer .checkboxLabel { white-space: normal; }
     </style>
     <div data-role="content">
         <div class="content-primary">
@@ -67,13 +69,13 @@
                 <div class="checkboxContainer">
                     <label class="emby-checkbox-label">
                         <input is="emby-checkbox" type="checkbox" id="chkInjectWebClientLoader" />
-                        <span class="checkboxLabel" id="lbl_chkInjectWebClientLoader">Tegel "Discover Media" opent meteen de Discover-pagina (alleen in de browser; past de Emby-webclient aan)</span>
+                        <span class="checkboxLabel" id="lbl_chkInjectWebClientLoader">Tegel opent Discover-pagina</span>
                         <span class="emby-checkbox-outline">
                             <span class="emby-checkbox-on"><i class="md-icon">check</i></span>
                             <span class="emby-checkbox-off"></span>
                         </span>
                     </label>
-                    <div class="fieldDescription" id="desc_chkInjectWebClientLoader">Zet een klein lader-script in index.html van de webclient op de server. De officiele Emby-apps (tv, mobiel) hebben een eigen ingebouwde client en merken hier niets van; daar werkt Discover via het kanaal. Wordt bij elke serverstart opnieuw toegepast. Het script blijft in index.html staan en leest deze schakelaar live, dus aan/uit werkt direct (zonder herstart). Staat de webclient op een andere plek, vul dan het pad in bij "Pad webclient" (leeg = automatisch zoeken).</div>
+                    <div class="fieldDescription" id="desc_chkInjectWebClientLoader">Alleen in de webclient (browser): de tegel "Discover Media" opent direct de Discover-pagina. Dit voegt een klein lader-script toe aan de index.html van de webclient. Na opslaan werkt het direct, zonder herstart. Uitgeschakeld opent de tegel gewoon de kanaaltegels (het script blijft staan maar doet dan niets). De Emby-apps (tv, mobiel) merken hier niets van; daar werkt Discover via het kanaal.</div>
                 </div>
 
                 <div>

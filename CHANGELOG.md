@@ -1,5 +1,7 @@
 ## Version 1.3.4.5
 
+- Change: the settings text for **Tile opens Discover page** is shorter and no longer wraps in a narrow column (Dutch, English, German), and now describes how it actually works: the loader stays in `index.html`, the switch takes effect right after saving, and when off the tile opens the channel tiles.
+
 - Fix: on the Discover page (web client) the header text "Discover", the back arrow and the icons top right (cast, user, settings) are now white, also on hover/focus, instead of dark on the dark page. Scoped to the Discover page only (a body class that is set while that page is active); other pages and the side drawer are untouched.
 
 - Fix: the status marker (checkmark / hourglass) is now placed after the title instead of before it, so it no longer affects title sorting in the channel lists. Channel DataVersion bumped so Emby refreshes cached names.

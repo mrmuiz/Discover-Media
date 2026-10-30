@@ -69,16 +69,16 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         var injectLabel = view.querySelector('#lbl_chkInjectWebClientLoader');
         if (injectLabel) {
             injectLabel.textContent = languageText(
-                'Tegel "Discover Media" opent meteen de Discover-pagina (alleen in de browser; past de Emby-webclient aan)',
-                'The "Discover Media" tile opens the Discover page directly (browser only; modifies the Emby web client)',
-                'Kachel „Discover Media“ öffnet direkt die Discover-Seite (nur im Browser; ändert den Emby-Webclient)');
+                'Tegel opent Discover-pagina',
+                'Tile opens Discover page',
+                'Kachel öffnet Discover-Seite');
         }
         var injectDesc = view.querySelector('#desc_chkInjectWebClientLoader');
         if (injectDesc) {
             injectDesc.textContent = languageText(
-                'Zet een klein lader-script in index.html van de webclient op de server. De officiele Emby-apps (tv, mobiel) hebben een eigen ingebouwde client en merken hier niets van; daar werkt Discover via het kanaal. Wordt bij elke serverstart opnieuw toegepast en netjes verwijderd als je dit weer uitzet. Staat de webclient op een andere plek, vul dan het pad in bij "Pad webclient" (leeg = automatisch zoeken).',
-                'Adds a small loader script to the server web client index.html. The official Emby apps (TV, mobile) ship their own built-in client and are not affected; there Discover works through the channel. Re-applied on every server start and cleanly removed when you turn this off. If the web client lives elsewhere, set its path under "Web client path" (empty = search automatically).',
-                'Fügt ein kleines Loader-Skript in die index.html des Server-Webclients ein. Die offiziellen Emby-Apps (TV, Mobil) haben einen eigenen eingebauten Client und sind nicht betroffen; dort funktioniert Discover über den Kanal. Wird bei jedem Serverstart erneut angewendet und sauber entfernt, wenn du dies wieder ausschaltest. Liegt der Webclient woanders, trage den Pfad unter „Webclient-Pfad“ ein (leer = automatisch suchen).');
+                'Alleen in de webclient (browser): de tegel "Discover Media" opent direct de Discover-pagina. Dit voegt een klein lader-script toe aan de index.html van de webclient. Na opslaan werkt het direct, zonder herstart. Uitgeschakeld opent de tegel gewoon de kanaaltegels (het script blijft staan maar doet dan niets). De Emby-apps (tv, mobiel) merken hier niets van; daar werkt Discover via het kanaal.',
+                'Web client (browser) only: the "Discover Media" tile opens the Discover page directly. This adds a small loader script to the web client\'s index.html. It takes effect right after saving, no restart needed. When turned off, the tile simply opens the channel tiles (the script stays in place but does nothing). The Emby apps (TV, mobile) are not affected; there Discover works through the channel.',
+                'Nur im Webclient (Browser): Die Kachel „Discover Media“ öffnet direkt die Discover-Seite. Dafür wird ein kleines Loader-Skript in die index.html des Webclients eingefügt. Nach dem Speichern wirkt es sofort, ohne Neustart. Ausgeschaltet öffnet die Kachel einfach die Kanal-Kacheln (das Skript bleibt, tut dann aber nichts). Die Emby-Apps (TV, Mobil) sind nicht betroffen; dort funktioniert Discover über den Kanal.');
         }
         label('txtRadarrUrl', 'URL (bijv. http://192.168.1.10:7878)', 'URL (e.g. http://192.168.1.10:7878)', 'URL (z. B. http://192.168.1.10:7878)');
         label('txtRadarrKey', 'API key', 'API key', 'API-Schlüssel');
