@@ -149,8 +149,13 @@ define([], function () {
             var inner = t.Image
                 ? '<img class="dcTileLogo" loading="lazy" src="' + esc(t.Image) + '" alt="' + esc(t.Name) + '" />'
                 : '<span>' + esc(t.Name) + '</span>';
+            var color = esc(t.Color || '#1c2640');
+            // Genre met foto: gekleurde laag over de foto, zodat de witte tekst leesbaar blijft.
+            var bg = t.Backdrop
+                ? 'background:linear-gradient(' + color + 'cc,' + color + 'cc),url(' + esc(t.Backdrop) + ') center/cover'
+                : 'background:' + color;
             return '<div class="dcTile focusable' + (t.Image ? ' logo' : '') + '" tabindex="0" role="button" data-kind="' + esc(r.TileKind) + '" data-id="' + esc(t.Id) +
-                '" data-name="' + esc(t.Name) + '" title="' + esc(t.Name) + '" style="background:' + esc(t.Color || '#1c2640') + '">' + inner + '</div>';
+                '" data-name="' + esc(t.Name) + '" title="' + esc(t.Name) + '" style="' + bg + '">' + inner + '</div>';
         }
 
         // ---- genre / studio / netwerk: alles in een raster met "Meer laden" ----
@@ -173,7 +178,9 @@ define([], function () {
             b.loading = true;
             var btn = content.querySelector('.dcMoreBtn');
             if (btn) { btn.disabled = true; btn.textContent = text('Laden...', 'Loading...', 'Wird geladen...'); }
-            api('GET', 'Discover/Browse', { Kind: b.kind, Id: b.id, Page: b.next }).then(function (r) {
+            var call = b.kind === 'list' ? api('GET', 'Discover/List', { Key: b.id, Page: b.next })
+                                         : api('GET', 'Discover/Browse', { Kind: b.kind, Id: b.id, Page: b.next });
+            call.then(function (r) {
                 if (browse !== b) { return; }
                 var list = (r && r.Items) || [];
                 var fresh = list.filter(function (i) {
@@ -220,7 +227,7 @@ define([], function () {
                 var seen = {};
                 r.Items.forEach(function (i) { seen[key(i)] = true; });
                 rowState[r.Key] = { nextPage: r.NextPage || 4, loading: false, done: false, seen: seen };
-                html += '<div class="dcRowTitle">' + esc(r.Title) + '</div>' +
+                html += '<div class="dcRowTitle dcRowLink" data-row-key="' + esc(r.Key) + '" data-name="' + esc(r.Title) + '" role="link">' + esc(r.Title) + ' <span class="dcRowGo">&#10095;</span></div>' +
                     '<div class="dcRowWrap">' +
                     '<button type="button" class="dcArrow left" data-dir="-1">&#10094;</button>' +
                     '<div class="dcRow" data-row="' + esc(r.Key) + '">' + r.Items.map(cardHtml).join('') + '</div>' +
@@ -557,6 +564,8 @@ define([], function () {
 
         content.addEventListener('click', function (e) {
             var t = e.target;
+            var link = t.closest ? t.closest('.dcRowLink') : null;
+            if (link) { openBrowse('list', link.getAttribute('data-row-key'), link.getAttribute('data-name')); return; }
             var tile = t.closest ? t.closest('.dcTile') : null;
             if (tile) {
                 openBrowse(tile.getAttribute('data-kind'), parseInt(tile.getAttribute('data-id'), 10), tile.getAttribute('data-name'));

@@ -20,11 +20,14 @@ body.dcDiscoverActive .skinHeader .headerButton:focus,
 body.dcDiscoverActive .skinHeader .headerButton:hover .material-icons,
 body.dcDiscoverActive .skinHeader .headerButton:focus .material-icons { color:#fff !important; background:rgba(255,255,255,.18); }
 body.dcDiscoverActive .skinHeader .headerButton svg { fill:#fff; }
-.dcRoot { padding: 5.5em 3% 4em; color: #fff; background:#0b1426; height:100vh; overflow-y:auto; box-sizing:border-box; }
+.dcRoot { padding: 5.5em 3% 4em; color: #fff; background:#0b1426; height:100vh; height:100dvh; overflow-y:auto; box-sizing:border-box; }
 .dcModal, .dcModal h2, .dcModal .dcOverview { color:#fff; }
 .dcSearch { display:flex; align-items:center; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.15); border-radius:2em; padding:0 1.2em; margin-bottom:1.5em; }
 .dcSearch input { flex:1; background:none; border:0; outline:0; color:#fff; font-size:1.1em; padding:.9em .5em; }
 .dcRowTitle { font-size:1.5em; font-weight:600; margin:1.2em 0 .5em; }
+.dcRowLink { cursor:pointer; display:inline-block; }
+.dcRowLink .dcRowGo { font-size:.7em; opacity:.6; margin-left:.3em; }
+.dcRowLink:hover .dcRowGo { opacity:1; color:#ffb400; }
 .dcRow { display:flex; overflow-x:auto; padding:.3em 0 1em; scrollbar-width:thin; }
 .dcRowWrap { position:relative; }
 .dcArrow { position:absolute; top:calc(50% - .5em); transform:translateY(-50%); z-index:3; width:2.4em; height:4.5em; border:0; border-radius:.6em; background:rgba(0,0,0,.7); color:#fff; font-size:1.2em; cursor:pointer; opacity:.85; }
@@ -111,7 +114,7 @@ body.dcDiscoverActive .skinHeader .headerButton svg { fill:#fff; }
 .dcToast { position:fixed; bottom:2em; left:50%; transform:translateX(-50%); background:#22a559; color:#fff; padding:.8em 1.6em; border-radius:2em; z-index:10001; display:none; }
 .dcToast.err { background:#d32f2f; }
 .dcTileRow { }
-.dcTile { flex:0 0 auto; width:190px; height:84px; border-radius:.7em; display:flex; align-items:center; justify-content:center; text-align:center; padding:.5em 1em; box-sizing:border-box; font-weight:700; font-size:1.05em; color:#fff; cursor:pointer; border:1px solid rgba(255,255,255,.12); transition:transform .15s, border-color .15s; overflow:hidden; }
+.dcTile { text-shadow:0 1px 4px rgba(0,0,0,.7); flex:0 0 auto; width:190px; height:84px; border-radius:.7em; display:flex; align-items:center; justify-content:center; text-align:center; padding:.5em 1em; box-sizing:border-box; font-weight:700; font-size:1.05em; color:#fff; cursor:pointer; border:1px solid rgba(255,255,255,.12); transition:transform .15s, border-color .15s; overflow:hidden; }
 .dcTile:hover { transform:scale(1.04); border-color:#ffb400; }
 .dcTile.logo { width:150px; padding:.8em 1.2em; }
 .dcTileLogo { max-width:100%; max-height:100%; object-fit:contain; filter:brightness(0) invert(1); }
@@ -125,7 +128,7 @@ body.dcDiscoverActive .skinHeader .headerButton svg { fill:#fff; }
 .dcTile:focus, .dcBtn:focus, .dcBack:focus, .dcArrow:focus, .dcClose:focus, .dcBtnTrailer:focus, .dcBtnOpen:focus, .dcBtnDel:focus { outline:0; box-shadow:0 0 0 3px #ffb400; transform:scale(1.04); z-index:2; }
 .dcCard:focus .dcPoster { transform:scale(1.06); border-color:#ffb400; box-shadow:0 .5em 1.4em rgba(0,0,0,.5), 0 0 0 3px #ffb400; }
 .dcCard:focus .dcCapT { color:#ffb400; }
-@media (max-width:600px){ .dcCard{width:130px;} .dcPoster{height:195px;} .dcSkel{width:130px;} .dcSkelP{height:195px;} .dcModalBody{flex-direction:column; align-items:center;}
+@media (max-width:600px){ .dcRoot{padding-bottom:calc(8em + env(safe-area-inset-bottom));} .dcCard{width:130px;} .dcPoster{height:195px;} .dcSkel{width:130px;} .dcSkelP{height:195px;} .dcModalBody{flex-direction:column; align-items:center;}
   /* Telefoon: knoppen direct onder de poster, zodat ze niet onder Emby's onderbalk vallen. */
   .dcOverlay:not(.dcTv) .dcModalInfo{display:contents;}
   .dcOverlay:not(.dcTv) .dcModalBody > img{margin-right:0; order:0;}
