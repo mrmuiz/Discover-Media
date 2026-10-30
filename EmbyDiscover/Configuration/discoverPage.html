@@ -125,7 +125,12 @@ body.dcDiscoverActive .skinHeader .headerButton svg { fill:#fff; }
 .dcTile:focus, .dcBtn:focus, .dcBack:focus, .dcArrow:focus, .dcClose:focus, .dcBtnTrailer:focus, .dcBtnOpen:focus, .dcBtnDel:focus { outline:0; box-shadow:0 0 0 3px #ffb400; transform:scale(1.04); z-index:2; }
 .dcCard:focus .dcPoster { transform:scale(1.06); border-color:#ffb400; box-shadow:0 .5em 1.4em rgba(0,0,0,.5), 0 0 0 3px #ffb400; }
 .dcCard:focus .dcCapT { color:#ffb400; }
-@media (max-width:600px){ .dcCard{width:130px;} .dcPoster{height:195px;} .dcSkel{width:130px;} .dcSkelP{height:195px;} .dcModalBody{flex-direction:column; align-items:center;} }
+@media (max-width:600px){ .dcCard{width:130px;} .dcPoster{height:195px;} .dcSkel{width:130px;} .dcSkelP{height:195px;} .dcModalBody{flex-direction:column; align-items:center;}
+  /* Telefoon: knoppen direct onder de poster, zodat ze niet onder Emby's onderbalk vallen. */
+  .dcOverlay:not(.dcTv) .dcModalInfo{display:contents;}
+  .dcOverlay:not(.dcTv) .dcModalBody > img{margin-right:0; order:0;}
+  .dcOverlay:not(.dcTv) .dcBtnRow{order:1; justify-content:center; margin-top:1em; width:100%;}
+  .dcOverlay:not(.dcTv) .dcModalTitle,.dcOverlay:not(.dcTv) .dcMeta,.dcOverlay:not(.dcTv) .dcInfo,.dcOverlay:not(.dcTv) .dcOverview{order:2; align-self:stretch;} }
 @media (prefers-reduced-motion: reduce){ .dcSkelP{animation:none} }
 </style>
     <div class="dcRoot">
