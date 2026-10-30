@@ -32,7 +32,31 @@ namespace Emby.Plugins.Discover
             _logger = logManager.GetLogger("Discover");
         }
 
+        private System.Threading.Timer _timer;
+        private bool? _lastApplied;
+
         public void Run()
+        {
+            Reapply();
+            // Apply again whenever settings are saved, so switching the loader on/off takes effect right away (no restart).
+            try { Plugin.ConfigurationSaved += OnConfigurationChanged; } catch { }
+            // Safety net in case Emby saves the settings without going through UpdateConfiguration.
+            _timer = new System.Threading.Timer(_ => CheckForChange(), null, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(5));
+        }
+
+        private void OnConfigurationChanged(object sender, EventArgs e) { Reapply(); }
+
+        private void CheckForChange()
+        {
+            try
+            {
+                var on = Plugin.GetCurrentConfiguration().InjectWebClientLoader;
+                if (_lastApplied.HasValue && _lastApplied.Value != on) Reapply();
+            }
+            catch { }
+        }
+
+        private void Reapply()
         {
             try { Apply(); }
             catch (Exception ex)
@@ -42,7 +66,7 @@ namespace Emby.Plugins.Discover
             }
         }
 
-        public void Dispose() { }
+        public void Dispose() { try { Plugin.ConfigurationSaved -= OnConfigurationChanged; } catch { } if (_timer != null) _timer.Dispose(); }
 
         private void Apply()
         {
@@ -51,7 +75,14 @@ namespace Emby.Plugins.Discover
             try
             {
                 var cfg = Plugin.GetCurrentConfiguration();
+                if (!cfg.LoaderDefaultApplied)
+                {
+                    cfg.LoaderDefaultApplied = true;
+                    cfg.InjectWebClientLoader = true;
+                    try { Plugin.Instance.UpdateConfiguration(cfg); } catch { }
+                }
                 loaderOn = cfg.InjectWebClientLoader;
+                _lastApplied = loaderOn;
                 configuredPath = cfg.DashboardUiPath ?? "";
             }
             catch { }
@@ -59,13 +90,13 @@ namespace Emby.Plugins.Discover
             string indexPath = FindIndexHtml(configuredPath);
             if (indexPath == null)
             {
-                DiscoverDiagnostics.WebInject = loaderOn
-                    ? "webclient niet gevonden; vul het pad van de webclient-map (met index.html) in bij de instellingen"
-                    : "uit";
+                DiscoverDiagnostics.WebInject = "webclient niet gevonden; vul het pad van de webclient-map (met index.html) in bij de instellingen";
                 return;
             }
 
-            DiscoverDiagnostics.WebInject = ApplyLoader(indexPath, loaderOn);
+            // The loader always stays injected: it reads the "tile opens Discover" switch from the server at runtime
+            // (/Discover/LoaderConfig), so toggling takes effect at once without a restart or a changed index.html.
+            DiscoverDiagnostics.WebInject = ApplyLoader(indexPath, true) + (loaderOn ? " (tegel -> Discover: aan)" : " (tegel -> Discover: uit)");
             string ns = RemoveNativeShell(indexPath);
             try { _logger.Info("Discover: webclient-lader {0}; oude app-modus-shim {1}", DiscoverDiagnostics.WebInject, ns); } catch { }
         }
@@ -209,7 +240,7 @@ namespace Emby.Plugins.Discover
             string html = ReadText(indexPath, out bom);
             string cleaned = StripExisting(html);
             string block = "\n" + StartMark +
-                "<script src=\"" + LoaderFile + "?v=" + Plugin.VersionString + "\" defer></script>" +
+                "<script src=\"" + LoaderFile + "?v=" + Plugin.VersionString + "." + DateTime.UtcNow.Ticks + "\" defer></script>" +
                 EndMark + "\n";
 
             int bodyClose = cleaned.LastIndexOf("</body>", StringComparison.OrdinalIgnoreCase);

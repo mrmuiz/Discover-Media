@@ -28,7 +28,10 @@ namespace Emby.Plugins.Discover
         /// <summary>Als dit aan staat, zet de plugin een klein lader-script in de index.html van de Emby-webclient,
         /// zodat een tik op de tegel/menu-ingang "Discover Media" meteen de Discover-pagina opent (in de browser
         /// en in apps die de webclient van de server laden) en de Aanvragen-knop overal werkt. Standaard uit.</summary>
-        public bool InjectWebClientLoader { get; set; } = false;
+        public bool InjectWebClientLoader { get; set; } = true;
+
+        /// <summary>Eenmalig: bestaande installaties (loader stond standaard uit) krijgen de loader één keer aan; daarna beslist de gebruiker.</summary>
+        public bool LoaderDefaultApplied { get; set; } = false;
 
         /// <summary>Optioneel: volledig pad naar ffmpeg, voor de bevestigingskaart per titel. Leeg = zoeken op gangbare plekken.</summary>
         public string FfmpegPath { get; set; } = "";

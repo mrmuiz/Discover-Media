@@ -28,7 +28,7 @@ namespace Emby.Plugins.Discover
             get
             {
                 try { return typeof(Plugin).Assembly.GetName().Version.ToString(); }
-                catch { return "1.3.4.4"; }
+                catch { return "1.3.4.5"; }
             }
         }
 
@@ -87,6 +87,14 @@ namespace Emby.Plugins.Discover
             }
 
             return Configuration;
+        }
+
+        public static event EventHandler ConfigurationSaved;
+
+        public override void UpdateConfiguration(BasePluginConfiguration configuration)
+        {
+            base.UpdateConfiguration(configuration);
+            try { ConfigurationSaved?.Invoke(this, EventArgs.Empty); } catch { }
         }
 
         public override string Name => "Discover";
