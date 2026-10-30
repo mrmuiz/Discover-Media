@@ -32,8 +32,8 @@ define([], function () {
 
     // Load as an external script so Emby's Content-Security-Policy does not block inline execution.
     function loadButtonScript() {
-        if (window.__discoverRequestButtonVersion === '1.3.4.6') {
-            diag.load = text('script is al actief v1.3.4.6', 'script already active v1.3.4.6', 'Skript bereits aktiv v1.3.4.6');
+        if (window.__discoverRequestButtonVersion === '1.3.4.5') {
+            diag.load = text('script is al actief v1.3.4.5', 'script already active v1.3.4.5', 'Skript bereits aktiv v1.3.4.5');
             showDiag();
             return;
         }
@@ -51,7 +51,7 @@ define([], function () {
             script.src = u + (u.indexOf('?') === -1 ? '?' : '&') + '_=' + Date.now();
             script.async = true;
             script.onload = function () {
-                if (window.__discoverRequestButtonVersion === '1.3.4.6') {
+                if (window.__discoverRequestButtonVersion === '1.3.4.5') {
                     diag.load = text('OK via extern script ', 'OK via external script ', 'OK über externes Skript ') + u;
                     showDiag();
                 } else {
