@@ -1,3 +1,28 @@
+## Version 1.3.4.6
+
+- Add: season buttons in the Discover popup for series. Next to Request there is now an **All seasons** button and one button per season (Season 1, Season 2, ...). A season button requests only that season; All seasons requests the whole series, including seasons released later. For series the single Request button is hidden while the season buttons are shown; if the seasons cannot be loaded, the normal Request button stays.
+- Change: a series that is already in your Emby library no longer jumps straight to its Emby page. The Discover popup opens first, so missing seasons can still be requested, and an **Open in Emby** button takes you to the series. Movies still open directly in Emby.
+- Add: seasons that are already in your Emby library (at least one episode) show a checkmark in the popup and cannot be clicked again. **All seasons** stays clickable.
+- Change: **Delete** and **Cancel request** are now available to administrators and to users who have Emby's *Allow media deletion* permission (before: administrators only). `/Discover/RemoveItem` checks this on the server too, so a user without the permission gets "You are not allowed to delete." even when calling the endpoint directly.
+- Fix: the green checkmarks on the **Season N** and **All seasons** request tiles are hidden. They were Emby's own "played" marker (set when you press Play to request) and did not mean the season is in your library. The checkmark in the tile label ("Season 1 ✓") is the real availability indicator.
+- After updating, rebuild the plugin, restart Emby once and hard-refresh the browser (Ctrl+F5).
+
+## Version 1.3.5.1
+
+- New: requesting a series that is **already in Sonarr** no longer does nothing. The requested seasons (All seasons: every season except specials) are set to monitored, the series itself is set to monitored if needed, and a search starts for aired episodes without a file (`SeriesSearch` for All seasons, `SeasonSearch` per season otherwise). Seasons that were already monitored are never switched off. If there was nothing to do, the message stays "Already in Sonarr". The season flag uses the same endpoint as for new series (Sonarr v5); on v4 only the episodes are updated and Diagnostics shows a line.
+- Change: the **All seasons** item now has a neutral grey-blue portrait tile with the text "All seasons" (in the plugin language) instead of a series poster. If the tile cannot be made (no ffmpeg, tile text images off), the series poster is used. Its description was updated. Season folder ID bumped to `ask25seasons:` so Emby re-reads the list.
+
+## Version 1.3.5.0
+
+- Fix: **Refresh Internet Channels no longer creates a card and tile for every title.** Until now the refresh opened every title folder, which started a background ffmpeg job per title (and per season). The scheduled task finished, but the queue kept running for hours and wrote tens of GB (e.g. 23,860 cards = 22 GB and 13,248 tile images). Cards and per-title tiles are now only created when someone actually plays or requests a title. The old behaviour is available as **Pre-create cards and tiles for every title** (Storage tab, off by default).
+- New: **automatic cleanup** of `discover-cards` and `discover-tiles`, independent of creating files. It runs 2 minutes after startup and every 24 hours: first files older than the retention (cards 14 days, tiles 30 days, configurable), then the oldest files until the total is under the maximum size (2048 MB, configurable; 0 = unlimited). A card that is still being used keeps its date. The old cleanup that scanned the whole folder after every new file is removed.
+- New: **Users tab**: tick which Emby users may make requests. Users without a tick can still browse and watch trailers, but pressing Play on Request does nothing in Radarr/Sonarr (playback is stopped and a message is shown), and the Request button on the Discover page returns a message. New users are allowed by default. Stored as `BlockedUserIds`.
+- New: **Storage tab** with the size of the stored cards and tiles, the retention settings, and the buttons **Clean up now** and **Delete everything** (admins only; `GET /Discover/Cache`, `POST /Discover/Cache/Clean`).
+- Change: the settings page is split into tabs: General, TMDB, Radarr & Sonarr, Users, Storage and Diagnostics. One Save button for all tabs; the last used tab is remembered. Settings page `discoverconfig1080` / `discoverconfigjs1350`.
+- New: **Request all seasons** button in the season picker (Discover page, item pages and the rows). One click requests the whole series and, unlike ticking every season, Sonarr also monitors seasons that are released later. The old *All* button is now *Select all*, and the confirm button is *Request selected*.
+- New: the channel's season folder ("Request: <series>") now starts with an **All seasons** item. Press ▶ on it to request the whole series at once, including seasons released later; the individual season items still request only that season. The season folder ID and the channel DataVersion were bumped so Emby drops its cached folder contents and shows the new item.
+- After updating, restart Emby once and hard-refresh the browser (Ctrl+F5). Existing card and tile files are cleaned up by the new retention rules; use **Delete everything** on the Storage tab to free the space at once.
+
 ## Version 1.3.4.5
 
 - Add: on-phone debug panel for the item-page buttons. Open any Discover item page with `?dcdebug=1` appended (or set `localStorage.dcDebug='1'`; `?dcdebug=0` turns it off). It shows the script build, the detected bottom bar, `--dc-bottom-clear`, the scroller, the Request button rect and its ancestor chain, and the viewport sizes. Tap the panel to hide it for 4 seconds.

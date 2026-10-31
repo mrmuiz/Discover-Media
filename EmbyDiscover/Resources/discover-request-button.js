@@ -3,16 +3,16 @@
  * Verbergt ook "Media informatie" op Discover/Trailers-detailpagina's. */
 (function () {
     'use strict';
-    if (window.__discoverRequestButtonVersion === '1.3.4.5') { return; }
+    if (window.__discoverRequestButtonVersion === '1.3.4.6') { return; }
     if (window.__discoverRequestButton) {
         console.warn('[Discover] oudere knopcode is nog actief; vernieuw de webclient om dubbele handlers te voorkomen.');
         return;
     }
-    var DC_BUILD = 'mobile-r3 2026-10-31T11:20';
+    var DC_BUILD = 'seasons-r1 2026-10-31T17:00';
     window.__discoverRequestButton = true;
-    window.__discoverRequestButtonVersion = '1.3.4.5';
+    window.__discoverRequestButtonVersion = '1.3.4.6';
     window.__discoverRequestButtonBuild = DC_BUILD;
-    console.log('[Discover] request-button script loaded v1.3.4.5 build ' + DC_BUILD);
+    console.log('[Discover] request-button script loaded v1.3.4.6 build ' + DC_BUILD);
 
     var uiLanguage = 'nl';
     function text(dutch, english, german, norwegian) {
@@ -43,7 +43,7 @@
                     'color:#ffd666;background:rgba(0,0,0,.7);padding:4px 8px;border-radius:4px;pointer-events:none;white-space:pre-wrap;';
                 document.body.appendChild(el);
             }
-            el.textContent = 'Discover v1.3.4.5 | ' + msg;
+            el.textContent = 'Discover v1.3.4.6 | ' + msg;
         } catch (e) { }
     }
     var isAdmin = false;
@@ -88,6 +88,7 @@
             '.discover-channel-landscape-card .itemSelectionPanel { display: none !important; }',
             '.discover-season-request-card [class*="cardOverlayFab"], .discover-season-request-card [class*="cardOverlayButton"],',
             '.discover-season-request-card .itemSelectionPanel { display: none !important; }',
+            '.discover-season-request-card [class*="playedIndicator"], .discover-no-played [class*="playedIndicator"] { display: none !important; }',
             '.discover-channel-landscape-card .cardScalable { aspect-ratio: 16 / 9 !important; height: auto !important; padding: 0 !important; }',
             '.discover-season-request-card .cardScalable { aspect-ratio: 2 / 3 !important; height: auto !important; padding: 0 !important; }',
             '.discover-season-info { box-sizing: border-box; margin-top: 12px; overflow: hidden; border: 1px solid #344154; border-radius: 8px; background: #111a2a; color: #e8edf6; font-size: 12px; line-height: 1.3; }',
@@ -221,7 +222,7 @@
             var bcs = btn ? getComputedStyle(btn) : null;
             var vv = window.visualViewport;
             el.textContent = [
-                'Discover v1.3.4.5 build ' + DC_BUILD + ' (' + (window.__discoverRequestButtonBuild || '?') + ')',
+                'Discover v1.3.4.6 build ' + DC_BUILD + ' (' + (window.__discoverRequestButtonBuild || '?') + ')',
                 'item page: ' + (document.querySelector('.itemDetailPage') ? 'ja' : 'nee') + ' body=' + document.body.className.split(/\s+/).filter(function (c) { return /^(dc|discover)/.test(c); }).join(' '),
                 'bar: ' + (info.bar ? describe(info.bar) + ' ' + rectText(info.bar) : 'niet gevonden') + ' h=' + info.measured,
                 'mode=' + info.mode + ' --dc-bottom-clear=' + (document.documentElement.style.getPropertyValue('--dc-bottom-clear') || '(leeg)'),
@@ -494,6 +495,14 @@
                     return null;
                 }, function () { schedule(); return null; });
             }
+            // Het kanaalitem "Alle seizoenen" is een aanvraagitem zoals de seizoenen: geen eigen Aanvragen-knop.
+            if (/^[\u2713\u23F3]?\s*(?:Alle seizoenen|All seasons|Alle Staffeln)\s*$/i.test(nm)) {
+                askIds[id] = true;
+                askStatus[id] = 0;
+                dbg('alle-seizoenen-aanvraag herkend: ' + nm);
+                schedule();
+                return null;
+            }
             var seasonAskName = /^[\u2713\u23F3]?\s*(?:Aanvragen Seizoen|Request Season|Staffel anfragen|Seizoen|Season|Staffel)\s+\d+/i.test(nm);
             if (seasonAskName) {
                 askIds[id] = true;
@@ -674,13 +683,20 @@
             return b;
         }
 
-        var btnAll = mkBtn(text('Alles', 'All', 'Alle'), false);
+        var btnAll = mkBtn(text('Alles selecteren', 'Select all', 'Alle auswählen'), false);
         btnAll.onclick = function () { checks.forEach(function (c) { c.checked = true; }); };
+
+        // Een klik: de hele serie aanvragen. Zonder seizoenslijst monitort Sonarr alles, ook seizoenen die later uitkomen.
+        var btnEvery = mkBtn(text('Alle seizoenen aanvragen', 'Request all seasons', 'Alle Staffeln anfordern'), true);
+        btnEvery.onclick = function () {
+            closeModal(overlay);
+            onConfirm(null);
+        };
 
         var btnCancel = mkBtn(text('Annuleren', 'Cancel', 'Abbrechen'), false);
         btnCancel.onclick = function () { closeModal(overlay); };
 
-        var btnOk = mkBtn(text('Aanvragen', 'Request', 'Anfragen', 'Forespør'), true);
+        var btnOk = mkBtn(text('Geselecteerde aanvragen', 'Request selected', 'Auswahl anfordern'), false);
         btnOk.onclick = function () {
             var selected = [];
             checks.forEach(function (c) { if (c.checked) { selected.push(parseInt(c.value, 10)); } });
@@ -695,6 +711,7 @@
         actions.appendChild(btnAll);
         actions.appendChild(btnCancel);
         actions.appendChild(btnOk);
+        actions.appendChild(btnEvery);
         card.appendChild(actions);
 
         overlay.appendChild(card);
@@ -1409,6 +1426,11 @@
             card.classList.remove('discover-web-ask-hidden');
             card.classList.remove('discover-channel-landscape-card');
             card.classList.remove('discover-season-request-card');
+            card.classList.remove('discover-no-played');
+            if (info && info.name && /^[\u2713\u23F3]?\s*(?:Alle seizoenen|All seasons|Alle Staffeln)\s*$/i.test(info.name)) {
+                // Emby's eigen groene "gezien"-vinkje zegt hier niets over je bibliotheek: verbergen.
+                card.classList.add('discover-no-played');
+            }
             if (!info || !info.name || !info.parentId) {
                 restoreRequestTileLabel(card);
                 restoreSeasonTileLabel(card);

@@ -97,6 +97,15 @@ body.dcDiscoverActive .skinHeader .headerButton svg { fill:#fff; }
 /* Op tv is Emby's kop (.skinHeader, 9.125em met de paginatitel "Discover Media") hoger dan de
    5.5em die .dcRoot standaard vrijhoudt; daardoor viel de titel over de zoekbalk. Extra ruimte boven. */
 .dcTvPage .dcRoot { padding-left:5%; padding-right:5%; padding-top:9.75em; }
+.dcSeasons { display:none; flex-wrap:wrap; align-items:center; margin-bottom:.4em; }
+.dcSeasons.show { display:flex; }
+.dcSeasons > * { margin:0 .5em .5em 0; }
+.dcSeasonLabel { width:100%; color:#b8c0d4; font-size:.85em; margin-bottom:.4em; }
+.dcBtnSeason { background:rgba(255,255,255,.12); color:#fff; border:1px solid rgba(255,255,255,.3); border-radius:2em; padding:.55em 1.1em; font-weight:700; font-size:.95em; cursor:pointer; }
+.dcBtnSeason:hover { background:#ffb400; color:#111; }
+.dcBtnSeason.all { background:#ffb400; color:#111; border-color:#ffb400; }
+.dcBtnSeason:disabled { opacity:.5; cursor:default; }
+.dcBtnSeason:focus { outline:0; box-shadow:0 0 0 3px #ffb400; transform:scale(1.04); }
 .dcBtnDel { background:#c62828; color:#fff; border:0; border-radius:2em; padding:.8em 1.6em; font-weight:700; font-size:1em; cursor:pointer; display:none; }
 .dcBtnDel.show { display:inline-block; }
 .dcBtnTrailer, .dcBtnOpen { background:rgba(255,255,255,.12); color:#fff; border:1px solid rgba(255,255,255,.3); border-radius:2em; padding:.8em 1.6em; font-weight:700; font-size:1em; cursor:pointer; display:none; }
@@ -150,6 +159,7 @@ body.dcDiscoverActive .skinHeader .headerButton svg { fill:#fff; }
                     <div class="dcMeta"></div>
                     <div class="dcInfo"></div>
                     <div class="dcOverview"></div>
+                    <div class="dcSeasons"></div>
                     <div class="dcBtnRow"><button type="button" class="dcBtn"></button><button type="button" class="dcBtnTrailer"></button><button type="button" class="dcBtnOpen"></button><button type="button" class="dcBtnDel"></button></div>
                 </div>
             </div>

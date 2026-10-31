@@ -28,7 +28,7 @@ namespace Emby.Plugins.Discover
             get
             {
                 try { return typeof(Plugin).Assembly.GetName().Version.ToString(); }
-                catch { return "1.3.4.5"; }
+                catch { return "1.3.4.6"; }
             }
         }
 
@@ -156,7 +156,7 @@ namespace Emby.Plugins.Discover
                 },
                 new PluginPageInfo
                 {
-                    Name = "discoverconfigjs1301",
+                    Name = "discoverconfigjs1350",
                     EmbeddedResourcePath = GetType().Namespace + ".Configuration.configPage.js"
                 }
             };

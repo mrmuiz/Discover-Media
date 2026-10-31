@@ -32,8 +32,8 @@ define([], function () {
 
     // Load as an external script so Emby's Content-Security-Policy does not block inline execution.
     function loadButtonScript() {
-        if (window.__discoverRequestButtonVersion === '1.3.4.5') {
-            diag.load = text('script is al actief v1.3.4.5', 'script already active v1.3.4.5', 'Skript bereits aktiv v1.3.4.5');
+        if (window.__discoverRequestButtonVersion === '1.3.4.6') {
+            diag.load = text('script is al actief v1.3.4.6', 'script already active v1.3.4.6', 'Skript bereits aktiv v1.3.4.6');
             showDiag();
             return;
         }
@@ -51,7 +51,7 @@ define([], function () {
             script.src = u + (u.indexOf('?') === -1 ? '?' : '&') + '_=' + Date.now();
             script.async = true;
             script.onload = function () {
-                if (window.__discoverRequestButtonVersion === '1.3.4.5') {
+                if (window.__discoverRequestButtonVersion === '1.3.4.6') {
                     diag.load = text('OK via extern script ', 'OK via external script ', 'OK über externes Skript ') + u;
                     showDiag();
                 } else {
@@ -107,7 +107,7 @@ define([], function () {
         var showTrailer = true;
         try {
             ApiClient.getCurrentUser().then(function (u) {
-                isAdmin = !!(u && u.Policy && u.Policy.IsAdministrator);
+                isAdmin = !!(u && u.Policy && (u.Policy.IsAdministrator || u.Policy.EnableContentDeletion)); // mag verwijderen/annuleren
                 updateButton();
             }, function () { });
         } catch (e) { }
@@ -316,6 +316,117 @@ define([], function () {
             }
         }
 
+        // ---- Seizoenknoppen in de popup (series): "Alle seizoenen" + een knop per seizoen ----
+        var seasonCache = {};
+        function requestSeasons(i, seasons, btn) {
+            if (!i) { return; }
+            var all = !seasons || !seasons.length;
+            var body = { Type: i.Type, TmdbId: i.TmdbId };
+            if (!all) { body.Seasons = seasons; }
+            btn.disabled = true;
+            api('POST', 'Discover/RequestItem', null, body).then(function (r) {
+                if (r && r.Success) {
+                    i.Status = 1;
+                    refreshCards(i);
+                    showToast(i.Title + ': ' + r.Message, false);
+                } else {
+                    showToast(text('Mislukt: ', 'Failed: ', 'Fehlgeschlagen: ') + ((r && r.Message) || text('onbekende fout', 'unknown error', 'unbekannter Fehler')), true);
+                }
+                btn.disabled = false;
+                if (current === i) { updateButton(); applySeasonStates(i); }
+            }, function () {
+                showToast(text('Aanvraag mislukt.', 'Request failed.', 'Anfrage fehlgeschlagen.'), true);
+                btn.disabled = false;
+            });
+        }
+
+        function renderSeasonButtons(i, seasons) {
+            var box = overlay.querySelector('.dcSeasons');
+            box.textContent = '';
+            var list = (seasons || []).filter(function (s) { return s.Number > 0; });
+            if (i.Type !== 'tv' || list.length === 0) { box.classList.remove('show'); return; }
+            var label = document.createElement('div');
+            label.className = 'dcSeasonLabel';
+            label.textContent = text('Kies een seizoen om aan te vragen', 'Choose a season to request', 'Staffel zum Anfordern wählen');
+            box.appendChild(label);
+            var all = document.createElement('button');
+            all.type = 'button';
+            all.className = 'dcBtnSeason all';
+            all.textContent = text('Alle seizoenen', 'All seasons', 'Alle Staffeln');
+            all.addEventListener('click', function () { requestSeasons(current, null, all); });
+            box.appendChild(all);
+            list.forEach(function (s) {
+                var b = document.createElement('button');
+                b.type = 'button';
+                b.className = 'dcBtnSeason';
+                b.setAttribute('data-season', s.Number);
+                b.textContent = text('Seizoen ', 'Season ', 'Staffel ') + s.Number;
+                b.title = s.EpisodeCount ? s.EpisodeCount + ' ' + text('afl.', 'eps.', 'Folgen') : '';
+                b.addEventListener('click', function () { requestSeasons(current, [s.Number], b); });
+                box.appendChild(b);
+            });
+            box.classList.add('show');
+            applySeasonStates(i);
+            // De losse Aanvragen-knop is voor series overbodig: "Alle seizoenen" doet hetzelfde.
+            overlay.querySelector('.dcBtn').style.display = 'none';
+        }
+
+        // Seizoenen die al in je Emby-bibliotheek staan (minstens een aflevering) krijgen een vinkje en
+        // zijn niet meer aan te klikken.
+        var libSeasons = {};
+        function applySeasonStates(i) {
+            var have = libSeasons[i.TmdbId] || {};
+            var btns = overlay.querySelectorAll('.dcBtnSeason[data-season]');
+            for (var k = 0; k < btns.length; k++) {
+                var n = parseInt(btns[k].getAttribute('data-season'), 10);
+                var base = text('Seizoen ', 'Season ', 'Staffel ') + n;
+                if (have[n]) {
+                    btns[k].textContent = '\u2713 ' + base;
+                    btns[k].disabled = true;
+                    btns[k].title = text('Al in je bibliotheek', 'Already in your library', 'Bereits in deiner Bibliothek');
+                } else {
+                    btns[k].textContent = base;
+                    btns[k].disabled = false;
+                }
+            }
+        }
+        function loadLibrarySeasons(i) {
+            if (i.Type !== 'tv') { return; }
+            if (libSeasons[i.TmdbId]) { applySeasonStates(i); return; }
+            findLibraryItem(i).then(function (libId) {
+                if (!libId) { libSeasons[i.TmdbId] = {}; return; }
+                var uid = ApiClient.getCurrentUserId();
+                return getJson('Users/' + uid + '/Items', {
+                    ParentId: libId, IncludeItemTypes: 'Episode', Recursive: true,
+                    Fields: 'ParentIndexNumber', Limit: 5000
+                }).then(function (r) {
+                    var states = {};
+                    ((r && r.Items) || []).forEach(function (it) {
+                        var n = parseInt(it.ParentIndexNumber, 10);
+                        if (n > 0) { states[n] = true; }
+                    });
+                    libSeasons[i.TmdbId] = states;
+                });
+            }).then(function () {
+                if (current === i) { applySeasonStates(i); }
+            }, function () { });
+        }
+
+        function loadSeasonButtons(i) {
+            var box = overlay.querySelector('.dcSeasons');
+            box.textContent = '';
+            box.classList.remove('show');
+            overlay.querySelector('.dcBtn').style.display = '';
+            if (i.Type !== 'tv') { return; }
+            loadLibrarySeasons(i);
+            if (seasonCache[i.TmdbId]) { renderSeasonButtons(i, seasonCache[i.TmdbId]); return; }
+            api('GET', 'Discover/Seasons', { TmdbId: i.TmdbId }).then(function (r) {
+                var s = (r && r.Seasons) || [];
+                seasonCache[i.TmdbId] = s;
+                if (current === i) { renderSeasonButtons(i, s); }
+            }, function () { /* geen seizoenen: de gewone Aanvragen-knop blijft staan */ });
+        }
+
         function openModal(i) {
             current = i;
             overlay.querySelector('.dcModalBack').style.backgroundImage = i.Backdrop ? 'url(' + i.Backdrop + ')' : 'none';
@@ -340,6 +451,7 @@ define([], function () {
             var ob = overlay.querySelector('.dcBtnOpen');
             ob.classList.remove('show'); ob.removeAttribute('data-id');
             ob.textContent = text('Openen in Emby', 'Open in Emby', 'In Emby öffnen');
+            loadSeasonButtons(i);
             updateButton();
             lastFocus = document.activeElement;
             overlay.classList.add('open');
@@ -482,14 +594,25 @@ define([], function () {
                 return;
             }
             findLibraryItem(i).then(function (libId) {
+                if (libId && i.Type === 'tv') { openModalWithEmbyLink(i, libId); return; }
                 if (libId) { goToEmbyItem(libId); return; }
                 openChannelItem(i);
             });
         }
 
+        // Series die je al (deels) hebt: toch de popup tonen, zodat je ontbrekende seizoenen kunt aanvragen.
+        // Met de knop "Openen in Emby" kom je alsnog bij de serie zelf.
+        function openModalWithEmbyLink(i, embyId) {
+            openModal(i);
+            var ob = overlay.querySelector('.dcBtnOpen');
+            ob.setAttribute('data-id', embyId);
+            ob.classList.add('show');
+        }
+
         function openChannelItem(i) {
             buildEmbyMap().then(function (map) {
                 var id = lookup(map, i);
+                if (id && i.Type === 'tv') { openModalWithEmbyLink(i, id); return; }
                 if (id) { goToEmbyItem(id); return; }
                 openModal(i); // niet in bibliotheek of hoofdlijsten: kleine popup
             }, function () { openModal(i); });
@@ -745,7 +868,7 @@ define([], function () {
 
         function modalButtons(host) {
             if (host === trailerOverlay) { return [trailerOverlay.querySelector('.dcTrailerClose')]; }
-            return Array.prototype.filter.call(overlay.querySelectorAll('.dcBtnRow button'), isUsable);
+            return Array.prototype.filter.call(overlay.querySelectorAll('.dcSeasons button, .dcBtnRow button'), isUsable);
         }
         function firstModalButton(host) {
             return modalButtons(host)[0] || host.querySelector('.dcClose');

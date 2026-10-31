@@ -41,8 +41,8 @@ namespace Emby.Plugins.Discover
         public int[] Seasons { get; set; }
     }
 
-    [Route("/Discover/RemoveItem", "POST", Summary = "Verwijder een film of serie uit Radarr/Sonarr (alleen beheerders)")]
-    [Authenticated(Roles = "Admin")]
+    [Route("/Discover/RemoveItem", "POST", Summary = "Verwijder een film of serie uit Radarr/Sonarr (beheerders en gebruikers met Emby-verwijderrechten)")]
+    [Authenticated]
     public class DiscoverRemoveItem : IReturn<DiscoverRequestResult>
     {
         /// <summary>"movie" of "tv"</summary>
@@ -226,6 +226,27 @@ namespace Emby.Plugins.Discover
         public List<DiscoverRow> Rows { get; set; } = new List<DiscoverRow>();
     }
 
+    [Route("/Discover/Cache", "GET", Summary = "Grootte van de bewaarde kaartclips en tegelplaatjes (alleen beheerders)")]
+    [Authenticated(Roles = "Admin")]
+    public class DiscoverCacheRequest : IReturn<DiscoverCacheResult> { }
+
+    [Route("/Discover/Cache/Clean", "POST", Summary = "Kaartclips en tegelplaatjes opruimen (alleen beheerders)")]
+    [Authenticated(Roles = "Admin")]
+    public class DiscoverCacheCleanRequest : IReturn<DiscoverCacheResult>
+    {
+        /// <summary>true = alles verwijderen; false = alleen wat volgens de instellingen te oud of te veel is.</summary>
+        public bool All { get; set; }
+    }
+
+    public class DiscoverCacheResult
+    {
+        public int CardFiles { get; set; }
+        public long CardBytes { get; set; }
+        public int TileFiles { get; set; }
+        public long TileBytes { get; set; }
+        public string Message { get; set; }
+    }
+
     public class DiscoverRequestResult
     {
         public bool Success { get; set; }
@@ -233,7 +254,7 @@ namespace Emby.Plugins.Discover
         public int Status { get; set; }
     }
 
-    public class DiscoverApiService : IService
+    public class DiscoverApiService : IService, IRequiresRequest
     {
         private class RowDef
         {
@@ -311,8 +332,14 @@ namespace Emby.Plugins.Discover
         private readonly ArrClient _arr;
         private readonly ILogger _logger;
 
-        public DiscoverApiService(ILogManager logManager, IJsonSerializer json)
+        private readonly IAuthorizationContext _auth;
+
+        /// <summary>Wordt door Emby ingevuld (IRequiresRequest); nodig om te weten wie de aanvraag doet.</summary>
+        public IRequest Request { get; set; }
+
+        public DiscoverApiService(ILogManager logManager, IJsonSerializer json, IAuthorizationContext auth)
         {
+            _auth = auth;
             _logger = logManager.GetLogger("Discover");
             _tmdb = new TmdbClient(json);
             _arr = new ArrClient(json);
@@ -903,6 +930,21 @@ namespace Emby.Plugins.Discover
             var res = new DiscoverRequestResult();
             try
             {
+                object requesterId = null;
+                string requesterName = null;
+                try
+                {
+                    var info = _auth.GetAuthorizationInfo(Request);
+                    if (info != null) { requesterId = info.UserId; requesterName = info.User != null ? info.User.Name : null; }
+                }
+                catch (Exception ex) { DiscoverDiagnostics.Add("gebruiker bij aanvraag niet te bepalen: " + ex.Message); }
+                if (!RequestAccess.IsAllowed(requesterId))
+                {
+                    DiscoverDiagnostics.Add("aanvraag (webpagina) geblokkeerd voor gebruiker " + (requesterName ?? "?") + ": " + request.Type + " " + request.TmdbId);
+                    res.Success = false;
+                    res.Message = RequestAccess.DeniedMessage();
+                    return res;
+                }
                 bool tv = string.Equals(request.Type, "tv", StringComparison.OrdinalIgnoreCase);
                 bool added;
                 if (tv)
@@ -942,11 +984,46 @@ namespace Emby.Plugins.Discover
             return res;
         }
 
+        private static DiscoverCacheResult CacheResult(string message)
+        {
+            var st = CacheCleaner.GetStats();
+            return new DiscoverCacheResult
+            {
+                CardFiles = st.CardFiles, CardBytes = st.CardBytes,
+                TileFiles = st.TileFiles, TileBytes = st.TileBytes,
+                Message = message
+            };
+        }
+
+        public object Get(DiscoverCacheRequest request)
+        {
+            return CacheResult(null);
+        }
+
+        public object Post(DiscoverCacheCleanRequest request)
+        {
+            string msg;
+            try { msg = CacheCleaner.Run(request != null && request.All); }
+            catch (Exception ex) { msg = "Opruimen mislukt: " + ex.Message; }
+            return CacheResult(msg);
+        }
+
         public async Task<object> Post(DiscoverRemoveItem request)
         {
             var res = new DiscoverRequestResult();
             try
             {
+                // Alleen beheerders of gebruikers die in Emby media mogen verwijderen.
+                var authInfo = _auth.GetAuthorizationInfo(Request);
+                var policy = authInfo != null && authInfo.User != null ? authInfo.User.Policy : null;
+                if (policy == null || !(policy.IsAdministrator || policy.EnableContentDeletion))
+                {
+                    res.Message = DiscoverLanguage.Text(
+                        "Je hebt geen toestemming om te verwijderen.",
+                        "You are not allowed to delete.",
+                        "Du darfst nichts löschen.");
+                    return res;
+                }
                 bool tv = string.Equals(request.Type, "tv", StringComparison.OrdinalIgnoreCase);
                 bool removed = tv
                     ? await _arr.RemoveSeries(request.TmdbId, request.DeleteFiles, CancellationToken.None).ConfigureAwait(false)
