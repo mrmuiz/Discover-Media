@@ -55,10 +55,6 @@
         s.id = 'discover-request-css';
         s.textContent = [
             'body.discover-item-page .btnMoreCommands { display: none !important; }',
-            // Narrow screens: leave room for Emby's floating bottom navigation bar (and the iOS/Android safe area).
-            '@media (max-width: 800px) {',
-            '  body.discover-item-page .itemDetailPage { padding-bottom: calc(7em + env(safe-area-inset-bottom, 0px)) !important; }',
-            '}',
             'body.discover-item-page .itemDetailPage.discover-seerr { position: relative; isolation: isolate; }',
             '.discover-hero { position: absolute; top: 0; left: 0; right: 0; height: 480px; z-index: -1; pointer-events: none;',
             '  background-size: cover; background-position: center top; opacity: .55;',
@@ -128,6 +124,82 @@
         ].join('\n');
         (document.head || document.documentElement).appendChild(s);
     })();
+
+    // BEGIN bottom-clearance
+    // Measures Emby's floating bottom navigation bar (any fixed/sticky element near the bottom edge) and exposes its
+    // height as --dc-bottom-clear, so item pages, the floating button and the Discover page stay above it.
+    // Without such a bar (desktop) nothing is changed.
+    (function bottomClearance() {
+        var CLS = 'dc-has-bottom-bar', SCROLLER = 'dc-clear-scroller', last = -1;
+        var css = document.createElement('style');
+        css.id = 'discover-bottom-clearance-css';
+        css.textContent = [
+            'body.' + CLS + '.discover-item-page .itemDetailPage.dc-clear-page { padding-bottom: var(--dc-bottom-clear) !important; }',
+            'body.' + CLS + '.discover-item-page .' + SCROLLER + ' { padding-bottom: var(--dc-bottom-clear) !important; box-sizing: border-box; }',
+            'body.' + CLS + ' .dcRoot { padding-bottom: var(--dc-bottom-clear) !important; }'
+        ].join('\n');
+        (document.head || document.documentElement).appendChild(css);
+
+        function skip(el) {
+            return !!(el.closest && el.closest('.btnDiscoverRequest, .btnDiscoverFloating, .discover-toast, #discover-debug, .dialogContainer, .dialog'));
+        }
+        function barTop() {
+            var vh = window.innerHeight, vw = window.innerWidth, top = vh;
+            var xs = [0.15, 0.35, 0.5, 0.65, 0.85], ys = [4, 16, 32, 48, 64, 80, 96, 112];
+            for (var xi = 0; xi < xs.length; xi++) {
+                for (var yi = 0; yi < ys.length; yi++) {
+                    var els = document.elementsFromPoint(vw * xs[xi], vh - ys[yi]);
+                    for (var i = 0; i < els.length; i++) {
+                        var el = els[i];
+                        while (el && el !== document.body && el !== document.documentElement) {
+                            var pos = getComputedStyle(el).position;
+                            if (pos === 'fixed' || pos === 'sticky') { break; }
+                            el = el.parentElement;
+                        }
+                        if (!el || el === document.body || el === document.documentElement || skip(el)) { continue; }
+                        var r = el.getBoundingClientRect();
+                        if (r.height > 0 && r.height <= vh * 0.3 && r.width >= vw * 0.4 && r.bottom >= vh - 120 && r.top < top) {
+                            top = r.top;
+                        }
+                    }
+                }
+            }
+            return top;
+        }
+        function scroller(page) {
+            for (var el = page; el && el !== document.body; el = el.parentElement) {
+                var oy = getComputedStyle(el).overflowY;
+                if (oy === 'auto' || oy === 'scroll') { return el; }
+            }
+            return null;
+        }
+        function update() {
+            if (!document.body) { return; }
+            var h = Math.max(0, Math.ceil(window.innerHeight - barTop()));
+            var px = h > 0 ? h + 16 : 0;
+            var old = document.querySelectorAll('.' + SCROLLER + ', .dc-clear-page');
+            for (var o = 0; o < old.length; o++) { old[o].classList.remove(SCROLLER); old[o].classList.remove('dc-clear-page'); }
+            if (px > 0) {
+                var pages = document.querySelectorAll('.itemDetailPage');
+                for (var p = 0; p < pages.length; p++) {
+                    var sc = scroller(pages[p]);
+                    if (sc) { sc.classList.add(SCROLLER); } else { pages[p].classList.add('dc-clear-page'); }
+                }
+            }
+            if (px === last) { return; }
+            last = px;
+            document.body.classList.toggle(CLS, px > 0);
+            if (px > 0) { document.documentElement.style.setProperty('--dc-bottom-clear', px + 'px'); }
+            else { document.documentElement.style.removeProperty('--dc-bottom-clear'); }
+        }
+        window.__discoverBottomClear = update;
+        window.addEventListener('resize', update);
+        window.addEventListener('orientationchange', update);
+        if (window.visualViewport) { window.visualViewport.addEventListener('resize', update); }
+        setInterval(update, 1000);
+        setTimeout(update, 50);
+    })();
+    // END bottom-clearance
 
     function api() { return window.ApiClient || null; }
 
@@ -607,8 +679,7 @@
         btn.classList.add('btnDiscoverFloating');
         btn.style.setProperty('position', 'fixed', 'important');
         btn.style.setProperty('right', '1.5em', 'important');
-        var narrow = window.matchMedia && window.matchMedia('(max-width: 800px)').matches;
-        btn.style.setProperty('bottom', narrow ? 'calc(5.5em + env(safe-area-inset-bottom, 0px))' : '1.5em', 'important');
+        btn.style.setProperty('bottom', 'max(1.5em, var(--dc-bottom-clear, 0px))', 'important');
         btn.style.setProperty('z-index', '99999', 'important');
         btn.style.setProperty('margin-left', '0', 'important');
         btn.style.setProperty('box-shadow', '0 4px 16px rgba(0,0,0,.5)', 'important');
