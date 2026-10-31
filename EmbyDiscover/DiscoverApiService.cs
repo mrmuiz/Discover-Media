@@ -192,6 +192,8 @@ namespace Emby.Plugins.Discover
         /// <summary>Logo-URL (studio/netwerk), anders leeg.</summary>
         public string Image { get; set; }
         public string Color { get; set; }
+        /// <summary>Achtergrondfoto (genre), anders leeg.</summary>
+        public string Backdrop { get; set; }
     }
 
     [Route("/Discover/Browse", "GET", Summary = "Films/series per genre, studio of netwerk")]
@@ -489,20 +491,51 @@ namespace Emby.Plugins.Discover
         }
 
         // ---------- tegels (genres, studio's, netwerken) ----------
+        private static readonly Dictionary<string, KeyValuePair<DateTime, string>> GenreBackdropCache =
+            new Dictionary<string, KeyValuePair<DateTime, string>>();
+
+        // Zoals Seerr en het kanaal: de vijfde achtergrond uit de populairste titels van dat genre.
+        private async Task<string> GenreBackdrop(bool tv, int genreId)
+        {
+            var key = TmdbClient.Language() + "|" + (tv ? "t" : "m") + genreId;
+            lock (GenreBackdropCache)
+            {
+                KeyValuePair<DateTime, string> hit;
+                if (GenreBackdropCache.TryGetValue(key, out hit) && DateTime.UtcNow - hit.Key < TimeSpan.FromHours(12)) return hit.Value;
+            }
+            try
+            {
+                var items = await _tmdb.BrowsePages(tv, "&with_genres=" + genreId, 1, 1, CancellationToken.None).ConfigureAwait(false);
+                var backs = items.Where(x => !string.IsNullOrEmpty(x.backdrop_path)).Select(x => x.backdrop_path).ToList();
+                if (backs.Count == 0) return null;
+                var chosen = backs.Count > 4 ? backs[4] : backs[backs.Count - 1];
+                lock (GenreBackdropCache) { GenreBackdropCache[key] = new KeyValuePair<DateTime, string>(DateTime.UtcNow, chosen); }
+                return chosen;
+            }
+            catch (Exception ex)
+            {
+                DiscoverDiagnostics.Add("genre-achtergrond " + key + " mislukt: " + ex.Message);
+                return null;
+            }
+        }
+
         private async Task<List<DiscoverTileDto>> TilesFor(string kind)
         {
             var tiles = new List<DiscoverTileDto>();
             if (kind == "genre_movie" || kind == "genre_tv")
             {
                 var genres = await _tmdb.GetGenres(kind == "genre_tv", CancellationToken.None).ConfigureAwait(false);
-                foreach (var g in genres)
+                bool tv = kind == "genre_tv";
+                var backs = await Task.WhenAll(genres.Select(g => GenreBackdrop(tv, g.id))).ConfigureAwait(false);
+                for (int i = 0; i < genres.Count; i++)
                 {
-                    bool tv = kind == "genre_tv";
+                    var g = genres[i];
                     tiles.Add(new DiscoverTileDto
                     {
                         Id = g.id.ToString(),
                         Name = DiscoverMediaChannel.LocalizedGenreName(g.id, tv, g.name),
-                        Color = Palette[Math.Abs(g.id) % Palette.Length]
+                        Color = Palette[Math.Abs(g.id) % Palette.Length],
+                        Backdrop = string.IsNullOrEmpty(backs[i]) ? null : "https://image.tmdb.org/t/p/w780" + backs[i]
                     });
                 }
                 return tiles;
@@ -518,7 +551,7 @@ namespace Emby.Plugins.Discover
                     Id = src[i].Key.ToString(),
                     Name = src[i].Value,
                     Image = string.IsNullOrEmpty(logos[i]) ? null : "https://image.tmdb.org/t/p/w300" + logos[i],
-                    Color = "#1c2640"
+                    Color = "#2a3558"
                 });
             }
             return tiles;

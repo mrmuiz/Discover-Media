@@ -1,3 +1,10 @@
+## Version 1.3.4.6-beta
+
+- Fix: on phones the Request/Trailer buttons in the Discover popup now sit directly under the poster instead of below the description, where Emby's bottom bar covered them.
+- New: genre tiles on the Discover page show a photo (like Seerr) with a colour overlay; studio and network tiles are lighter so the logos are easier to read.
+- New: row titles on the Discover page (e.g. Popular series) are clickable and open the full list with "Load more".
+- Fix: on phones the Discover page scrolls far enough that the last row is not hidden behind Emby's bottom bar.
+
 ## Version 1.3.4.5
 
 - Fix: on phones (mobile browser, narrow screens) the Request/Trailer buttons on item pages and the bottom of the Discover page are no longer hidden behind Emby's floating bottom navigation bar: extra bottom space incl. safe-area inset, dynamic viewport height, and the floating button sits above the bar. Desktop is unchanged.
