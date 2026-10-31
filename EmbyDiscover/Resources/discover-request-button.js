@@ -58,7 +58,6 @@
             // Narrow screens: leave room for Emby's floating bottom navigation bar (and the iOS/Android safe area).
             '@media (max-width: 800px) {',
             '  body.discover-item-page .itemDetailPage { padding-bottom: calc(7em + env(safe-area-inset-bottom, 0px)) !important; }',
-            '  .btnDiscoverFloating { bottom: calc(5.5em + env(safe-area-inset-bottom, 0px)) !important; }',
             '}',
             'body.discover-item-page .itemDetailPage.discover-seerr { position: relative; isolation: isolate; }',
             '.discover-hero { position: absolute; top: 0; left: 0; right: 0; height: 480px; z-index: -1; pointer-events: none;',
@@ -608,7 +607,8 @@
         btn.classList.add('btnDiscoverFloating');
         btn.style.setProperty('position', 'fixed', 'important');
         btn.style.setProperty('right', '1.5em', 'important');
-        btn.style.setProperty('bottom', '1.5em', 'important');
+        var narrow = window.matchMedia && window.matchMedia('(max-width: 800px)').matches;
+        btn.style.setProperty('bottom', narrow ? 'calc(5.5em + env(safe-area-inset-bottom, 0px))' : '1.5em', 'important');
         btn.style.setProperty('z-index', '99999', 'important');
         btn.style.setProperty('margin-left', '0', 'important');
         btn.style.setProperty('box-shadow', '0 4px 16px rgba(0,0,0,.5)', 'important');
