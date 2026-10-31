@@ -164,6 +164,7 @@ define(['emby-button'], function () {
     function ok(lines, message) { lines.push('[ OK ] ' + message); }
     function bad(lines, message) { lines.push('[' + text('FOUT', 'ERROR', 'FEHLER') + '] ' + message); }
     function info(lines, text) { lines.push('       ' + text); }
+    function warn(lines, message) { lines.push('[ ! ]  ' + message); }
 
     function translateButtonScript(value) {
         if (value === 'OK Emby-pluginresource; open Discover om het script in deze browser te laden.') {
@@ -206,7 +207,9 @@ define(['emby-button'], function () {
             return step(lines, text('Plugin-status ophalen', 'Get plugin status', 'Pluginstatus abrufen'), function () {
                 return getJson('Discover/Status').then(function (r) {
                     window.__discoverStatus = r;
-                    ok(lines, text('Discover-service bereikbaar, DLL-versie ', 'Discover service available, DLL version ', 'Discover-Dienst erreichbar, DLL-Version ') + r.PluginVersion + ', ' + text('geladen om ', 'loaded at ', 'geladen um ') + r.LoadedAt);
+                    ok(lines, text('Discover-service bereikbaar, DLL-versie ', 'Discover service available, DLL version ', 'Discover-Dienst erreichbar, DLL-Version ') + r.PluginVersion + ' (build ' + (r.ScriptBuild || '?') + '), ' + text('geladen om ', 'loaded at ', 'geladen um ') + r.LoadedAt + '; ' + text('DLL-bestand gewijzigd ', 'DLL file modified ', 'DLL-Datei geändert ') + (r.DllBuilt || '?'));
+                    info(lines, text('Knop-script in deze browser: build ', 'Button script in this browser: build ', 'Schaltflächenskript in diesem Browser: Build ') + (window.__discoverRequestButtonBuild || text('niet geladen (open eerst Discover of een Discover-itempagina)', 'not loaded (open Discover or a Discover item page first)', 'nicht geladen (zuerst Discover oder eine Discover-Detailseite öffnen)')) +
+                        (window.__discoverRequestButtonBuild && r.ScriptBuild && window.__discoverRequestButtonBuild !== r.ScriptBuild ? ' - ' + text('VERSCHILT van de server: ververs de pagina (Ctrl+F5)', 'DIFFERS from the server: reload the page (Ctrl+F5)', 'WEICHT vom Server ab: Seite neu laden (Strg+F5)') : ''));
                     (r.TmdbKeySet ? ok : bad)(lines, 'TMDB ' + text('key ingesteld: ', 'key configured: ', 'Schlüssel eingerichtet: ') + (r.TmdbKeySet ? text('ja', 'yes', 'ja') : text('NEE', 'NO', 'NEIN')));
                     info(lines, text('Plugin-/Emby-taal: ', 'Plugin/Emby language: ', 'Plugin-/Emby-Sprache: ') + r.PluginLanguage + '; ' + text('TMDB-taal: ', 'TMDB language: ', 'TMDB-Sprache: ') + r.TmdbLanguage);
                     info(lines, text('Debuginformatie op Discover-/detailpagina\'s: ', 'Diagnostics on Discover/item pages: ', 'Diagnoseinformationen auf Discover-/Detailseiten: ') + (r.ShowDiagnostics ? text('aan', 'on', 'ein') : text('uit', 'off', 'aus')));
@@ -219,6 +222,12 @@ define(['emby-button'], function () {
                     var wi = r.WebInject || text('onbekend', 'unknown', 'unbekannt');
                     var wiLabel = text('Tegel "Discover Media" -> Discover-pagina: ', 'Tile "Discover Media" -> Discover page: ', 'Kachel „Discover Media“ -> Discover-Seite: ');
                     if (/^(actief|al actief)/.test(wi)) { ok(lines, wiLabel + wi); }
+                    else if (/^alleen-lezen/.test(wi)) {
+                        warn(lines, wiLabel + text(
+                            'niet mogelijk: de webclient-map is alleen-lezen, dus het lader-script staat niet in index.html. De Discover-pagina en de knoppen werken wel nadat je Discover hebt geopend (het script wordt dan via de plugin geladen). Wil je de tegel direct naar Discover laten gaan, maak dan de map beschrijfbaar (Docker: volume zonder :ro) of vul een beschrijfbaar "Pad webclient" in. Detail: ' + wi,
+                            'not possible: the web client folder is read-only, so the loader script is not in index.html. The Discover page and the buttons still work once you have opened Discover (the script is then loaded through the plugin). To let the tile open Discover directly, make the folder writable (Docker: volume without :ro) or set a writable "Web client path". Detail: ' + wi,
+                            'nicht möglich: Der Webclient-Ordner ist schreibgeschützt, daher steht das Lader-Skript nicht in index.html. Die Discover-Seite und die Schaltflächen funktionieren nach dem Öffnen von Discover trotzdem (das Skript wird dann über das Plugin geladen). Damit die Kachel direkt Discover öffnet, den Ordner beschreibbar machen (Docker: Volume ohne :ro) oder einen beschreibbaren „Pfad Webclient“ angeben. Detail: ' + wi));
+                    }
                     else if (/^(fout|webclient niet gevonden)/.test(wi)) { bad(lines, wiLabel + wi); }
                     else { info(lines, wiLabel + wi); }
                     info(lines, text('Kanaal opgevraagd door Emby: ', 'Channel requests by Emby: ', 'Kanalaufrufe durch Emby: ') + r.ChannelCalls + 'x; ' + text('aanvragen gelukt/mislukt: ', 'requests succeeded/failed: ', 'Anfragen erfolgreich/fehlgeschlagen: ') + (r.Requests - r.RequestErrors) + '/' + r.RequestErrors);

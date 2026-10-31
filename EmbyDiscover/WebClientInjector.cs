@@ -118,12 +118,21 @@ namespace Emby.Plugins.Discover
                 {
                     if (src == null) { return "fout: lader ontbreekt in de DLL"; }
                     var tmp = loaderPath + "." + Guid.NewGuid().ToString("N") + ".tmp";
-                    using (var dst = File.Create(tmp)) { src.CopyTo(dst); }
-                    if (File.Exists(loaderPath)) File.Delete(loaderPath);
-                    File.Move(tmp, loaderPath);
+                    try
+                    {
+                        using (var dst = File.Create(tmp)) { src.CopyTo(dst); }
+                        if (File.Exists(loaderPath)) File.Delete(loaderPath);
+                        File.Move(tmp, loaderPath);
+                    }
+                    catch { try { if (File.Exists(tmp)) File.Delete(tmp); } catch { } throw; }
                 }
                 bool added = AddToIndex(indexPath);
                 return (added ? "actief in " : "al actief in ") + indexPath;
+            }
+            catch (Exception ex) when (ex is UnauthorizedAccessException || ex is IOException)
+            {
+                return "alleen-lezen: webclient-map '" + dir + "' is niet beschrijfbaar (" + ex.Message + "); lader niet geplaatst. " +
+                    "Discover-pagina en knoppen werken wel nadat je Discover hebt geopend. Maak de map beschrijfbaar (bij Docker: volume-mount zonder :ro) of vul bij de instellingen een beschrijfbaar 'Pad webclient' in.";
             }
             catch (Exception ex) { return "fout: " + ex.Message; }
         }
@@ -210,13 +219,17 @@ namespace Emby.Plugins.Discover
         {
             var body = Encoding.UTF8.GetBytes(text);
             var tmp = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
-            using (var fs = File.Create(tmp))
+            try
             {
-                if (bom) fs.Write(new byte[] { 0xEF, 0xBB, 0xBF }, 0, 3);
-                fs.Write(body, 0, body.Length);
+                using (var fs = File.Create(tmp))
+                {
+                    if (bom) fs.Write(new byte[] { 0xEF, 0xBB, 0xBF }, 0, 3);
+                    fs.Write(body, 0, body.Length);
+                }
+                if (File.Exists(path)) File.Delete(path);
+                File.Move(tmp, path);
             }
-            if (File.Exists(path)) File.Delete(path);
-            File.Move(tmp, path);
+            catch { try { if (File.Exists(tmp)) File.Delete(tmp); } catch { } throw; }
         }
 
         private string StripExisting(string html)

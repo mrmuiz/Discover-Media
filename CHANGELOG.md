@@ -1,5 +1,9 @@
 ## Version 1.3.4.5
 
+- Add: on-phone debug panel for the item-page buttons. Open any Discover item page with `?dcdebug=1` appended (or set `localStorage.dcDebug='1'`; `?dcdebug=0` turns it off). It shows the script build, the detected bottom bar, `--dc-bottom-clear`, the scroller, the Request button rect and its ancestor chain, and the viewport sizes. Tap the panel to hide it for 4 seconds.
+- Fix: Emby's own fixed/sticky button bar is lifted above the bottom bar, and on mobile (narrow or touch) a minimum clearance of 88px + safe-area is always applied, even if detection fails.
+- Add: the status page shows the DLL build, the DLL file time and the script build loaded in this browser. The Discover page diagnostic line shows the script build too.
+- Fix: a read-only web client folder (e.g. Docker `:ro`) is reported as a warning (not an error), leaves no `.tmp` files and explains that the Discover page and buttons still work after opening Discover.
 - Fix: on phones (mobile browser, narrow screens) the Request/Trailer buttons on item pages and the bottom of the Discover page are no longer hidden behind Emby's floating bottom navigation bar: the height of the bar is now measured in the browser (any fixed element at the bottom edge) and used as bottom padding of the scrolling item page, the Discover page and the floating button, so it works without relying on Emby class names or breakpoints. Desktop is unchanged.
 - Change: the settings text for **Tile opens Discover page** is shorter and no longer wraps in a narrow column (Dutch, English, German), and now describes how it actually works: the loader stays in `index.html`, the switch takes effect right after saving, and when off the tile opens the channel tiles.
 

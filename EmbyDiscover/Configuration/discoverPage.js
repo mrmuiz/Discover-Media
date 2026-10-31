@@ -25,7 +25,7 @@ define([], function () {
     function showDiag() {
         if (!diagEl) { return; }
         diagEl.textContent = text('Diagnose: knop-script actief in browser: ', 'Diagnostics: request script active in browser: ', 'Diagnose: Schaltflächenskript im Browser aktiv: ') +
-            (window.__discoverRequestButton ? text('JA v', 'YES v', 'JA v') + (window.__discoverRequestButtonVersion || text('oud (<0.14.6)', 'old (<0.14.6)', 'alt (<0.14.6)')) : text('NEE', 'NO', 'NEIN')) +
+            (window.__discoverRequestButton ? text('JA v', 'YES v', 'JA v') + (window.__discoverRequestButtonVersion || text('oud (<0.14.6)', 'old (<0.14.6)', 'alt (<0.14.6)')) + ' build ' + (window.__discoverRequestButtonBuild || '?') : text('NEE', 'NO', 'NEIN')) +
             '\n' + text('laden vanaf Discover-pagina: ', 'loaded from Discover page: ', 'von der Discover-Seite geladen: ') + diag.load +
             '\n' + text('server: ', 'server: ', 'Server: ') + (diag.status || '...');
     }
