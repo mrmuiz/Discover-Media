@@ -55,6 +55,11 @@
         s.id = 'discover-request-css';
         s.textContent = [
             'body.discover-item-page .btnMoreCommands { display: none !important; }',
+            // Narrow screens: leave room for Emby's floating bottom navigation bar (and the iOS/Android safe area).
+            '@media (max-width: 800px) {',
+            '  body.discover-item-page .itemDetailPage { padding-bottom: calc(7em + env(safe-area-inset-bottom, 0px)) !important; }',
+            '  .btnDiscoverFloating { bottom: calc(5.5em + env(safe-area-inset-bottom, 0px)) !important; }',
+            '}',
             'body.discover-item-page .itemDetailPage.discover-seerr { position: relative; isolation: isolate; }',
             '.discover-hero { position: absolute; top: 0; left: 0; right: 0; height: 480px; z-index: -1; pointer-events: none;',
             '  background-size: cover; background-position: center top; opacity: .55;',
