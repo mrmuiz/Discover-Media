@@ -168,6 +168,8 @@ namespace Emby.Plugins.Discover
         public string ClipError { get; set; }
         public string ButtonScript { get; set; }
         public string WebInject { get; set; }
+        public string ScriptBuild { get; set; }
+        public string DllBuilt { get; set; }
         public List<string> Events { get; set; } = new List<string>();
     }
 
@@ -316,6 +318,27 @@ namespace Emby.Plugins.Discover
             _arr = new ArrClient(json);
         }
 
+        private static string EmbeddedScriptBuild()
+        {
+            try
+            {
+                var asm = typeof(Plugin).Assembly;
+                using (var s = asm.GetManifestResourceStream(typeof(Plugin).Namespace + ".Resources.discover-request-button.js"))
+                using (var r = new System.IO.StreamReader(s))
+                {
+                    var m = System.Text.RegularExpressions.Regex.Match(r.ReadToEnd(), "var DC_BUILD = '([^']*)'");
+                    return m.Success ? m.Groups[1].Value : "?";
+                }
+            }
+            catch { return "?"; }
+        }
+
+        private static string DllBuildTime()
+        {
+            try { return System.IO.File.GetLastWriteTime(typeof(Plugin).Assembly.Location).ToString("yyyy-MM-dd HH:mm:ss"); }
+            catch { return "?"; }
+        }
+
         public object Get(DiscoverStatusRequest request)
         {
             var cfg = Plugin.GetCurrentConfiguration();
@@ -341,6 +364,8 @@ namespace Emby.Plugins.Discover
                     "OK Emby plugin resource; open Discover to load the script in this browser.",
                     "OK Emby-Pluginressource; öffne Discover, um das Skript in diesem Browser zu laden."),
                 WebInject = DiscoverDiagnostics.WebInject,
+                ScriptBuild = EmbeddedScriptBuild(),
+                DllBuilt = DllBuildTime(),
                 Events = DiscoverDiagnostics.Snapshot()
             };
         }

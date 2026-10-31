@@ -8,9 +8,11 @@
         console.warn('[Discover] oudere knopcode is nog actief; vernieuw de webclient om dubbele handlers te voorkomen.');
         return;
     }
+    var DC_BUILD = 'mobile-r3 2026-10-31T11:20';
     window.__discoverRequestButton = true;
     window.__discoverRequestButtonVersion = '1.3.4.5';
-    console.log('[Discover] request-button script loaded v1.3.4.5');
+    window.__discoverRequestButtonBuild = DC_BUILD;
+    console.log('[Discover] request-button script loaded v1.3.4.5 build ' + DC_BUILD);
 
     var uiLanguage = 'nl';
     function text(dutch, english, german, norwegian) {
@@ -130,7 +132,7 @@
     // height as --dc-bottom-clear, so item pages, the floating button and the Discover page stay above it.
     // Without such a bar (desktop) nothing is changed.
     (function bottomClearance() {
-        var CLS = 'dc-has-bottom-bar', SCROLLER = 'dc-clear-scroller', last = -1;
+        var CLS = 'dc-has-bottom-bar', SCROLLER = 'dc-clear-scroller', last = '';
         var css = document.createElement('style');
         css.id = 'discover-bottom-clearance-css';
         css.textContent = [
@@ -140,11 +142,18 @@
         ].join('\n');
         (document.head || document.documentElement).appendChild(css);
 
+        var lastBar = null, lastMode = '';
         function skip(el) {
-            return !!(el.closest && el.closest('.btnDiscoverRequest, .btnDiscoverFloating, .discover-toast, #discover-debug, .dialogContainer, .dialog'));
+            if (el.closest && el.closest('.btnDiscoverRequest, .btnDiscoverFloating, .discover-toast, #discover-dbg, #dc-debug-panel, .dialogContainer, .dialog')) { return true; }
+            // A fixed button bar of the item page itself is not the navigation bar.
+            return !!(el.querySelector && el.querySelector('.btnDiscoverRequest, .btnPlay'));
+        }
+        function mobile() {
+            return window.innerWidth <= 900 || (window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
         }
         function barTop() {
             var vh = window.innerHeight, vw = window.innerWidth, top = vh;
+            lastBar = null;
             var xs = [0.15, 0.35, 0.5, 0.65, 0.85], ys = [4, 16, 32, 48, 64, 80, 96, 112];
             for (var xi = 0; xi < xs.length; xi++) {
                 for (var yi = 0; yi < ys.length; yi++) {
@@ -160,6 +169,7 @@
                         var r = el.getBoundingClientRect();
                         if (r.height > 0 && r.height <= vh * 0.3 && r.width >= vw * 0.4 && r.bottom >= vh - 120 && r.top < top) {
                             top = r.top;
+                            lastBar = el;
                         }
                     }
                 }
@@ -173,24 +183,109 @@
             }
             return null;
         }
+        function describe(el) {
+            if (!el) { return 'none'; }
+            var c = (typeof el.className === 'string' ? el.className : '').trim().split(/\s+/).slice(0, 2).join('.');
+            return el.tagName.toLowerCase() + (el.id ? '#' + el.id : '') + (c ? '.' + c : '');
+        }
+        function rectText(el) {
+            if (!el) { return '-'; }
+            var r = el.getBoundingClientRect();
+            return Math.round(r.left) + ',' + Math.round(r.top) + ' ' + Math.round(r.width) + 'x' + Math.round(r.height) + ' b=' + Math.round(r.bottom);
+        }
+        function debugOn() {
+            try {
+                var href = String(location.href);
+                if (/[?&#]dcdebug=1/.test(href)) { localStorage.setItem('dcDebug', '1'); }
+                else if (/[?&#]dcdebug=0/.test(href)) { localStorage.removeItem('dcDebug'); }
+                return localStorage.getItem('dcDebug') === '1';
+            } catch (e) { return /dcdebug=1/.test(String(location.href)); }
+        }
+        function debugPanel(info) {
+            var el = document.getElementById('dc-debug-panel');
+            if (!debugOn()) { if (el && el.parentNode) { el.parentNode.removeChild(el); } return; }
+            if (!el) {
+                el = document.createElement('div');
+                el.id = 'dc-debug-panel';
+                el.style.cssText = 'position:fixed;left:4px;top:60px;z-index:2147483647;max-width:94vw;font:10px/1.25 monospace;color:#7CFC00;' +
+                    'background:rgba(0,0,0,.82);padding:5px 7px;border-radius:5px;white-space:pre-wrap;word-break:break-all;';
+                el.addEventListener('click', function () { el.style.display = 'none'; setTimeout(function () { el.style.display = ''; }, 4000); });
+                document.body.appendChild(el);
+            }
+            var btn = document.querySelector('.btnDiscoverRequest');
+            var chain = [];
+            for (var a = btn ? btn.parentElement : null; a && a !== document.documentElement && chain.length < 8; a = a.parentElement) {
+                var cs = getComputedStyle(a);
+                chain.push(describe(a) + ' [' + cs.position + (cs.transform !== 'none' ? ' transform' : '') + (cs.overflowY !== 'visible' ? ' oy=' + cs.overflowY : '') + ' b=' + Math.round(a.getBoundingClientRect().bottom) + ']');
+            }
+            var bcs = btn ? getComputedStyle(btn) : null;
+            var vv = window.visualViewport;
+            el.textContent = [
+                'Discover v1.3.4.5 build ' + DC_BUILD + ' (' + (window.__discoverRequestButtonBuild || '?') + ')',
+                'item page: ' + (document.querySelector('.itemDetailPage') ? 'ja' : 'nee') + ' body=' + document.body.className.split(/\s+/).filter(function (c) { return /^(dc|discover)/.test(c); }).join(' '),
+                'bar: ' + (info.bar ? describe(info.bar) + ' ' + rectText(info.bar) : 'niet gevonden') + ' h=' + info.measured,
+                'mode=' + info.mode + ' --dc-bottom-clear=' + (document.documentElement.style.getPropertyValue('--dc-bottom-clear') || '(leeg)'),
+                'scroller: ' + (info.scroller ? describe(info.scroller) + ' oy=' + getComputedStyle(info.scroller).overflowY : 'document'),
+                'lift: ' + (info.lift ? describe(info.lift) : 'geen'),
+                'knop: ' + (btn ? rectText(btn) + ' ' + bcs.position + ' bottom=' + bcs.bottom : 'niet aanwezig'),
+                'ketting: ' + (chain.join(' < ') || '-'),
+                'inner ' + window.innerWidth + 'x' + window.innerHeight + ' vv ' + (vv ? Math.round(vv.width) + 'x' + Math.round(vv.height) : '?') + ' dpr ' + window.devicePixelRatio + ' mobiel=' + mobile()
+            ].join('\n');
+        }
+        function liftButtonBar(active, clearPx) {
+            var prev = document.querySelectorAll('[data-dc-lift]');
+            if (!active) {
+                for (var i = 0; i < prev.length; i++) { prev[i].style.removeProperty('bottom'); prev[i].removeAttribute('data-dc-lift'); }
+                return null;
+            }
+            if (prev.length) { return prev[0]; }
+            var btn = document.querySelector('.btnDiscoverRequest');
+            if (!btn || btn.classList.contains('btnDiscoverFloating')) { return null; }
+            // Emby's own fixed/sticky button bar: move the container itself, padding alone cannot help here.
+            for (var el = btn.parentElement; el && el !== document.body; el = el.parentElement) {
+                var pos = getComputedStyle(el).position;
+                if (pos === 'fixed' || pos === 'sticky') {
+                    var rr = el.getBoundingClientRect();
+                    if (rr.height <= window.innerHeight * 0.3 && rr.bottom > window.innerHeight - clearPx + 4) {
+                        el.setAttribute('data-dc-lift', '1');
+                        el.style.setProperty('bottom', 'var(--dc-bottom-clear)', 'important');
+                        return el;
+                    }
+                }
+            }
+            return null;
+        }
         function update() {
             if (!document.body) { return; }
-            var h = Math.max(0, Math.ceil(window.innerHeight - barTop()));
-            var px = h > 0 ? h + 16 : 0;
+            var measured = Math.max(0, Math.ceil(window.innerHeight - barTop()));
+            var bar = lastBar;
+            var px = measured > 0 ? measured + 16 : 0;
+            var mode = measured > 0 ? 'gemeten' : 'geen';
+            var value = px + 'px';
+            if (mobile() && px < 88) {
+                px = 88;
+                value = 'calc(88px + env(safe-area-inset-bottom, 0px))';
+                mode = measured > 0 ? 'minimum' : 'fallback';
+            }
             var old = document.querySelectorAll('.' + SCROLLER + ', .dc-clear-page');
             for (var o = 0; o < old.length; o++) { old[o].classList.remove(SCROLLER); old[o].classList.remove('dc-clear-page'); }
+            var sc0 = null;
             if (px > 0) {
                 var pages = document.querySelectorAll('.itemDetailPage');
                 for (var p = 0; p < pages.length; p++) {
                     var sc = scroller(pages[p]);
-                    if (sc) { sc.classList.add(SCROLLER); } else { pages[p].classList.add('dc-clear-page'); }
+                    if (sc) { sc.classList.add(SCROLLER); sc0 = sc; } else { pages[p].classList.add('dc-clear-page'); }
                 }
             }
-            if (px === last) { return; }
-            last = px;
-            document.body.classList.toggle(CLS, px > 0);
-            if (px > 0) { document.documentElement.style.setProperty('--dc-bottom-clear', px + 'px'); }
-            else { document.documentElement.style.removeProperty('--dc-bottom-clear'); }
+            var key = mode + value;
+            if (key !== last) {
+                last = key;
+                document.body.classList.toggle(CLS, px > 0);
+                if (px > 0) { document.documentElement.style.setProperty('--dc-bottom-clear', value); }
+                else { document.documentElement.style.removeProperty('--dc-bottom-clear'); }
+            }
+            var lifted = liftButtonBar(px > 0, px);
+            debugPanel({ bar: bar, measured: measured, mode: mode, scroller: sc0, lift: lifted });
         }
         window.__discoverBottomClear = update;
         window.addEventListener('resize', update);
