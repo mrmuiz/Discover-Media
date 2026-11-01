@@ -160,8 +160,35 @@ Other common causes:
 
 - The user cannot see the channel: grant channel access in that user's Emby settings.
 - Radarr or Sonarr cannot be reached from Emby: verify the URL from the server/container, not just from a desktop browser.
-- **Tile opens the Discover page** reports "Access denied" (Docker): Emby's web client folder is read-only for the Emby user. Make it writable once and restart Emby, for example `docker exec -u 0 emby chmod -R u+rwX,g+rwX /system/dashboard-ui && docker restart emby` (adjust the container name). An Emby image update (for example through Watchtower) resets this, so repeat it after updating.
+- **Tile opens the Discover page** reports "Access denied" or "read-only" (Docker): see [Docker: writable web client](#docker-writable-web-client) below.
 - Old channel artwork or entries remain cached: run **Refresh Internet Channels** and wait for completion; Emby may retain channel items between requests.
+
+### Docker: writable web client
+
+In Docker, `/system/dashboard-ui` is read-only for the Emby user, so the tile shortcut cannot be enabled. The Discover page and request buttons still work; only the tile shortcut (browser only, not the Emby apps) is affected. Fix it with a writable bind mount:
+
+1. Copy the web client out of the container (adjust names, paths, UID/GID):
+   ```bash
+   docker cp <container>:/system/dashboard-ui /path/to/config/dashboard-ui
+   chown -R <UID>:<GID> /path/to/config/dashboard-ui
+   ```
+2. Add the bind mount to your compose file:
+   ```yaml
+   services:
+     emby:
+       volumes:
+         - /path/to/config:/config
+         - /path/to/config/dashboard-ui:/system/dashboard-ui:rw
+   ```
+3. Apply it with `docker compose up -d`.
+4. Enable **Tile opens the Discover page** in the plugin settings. The diagnostics should now show `[ OK ]` for the tile.
+
+Notes:
+
+- Do step 1 before step 2. An empty bind mount breaks the web UI.
+- `<UID>:<GID>` must match the `UID`/`GID` environment variables of your container.
+- After an Emby update, refresh the folder from the new image, or the web client stays outdated.
+- Alternative: copy the folder anywhere writable and set it as **Web client path** in the plugin settings.
 
 ## Build
 
