@@ -8,7 +8,7 @@
         console.warn('[Discover] oudere knopcode is nog actief; vernieuw de webclient om dubbele handlers te voorkomen.');
         return;
     }
-    var DC_BUILD = 'rows-progress-r5 2026-11-04T21:15';
+    var DC_BUILD = 'rows-progress-r6 2026-11-04T21:25';
     window.__discoverRequestButton = true;
     window.__discoverRequestButtonVersion = '1.3.5.5';
     window.__discoverRequestButtonBuild = DC_BUILD;

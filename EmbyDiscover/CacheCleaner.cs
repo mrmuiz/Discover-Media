@@ -15,19 +15,22 @@ namespace Emby.Plugins.Discover
     internal static class CacheCleaner
     {
         private static readonly object Gate = new object();
-        private static int? _epoch;
+        private static string _epoch;
 
         /// <summary>
-        /// Telt op als de opruiming tegelplaatjes verwijdert. Zit in de DataVersion van het kanaal, zodat Emby daarna de
-        /// mappen opnieuw opvraagt en de plugin de plaatjes opnieuw maakt. Bewaard in discover-tiles/.epoch.
+        /// Kenmerk van de huidige set tegelplaatjes, in discover-tiles/.epoch. Verandert als de opruiming tegels verwijdert,
+        /// en ook als de map leeg of nieuw is (bv. na een nieuwe Docker-container): dan staat er nog geen .epoch en komt er
+        /// een nieuw kenmerk. Het zit in de DataVersion van het kanaal, zodat Emby de mappen opnieuw opvraagt en de plugin
+        /// de ontbrekende plaatjes opnieuw maakt in plaats van te verwijzen naar bestanden die er niet meer zijn.
         /// </summary>
-        internal static int TileEpoch
+        internal static string TileEpoch
         {
             get
             {
-                if (_epoch.HasValue) return _epoch.Value;
-                int e = 0;
-                try { int v; var f = EpochFile(); if (f != null && File.Exists(f) && int.TryParse(File.ReadAllText(f).Trim(), out v)) e = v; } catch { }
+                if (_epoch != null) return _epoch;
+                string e = null;
+                try { var f = EpochFile(); if (f != null && File.Exists(f)) e = File.ReadAllText(f).Trim(); } catch { }
+                if (string.IsNullOrEmpty(e)) { BumpEpoch(); return _epoch; }
                 _epoch = e;
                 return e;
             }
@@ -40,9 +43,9 @@ namespace Emby.Plugins.Discover
 
         private static void BumpEpoch()
         {
-            var next = TileEpoch + 1;
+            var next = Guid.NewGuid().ToString("N").Substring(0, 8);
             _epoch = next;
-            try { var f = EpochFile(); if (f != null) File.WriteAllText(f, next.ToString()); } catch { }
+            try { var f = EpochFile(); if (f != null) File.WriteAllText(f, next); } catch { }
         }
 
         /// <summary>Een plaatje dat nog gebruikt wordt houdt een verse datum, zodat de opruiming het laat staan.</summary>
