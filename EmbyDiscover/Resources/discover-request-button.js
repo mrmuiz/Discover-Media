@@ -8,7 +8,7 @@
         console.warn('[Discover] oudere knopcode is nog actief; vernieuw de webclient om dubbele handlers te voorkomen.');
         return;
     }
-    var DC_BUILD = 'rows-progress-r3 2026-11-04T20:50';
+    var DC_BUILD = 'rows-progress-r4 2026-11-04T21:10';
     window.__discoverRequestButton = true;
     window.__discoverRequestButtonVersion = '1.3.5.5';
     window.__discoverRequestButtonBuild = DC_BUILD;
@@ -100,13 +100,15 @@
             '.discover-season-info-provider-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }',
             '.discover-season-info-provider { padding: 3px 7px; border-radius: 4px; background: #26364c; color: #dce7f5; }',
             'body.discover-folder-page .btnPlay, body.discover-folder-page .btnShuffle, body.discover-folder-page .btnQueue { display: none !important; }',
-            '.discover-row-section { margin: 1.5em 0 .5em; }',
-            '.discover-row-title { margin: 0 0 .7em !important; font-size: 1.35em !important; font-weight: 600 !important; }',
+            /* De rijen nemen Emby's eigen maten over (zelfde postergrootte en uitlijning als "More Like This"):
+               de sectie en titel krijgen Emby's klassen, de maten komen uit --dc-w/--dc-h (gemeten op de pagina). */
+            '.discover-row-section { position: relative; }',
             '.discover-row-wrap { position: relative; }',
-            '.discover-row-scroller { display: flex; gap: 1em; overflow-x: auto; padding: .5em .35em 1em; margin: -.5em -.35em 0; scroll-snap-type: x proximity; scroll-padding: 0 .35em; scrollbar-width: none; -ms-overflow-style: none; }',
+            '.discover-row-scroller { display: flex; overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none; -ms-overflow-style: none; }',
             '.discover-row-scroller::-webkit-scrollbar { display: none; }',
-            '.discover-row-card { flex: 0 0 auto; width: 9.5em; scroll-snap-align: start; }',
-            '.discover-row-poster { position: relative; display: block; border-radius: .6em; overflow: hidden; background: #222; height: 14.25em; outline: 0; transition: transform .15s, box-shadow .15s; }',
+            '.discover-row-card { flex: 0 0 auto; width: var(--dc-w, 10.7em); margin-right: var(--dc-gap, 1.1em); scroll-snap-align: start; text-align: center; }',
+            '.discover-row-card:last-child { margin-right: 0; }',
+            '.discover-row-poster { position: relative; display: block; border-radius: .54em; overflow: hidden; background: #222; height: var(--dc-h, 16em); outline: 0; transition: transform .15s, box-shadow .15s; }',
             '.discover-row-poster img { width: 100%; height: 100%; object-fit: cover; display: block; }',
             /* Geselecteerde poster: dunne gele rand, 5% groter, zachte schaduw. Muis: hover; toetsenbord: focus-visible; tv: focus. */
             '.discover-row-card:hover .discover-row-poster, .discover-row-poster:focus-visible { transform: scale(1.05); box-shadow: 0 0 0 3px #ffb400, 0 .5em 1.2em rgba(0,0,0,.5); }',
@@ -119,20 +121,24 @@
             'html.layout-tv .discover-row-poster:focus ~ .discover-row-btn:not(:disabled), html.discover-tv .discover-row-poster:focus ~ .discover-row-btn:not(:disabled) { background: #ffc633; }',
             '.discover-row-card:hover .discover-row-name, .discover-row-poster:focus-visible ~ .discover-row-name, html.layout-tv .discover-row-poster:focus ~ .discover-row-name, html.discover-tv .discover-row-poster:focus ~ .discover-row-name { color: #ffb400; }',
             /* Gele pijlknoppen links en rechts, zoals op de Discover-pagina. Niet op tv (afstandsbediening) en niet op touchscreens. */
-            /* Ronde witte pijlknoppen, zoals Emby's eigen rijen. */
-            '.discover-row-arrow { position: absolute; top: 5.95em; transform: translateY(-50%); z-index: 3; width: 2.6em; height: 2.6em; border: 0; border-radius: 50%; background: #fff; color: #111; font-size: 1.2em; font-weight: 700; line-height: 1; cursor: pointer; box-shadow: 0 .15em .6em rgba(0,0,0,.45); transition: opacity .15s, background .15s, transform .15s; padding: 0; }',
-            '.discover-row-arrow:hover { background: #e9e9e9; transform: translateY(-50%) scale(1.06); }',
-            '.discover-row-arrow.is-hidden { opacity: 0; pointer-events: none; }',
-            '.discover-row-arrow.left { left: -.4em; }',
-            '.discover-row-arrow.right { right: -.4em; }',
-            'html.layout-tv .discover-row-arrow, html.discover-tv .discover-row-arrow { display: none; }',
-            '@media (hover: none) and (pointer: coarse) { .discover-row-arrow { display: none; } }',
+            /* Pijlknoppen zoals Emby's eigen rijen: rond en wit, alleen zichtbaar als de muis boven de rij hangt,
+               en weg aan het begin/eind. Niet op tv (afstandsbediening) en niet op touchscreens. */
+            '.discover-row-arrowbox { position: absolute; top: 0; height: calc(var(--dc-h, 16em) + 1em); display: none; align-items: center; z-index: 5; }',
+            '.discover-row-arrowbox.back { left: 0; }',
+            '.discover-row-arrowbox.fwd { right: 0; }',
+            '@media (pointer: fine) { .discover-row-section:hover .discover-row-arrowbox { display: flex; } }',
+            '.discover-row-section .discover-row-arrowbox.is-hidden { display: none !important; }',
+            'html.layout-tv .discover-row-arrowbox, html.discover-tv .discover-row-arrowbox { display: none !important; }',
+            '.discover-row-arrow { display: inline-flex; align-items: center; justify-content: center; width: 3.55em; height: 3.55em; margin: 0 .4em; padding: 0; border: 0; border-radius: 100em; background: #fff; color: #000; cursor: pointer;',
+            '  box-shadow: 0 4px 5px 0 rgba(0,0,0,.14), 0 1px 10px 0 rgba(0,0,0,.12), 0 2px 4px -1px rgba(0,0,0,.4); transition: transform 250ms cubic-bezier(.175,.885,.32,1.15); }',
+            '.discover-row-arrow:hover { transform: scale(1.1); }',
+            '.discover-row-arrow svg { width: 2.2em; height: 2.2em; fill: currentColor; }',
             /* Downloadvoortgang uit de Radarr/Sonarr-wachtrij */
             '.discover-row-prog { position: absolute; left: 0; right: 0; bottom: 0; height: 10px; background: rgba(0,0,0,.65); }',
             'html.layout-tv .discover-row-prog, html.discover-tv .discover-row-prog { height: 12px; }',
             '.discover-row-prog i { display: block; height: 100%; width: 0; background: #ffb400; transition: width .6s; }',
             '.discover-row-prog.paused i, .discover-row-prog.stalled i { background: #9aa5b8; }',
-            '.discover-row-name { margin-top: .5em; font-size: .95em; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }',
+            '.discover-row-name { margin-top: .5em; font-size: .9em; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }',
             '.discover-row-meta { font-size: .8em; opacity: .65; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }',
             '.discover-row-btn { display: block; width: 100%; box-sizing: border-box; margin-top: .5em; padding: .45em .6em; border: none;',
             '  border-radius: 2em; font: inherit; font-size: .9em; font-weight: 600; cursor: pointer; background: #ffb400; color: #111; }',
@@ -1837,23 +1843,26 @@
 
     // Pijlknop voor een rij: niet focusbaar (tabindex -1), zodat de afstandsbediening er niet op blijft hangen.
     function makeRowArrow(row, dir) {
+        var box = document.createElement('div');
+        box.className = 'discover-row-arrowbox ' + (dir < 0 ? 'back is-hidden' : 'fwd');
         var b = document.createElement('button');
         b.type = 'button';
         b.tabIndex = -1;
-        b.className = 'discover-row-arrow ' + (dir < 0 ? 'left is-hidden' : 'right');
+        b.className = 'discover-row-arrow';
         b.setAttribute('aria-label', dir < 0 ? text('Vorige', 'Previous', 'Zurück', 'Forrige') : text('Volgende', 'Next', 'Weiter', 'Neste'));
-        b.innerHTML = dir < 0 ? '&#10094;' : '&#10095;';
+        b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="' + (dir < 0 ? 'M14.7 6.3a1 1 0 0 1 0 1.4L10.4 12l4.3 4.3a1 1 0 0 1-1.4 1.4l-5-5a1 1 0 0 1 0-1.4l5-5a1 1 0 0 1 1.4 0z' : 'M9.3 6.3a1 1 0 0 0 0 1.4l4.3 4.3-4.3 4.3a1 1 0 1 0 1.4 1.4l5-5a1 1 0 0 0 0-1.4l-5-5a1 1 0 0 0-1.4 0z') + '"/></svg>';
+        box.appendChild(b);
         b.addEventListener('click', function (e) {
             e.preventDefault(); e.stopPropagation();
             var amount = Math.max(300, row.clientWidth * 0.85) * dir;
             if (row.scrollBy) { row.scrollBy({ left: amount, behavior: 'smooth' }); } else { row.scrollLeft += amount; }
         });
-        return b;
+        return box;
     }
     // Links weg aan het begin, rechts weg aan het eind; geen pijlen als de hele rij al in beeld past.
     function updateRowArrows(wrap) {
         var row = wrap.querySelector('.discover-row-scroller');
-        var l = wrap.querySelector('.discover-row-arrow.left'), r = wrap.querySelector('.discover-row-arrow.right');
+        var l = wrap.querySelector('.discover-row-arrowbox.back'), r = wrap.querySelector('.discover-row-arrowbox.fwd');
         if (!row || !l || !r) { return; }
         var max = row.scrollWidth - row.clientWidth;
         l.classList.toggle('is-hidden', row.scrollLeft <= 12);
@@ -1864,30 +1873,62 @@
         for (var i = 0; i < ws.length; i++) { updateRowArrows(ws[i]); }
     });
 
+    // Postermaat van Emby's eigen staande kaarten op deze pagina (cast, "More Like This"), zodat onze rij even groot is.
+    function embyCardSize(parent) {
+        var imgs = (parent || document).querySelectorAll('.portraitCard .cardImageContainer');
+        for (var i = 0; i < imgs.length; i++) {
+            var r = imgs[i].getBoundingClientRect();
+            if (r.width > 40 && r.height > 60) {
+                var card = imgs[i].closest ? imgs[i].closest('.card') : null;
+                var cw = card ? card.getBoundingClientRect().width : r.width;
+                return { w: Math.round(r.width), h: Math.round(r.height), gap: Math.max(8, Math.round(cw - r.width)) };
+            }
+        }
+        return null;
+    }
+    function embyAnchorSection(parent) {
+        var similar = parent.querySelector('.similarSection');
+        if (similar && similar.parentNode === parent && visible(similar)) { return similar; }
+        var secs = parent.querySelectorAll('.verticalSection-cards.emby-scrollbuttons-scroller');
+        for (var i = secs.length - 1; i >= 0; i--) {
+            if (secs[i].parentNode === parent && visible(secs[i]) && secs[i].querySelector('.card')) { return secs[i]; }
+        }
+        return null;
+    }
+
     function renderRowSections(id, sections) {
         var parent = rowParent();
         if (!parent) { return false; }
         if (parent.querySelector('.discover-row-section[data-itemid="' + id + '"]')) { return true; }
         removeRowSections(null);
+        var size = embyCardSize(parent);
+        // Direct onder Emby's eigen "More Like This" (of op persoonspagina's na de laatste posterrij), niet onderaan.
+        var after = embyAnchorSection(parent);
         sections.forEach(function (s) {
             var sec = document.createElement('div');
-            sec.className = 'discover-row-section verticalSection';
+            sec.className = 'discover-row-section verticalSection verticalSection-cards';
             sec.setAttribute('data-itemid', id);
             sec.setAttribute('data-row', s.key);
+            if (size) {
+                sec.style.setProperty('--dc-w', size.w + 'px');
+                sec.style.setProperty('--dc-h', size.h + 'px');
+                sec.style.setProperty('--dc-gap', size.gap + 'px');
+            }
             var h = document.createElement('h2');
-            h.className = 'discover-row-title sectionTitle';
+            h.className = 'discover-row-title sectionTitle sectionTitle-cards padded-left padded-left-page padded-right';
             h.textContent = s.title;
             sec.appendChild(h);
             var wrap = document.createElement('div');
             wrap.className = 'discover-row-wrap';
             var row = document.createElement('div');
-            row.className = 'discover-row-scroller';
+            row.className = 'discover-row-scroller padded-top-focusscale padded-bottom-focusscale padded-left padded-left-page padded-right';
             s.items.forEach(function (item) { row.appendChild(buildRowCard(item)); });
             wrap.appendChild(makeRowArrow(row, -1));
             wrap.appendChild(row);
             wrap.appendChild(makeRowArrow(row, 1));
             sec.appendChild(wrap);
-            parent.appendChild(sec);
+            if (after && after.parentNode === parent) { parent.insertBefore(sec, after.nextSibling); after = sec; }
+            else { parent.appendChild(sec); }
             row.addEventListener('scroll', function () { updateRowArrows(wrap); });
             // Toetsenbord: de gefocuste poster netjes in beeld (op tv doet onRowCommand dat al).
             row.addEventListener('focusin', function (ev) {

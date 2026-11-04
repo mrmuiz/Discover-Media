@@ -263,11 +263,13 @@ define([], function () {
             updateArrows(box.querySelector('.dcRowWrap'));
         }
 
+        var CHEV_L = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.7 6.3a1 1 0 0 1 0 1.4L10.4 12l4.3 4.3a1 1 0 0 1-1.4 1.4l-5-5a1 1 0 0 1 0-1.4l5-5a1 1 0 0 1 1.4 0z"/></svg>';
+        var CHEV_R = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.3 6.3a1 1 0 0 0 0 1.4l4.3 4.3-4.3 4.3a1 1 0 1 0 1.4 1.4l5-5a1 1 0 0 0 0-1.4l-5-5a1 1 0 0 0-1.4 0z"/></svg>';
         function rowWrapHtml(inner) {
             return '<div class="dcRowWrap">' +
-                '<button type="button" class="dcArrow left dcHide" data-dir="-1" tabindex="-1" aria-label="' + esc(text('Vorige', 'Previous', 'Zurück', 'Forrige')) + '">&#10094;</button>' +
+                '<button type="button" class="dcArrow left dcHide" data-dir="-1" tabindex="-1" aria-label="' + esc(text('Vorige', 'Previous', 'Zurück', 'Forrige')) + '">' + CHEV_L + '</button>' +
                 inner +
-                '<button type="button" class="dcArrow right" data-dir="1" tabindex="-1" aria-label="' + esc(text('Volgende', 'Next', 'Weiter', 'Neste')) + '">&#10095;</button>' +
+                '<button type="button" class="dcArrow right" data-dir="1" tabindex="-1" aria-label="' + esc(text('Volgende', 'Next', 'Weiter', 'Neste')) + '">' + CHEV_R + '</button>' +
                 '</div>';
         }
         // Pijl links weg aan het begin, rechts weg aan het eind; geen pijlen als alles al in beeld past.

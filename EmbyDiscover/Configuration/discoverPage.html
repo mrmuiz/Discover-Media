@@ -29,13 +29,14 @@ body.dcDiscoverActive .skinHeader .headerButton svg { fill:#fff; }
 .dcRow { display:flex; overflow-x:auto; padding:.5em .3em 1em; scrollbar-width:none; -ms-overflow-style:none; }
 .dcRow::-webkit-scrollbar { display:none; }
 .dcRowWrap { position:relative; }
-/* Gele pijlknoppen links en rechts van een rij. Verdwijnen aan het begin/eind en als alles al in beeld past. */
-.dcArrow { position:absolute; top:calc(50% - .5em); transform:translateY(-50%); z-index:3; width:2.6em; height:2.6em; padding:0; border:0; border-radius:50%; background:#fff; color:#111; font-size:1.2em; font-weight:700; line-height:1; cursor:pointer; box-shadow:0 .15em .6em rgba(0,0,0,.45); transition:opacity .15s, background .15s, transform .15s; }
-.dcArrow:hover { background:#e9e9e9; transform:translateY(-50%) scale(1.06); }
-.dcArrow.dcHide { opacity:0; pointer-events:none; }
-.dcArrow.left { left:-.4em; }
-.dcArrow.right { right:-.4em; }
-@media (hover: none) and (pointer: coarse) { .dcArrow { display:none; } }
+/* Pijlknoppen zoals Emby's eigen rijen: rond en wit, zichtbaar als de muis boven de rij hangt, weg aan het begin/eind. */
+.dcArrow { position:absolute; top:calc(50% - .9em); transform:translateY(-50%); z-index:3; width:3.55em; height:3.55em; padding:0; border:0; border-radius:100em; background:#fff; color:#000; cursor:pointer; display:none; align-items:center; justify-content:center; box-shadow:0 4px 5px 0 rgba(0,0,0,.14), 0 1px 10px 0 rgba(0,0,0,.12), 0 2px 4px -1px rgba(0,0,0,.4); transition:transform 250ms cubic-bezier(.175,.885,.32,1.15); }
+.dcArrow svg { width:2.2em; height:2.2em; fill:currentColor; }
+.dcArrow:hover { transform:translateY(-50%) scale(1.1); }
+@media (pointer: fine) { .dcRowWrap:hover .dcArrow { display:inline-flex; } }
+.dcRowWrap .dcArrow.dcHide { display:none !important; }
+.dcArrow.left { left:.3em; }
+.dcArrow.right { right:.3em; }
 .dcGrid { display:flex; flex-wrap:wrap; }
 .dcRow > * { margin-right:.9em; }
 .dcGrid > * { margin:0 .9em .9em 0; }
