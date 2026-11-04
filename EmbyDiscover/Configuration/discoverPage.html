@@ -5,7 +5,7 @@
     <title>Discover</title>
 </head>
 <body>
-<div data-role="page" class="page type-interior discoverUiPage" data-controller="__plugin/discoveruijs1372">
+<div data-role="page" class="page type-interior discoverUiPage" data-controller="__plugin/discoveruijs1373">
 <style>
 /* Header on the Discover page only (body.dcDiscoverActive is set while this page is the active route): white text and icons on the dark page. The side drawer is deliberately left alone. */
 body.dcDiscoverActive .skinHeader .pageTitle,
@@ -26,12 +26,16 @@ body.dcDiscoverActive .skinHeader .headerButton svg { fill:#fff; }
 .dcSearch { display:flex; align-items:center; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.15); border-radius:2em; padding:0 1.2em; margin-bottom:1.5em; }
 .dcSearch input { flex:1; background:none; border:0; outline:0; color:#fff; font-size:1.1em; padding:.9em .5em; }
 .dcRowTitle { font-size:1.5em; font-weight:600; margin:1.2em 0 .5em; }
-.dcRow { display:flex; overflow-x:auto; padding:.3em 0 1em; scrollbar-width:thin; }
+.dcRow { display:flex; overflow-x:auto; padding:.5em .3em 1em; scrollbar-width:none; -ms-overflow-style:none; }
+.dcRow::-webkit-scrollbar { display:none; }
 .dcRowWrap { position:relative; }
-.dcArrow { position:absolute; top:calc(50% - .5em); transform:translateY(-50%); z-index:3; width:2.4em; height:4.5em; border:0; border-radius:.6em; background:rgba(0,0,0,.7); color:#fff; font-size:1.2em; cursor:pointer; opacity:.85; }
-.dcArrow:hover { background:#ffb400; color:#111; opacity:1; }
+/* Gele pijlknoppen links en rechts van een rij. Verdwijnen aan het begin/eind en als alles al in beeld past. */
+.dcArrow { position:absolute; top:calc(50% - .5em); transform:translateY(-50%); z-index:3; width:2.4em; height:4.5em; border:0; border-radius:.6em; background:#ffb400; color:#111; font-size:1.2em; font-weight:700; cursor:pointer; box-shadow:0 .2em .7em rgba(0,0,0,.45); transition:opacity .15s, background .15s; }
+.dcArrow:hover { background:#ffc633; }
+.dcArrow.dcHide { opacity:0; pointer-events:none; }
 .dcArrow.left { left:-.6em; }
 .dcArrow.right { right:-.6em; }
+@media (hover: none) and (pointer: coarse) { .dcArrow { display:none; } }
 .dcGrid { display:flex; flex-wrap:wrap; }
 .dcRow > * { margin-right:.9em; }
 .dcGrid > * { margin:0 .9em .9em 0; }
@@ -111,7 +115,9 @@ body.dcDiscoverActive .skinHeader .headerButton svg { fill:#fff; }
 .dcBtnSeason:hover { background:#ffb400; color:#111; }
 .dcBtnSeason.all { background:#ffb400; color:#111; border-color:#ffb400; }
 .dcBtnSeason:disabled { opacity:.5; cursor:default; }
-.dcBtnSeason:focus { outline:0; box-shadow:0 0 0 3px #ffb400; transform:scale(1.04); }
+.dcBtnSeason:focus { outline:0; }
+.dcBtnSeason:focus-visible { box-shadow:0 0 0 3px #ffb400; transform:scale(1.04); }
+.dcTvPage .dcBtnSeason:focus { box-shadow:0 0 0 3px #ffb400; transform:scale(1.04); }
 /* Telefoon: seizoenknoppen in 3 kolommen; "Alle seizoenen" gaat over de volle breedte. */
 @media (max-width: 600px) {
   .dcSeasons.show { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:.5em; align-items:stretch; width:100%; }
@@ -151,9 +157,37 @@ body.dcDiscoverActive .skinHeader .headerButton svg { fill:#fff; }
 .dcBack:hover { background:#ffb400; color:#111; }
 .dcMore { text-align:center; margin:1.5em 0; }
 .dcMsg { padding:2em; color:#b8c0d4; }
-.dcTile:focus, .dcBtn:focus, .dcBack:focus, .dcArrow:focus, .dcClose:focus, .dcBtnTrailer:focus, .dcBtnOpen:focus, .dcBtnDel:focus { outline:0; box-shadow:0 0 0 3px #ffb400; transform:scale(1.04); z-index:2; }
-.dcCard:focus .dcPoster { transform:scale(1.06); border-color:#ffb400; box-shadow:0 .5em 1.4em rgba(0,0,0,.5), 0 0 0 3px #ffb400; }
-.dcCard:focus .dcCapT { color:#ffb400; }
+/* Focusrand: alleen bij navigeren met toetsenbord of afstandsbediening (:focus-visible), niet na een muisklik.
+   Op tv altijd (.dcTvPage), want oudere tv-browsers (webOS 6, Chromium 79) kennen :focus-visible niet. */
+.dcTile:focus, .dcBtn:focus, .dcBack:focus, .dcArrow:focus, .dcClose:focus, .dcBtnTrailer:focus, .dcBtnOpen:focus, .dcBtnDel:focus { outline:0; }
+.dcTile:focus-visible, .dcBtn:focus-visible, .dcBack:focus-visible, .dcArrow:focus-visible, .dcClose:focus-visible, .dcBtnTrailer:focus-visible, .dcBtnOpen:focus-visible, .dcBtnDel:focus-visible { box-shadow:0 0 0 3px #ffb400; transform:scale(1.04); z-index:2; }
+.dcTvPage .dcTile:focus, .dcTvPage .dcBtn:focus, .dcTvPage .dcBack:focus, .dcTvPage .dcClose:focus, .dcTvPage .dcBtnTrailer:focus, .dcTvPage .dcBtnOpen:focus, .dcTvPage .dcBtnDel:focus { box-shadow:0 0 0 3px #ffb400; transform:scale(1.04); z-index:2; }
+/* Geselecteerde poster: dunne gele rand, 5% groter en een zachte schaduw. */
+.dcCard:focus-visible .dcPoster { transform:scale(1.05); border-color:#ffb400; box-shadow:0 .5em 1.4em rgba(0,0,0,.5), 0 0 0 3px #ffb400; }
+.dcCard:focus-visible .dcCapT { color:#ffb400; }
+.dcTvPage .dcCard:focus .dcPoster { transform:scale(1.05); border-color:#ffb400; box-shadow:0 .5em 1.4em rgba(0,0,0,.5), 0 0 0 3px #ffb400; }
+.dcTvPage .dcCard:focus .dcCapT { color:#ffb400; }
+/* Downloadvoortgang (Radarr/Sonarr-wachtrij) */
+.dcProg { position:absolute; left:0; right:0; bottom:0; height:5px; background:rgba(0,0,0,.6); z-index:1; }
+.dcProg i { display:block; height:100%; width:0; background:#ffb400; transition:width .6s; }
+.dcProg.paused i, .dcProg.stalled i { background:#9aa5b8; }
+.dcCapQ { margin-top:.25em; font-size:.78em; font-weight:600; color:#ffb400; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.dcCapQ.paused, .dcCapQ.stalled, .dcCapQ.req { color:#c9d2ea; }
+.dcCapQ.avail { color:#5fd38d; }
+.dcQueue { display:none; margin:0 0 1em; }
+.dcQueue.show { display:block; }
+.dcQHead { font-size:.85em; color:#b8c0d4; margin-bottom:.3em; }
+.dcQRow { display:flex; align-items:center; padding:.35em 0; font-size:.88em; border-top:1px solid rgba(255,255,255,.08); }
+.dcQRow > * { margin-right:.7em; }
+.dcQRow > *:last-child { margin-right:0; }
+.dcQName { flex:1 1 auto; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.dcQBar { flex:0 0 7em; height:6px; border-radius:3px; background:rgba(255,255,255,.12); overflow:hidden; }
+.dcQBar i { display:block; height:100%; background:#ffb400; }
+.dcQBar.paused i, .dcQBar.stalled i { background:#9aa5b8; }
+.dcQPct { flex:0 0 auto; min-width:7.5em; text-align:right; color:#b8c0d4; white-space:nowrap; }
+.dcQRel { font-size:.75em; color:#8a96ad; word-break:break-all; padding:0 0 .35em; }
+.dcQMore { font-size:.8em; color:#8a96ad; padding-top:.3em; }
+@media (max-width:600px) { .dcQBar { flex-basis:3.5em; } .dcQPct { min-width:0; } }
 @media (max-width:600px){ .dcCard{width:130px;} .dcPoster{height:195px;} .dcSkel{width:130px;} .dcSkelP{height:195px;} .dcModalBody{flex-direction:column; align-items:center;} }
 @media (prefers-reduced-motion: reduce){ .dcSkelP{animation:none} }
 </style>
@@ -178,6 +212,7 @@ body.dcDiscoverActive .skinHeader .headerButton svg { fill:#fff; }
                     <div class="dcMeta"></div>
                     <div class="dcInfo"></div>
                     <div class="dcOverview"></div>
+                    <div class="dcQueue"></div>
                     <div class="dcSeasons"></div>
                     <div class="dcBtnRow"><button type="button" class="dcBtn"></button><button type="button" class="dcBtnTrailer"></button><button type="button" class="dcBtnOpen"></button><button type="button" class="dcBtnDel"></button></div>
                 </div>

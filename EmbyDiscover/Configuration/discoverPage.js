@@ -32,14 +32,14 @@ define([], function () {
 
     // Load as an external script so Emby's Content-Security-Policy does not block inline execution.
     function loadButtonScript() {
-        if (window.__discoverRequestButtonVersion === '1.3.4.6') {
-            diag.load = text('script is al actief v1.3.4.6', 'script already active v1.3.4.6', 'Skript bereits aktiv v1.3.4.6');
+        if (window.__discoverRequestButtonVersion === '1.3.5.5') {
+            diag.load = text('script is al actief v1.3.5.5', 'script already active v1.3.5.5', 'Skript bereits aktiv v1.3.5.5');
             showDiag();
             return;
         }
         var urls = [
-            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1372' }),
-            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1372' }),
+            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1373' }),
+            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1373' }),
             ApiClient.getUrl('Plugins/Discover/Script')
         ];
         var n = 0;
@@ -51,7 +51,7 @@ define([], function () {
             script.src = u + (u.indexOf('?') === -1 ? '?' : '&') + '_=' + Date.now();
             script.async = true;
             script.onload = function () {
-                if (window.__discoverRequestButtonVersion === '1.3.4.6') {
+                if (window.__discoverRequestButtonVersion === '1.3.5.5') {
                     diag.load = text('OK via extern script ', 'OK via external script ', 'OK über externes Skript ') + u;
                     showDiag();
                 } else {
@@ -116,7 +116,174 @@ define([], function () {
 
         function statusIcon(st) { return st === 2 ? '&#10003;' : (st === 1 ? '&#9203;' : ''); }
 
-        function cardHtml(i) {
+        // ---- Downloadvoortgang (Radarr/Sonarr-wachtrij) ----
+        var queue = {};          // sleutel -> wachtrij-item van /Discover/Queue
+        var queueTimer = null, queueBusy = false, pollUntil = 0;
+        var QUEUE_POLL = 15000;
+
+        function stateLabel(st) {
+            return st === 'downloading' ? text('Downloaden', 'Downloading', 'Lädt herunter', 'Laster ned') :
+                st === 'paused' ? text('Gepauzeerd', 'Paused', 'Pausiert', 'Pauset') :
+                st === 'importing' ? text('Wordt toegevoegd', 'Importing', 'Wird importiert', 'Importeres') :
+                st === 'stalled' ? text('Wacht op download', 'Waiting for download', 'Wartet auf Download', 'Venter') :
+                text('In wachtrij', 'Queued', 'In Warteschlange', 'I kø');
+        }
+        function timeLeft(sec) {
+            if (typeof sec !== 'number' || sec < 0) { return ''; }
+            if (sec < 60) { return '<1 min'; }
+            var h = Math.floor(sec / 3600), m = Math.round((sec % 3600) / 60);
+            if (m === 60) { h++; m = 0; }
+            return h > 0 ? h + text('u ', 'h ', 'h ', 't ') + m + 'm' : m + ' min';
+        }
+        // Korte statusregel: "↓ 45% · 12 min", "⏸ Gepauzeerd · 32%", "5 afl. · ↓ 32% · 18 min".
+        function queueLine(e) {
+            var parts = [];
+            if (e.Type === 'tv' && e.Count > 1) { parts.push(e.Count + ' ' + text('afl.', 'eps.', 'Folgen', 'ep.')); }
+            if (e.State === 'downloading') {
+                parts.push('\u2193 ' + e.Progress + '%');
+                var t = timeLeft(e.TimeLeft); if (t) { parts.push(t); }
+            } else if (e.State === 'paused') {
+                parts.push(stateLabel(e.State)); parts.push(e.Progress + '%');
+            } else {
+                parts.push(stateLabel(e.State));
+                if (e.Progress > 0 && e.State !== 'importing') { parts.push(e.Progress + '%'); }
+            }
+            return parts.join(' \u00B7 ');
+        }
+        function queueHtml(i) {
+            var e = queue[key(i)];
+            if (!e) { return ''; }
+            return '<div class="dcProg ' + esc(e.State) + '"><i style="width:' + e.Progress + '%"></i></div>';
+        }
+        function capQueueHtml(i, mine) {
+            var e = queue[key(i)];
+            if (e) { return '<div class="dcCapQ ' + esc(e.State) + '">' + esc(queueLine(e)) + '</div>'; }
+            if (!mine) { return ''; }
+            return i.Status === 2
+                ? '<div class="dcCapQ avail">\u2713 ' + text('Beschikbaar', 'Available', 'Verfügbar', 'Tilgjengelig') + '</div>'
+                : '<div class="dcCapQ req">' + text('Aangevraagd', 'Requested', 'Angefordert', 'Forespurt') + '</div>';
+        }
+        // Bestaande kaarten bijwerken na een nieuwe wachtrij (zonder de rij opnieuw op te bouwen).
+        function applyQueueToCards() {
+            var cards = view.querySelectorAll('.dcCard[data-key]');
+            for (var c = 0; c < cards.length; c++) {
+                var card = cards[c], i = items[card.getAttribute('data-key')];
+                if (!i) { continue; }
+                var poster = card.querySelector('.dcPoster'), cap = card.querySelector('.dcCap');
+                var oldP = poster && poster.querySelector('.dcProg'); if (oldP) { poster.removeChild(oldP); }
+                var oldQ = cap && cap.querySelector('.dcCapQ'); if (oldQ) { cap.removeChild(oldQ); }
+                if (poster) { poster.insertAdjacentHTML('beforeend', queueHtml(i)); }
+                if (cap) { cap.insertAdjacentHTML('beforeend', capQueueHtml(i, card.hasAttribute('data-mine'))); }
+            }
+        }
+        function pageActive() { return onDiscoverRoute() && document.body.contains(view); }
+        function scheduleQueue(ms) {
+            clearTimeout(queueTimer);
+            queueTimer = setTimeout(loadQueue, ms);
+        }
+        // Alleen verversen zolang er iets downloadt (of net iets is aangevraagd) en de pagina open is.
+        function loadQueue() {
+            queueTimer = null;
+            if (queueBusy || !pageActive()) { return; }
+            if (document.hidden) { scheduleQueue(QUEUE_POLL); return; }
+            queueBusy = true;
+            api('GET', 'Discover/Queue').then(function (r) {
+                queueBusy = false;
+                var next = {}, gone = false;
+                ((r && r.Items) || []).forEach(function (e) { next[e.Type + ':' + e.TmdbId] = e; });
+                for (var k in queue) { if (queue.hasOwnProperty(k) && !next[k]) { gone = true; } }
+                queue = next;
+                applyQueueToCards();
+                if (current) { renderQueueInfo(current); if (!delArmed) { updateButton(); } }
+                if (gone) { loadMyRequests(); }   // klaar met downloaden: status in "Mijn aanvragen" bijwerken
+                if (Object.keys(queue).length || Date.now() < pollUntil) { scheduleQueue(QUEUE_POLL); }
+            }, function () {
+                queueBusy = false;
+                if (Date.now() < pollUntil) { scheduleQueue(QUEUE_POLL * 2); }
+            });
+        }
+        // Na een aanvraag een paar minuten blijven kijken: Radarr/Sonarr hebben even nodig voor de download start.
+        function afterRequest() {
+            pollUntil = Date.now() + 5 * 60 * 1000;
+            scheduleQueue(5000);
+            loadMyRequests();
+        }
+
+        // Voortgang per aflevering in de popup.
+        function renderQueueInfo(i) {
+            var box = overlay.querySelector('.dcQueue');
+            if (!box) { return; }
+            var e = queue[key(i)];
+            if (!e) { box.classList.remove('show'); box.innerHTML = ''; return; }
+            var max = isTvClient ? 3 : 8;
+            var html = '<div class="dcQHead">' + esc(stateLabel(e.State)) + (e.Count > 1 ? ' \u00B7 ' + e.Count + ' ' + text('downloads', 'downloads', 'Downloads', 'nedlastinger') : '') + '</div>';
+            e.Parts.slice(0, max).forEach(function (p) {
+                var name = p.Label ? p.Label + (p.Name ? ' \u00B7 ' + p.Name : '') : i.Title;
+                var right = p.State === 'downloading' ? p.Progress + '%' + (timeLeft(p.TimeLeft) ? ' \u00B7 ' + timeLeft(p.TimeLeft) : '')
+                    : stateLabel(p.State) + (p.Progress > 0 && p.State !== 'importing' ? ' \u00B7 ' + p.Progress + '%' : '');
+                html += '<div class="dcQRow"><span class="dcQName">' + esc(name) + '</span>' +
+                    '<span class="dcQBar ' + esc(p.State) + '"><i style="width:' + p.Progress + '%"></i></span>' +
+                    '<span class="dcQPct">' + esc(right) + '</span></div>';
+                if (p.Release || p.Detail) {
+                    html += '<div class="dcQRel">' + esc(p.Release || '') + (p.Release && p.Detail ? ' \u00B7 ' : '') + esc(p.Detail || '') + '</div>';
+                }
+            });
+            if (e.Parts.length > max) {
+                html += '<div class="dcQMore">' + text('en nog ', 'and ', 'und ', 'og ') + (e.Parts.length - max) + text(' meer', ' more', ' weitere', ' til') + '</div>';
+            }
+            box.innerHTML = html;
+            box.classList.add('show');
+        }
+
+        // ---- Rij "Mijn aanvragen" bovenaan de startpagina ----
+        var mineRow = null, homeShown = false;
+        function loadMyRequests() {
+            api('GET', 'Discover/MyRequests').then(function (r) {
+                mineRow = r || null;
+                renderMine();
+            }, function () { });
+        }
+        function renderMine() {
+            var old = content.querySelector('.dcMine');
+            if (!homeShown) { return; }
+            var list = (mineRow && mineRow.Items) || [];
+            if (!list.length) { if (old) { old.parentNode.removeChild(old); } return; }
+            var scroll = old ? old.querySelector('.dcRow').scrollLeft : 0;
+            var html = '<div class="dcMine"><div class="dcRowTitle">' + esc(mineRow.Title || text('Mijn aanvragen', 'My requests', 'Meine Anfragen')) + '</div>' +
+                rowWrapHtml('<div class="dcRow" data-row="my_requests">' + list.map(function (i) { return cardHtml(i, true); }).join('') + '</div>') + '</div>';
+            var hadFocus = old && old.contains(document.activeElement) ? document.activeElement.getAttribute('data-key') : null;
+            if (old) { old.insertAdjacentHTML('afterend', html); old.parentNode.removeChild(old); }
+            else { content.insertAdjacentHTML('afterbegin', html); }
+            var box = content.querySelector('.dcMine');
+            var row = box.querySelector('.dcRow');
+            row.scrollLeft = scroll;
+            if (hadFocus) { var f = row.querySelector('.dcCard[data-key="' + hadFocus + '"]'); if (f) { focusEl(f); } }
+            updateArrows(box.querySelector('.dcRowWrap'));
+        }
+
+        function rowWrapHtml(inner) {
+            return '<div class="dcRowWrap">' +
+                '<button type="button" class="dcArrow left dcHide" data-dir="-1" tabindex="-1" aria-label="' + esc(text('Vorige', 'Previous', 'Zurück', 'Forrige')) + '">&#10094;</button>' +
+                inner +
+                '<button type="button" class="dcArrow right" data-dir="1" tabindex="-1" aria-label="' + esc(text('Volgende', 'Next', 'Weiter', 'Neste')) + '">&#10095;</button>' +
+                '</div>';
+        }
+        // Pijl links weg aan het begin, rechts weg aan het eind; geen pijlen als alles al in beeld past.
+        function updateArrows(wrap) {
+            if (!wrap) { return; }
+            var row = wrap.querySelector('.dcRow');
+            var l = wrap.querySelector('.dcArrow.left'), r = wrap.querySelector('.dcArrow.right');
+            if (!row || !l || !r) { return; }
+            var max = row.scrollWidth - row.clientWidth;
+            l.classList.toggle('dcHide', row.scrollLeft <= 12);
+            r.classList.toggle('dcHide', row.scrollLeft >= max - 12);
+        }
+        function updateAllArrows() {
+            var wraps = content.querySelectorAll('.dcRowWrap');
+            for (var w = 0; w < wraps.length; w++) { updateArrows(wraps[w]); }
+        }
+
+        function cardHtml(i, mine) {
             items[key(i)] = i;
             var poster = i.Poster
                 ? '<img loading="lazy" src="' + esc(i.Poster) + '" alt="" />'
@@ -124,12 +291,13 @@ define([], function () {
             var sub = [];
             if (typeof i.Rating === 'number' && i.Rating > 0) { sub.push('<span class="dcStar">&#9733; ' + i.Rating.toFixed(1) + '</span>'); }
             if (i.Year) { sub.push('<span>' + i.Year + '</span>'); }
-            return '<div class="dcCard focusable" tabindex="0" role="button" data-key="' + key(i) + '">' +
+            return '<div class="dcCard focusable" tabindex="0" role="button" data-key="' + key(i) + '"' + (mine === true ? ' data-mine="1"' : '') + '>' +
                 '<div class="dcPoster">' + poster +
                 '<span class="dcBadge ' + i.Type + '">' + (i.Type === 'tv' ? text('SERIE', 'SERIES', 'SERIE') : text('FILM', 'MOVIE', 'FILM')) + '</span>' +
-                '<span class="dcStatus s' + i.Status + '">' + statusIcon(i.Status) + '</span></div>' +
+                '<span class="dcStatus s' + i.Status + '">' + statusIcon(i.Status) + '</span>' + queueHtml(i) + '</div>' +
                 '<div class="dcCap"><div class="dcCapT">' + esc(i.Title) + '</div>' +
                 (sub.length ? '<div class="dcCapSub">' + sub.join('') + '</div>' : '') +
+                capQueueHtml(i, mine === true) +
                 '</div></div>';
         }
 
@@ -157,6 +325,7 @@ define([], function () {
         var browse = null;
 
         function openBrowse(kind, id, name) {
+            homeShown = false;
             browse = { kind: kind, id: id, next: 1, loading: false, done: false, seen: {} };
             content.innerHTML = '<div class="dcBrowseHead"><button type="button" class="dcBack">&#10094; ' + text('Terug', 'Back', 'Zurück') + '</button>' +
                 '<span class="dcBrowseTitle">' + esc(name) + '</span></div>' +
@@ -183,7 +352,7 @@ define([], function () {
                 });
                 var grid = content.querySelector('.dcBrowseGrid');
                 var firstPage = grid && !grid.children.length;
-                if (grid && fresh.length) { grid.insertAdjacentHTML('beforeend', fresh.map(cardHtml).join('')); }
+                if (grid && fresh.length) { grid.insertAdjacentHTML('beforeend', fresh.map(function (i) { return cardHtml(i); }).join('')); }
                 if (isTvClient && firstPage && grid.firstElementChild && !overlay.classList.contains('open')) { focusEl(grid.firstElementChild); }
                 b.next = (r && r.NextPage) || (b.next + 2);
                 b.loading = false;
@@ -209,11 +378,7 @@ define([], function () {
                 if (r.Kind === 'tiles') {
                     if (!r.Tiles || !r.Tiles.length) { return; }
                     html += '<div class="dcRowTitle">' + esc(r.Title) + '</div>' +
-                        '<div class="dcRowWrap">' +
-                        '<button type="button" class="dcArrow left" data-dir="-1">&#10094;</button>' +
-                        '<div class="dcRow dcTileRow">' + r.Tiles.map(function (t) { return tileHtml(r, t); }).join('') + '</div>' +
-                        '<button type="button" class="dcArrow right" data-dir="1">&#10095;</button>' +
-                        '</div>';
+                        rowWrapHtml('<div class="dcRow dcTileRow">' + r.Tiles.map(function (t) { return tileHtml(r, t); }).join('') + '</div>');
                     return;
                 }
                 if (!r.Items || !r.Items.length) { return; }
@@ -221,13 +386,12 @@ define([], function () {
                 r.Items.forEach(function (i) { seen[key(i)] = true; });
                 rowState[r.Key] = { nextPage: r.NextPage || 4, loading: false, done: false, seen: seen };
                 html += '<div class="dcRowTitle">' + esc(r.Title) + '</div>' +
-                    '<div class="dcRowWrap">' +
-                    '<button type="button" class="dcArrow left" data-dir="-1">&#10094;</button>' +
-                    '<div class="dcRow" data-row="' + esc(r.Key) + '">' + r.Items.map(cardHtml).join('') + '</div>' +
-                    '<button type="button" class="dcArrow right" data-dir="1">&#10095;</button>' +
-                    '</div>';
+                    rowWrapHtml('<div class="dcRow" data-row="' + esc(r.Key) + '">' + r.Items.map(function (i) { return cardHtml(i); }).join('') + '</div>');
             });
             content.innerHTML = html || '<div class="dcMsg">' + text('Geen resultaten.', 'No results.', 'Keine Ergebnisse.') + '</div>';
+            homeShown = true;
+            renderMine();
+            setTimeout(updateAllArrows, 0);
         }
 
         // Laadt de volgende TMDB-pagina als je bijna aan het eind van een rij bent.
@@ -246,7 +410,8 @@ define([], function () {
                     st.seen[key(i)] = true;
                     return true;
                 });
-                if (fresh.length) { el.insertAdjacentHTML('beforeend', fresh.map(cardHtml).join('')); }
+                if (fresh.length) { el.insertAdjacentHTML('beforeend', fresh.map(function (i) { return cardHtml(i); }).join('')); }
+                updateArrows(el.parentNode);
                 st.loading = false;
                 maybeLoadMore(el); // nog steeds aan het eind (bijv. alles dubbel)? meteen verder
             }, function () { st.loading = false; st.done = true; });
@@ -254,7 +419,10 @@ define([], function () {
 
         function loadHome() {
             browse = null;
+            homeShown = false;
             content.innerHTML = skeletonHtml(3);
+            loadMyRequests();
+            scheduleQueue(0);
             api('GET', 'Discover/Home').then(function (r) {
                 var culture = String(r.Language || '').toLowerCase();
                 uiLanguage = culture.indexOf('nl') === 0 ? 'nl' : culture.indexOf('de') === 0 ? 'de' : (culture.indexOf('nb') === 0 || culture.indexOf('nn') === 0 || culture.indexOf('no') === 0) ? 'no' : 'en';
@@ -274,11 +442,12 @@ define([], function () {
 
         function doSearch(q) {
             browse = null;
+            homeShown = false;
             content.innerHTML = '<div class="dcRowTitle">' + text('Zoeken...', 'Searching...', 'Suchen...') + '</div><div class="dcSkelRow">' + skelCards(8) + '</div>';
             api('GET', 'Discover/Search', { Query: q }).then(function (r) {
                 var list = r.Items || [];
                 content.innerHTML = list.length
-                    ? '<div class="dcRowTitle">' + text('Zoekresultaten', 'Search results', 'Suchergebnisse') + '</div><div class="dcGrid">' + list.map(cardHtml).join('') + '</div>'
+                    ? '<div class="dcRowTitle">' + text('Zoekresultaten', 'Search results', 'Suchergebnisse') + '</div><div class="dcGrid">' + list.map(function (i) { return cardHtml(i); }).join('') + '</div>'
                     : '<div class="dcMsg">' + text('Niets gevonden voor "', 'Nothing found for "', 'Keine Ergebnisse für "') + esc(q) + '".</div>';
             });
         }
@@ -304,6 +473,7 @@ define([], function () {
             else if (isAdmin && current.Status === 2) { d.textContent = text('Verwijderen', 'Delete', 'Löschen'); d.classList.add('show'); }
             else { d.classList.remove('show'); }
             if (current.Status === 2) { b.textContent = text('Beschikbaar', 'Available', 'Verfügbar'); b.disabled = true; }
+            else if (current.Status === 1 && queue[key(current)]) { b.textContent = queueLine(queue[key(current)]); b.disabled = true; }
             else if (current.Status === 1) { b.textContent = text('Aangevraagd', 'Requested', 'Angefordert'); b.disabled = true; }
             else { b.textContent = text('Aanvragen', 'Request', 'Anfragen', 'Forespør'); b.disabled = false; }
         }
@@ -329,6 +499,7 @@ define([], function () {
                     i.Status = 1;
                     refreshCards(i);
                     showToast(i.Title + ': ' + r.Message, false);
+                    afterRequest();
                 } else {
                     showToast(text('Mislukt: ', 'Failed: ', 'Fehlgeschlagen: ') + ((r && r.Message) || text('onbekende fout', 'unknown error', 'unbekannter Fehler')), true);
                 }
@@ -452,6 +623,7 @@ define([], function () {
             ob.classList.remove('show'); ob.removeAttribute('data-id');
             ob.textContent = text('Openen in Emby', 'Open in Emby', 'In Emby öffnen');
             loadSeasonButtons(i);
+            renderQueueInfo(i);
             updateButton();
             lastFocus = document.activeElement;
             overlay.classList.add('open');
@@ -710,8 +882,9 @@ define([], function () {
         // scroll-events borrelen niet op, dus in de capture-fase luisteren
         content.addEventListener('scroll', function (e) {
             var el = e.target;
-            if (el && el.classList && el.classList.contains('dcRow')) { maybeLoadMore(el); }
+            if (el && el.classList && el.classList.contains('dcRow')) { maybeLoadMore(el); updateArrows(el.parentNode); }
         }, true);
+        window.addEventListener('resize', function () { if (pageActive()) { updateAllArrows(); } });
 
         content.addEventListener('click', function (e) {
             var btn = e.target.closest ? e.target.closest('.dcArrow') : null;
@@ -739,6 +912,7 @@ define([], function () {
                     i.Status = 1;
                     refreshCards(i);
                     showToast(i.Title + ': ' + r.Message, false);
+                    afterRequest();
                 } else {
                     showToast(text('Mislukt: ', 'Failed: ', 'Fehlgeschlagen: ') + ((r && r.Message) || text('onbekende fout', 'unknown error', 'unbekannter Fehler')), true);
                 }
@@ -779,6 +953,9 @@ define([], function () {
                 if (r && r.Success) {
                     i.Status = 0;
                     refreshCards(i);
+                    delete queue[key(i)];
+                    applyQueueToCards();
+                    loadMyRequests();
                     showToast(i.Title + ': ' + r.Message, false);
                 } else {
                     showToast(text('Mislukt: ', 'Failed: ', 'Fehlgeschlagen: ') + ((r && r.Message) || text('onbekende fout', 'unknown error', 'unbekannter Fehler')), true);
@@ -1081,7 +1258,9 @@ define([], function () {
 
         view.addEventListener('viewshow', function () {
             if (!loaded) { loadHome(); }
+            else { scheduleQueue(0); loadMyRequests(); }
             openFromLink();
         });
+        view.addEventListener('viewhide', function () { clearTimeout(queueTimer); queueTimer = null; });
     };
 });

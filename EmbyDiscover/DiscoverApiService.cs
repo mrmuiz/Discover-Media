@@ -333,6 +333,7 @@ namespace Emby.Plugins.Discover
         private readonly ILogger _logger;
 
         private readonly IAuthorizationContext _auth;
+        private readonly IJsonSerializer _json;
 
         /// <summary>Wordt door Emby ingevuld (IRequiresRequest); nodig om te weten wie de aanvraag doet.</summary>
         public IRequest Request { get; set; }
@@ -340,6 +341,7 @@ namespace Emby.Plugins.Discover
         public DiscoverApiService(ILogManager logManager, IJsonSerializer json, IAuthorizationContext auth)
         {
             _auth = auth;
+            _json = json;
             _logger = logManager.GetLogger("Discover");
             _tmdb = new TmdbClient(json);
             _arr = new ArrClient(json);
@@ -947,6 +949,7 @@ namespace Emby.Plugins.Discover
                 }
                 bool tv = string.Equals(request.Type, "tv", StringComparison.OrdinalIgnoreCase);
                 bool added;
+                TmdbItem requested;
                 if (tv)
                 {
                     var t = await _tmdb.GetTv(request.TmdbId, CancellationToken.None).ConfigureAwait(false);
@@ -954,15 +957,19 @@ namespace Emby.Plugins.Discover
                     if (ext?.tvdb_id == null)
                         throw new InvalidOperationException("Geen TVDB-id bij deze serie; Sonarr kan hem niet toevoegen.");
                     added = await _arr.AddSeries(request.TmdbId, ext.tvdb_id.Value, t.name ?? t.title, request.Seasons, CancellationToken.None).ConfigureAwait(false);
+                    requested = t;
                 }
                 else
                 {
                     var m = await _tmdb.GetMovie(request.TmdbId, CancellationToken.None).ConfigureAwait(false);
                     added = await _arr.AddMovie(request.TmdbId, m.title ?? m.name, YearOf(m.release_date), CancellationToken.None).ConfigureAwait(false);
+                    requested = m;
                 }
 
                 res.Success = true;
                 res.Status = 1;
+                RequestStore.Add(_json, requesterId, tv, requested, request.TmdbId);
+                DownloadQueue.Invalidate();
                 string seasonNote = "";
                 if (tv && request.Seasons != null && request.Seasons.Length > 0)
                     seasonNote = " (" + DiscoverLanguage.Text("seizoen ", "season ", "Staffel ") +

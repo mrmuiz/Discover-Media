@@ -21,6 +21,7 @@ namespace Emby.Plugins.Discover
         private readonly ILogger _logger;
         private readonly TmdbClient _tmdb;
         private readonly ArrClient _arr;
+        private readonly IJsonSerializer _json;
 
         public RequestOnPlay(ISessionManager sessions, ILogManager logManager, IJsonSerializer json)
         {
@@ -28,6 +29,7 @@ namespace Emby.Plugins.Discover
             _logger = logManager.GetLogger("Discover");
             _tmdb = new TmdbClient(json);
             _arr = new ArrClient(json);
+            _json = json;
         }
 
         public void Run()
@@ -97,6 +99,17 @@ namespace Emby.Plugins.Discover
                     {
                         var msg = await DiscoverMediaChannel.RequestTitle(_tmdb, _arr, tv, tmdbId, null, CancellationToken.None).ConfigureAwait(false);
                         DiscoverDiagnostics.Add("aanvraag via Afspelen: " + ext + " -> " + msg);
+                        if (user != null)
+                        {
+                            try
+                            {
+                                var it = tv ? await _tmdb.GetTv(tmdbId, CancellationToken.None).ConfigureAwait(false)
+                                            : await _tmdb.GetMovie(tmdbId, CancellationToken.None).ConfigureAwait(false);
+                                RequestStore.Add(_json, user.Id, tv, it, tmdbId);
+                            }
+                            catch (Exception ex) { DiscoverDiagnostics.Add("aanvraag (Afspelen) onthouden mislukt: " + ex.Message); }
+                        }
+                        DownloadQueue.Invalidate();
                         _logger.Info("Discover: aanvraag via Afspelen {0}: {1}", ext, msg);
                     }
                     catch (Exception ex)

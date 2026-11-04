@@ -28,7 +28,7 @@ namespace Emby.Plugins.Discover
             get
             {
                 try { return typeof(Plugin).Assembly.GetName().Version.ToString(); }
-                catch { return "1.3.4.6"; }
+                catch { return "1.3.5.5"; }
             }
         }
 
@@ -45,6 +45,9 @@ namespace Emby.Plugins.Discover
         }
 
         public string ServerUiCulture => _serverConfigurationManager.Configuration.UICulture;
+
+        /// <summary>Emby's datamap (blijft bewaard bij updates en in Docker), voor de lijst met aanvragen per gebruiker.</summary>
+        public string DataPath => _paths.DataPath;
 
         public static PluginConfiguration GetCurrentConfiguration()
         {
@@ -127,7 +130,7 @@ namespace Emby.Plugins.Discover
                 },
                 new PluginPageInfo
                 {
-                    Name = "discoverui1080",
+                    Name = "discoverui1081",
                     DisplayName = "Discover",
                     EmbeddedResourcePath = GetType().Namespace + ".Configuration.discoverPage.html",
                     EnableInMainMenu = true,
@@ -136,12 +139,12 @@ namespace Emby.Plugins.Discover
                 },
                 new PluginPageInfo
                 {
-                    Name = "discoveruijs1372",
+                    Name = "discoveruijs1373",
                     EmbeddedResourcePath = GetType().Namespace + ".Configuration.discoverPage.js"
                 },
                 new PluginPageInfo
                 {
-                    Name = "discoverbuttonjs1372",
+                    Name = "discoverbuttonjs1373",
                     EmbeddedResourcePath = GetType().Namespace + ".Resources.discover-request-button.js"
                 },
                 new PluginPageInfo

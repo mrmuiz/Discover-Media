@@ -48,6 +48,15 @@ namespace Emby.Plugins.Discover
 
         public ArrClient(IJsonSerializer json) { _json = json; }
 
+        /// <summary>GET op Radarr (sonarr = false) of Sonarr (sonarr = true) met de ingestelde URL en API-sleutel.</summary>
+        internal static Task<string> GetRaw(bool sonarr, string path, CancellationToken ct)
+        {
+            var cfg = Plugin.GetCurrentConfiguration();
+            return sonarr
+                ? Send(HttpMethod.Get, cfg.SonarrUrl, cfg.SonarrApiKey, path, null, ct)
+                : Send(HttpMethod.Get, cfg.RadarrUrl, cfg.RadarrApiKey, path, null, ct);
+        }
+
         public static bool RadarrConfigured =>
             !string.IsNullOrWhiteSpace(Plugin.GetCurrentConfiguration().RadarrUrl) &&
             !string.IsNullOrWhiteSpace(Plugin.GetCurrentConfiguration().RadarrApiKey);

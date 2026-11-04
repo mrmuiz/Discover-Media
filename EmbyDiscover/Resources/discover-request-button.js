@@ -3,16 +3,16 @@
  * Verbergt ook "Media informatie" op Discover/Trailers-detailpagina's. */
 (function () {
     'use strict';
-    if (window.__discoverRequestButtonVersion === '1.3.4.6') { return; }
+    if (window.__discoverRequestButtonVersion === '1.3.5.5') { return; }
     if (window.__discoverRequestButton) {
         console.warn('[Discover] oudere knopcode is nog actief; vernieuw de webclient om dubbele handlers te voorkomen.');
         return;
     }
-    var DC_BUILD = 'seasons-r1 2026-10-31T17:00';
+    var DC_BUILD = 'rows-progress-r1 2026-11-04T20:00';
     window.__discoverRequestButton = true;
-    window.__discoverRequestButtonVersion = '1.3.4.6';
+    window.__discoverRequestButtonVersion = '1.3.5.5';
     window.__discoverRequestButtonBuild = DC_BUILD;
-    console.log('[Discover] request-button script loaded v1.3.4.6 build ' + DC_BUILD);
+    console.log('[Discover] request-button script loaded v1.3.5.5 build ' + DC_BUILD);
 
     var uiLanguage = 'nl';
     function text(dutch, english, german, norwegian) {
@@ -43,7 +43,7 @@
                     'color:#ffd666;background:rgba(0,0,0,.7);padding:4px 8px;border-radius:4px;pointer-events:none;white-space:pre-wrap;';
                 document.body.appendChild(el);
             }
-            el.textContent = 'Discover v1.3.4.6 | ' + msg;
+            el.textContent = 'Discover v1.3.5.5 | ' + msg;
         } catch (e) { }
     }
     var isAdmin = false;
@@ -102,18 +102,38 @@
             'body.discover-folder-page .btnPlay, body.discover-folder-page .btnShuffle, body.discover-folder-page .btnQueue { display: none !important; }',
             '.discover-row-section { margin: 1.5em 0 .5em; }',
             '.discover-row-title { margin: 0 0 .7em !important; font-size: 1.35em !important; font-weight: 600 !important; }',
-            '.discover-row-scroller { display: flex; gap: 1em; overflow-x: auto; padding: 0 0 1em; scroll-snap-type: x proximity; }',
+            '.discover-row-wrap { position: relative; }',
+            '.discover-row-scroller { display: flex; gap: 1em; overflow-x: auto; padding: .5em .35em 1em; margin: -.5em -.35em 0; scroll-snap-type: x proximity; scroll-padding: 0 .35em; scrollbar-width: none; -ms-overflow-style: none; }',
+            '.discover-row-scroller::-webkit-scrollbar { display: none; }',
             '.discover-row-card { flex: 0 0 auto; width: 9.5em; scroll-snap-align: start; }',
-            '.discover-row-poster { display: block; border-radius: .6em; overflow: hidden; background: #222; height: 14.25em; }',
-            '.discover-row-poster img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .2s; }',
-            '.discover-row-poster:hover img, .discover-row-poster:focus img { transform: scale(1.04); }',
+            '.discover-row-poster { position: relative; display: block; border-radius: .6em; overflow: hidden; background: #222; height: 14.25em; outline: 0; transition: transform .15s, box-shadow .15s; }',
+            '.discover-row-poster img { width: 100%; height: 100%; object-fit: cover; display: block; }',
+            /* Geselecteerde poster: dunne gele rand, 5% groter, zachte schaduw. Muis: hover; toetsenbord: focus-visible; tv: focus. */
+            '.discover-row-poster:hover, .discover-row-poster:focus-visible { transform: scale(1.05); box-shadow: 0 0 0 3px #ffb400, 0 .5em 1.2em rgba(0,0,0,.5); }',
+            'html.layout-tv .discover-row-poster:focus, html.discover-tv .discover-row-poster:focus { transform: scale(1.05); box-shadow: 0 0 0 3px #ffb400, 0 .5em 1.2em rgba(0,0,0,.5); }',
+            /* Gele pijlknoppen links en rechts, zoals op de Discover-pagina. Niet op tv (afstandsbediening) en niet op touchscreens. */
+            '.discover-row-arrow { position: absolute; top: 5.95em; transform: translateY(-50%); z-index: 3; width: 2.4em; height: 4.5em; border: 0; border-radius: .6em; background: #ffb400; color: #111; font-size: 1.2em; font-weight: 700; cursor: pointer; box-shadow: 0 .2em .7em rgba(0,0,0,.45); transition: opacity .15s, background .15s; padding: 0; }',
+            '.discover-row-arrow:hover { background: #ffc633; }',
+            '.discover-row-arrow.is-hidden { opacity: 0; pointer-events: none; }',
+            '.discover-row-arrow.left { left: -.6em; }',
+            '.discover-row-arrow.right { right: -.6em; }',
+            'html.layout-tv .discover-row-arrow, html.discover-tv .discover-row-arrow { display: none; }',
+            '@media (hover: none) and (pointer: coarse) { .discover-row-arrow { display: none; } }',
+            /* Downloadvoortgang uit de Radarr/Sonarr-wachtrij */
+            '.discover-row-prog { position: absolute; left: 0; right: 0; bottom: 0; height: 5px; background: rgba(0,0,0,.6); }',
+            '.discover-row-prog i { display: block; height: 100%; width: 0; background: #ffb400; transition: width .6s; }',
+            '.discover-row-prog.paused i, .discover-row-prog.stalled i { background: #9aa5b8; }',
             '.discover-row-name { margin-top: .5em; font-size: .95em; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }',
             '.discover-row-meta { font-size: .8em; opacity: .65; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }',
             '.discover-row-btn { display: block; width: 100%; box-sizing: border-box; margin-top: .5em; padding: .45em .6em; border: none;',
             '  border-radius: 2em; font: inherit; font-size: .9em; font-weight: 600; cursor: pointer; background: #ffb400; color: #111; }',
-            '.discover-row-btn:focus { outline: 2px solid #fff; outline-offset: 2px; }',
+            '.discover-row-btn:focus { outline: 0; }',
+            '.discover-row-btn:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }',
+            'html.layout-tv .discover-row-btn:focus, html.discover-tv .discover-row-btn:focus { outline: 2px solid #fff; outline-offset: 2px; }',
             '.discover-row-btn:disabled { cursor: default; }',
             '.discover-row-btn.is-requested { background: #555; color: #fff; }',
+            '.discover-row-btn.is-progress { background: #26304a; color: #ffd666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }',
+            '.discover-row-btn.is-progress.paused, .discover-row-btn.is-progress.stalled { color: #d0d6e4; }',
             '.discover-row-btn.is-available { background: #22a559; color: #fff; }',
             '.discover-film-req { cursor: pointer; }',
             '.discover-film-req .discover-film-badge { display:inline-block; margin-left:.6em; padding:0 .5em; border-radius:1em; background:#ffb400; color:#111; font-size:.8em; font-weight:700; vertical-align:middle; }',
@@ -222,7 +242,7 @@
             var bcs = btn ? getComputedStyle(btn) : null;
             var vv = window.visualViewport;
             el.textContent = [
-                'Discover v1.3.4.6 build ' + DC_BUILD + ' (' + (window.__discoverRequestButtonBuild || '?') + ')',
+                'Discover v1.3.5.5 build ' + DC_BUILD + ' (' + (window.__discoverRequestButtonBuild || '?') + ')',
                 'item page: ' + (document.querySelector('.itemDetailPage') ? 'ja' : 'nee') + ' body=' + document.body.className.split(/\s+/).filter(function (c) { return /^(dc|discover)/.test(c); }).join(' '),
                 'bar: ' + (info.bar ? describe(info.bar) + ' ' + rectText(info.bar) : 'niet gevonden') + ' h=' + info.measured,
                 'mode=' + info.mode + ' --dc-bottom-clear=' + (document.documentElement.style.getPropertyValue('--dc-bottom-clear') || '(leeg)'),
@@ -1636,10 +1656,65 @@
         return role === 'Director' ? text('Regie', 'Director', 'Regie') : role;
     }
 
+    // ---- Downloadvoortgang (Radarr/Sonarr-wachtrij) voor de rijen ----
+    var rowQueue = {};           // 'movie:123' -> wachtrij-item
+    var rowQueueTimer = null, rowQueueBusy = false, rowQueueUntil = 0;
+    function rowStateLabel(st) {
+        return st === 'downloading' ? text('Downloaden', 'Downloading', 'Lädt herunter', 'Laster ned') :
+            st === 'paused' ? text('Gepauzeerd', 'Paused', 'Pausiert', 'Pauset') :
+            st === 'importing' ? text('Wordt toegevoegd', 'Importing', 'Wird importiert', 'Importeres') :
+            st === 'stalled' ? text('Wacht op download', 'Waiting for download', 'Wartet auf Download', 'Venter') :
+            text('In wachtrij', 'Queued', 'In Warteschlange', 'I kø');
+    }
+    function rowQueueText(e) {
+        if (e.State === 'downloading') { return '\u2193 ' + e.Progress + '%'; }
+        if (e.State === 'paused') { return rowStateLabel(e.State) + ' \u00B7 ' + e.Progress + '%'; }
+        return rowStateLabel(e.State);
+    }
+    function applyRowProgress(card, item) {
+        var poster = card.querySelector('.discover-row-poster');
+        if (!poster) { return; }
+        var e = rowQueue[item.Type + ':' + item.TmdbId];
+        var bar = poster.querySelector('.discover-row-prog');
+        if (!e) { if (bar) { poster.removeChild(bar); } return; }
+        if (!bar) { bar = document.createElement('div'); bar.appendChild(document.createElement('i')); poster.appendChild(bar); }
+        bar.className = 'discover-row-prog ' + e.State;
+        bar.firstChild.style.width = e.Progress + '%';
+    }
+    function loadRowQueue() {
+        rowQueueTimer = null;
+        if (rowQueueBusy || !api() || !document.querySelector('.discover-row-section')) { return; }
+        if (document.hidden) { rowQueueTimer = setTimeout(loadRowQueue, 15000); return; }
+        rowQueueBusy = true;
+        var c = api();
+        Promise.resolve(c.getJSON(c.getUrl('Discover/Queue'))).then(function (r) {
+            rowQueueBusy = false;
+            var next = {};
+            ((r && r.Items) || []).forEach(function (e) { next[e.Type + ':' + e.TmdbId] = e; });
+            rowQueue = next;
+            var bs = document.querySelectorAll('.discover-row-btn');
+            for (var i = 0; i < bs.length; i++) { if (bs[i]._item) { styleRowButton(bs[i], bs[i]._item); } }
+            // Alleen blijven verversen zolang er iets van deze rijen in de wachtrij staat (of net is aangevraagd).
+            var any = false;
+            for (var j = 0; j < bs.length && !any; j++) { if (bs[j]._item && rowQueue[bs[j]._item.Type + ':' + bs[j]._item.TmdbId]) { any = true; } }
+            if (any || Date.now() < rowQueueUntil) { rowQueueTimer = setTimeout(loadRowQueue, 15000); }
+        }, function () {
+            rowQueueBusy = false;
+            if (Date.now() < rowQueueUntil) { rowQueueTimer = setTimeout(loadRowQueue, 30000); }
+        });
+    }
+    function startRowQueue(delay) {
+        if (rowQueueTimer) { clearTimeout(rowQueueTimer); }
+        rowQueueTimer = setTimeout(loadRowQueue, delay || 0);
+    }
+
     function styleRowButton(btn, item) {
+        var e = item.Status === 1 ? rowQueue[item.Type + ':' + item.TmdbId] : null;
         btn.disabled = item.Status !== 0;
-        btn.textContent = rowStatusText(item.Status);
-        btn.className = 'discover-row-btn' + (item.Status === 2 ? ' is-available' : item.Status === 1 ? ' is-requested' : '');
+        btn.textContent = e ? rowQueueText(e) : rowStatusText(item.Status);
+        btn.className = 'discover-row-btn' + (e ? ' is-progress ' + e.State : item.Status === 2 ? ' is-available' : item.Status === 1 ? ' is-requested' : '');
+        var card = btn.parentNode;
+        if (card && card.classList && card.classList.contains('discover-row-card')) { applyRowProgress(card, item); }
     }
 
     // Dezelfde titel kan in meer rijen staan: alle knoppen bijwerken.
@@ -1665,6 +1740,8 @@
                 if (r && r.Success) {
                     item.Status = 1;
                     toast(item.Title + ': ' + r.Message, false);
+                    rowQueueUntil = Date.now() + 5 * 60 * 1000;
+                    startRowQueue(5000);
                 } else {
                     toast(text('Mislukt: ', 'Failed: ', 'Fehlgeschlagen: ') +
                         ((r && r.Message) || text('onbekende fout', 'unknown error', 'unbekannter Fehler')), true);
@@ -1719,7 +1796,7 @@
         var link = document.createElement('a');
         link.className = 'discover-row-poster';
         // Klik op de poster: de Discover-popup met info en trailer.
-        link.href = '#!/configurationpage?name=discoverui1080&openType=' + item.Type + '&openId=' + item.TmdbId;
+        link.href = '#!/configurationpage?name=discoverui1081&openType=' + item.Type + '&openId=' + item.TmdbId;
         link.title = item.Title;
         var img = document.createElement('img');
         img.loading = 'lazy';
@@ -1740,14 +1817,43 @@
         btn.type = 'button';
         btn._item = item;
         btn.setAttribute('data-key', item.Type + ':' + item.TmdbId);
-        styleRowButton(btn, item);
         btn.addEventListener('click', function (e) {
             e.preventDefault(); e.stopPropagation();
             if (item.Status === 0) { requestRowItem(item, btn); }
         });
         card.appendChild(link); card.appendChild(name); card.appendChild(meta); card.appendChild(btn);
+        styleRowButton(btn, item);
         return card;
     }
+
+    // Pijlknop voor een rij: niet focusbaar (tabindex -1), zodat de afstandsbediening er niet op blijft hangen.
+    function makeRowArrow(row, dir) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.tabIndex = -1;
+        b.className = 'discover-row-arrow ' + (dir < 0 ? 'left is-hidden' : 'right');
+        b.setAttribute('aria-label', dir < 0 ? text('Vorige', 'Previous', 'Zurück', 'Forrige') : text('Volgende', 'Next', 'Weiter', 'Neste'));
+        b.innerHTML = dir < 0 ? '&#10094;' : '&#10095;';
+        b.addEventListener('click', function (e) {
+            e.preventDefault(); e.stopPropagation();
+            var amount = Math.max(300, row.clientWidth * 0.85) * dir;
+            if (row.scrollBy) { row.scrollBy({ left: amount, behavior: 'smooth' }); } else { row.scrollLeft += amount; }
+        });
+        return b;
+    }
+    // Links weg aan het begin, rechts weg aan het eind; geen pijlen als de hele rij al in beeld past.
+    function updateRowArrows(wrap) {
+        var row = wrap.querySelector('.discover-row-scroller');
+        var l = wrap.querySelector('.discover-row-arrow.left'), r = wrap.querySelector('.discover-row-arrow.right');
+        if (!row || !l || !r) { return; }
+        var max = row.scrollWidth - row.clientWidth;
+        l.classList.toggle('is-hidden', row.scrollLeft <= 12);
+        r.classList.toggle('is-hidden', row.scrollLeft >= max - 12);
+    }
+    window.addEventListener('resize', function () {
+        var ws = document.querySelectorAll('.discover-row-wrap');
+        for (var i = 0; i < ws.length; i++) { updateRowArrows(ws[i]); }
+    });
 
     function renderRowSections(id, sections) {
         var parent = rowParent();
@@ -1763,12 +1869,27 @@
             h.className = 'discover-row-title sectionTitle';
             h.textContent = s.title;
             sec.appendChild(h);
+            var wrap = document.createElement('div');
+            wrap.className = 'discover-row-wrap';
             var row = document.createElement('div');
             row.className = 'discover-row-scroller';
             s.items.forEach(function (item) { row.appendChild(buildRowCard(item)); });
-            sec.appendChild(row);
+            wrap.appendChild(makeRowArrow(row, -1));
+            wrap.appendChild(row);
+            wrap.appendChild(makeRowArrow(row, 1));
+            sec.appendChild(wrap);
             parent.appendChild(sec);
+            row.addEventListener('scroll', function () { updateRowArrows(wrap); });
+            // Toetsenbord: de gefocuste poster netjes in beeld (op tv doet onRowCommand dat al).
+            row.addEventListener('focusin', function (ev) {
+                var card = ev.target && ev.target.closest ? ev.target.closest('.discover-row-card') : null;
+                if (card && !rowIsTv()) { try { card.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch (x) { } }
+            });
+            setTimeout(function () { updateRowArrows(wrap); }, 0);
+            // Posters laden later in: dan verandert de breedte nog.
+            setTimeout(function () { updateRowArrows(wrap); }, 800);
         });
+        startRowQueue(0);
         return true;
     }
 
@@ -1779,7 +1900,7 @@
             : String(t || '').toLowerCase().replace(/[^a-z0-9]/g, '');
     }
     function filmReqOpen(type, tmdbId) {
-        try { window.location.hash = '#!/configurationpage?name=discoverui1080&openType=' + type + '&openId=' + tmdbId; } catch (e) { }
+        try { window.location.hash = '#!/configurationpage?name=discoverui1081&openType=' + type + '&openId=' + tmdbId; } catch (e) { }
     }
     function wireFilmography(id) {
         var data = rowData[id];
@@ -2081,6 +2202,8 @@
     }
 
     function start() {
+        // webOS/Tizen zetten niet altijd "layout-tv": dan zelf een klasse, zodat de tv-stijlen (focusrand, geen pijlen) gelden.
+        try { if (rowIsTv() && document.documentElement) { document.documentElement.classList.add('discover-tv'); } } catch (e) { }
         applyRouteState();
         window.addEventListener('hashchange', applyRouteState);
         // Na een klik op Afspelen/Aanvragen op de aanvraagpagina de status even later opnieuw ophalen.
