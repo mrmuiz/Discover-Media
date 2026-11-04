@@ -251,7 +251,7 @@ define([], function () {
             var list = (mineRow && mineRow.Items) || [];
             if (!list.length) { if (old) { old.parentNode.removeChild(old); } return; }
             var scroll = old ? old.querySelector('.dcRow').scrollLeft : 0;
-            var html = '<div class="dcMine"><div class="dcRowTitle">' + esc(mineRow.Title || text('Mijn aanvragen', 'My requests', 'Meine Anfragen')) + '</div>' +
+            var html = '<div class="dcMine"><div class="dcRowTitle">' + esc(text('Mijn aanvragen', 'My requests', 'Meine Anfragen', 'Mine forespørsler')) + '</div>' +
                 rowWrapHtml('<div class="dcRow" data-row="my_requests">' + list.map(function (i) { return cardHtml(i, true); }).join('') + '</div>') + '</div>';
             var hadFocus = old && old.contains(document.activeElement) ? document.activeElement.getAttribute('data-key') : null;
             if (old) { old.insertAdjacentHTML('afterend', html); old.parentNode.removeChild(old); }
@@ -265,6 +265,24 @@ define([], function () {
 
         var CHEV_L = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.7 6.3a1 1 0 0 1 0 1.4L10.4 12l4.3 4.3a1 1 0 0 1-1.4 1.4l-5-5a1 1 0 0 1 0-1.4l5-5a1 1 0 0 1 1.4 0z"/></svg>';
         var CHEV_R = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.3 6.3a1 1 0 0 0 0 1.4l4.3 4.3-4.3 4.3a1 1 0 1 0 1.4 1.4l5-5a1 1 0 0 0 0-1.4l-5-5a1 1 0 0 0-1.4 0z"/></svg>';
+        // Rijtitels in de taal van deze Emby-app (bij plugintaal Automatisch).
+        function rowTitle(k) {
+            switch (k) {
+                case 'recent_added': return text('Onlangs toegevoegd', 'Recently added', 'Kürzlich hinzugefügt', 'Nylig lagt til');
+                case 'recent_requests': return text('Recente aanvragen', 'Recent requests', 'Kürzlich angefragt', 'Nylige forespørsler');
+                case 'trending': return 'Trending';
+                case 'popular_movie': return text('Populaire films', 'Popular Movies', 'Beliebte Filme', 'Populære filmer');
+                case 'genres_movie': return text('Filmgenres', 'Movie Genres', 'Filmgenres', 'Filmsjangre');
+                case 'upcoming_movie': return text('Aankomende films', 'Upcoming Movies', 'Kommende Filme', 'Kommende filmer');
+                case 'studios': return text("Studio's", 'Studios', 'Studios', 'Studioer');
+                case 'popular_tv': return text('Populaire series', 'Popular Series', 'Beliebte Serien', 'Populære serier');
+                case 'genres_tv': return text('Seriegenres', 'Series Genres', 'Seriengenres', 'Seriesjangre');
+                case 'upcoming_tv': return text('Aankomende series', 'Upcoming Series', 'Kommende Serien', 'Kommende serier');
+                case 'networks': return text('Netwerken', 'Networks', 'Sender', 'Nettverk');
+                case 'my_requests': return text('Mijn aanvragen', 'My requests', 'Meine Anfragen', 'Mine forespørsler');
+            }
+            return null;
+        }
         function rowWrapHtml(inner) {
             return '<div class="dcRowWrap">' +
                 '<button type="button" class="dcArrow left dcHide" data-dir="-1" tabindex="-1" aria-label="' + esc(text('Vorige', 'Previous', 'Zurück', 'Forrige')) + '">' + CHEV_L + '</button>' +
@@ -428,10 +446,11 @@ define([], function () {
             loadMyRequests();
             scheduleQueue(0);
             api('GET', 'Discover/Home').then(function (r) {
-                var culture = String(r.Language || '').toLowerCase();
+                var culture = String((r.LanguageAuto && document.documentElement.lang) || r.Language || '').toLowerCase();
                 uiLanguage = culture.indexOf('nl') === 0 ? 'nl' : culture.indexOf('de') === 0 ? 'de' : (culture.indexOf('nb') === 0 || culture.indexOf('nn') === 0 || culture.indexOf('no') === 0) ? 'no' : 'en';
                 input.placeholder = text('Films en series zoeken', 'Search movies and series', 'Filme und Serien suchen', 'Søk filmer og serier');
                 if (r.Message) { content.innerHTML = '<div class="dcMsg">' + esc(r.Message) + '</div>'; return; }
+                if (r.LanguageAuto) { (r.Rows || []).forEach(function (row) { row.Title = rowTitle(row.Key) || row.Title; }); }
                 renderRows(r.Rows || []);
                 loaded = true;
                 // TV: meteen op de eerste kaart, behalve als je net in de zoekbalk aan het typen bent.

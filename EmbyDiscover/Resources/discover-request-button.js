@@ -8,7 +8,7 @@
         console.warn('[Discover] oudere knopcode is nog actief; vernieuw de webclient om dubbele handlers te voorkomen.');
         return;
     }
-    var DC_BUILD = 'rows-progress-r4 2026-11-04T21:10';
+    var DC_BUILD = 'rows-progress-r5 2026-11-04T21:15';
     window.__discoverRequestButton = true;
     window.__discoverRequestButtonVersion = '1.3.5.5';
     window.__discoverRequestButtonBuild = DC_BUILD;
@@ -103,6 +103,7 @@
             /* De rijen nemen Emby's eigen maten over (zelfde postergrootte en uitlijning als "More Like This"):
                de sectie en titel krijgen Emby's klassen, de maten komen uit --dc-w/--dc-h (gemeten op de pagina). */
             '.discover-row-section { position: relative; }',
+            '.mainCreditsSection.discover-hidden-credits { display: none !important; }',
             '.discover-row-wrap { position: relative; }',
             '.discover-row-scroller { display: flex; overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none; -ms-overflow-style: none; }',
             '.discover-row-scroller::-webkit-scrollbar { display: none; }',
@@ -334,13 +335,18 @@
 
     function api() { return window.ApiClient || null; }
 
+    function clientLanguage() {
+        try { return (document.documentElement && document.documentElement.lang) || navigator.language || ''; } catch (e) { return ''; }
+    }
+
     function loadDiagnosticsSetting() {
         var client = api();
         if (!client || !client.ajax || !client.getUrl || diagnosticsRequest || Date.now() < diagnosticsRetryAfter) { return; }
         diagnosticsRequest = true;
         client.ajax({ type: 'GET', url: client.getUrl('Discover/Status'), dataType: 'json' }).then(function (status) {
             diagnosticsEnabled = !!(status && status.ShowDiagnostics);
-            var culture = String(status && status.PluginLanguage || '').toLowerCase();
+            // Automatisch: de taal van deze Emby-app (html lang), niet die van de server.
+            var culture = String((status && status.PluginLanguageAuto && clientLanguage()) || (status && status.PluginLanguage) || '').toLowerCase();
             uiLanguage = culture.indexOf('nl') === 0 ? 'nl' : culture.indexOf('de') === 0 ? 'de' : (culture.indexOf('nb') === 0 || culture.indexOf('nn') === 0 || culture.indexOf('no') === 0) ? 'no' : 'en';
             diagnosticsLoaded = true;
             diagnosticsRequest = false;
@@ -1888,7 +1894,7 @@
     }
     function embyAnchorSection(parent) {
         var similar = parent.querySelector('.similarSection');
-        if (similar && similar.parentNode === parent && visible(similar)) { return similar; }
+        if (similar && similar.parentNode === parent) { return similar; }
         var secs = parent.querySelectorAll('.verticalSection-cards.emby-scrollbuttons-scroller');
         for (var i = secs.length - 1; i >= 0; i--) {
             if (secs[i].parentNode === parent && visible(secs[i]) && secs[i].querySelector('.card')) { return secs[i]; }
@@ -1952,6 +1958,27 @@
     function filmReqOpen(type, tmdbId) {
         try { window.location.hash = '#!/configurationpage?name=discoverui1081&openType=' + type + '&openId=' + tmdbId; } catch (e) { }
     }
+    // Persoonspagina: Emby's filmografielijst verbergen zolang onze posterrij "Niet in je bibliotheek" er staat
+    // (wat je al hebt toont Emby als posterrijen, wat je nog niet hebt staat in onze rij). Geen rij = lijst blijft.
+    function syncFilmographyList(id) {
+        var section = document.querySelector('.mainCreditsSection');
+        if (!section) { return; }
+        var ours = document.querySelector('.discover-row-section[data-itemid="' + id + '"][data-row="person"]');
+        section.classList.toggle('discover-hidden-credits', !!ours);
+    }
+    // Emby bouwt zijn eigen "More Like This" soms pas na onze rij op: dan onze rij(en) er alsnog onder zetten.
+    function keepRowOrder(id) {
+        var mine = document.querySelectorAll('.discover-row-section[data-itemid="' + id + '"]');
+        if (!mine.length) { return; }
+        var parent = mine[0].parentNode;
+        var similar = parent && parent.querySelector('.similarSection');
+        if (!similar || similar.parentNode !== parent) { return; }
+        if (similar.compareDocumentPosition(mine[0]) & Node.DOCUMENT_POSITION_PRECEDING) {
+            var after = similar;
+            for (var i = 0; i < mine.length; i++) { parent.insertBefore(mine[i], after.nextSibling); after = mine[i]; }
+        }
+    }
+
     function wireFilmography(id) {
         var data = rowData[id];
         if (!data || !data.length) { return; }
@@ -2029,7 +2056,8 @@
                 if (r && r.Collection && r.Collection.length) {
                     out.push({ key: 'collection', title: r.CollectionName || text('Collectie', 'Collection', 'Sammlung'), items: r.Collection });
                 }
-                out.push({ key: 'related', title: text('Meer zoals dit', 'More like this', 'Mehr wie dies', 'Mer som dette'),
+                out.push({ key: 'related', title: text('Meer zoals dit \u00B7 nog niet in je bibliotheek', 'More like this \u00B7 not in your library',
+                    'Mehr wie dies \u00B7 nicht in deiner Bibliothek', 'Mer som dette \u00B7 ikke i biblioteket ditt'),
                     items: (r && r.Recommendations) || [] });
                 return out;
             });
@@ -2048,7 +2076,8 @@
         if (!id || !api() || askIds[id] || seasonAskIds[id] || trailerIds[id]) { removeRowSections(null); return; }
         removeRowSections(id);
         if (rowData[id]) {
-            if (rowData[id].length) { renderRowSections(id, rowData[id]); wireFilmography(id); }
+            if (rowData[id].length) { renderRowSections(id, rowData[id]); syncFilmographyList(id); keepRowOrder(id); }
+            else { syncFilmographyList(id); }
             return;
         }
         if (rowLoading[id]) { return; }

@@ -9,6 +9,9 @@
 - New: in those rows the Request button and the title light up together with the selected poster (hover, keyboard and TV focus). The browser tooltip with the title over the poster is gone.
 - Change: thicker progress bar (10px, 12px on TV), slightly larger status line, and long times shown in days ("10d 3h" instead of "243h 21m").
 - Fix: the yellow focus ring on buttons (e.g. **Trailer** in the popup) no longer stays visible after a mouse click. It now uses `:focus-visible`, so it only shows when navigating with keyboard or remote; on TV (`layout-tv`, webOS, Tizen) it always shows, because older TV browsers do not support `:focus-visible`.
+- Change: on person pages Emby's own filmography list is hidden while the "Not in your library" poster row is shown (what you own is already in Emby's poster rows, what you don't own is in the plugin row). Without the plugin row the list stays. The yellow "Request" labels in that list are no longer needed.
+- Change: the plugin row on movie/series pages is called "More like this · not in your library", so it is not confused with Emby's own "More Like This", and it always stays below Emby's row (also when Emby builds its row later).
+- Change: with plugin language "Automatic" the rows and the Discover page follow the language of the Emby app (`html lang`) instead of the server language.
 - Change: page names bumped (`discoverui1081`, `discoveruijs1373`, `discoverbuttonjs1373`) so browsers load the new scripts.
 - After updating, restart Emby once and hard-refresh the browser (Ctrl+F5).
 

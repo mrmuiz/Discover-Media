@@ -153,6 +153,7 @@ namespace Emby.Plugins.Discover
     public class DiscoverStatusResponse
     {
         public string PluginVersion { get; set; }
+        public bool PluginLanguageAuto { get; set; }
         public bool TmdbKeySet { get; set; }
         public bool ShowDiagnostics { get; set; }
         public bool ShowTrailerTile { get; set; }
@@ -222,6 +223,7 @@ namespace Emby.Plugins.Discover
     public class DiscoverHomeResponse
     {
         public string Language { get; set; }
+        public bool LanguageAuto { get; set; }
         public string Message { get; set; }
         public List<DiscoverRow> Rows { get; set; } = new List<DiscoverRow>();
     }
@@ -380,6 +382,7 @@ namespace Emby.Plugins.Discover
                 ShowDiagnostics = cfg.ShowDiagnostics,
                 ShowTrailerTile = cfg.ShowTrailerTile,
                 PluginLanguage = DiscoverLanguage.PluginLanguage,
+                PluginLanguageAuto = DiscoverLanguage.IsAuto,
                 TmdbLanguage = TmdbClient.Language(),
                 RadarrSet = ArrClient.RadarrConfigured,
                 SonarrSet = ArrClient.SonarrConfigured,
@@ -401,7 +404,7 @@ namespace Emby.Plugins.Discover
 
         public async Task<object> Get(DiscoverHomeRequest request)
         {
-            var resp = new DiscoverHomeResponse { Language = DiscoverLanguage.PluginLanguage };
+            var resp = new DiscoverHomeResponse { Language = DiscoverLanguage.PluginLanguage, LanguageAuto = DiscoverLanguage.IsAuto };
             if (string.IsNullOrWhiteSpace(Plugin.GetCurrentConfiguration().TmdbApiKey))
             {
                 resp.Message = DiscoverLanguage.Text(
