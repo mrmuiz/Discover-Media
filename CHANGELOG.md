@@ -1,3 +1,9 @@
+## Version 1.3.5.4
+
+- Fix: on phones the **Trailer** button in the Discover popup was partly hidden behind Emby's bottom navigation bar. The mobile height limit of the popup was overridden by the general `max-height: 92vh` rule (wrong CSS order), so the popup was taller than the free space. The mobile rule now wins, so the popup always ends above the bottom bar.
+- Change: on phones (max 600px wide) the buttons below the seasons (Request, Trailer, Open in Emby, Delete) are full width and pinned to the bottom of the popup, so Trailer stays visible even for a series with many seasons. TV and desktop are unchanged.
+- After updating, rebuild the plugin, restart Emby once and hard-refresh the browser (on the phone: clear the site cache or reload).
+
 ## Version 1.3.4.6
 
 - Add: season buttons in the Discover popup for series. Next to Request there is now an **All seasons** button and one button per season (Season 1, Season 2, ...). A season button requests only that season; All seasons requests the whole series, including seasons released later. For series the single Request button is hidden while the season buttons are shown; if the seasons cannot be loaded, the normal Request button stays.

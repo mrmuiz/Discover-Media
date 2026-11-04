@@ -81,13 +81,16 @@ namespace Emby.Plugins.Discover
         }
 
         /// <summary>Geeft het pad van het plaatje (uit de bewaarde bestanden of net gemaakt), of null als het niet lukt.</summary>
-        public static async Task<string> Create(string key, string text, string backgroundUrl, CancellationToken ct, string fallbackColor = null, bool allowStale = true)
+        public static async Task<string> Create(string key, string text, string backgroundUrl, CancellationToken ct, string fallbackColor = null, bool allowStale = true, int width = 0, int height = 0)
         {
             try
             {
                 if (!Plugin.GetCurrentConfiguration().TileTextImages) return null;
                 if (string.IsNullOrEmpty(text)) return null;
                 if (string.IsNullOrEmpty(backgroundUrl) && string.IsNullOrEmpty(fallbackColor)) return null;
+                // Standaard liggend (1280x720); met width/height bv. een staande tegel (2:3) voor het "Alle seizoenen"-item.
+                int tw = width > 0 ? width : W;
+                int th = height > 0 ? height : H;
 
                 var ffmpeg = RequestCard.FindFfmpeg();
                 if (ffmpeg == null)
@@ -97,7 +100,7 @@ namespace Emby.Plugins.Discover
                 }
 
                 var dir = Plugin.Instance.WorkDir("discover-tiles");
-                var final = Path.Combine(dir, string.Format("tile-{0}-{1}-v{2}.jpg", key, Hash(text + "|" + backgroundUrl + "|" + fallbackColor), TileVersion));
+                var final = Path.Combine(dir, string.Format("tile-{0}-{1}-v{2}.jpg", key, Hash(text + "|" + backgroundUrl + "|" + fallbackColor + (width > 0 || height > 0 ? "|" + tw + "x" + th : "")), TileVersion));
                 if (File.Exists(final) && new FileInfo(final).Length > 0) return final;
 
                 // Is er al een eerder plaatje van deze tegel, toon dat dan meteen en maak het nieuwe op de achtergrond.
@@ -106,7 +109,7 @@ namespace Emby.Plugins.Discover
                     var stale = FindStale(dir, "tile-" + key + "-????????-v" + TileVersion + ".jpg", final);
                     if (stale != null)
                     {
-                        RebuildInBackground(final, () => Create(key, text, backgroundUrl, CancellationToken.None, fallbackColor, false));
+                        RebuildInBackground(final, () => Create(key, text, backgroundUrl, CancellationToken.None, fallbackColor, false, width, height));
                         return stale;
                     }
                 }
@@ -135,7 +138,7 @@ namespace Emby.Plugins.Discover
                         else if (!string.IsNullOrEmpty(fallbackColor))
                         {
                             DiscoverDiagnostics.Add("mapplaatje '" + text + "': effen achtergrond gebruikt");
-                            input = "-f lavfi -i color=c=0x" + fallbackColor.TrimStart('#') + ":s=" + W + "x" + H + ":d=1";
+                            input = "-f lavfi -i color=c=0x" + fallbackColor.TrimStart('#') + ":s=" + tw + "x" + th + ":d=1";
                         }
                         else
                         {
@@ -145,13 +148,16 @@ namespace Emby.Plugins.Discover
                         CopyResource("Poppins-Bold.ttf", Path.Combine(work, "bold.ttf"));
                         File.WriteAllText(Path.Combine(work, "text.txt"), text, new UTF8Encoding(false));
 
-                        // Lettergrootte: zo groot mogelijk (max 120), maar de tekst blijft binnen 1040 px van de 1280.
+                        // Lettergrootte: zo groot mogelijk (max 120), maar de tekst blijft binnen 81% van de breedte (1040 px van de 1280).
+                        // Bij meerdere regels (\n in de tekst) telt de breedste regel.
                         int size = 120;
-                        double width = RequestCard.Measure(text, size, true);
-                        if (width > 1040) size = (int)Math.Floor(size * 1040 / width);
+                        double textWidth = 0;
+                        foreach (var line in text.Split('\n')) textWidth = Math.Max(textWidth, RequestCard.Measure(line, size, true));
+                        double maxWidth = tw * 1040.0 / W;
+                        if (textWidth > maxWidth) size = (int)Math.Floor(size * maxWidth / textWidth);
 
                         // Eerst de volledige opmaak (donkerder, schaduw); werkt die niet in jouw ffmpeg, dan een eenvoudiger versie.
-                        var scaleCrop = "scale=" + W + ":" + H + ":force_original_aspect_ratio=increase,crop=" + W + ":" + H;
+                        var scaleCrop = "scale=" + tw + ":" + th + ":force_original_aspect_ratio=increase,crop=" + tw + ":" + th;
                         var full =
                             "[0:v]" + scaleCrop + "," +
                             "colorchannelmixer=rr=0.75:gg=0.75:bb=0.75," +
@@ -195,13 +201,6 @@ namespace Emby.Plugins.Discover
                         try { Directory.Delete(work, true); } catch { }
                     }
 
-                    // Oude plaatjes opruimen (30 dagen); de achtergronden wisselen mee met wat trending is.
-                    try
-                    {
-                        foreach (var f in Directory.GetFiles(dir, "tile-*.jpg"))
-                            if (File.GetLastWriteTimeUtc(f) < DateTime.UtcNow.AddDays(-30)) File.Delete(f);
-                    }
-                    catch { }
                     return final;
                 }
                 finally { Gate.Release(); }
@@ -288,12 +287,6 @@ namespace Emby.Plugins.Discover
                         try { Directory.Delete(work, true); } catch { }
                     }
 
-                    try
-                    {
-                        foreach (var f in Directory.GetFiles(dir, "logo-*.png"))
-                            if (File.GetLastWriteTimeUtc(f) < DateTime.UtcNow.AddDays(-30)) File.Delete(f);
-                    }
-                    catch { }
                     return final;
                 }
                 finally { Gate.Release(); }

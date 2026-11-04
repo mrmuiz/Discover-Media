@@ -1719,7 +1719,7 @@
         var link = document.createElement('a');
         link.className = 'discover-row-poster';
         // Klik op de poster: de Discover-popup met info en trailer.
-        link.href = '#!/configurationpage?name=discoverui1078&openType=' + item.Type + '&openId=' + item.TmdbId;
+        link.href = '#!/configurationpage?name=discoverui1080&openType=' + item.Type + '&openId=' + item.TmdbId;
         link.title = item.Title;
         var img = document.createElement('img');
         img.loading = 'lazy';
@@ -1779,7 +1779,7 @@
             : String(t || '').toLowerCase().replace(/[^a-z0-9]/g, '');
     }
     function filmReqOpen(type, tmdbId) {
-        try { window.location.hash = '#!/configurationpage?name=discoverui1078&openType=' + type + '&openId=' + tmdbId; } catch (e) { }
+        try { window.location.hash = '#!/configurationpage?name=discoverui1080&openType=' + type + '&openId=' + tmdbId; } catch (e) { }
     }
     function wireFilmography(id) {
         var data = rowData[id];

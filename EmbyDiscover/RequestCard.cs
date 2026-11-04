@@ -51,7 +51,12 @@ namespace Emby.Plugins.Discover
             var dir = Plugin.Instance.WorkDir("discover-cards");
             var final = Path.Combine(dir, string.Format("card-{0}{1}-s{2}-{3}-v{4}.mp4",
                 tv ? "t" : "m", t.id, season, alreadyThere ? "dup" : "new", CardVersion));
-            if (File.Exists(final) && new FileInfo(final).Length > 0) return final;
+            if (File.Exists(final) && new FileInfo(final).Length > 0)
+            {
+                // Een clip die gebruikt wordt blijft bewaard: de datum even verversen (hooguit een keer per dag).
+                try { if (File.GetLastWriteTimeUtc(final) < DateTime.UtcNow.AddDays(-1)) File.SetLastWriteTimeUtc(final, DateTime.UtcNow); } catch { }
+                return final;
+            }
 
             Task<string> task;
             Dictionary<string, Task<string>> own = background ? InFlightBackground : InFlightNow;
@@ -100,13 +105,7 @@ namespace Emby.Plugins.Discover
                         try { Directory.Delete(work, true); } catch { }
                     }
 
-                    // Oude clips opruimen (60 dagen).
-                    try
-                    {
-                        foreach (var f in Directory.GetFiles(dir, "card-*.mp4"))
-                            if (File.GetLastWriteTimeUtc(f) < DateTime.UtcNow.AddDays(-60)) File.Delete(f);
-                    }
-                    catch { }
+                    // Opruimen gebeurt los hiervan door CacheCleaner (leeftijd en maximale grootte).
                     return final;
                 }
                 finally { Gate.Release(); }

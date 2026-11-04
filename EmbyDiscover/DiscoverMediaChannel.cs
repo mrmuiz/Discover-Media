@@ -28,7 +28,10 @@ namespace Emby.Plugins.Discover
         private const string AskRoot = "ask16root";
         private const string AskItemPrefix = "ask16item:";   // versioned folder identity to avoid stale cached children
         private const string AskTvItemPrefix = "ask21tvitem:"; // refresh filtered series lists, not movie folders
-        private const string AskSeasonFolderPrefix = "ask22seasons:"; // new ID so Emby re-reads the season list and its images
+        private const string AskSeasonFolderPrefix = "ask25seasons:"; // new ID so Emby re-reads the season list (new tile and text on the "All seasons" item)
+        private const string LegacyAskSeasonFolderPrefix5 = "ask24seasons:"; // idem
+        private const string LegacyAskSeasonFolderPrefix4 = "ask23seasons:"; // idem
+        private const string LegacyAskSeasonFolderPrefix3 = "ask22seasons:"; // idem
         private const string LegacyAskSeasonFolderPrefix = "ask18seasons:"; // keep previously cached season folders working
         private const string LegacyAskSeasonFolderPrefix2 = "ask19seasons:"; // idem
         private const string AskListPrefix = "ask16list:";
@@ -36,6 +39,7 @@ namespace Emby.Plugins.Discover
         private const string AskStudioRoot = "ask16studios";       // map met studio- en netwerktegels
         internal const string AskPrefix = "ask16:";           // het aanvraagitem zelf
         internal const string AskSeasonPrefix = "ask22season:"; // seizoenaanvraagitems
+        internal const string AskAllPrefix = "ask22all:";       // "Alle seizoenen"-item: de hele serie in een keer aanvragen
         private const string TrailerPrefix = "tr10:";         // het trailer-item naast het aanvraagitem
 
         private readonly TmdbClient _tmdb;
@@ -59,7 +63,7 @@ namespace Emby.Plugins.Discover
         public string HomePageUrl => "";
 
         // Ophogen als Emby oude (bewaarde) kanaalinhoud blijft tonen.
-        public string DataVersion => Plugin.GetCurrentConfiguration().ShowTrailerTile ? "71" : "71-notrailer";
+        public string DataVersion => Plugin.GetCurrentConfiguration().ShowTrailerTile ? "72" : "72-notrailer";
         public ChannelParentalRating ParentalRating => ChannelParentalRating.GeneralAudience;
         public bool IsEnabledFor(string userId) => true;
 
@@ -120,6 +124,9 @@ namespace Emby.Plugins.Discover
                 else if (id.StartsWith(AskTvItemPrefix)) { var two = await RequestItems(id.Substring(AskTvItemPrefix.Length), ct).ConfigureAwait(false); res = new ChannelItemResult { Items = two, TotalRecordCount = two.Count }; }
                 else if (id.StartsWith(AskItemPrefix)) { var two = await RequestItems(id.Substring(AskItemPrefix.Length), ct).ConfigureAwait(false); res = new ChannelItemResult { Items = two, TotalRecordCount = two.Count }; }
                 else if (id.StartsWith(AskSeasonFolderPrefix)) res = await RequestSeasons(id.Substring(AskSeasonFolderPrefix.Length), ct).ConfigureAwait(false);
+                else if (id.StartsWith(LegacyAskSeasonFolderPrefix5)) res = await RequestSeasons(id.Substring(LegacyAskSeasonFolderPrefix5.Length), ct).ConfigureAwait(false);
+                else if (id.StartsWith(LegacyAskSeasonFolderPrefix4)) res = await RequestSeasons(id.Substring(LegacyAskSeasonFolderPrefix4.Length), ct).ConfigureAwait(false);
+                else if (id.StartsWith(LegacyAskSeasonFolderPrefix3)) res = await RequestSeasons(id.Substring(LegacyAskSeasonFolderPrefix3.Length), ct).ConfigureAwait(false);
                 else if (id.StartsWith(LegacyAskSeasonFolderPrefix2)) res = await RequestSeasons(id.Substring(LegacyAskSeasonFolderPrefix2.Length), ct).ConfigureAwait(false);
                 else if (id.StartsWith(LegacyAskSeasonFolderPrefix)) res = await RequestSeasons(id.Substring(LegacyAskSeasonFolderPrefix.Length), ct).ConfigureAwait(false);
                 else if (id.StartsWith(AskGenrePrefix)) res = await GenreTiles(id.Substring(AskGenrePrefix.Length) == "tv", ct).ConfigureAwait(false);
@@ -282,7 +289,7 @@ namespace Emby.Plugins.Discover
             // Zet de tekst "Aanvragen" resp. "Trailer" op de tegelafbeelding, zodat je de twee tegels direct uit elkaar houdt.
             // Lukt dat niet (of duurt het te lang), dan blijft de gewone achtergrond staan.
             bool showTrailerTile = Plugin.GetCurrentConfiguration().ShowTrailerTile;
-            if (!string.IsNullOrEmpty(t.backdrop_path))
+            if (!string.IsNullOrEmpty(t.backdrop_path) && Plugin.GetCurrentConfiguration().PrecreateCards)
             {
                 var tileKey = "rq" + (tv ? "t" : "m") + tmdbId;
                 var askTile = FolderTile.Create(tileKey + "ask", DiscoverLanguage.Text("Aanvragen", "Request", "Anfragen", "Forespør"),
@@ -345,6 +352,40 @@ namespace Emby.Plugins.Discover
                 ? "https://image.tmdb.org/t/p/w780" + detail.backdrop_path
                 : TmdbClient.PosterUrl(detail.poster_path);
             var items = new List<ChannelItemInfo>();
+
+            // Eerst een item om de hele serie in een keer aan te vragen. Zonder seizoenslijst monitort Sonarr alles,
+            // ook seizoenen die later uitkomen. (Op naam gesorteerd staat dit item vanzelf vooraan.)
+            {
+                // Neutrale staande tegel (2:3, effen grijsblauw) met de tekst "Alle seizoenen" in plaats van een serieposter, zodat het
+                // niet op een gewoon seizoen lijkt. Lukt dat niet (geen ffmpeg, tekstplaatjes uit of te traag), dan de serieposter.
+                var allImage = !string.IsNullOrEmpty(detail.poster_path) ? TmdbClient.PosterUrl(detail.poster_path) : background;
+                var allTileText = DiscoverLanguage.Text("Alle seizoenen", "All seasons", "Alle Staffeln").Replace(' ', '\n');
+                var allTile = await TileWithin(FolderTile.Create("allseasons", allTileText, null, CancellationToken.None, "5B6573", true, 720, 1080),
+                    TimeSpan.FromSeconds(20)).ConfigureAwait(false);
+                if (allTile != null) allImage = allTile;
+                string allOverview = DiscoverLanguage.Text(
+                    "Druk op \u25B6 om alle seizoenen in \u00E9\u00E9n keer aan te vragen, ook seizoenen die later uitkomen.",
+                    "Press \u25B6 to request all seasons at once, including seasons released later.",
+                    "Drücke auf \u25B6, um alle Staffeln auf einmal anzufordern, auch später erscheinende Staffeln.");
+                if (sonarrSeasons.Count > 0)
+                    allOverview += "\n\n" + DiscoverLanguage.Text(
+                        "\u23F3 Deze serie staat al in Sonarr. Opnieuw aanvragen zet alle seizoenen (behalve specials) op gemonitord en zoekt naar ontbrekende afleveringen.",
+                        "\u23F3 This series is already in Sonarr. Requesting again monitors all seasons (except specials) and searches for missing episodes.",
+                        "\u23F3 Diese Serie ist bereits in Sonarr. Eine erneute Anfrage überwacht alle Staffeln (außer Specials) und sucht nach fehlenden Folgen.");
+                items.Add(new ChannelItemInfo
+                {
+                    Id = AskAllPrefix + "t:" + tmdbId,
+                    Name = DiscoverLanguage.Text("Alle seizoenen", "All seasons", "Alle Staffeln"),
+                    Type = ChannelItemType.Media,
+                    MediaType = ChannelMediaType.Video,
+                    ContentType = ChannelMediaContentType.Clip,
+                    ImageUrl = allImage,
+                    Overview = allOverview,
+                    ProviderIds = new ProviderIdDictionary { { "Tmdb", tmdbId.ToString() } },
+                    ForceUpdate = true
+                });
+            }
+
             for (int i = 0; i < seasons.Count; i++)
             {
                 var season = seasons[i];
@@ -475,6 +516,9 @@ namespace Emby.Plugins.Discover
 
         private static void PrewarmCard(TmdbItem t, TmdbExtra extra, bool tv, bool alreadyThere, int season = 0, string posterPath = null)
         {
+            // Standaard niet vooraf maken: tijdens de kanaalverversing zou dat voor elke titel een ffmpeg-run starten.
+            // De kaart wordt dan pas gemaakt als iemand echt op Afspelen drukt.
+            if (!Plugin.GetCurrentConfiguration().PrecreateCards) return;
             Task.Run(async () =>
             {
                 try { await RequestCard.Create(t, extra, tv, alreadyThere, CancellationToken.None, season, posterPath, true).ConfigureAwait(false); }
@@ -944,7 +988,8 @@ namespace Emby.Plugins.Discover
         {
             DiscoverDiagnostics.Add("trailer afspelen: " + id);
             bool isSeasonReq = id.StartsWith(AskSeasonPrefix);
-            bool isReq = id.StartsWith(AskPrefix) || isSeasonReq;
+            bool isAllReq = id.StartsWith(AskAllPrefix);
+            bool isReq = id.StartsWith(AskPrefix) || isSeasonReq || isAllReq;
             int requestedSeason = 0;
             if (isSeasonReq)
             {
@@ -956,6 +1001,7 @@ namespace Emby.Plugins.Discover
                     throw new InvalidOperationException("Onbekend seizoensaanvraagitem: " + id);
                 id = seasonParts[0] + ":" + tmdbSeasonId;
             }
+            else if (isAllReq) id = id.Substring(AskAllPrefix.Length);
             else if (id.StartsWith(AskPrefix)) id = id.Substring(AskPrefix.Length);
             else if (id.StartsWith(TrailerPrefix)) id = id.Substring(TrailerPrefix.Length);
 

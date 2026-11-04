@@ -32,12 +32,51 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             current + ' (automatisch)');
     }
 
+    // Teksten van de tabbladen en de nieuwe instellingen: id -> [Nederlands, English, Deutsch]
+    var TEXTS = {
+        tab_general: ['Algemeen', 'General', 'Allgemein'],
+        tab_tmdb: ['TMDB', 'TMDB', 'TMDB'],
+        tab_arr: ['Radarr & Sonarr', 'Radarr & Sonarr', 'Radarr & Sonarr'],
+        tab_users: ['Gebruikers', 'Users', 'Benutzer'],
+        tab_storage: ['Opslag', 'Storage', 'Speicher'],
+        tab_diag: ['Diagnose', 'Diagnostics', 'Diagnose'],
+        desc_users: [
+            'Vink aan wie mag aanvragen. Een gebruiker zonder vinkje kan wel bladeren en trailers bekijken, maar een aanvraag wordt niet doorgestuurd naar Radarr of Sonarr en de gebruiker krijgt een melding. Nieuwe gebruikers mogen standaard wel aanvragen.',
+            'Tick who may make requests. A user without a tick can still browse and watch trailers, but a request is not sent to Radarr or Sonarr and the user gets a message. New users are allowed by default.',
+            'Wähle aus, wer anfordern darf. Ein Benutzer ohne Haken kann weiter stöbern und Trailer ansehen, aber die Anfrage wird nicht an Radarr oder Sonarr gesendet und der Benutzer erhält eine Meldung. Neue Benutzer dürfen standardmäßig anfordern.'],
+        btnAllowAllText: ['Iedereen toestaan', 'Allow everyone', 'Alle zulassen'],
+        btnAllowNoneText: ['Niemand toestaan', 'Allow no one', 'Niemanden zulassen'],
+        lbl_chkPrecreateCards: ['Kaarten en tegels per titel vooraf maken', 'Pre-create cards and tiles for every title', 'Karten und Kacheln für jeden Titel vorab erstellen'],
+        desc_chkPrecreateCards: [
+            'Uit (aanbevolen): een bevestigingskaart wordt pas gemaakt als iemand op Afspelen drukt. Aan: bij elke kanaalverversing wordt voor elke titel op de achtergrond een kaart en tegel gemaakt. Dat kost uren ffmpeg-werk en tientallen GB schijfruimte.',
+            'Off (recommended): a confirmation card is only made when someone presses Play. On: every channel refresh makes a card and tile for every title in the background. That costs hours of ffmpeg work and tens of GB of disk space.',
+            'Aus (empfohlen): Eine Bestätigungskarte wird erst erstellt, wenn jemand auf Wiedergabe drückt. Ein: Bei jeder Kanalaktualisierung werden im Hintergrund für jeden Titel Karte und Kachel erstellt. Das kostet Stunden an ffmpeg-Arbeit und Dutzende GB Speicher.'],
+        lbl_numCardDays: ['Kaartclips bewaren (dagen, 0 = onbeperkt)', 'Keep card clips (days, 0 = unlimited)', 'Kartenclips aufbewahren (Tage, 0 = unbegrenzt)'],
+        lbl_numTileDays: ['Tegelplaatjes bewaren (dagen, 0 = onbeperkt)', 'Keep tile images (days, 0 = unlimited)', 'Kachelbilder aufbewahren (Tage, 0 = unbegrenzt)'],
+        lbl_numMaxCacheMb: ['Maximale grootte kaarten en tegels samen (MB, 0 = geen limiet)', 'Maximum size of cards and tiles together (MB, 0 = no limit)', 'Maximale Größe von Karten und Kacheln zusammen (MB, 0 = keine Grenze)'],
+        desc_storage: [
+            'De opruiming draait 2 minuten na het opstarten en daarna elke 24 uur. Is de map te groot, dan gaan de oudste bestanden eerst weg. Verwijderde bestanden worden bij gebruik vanzelf opnieuw gemaakt. Sla de instellingen eerst op voordat je opruimt.',
+            'Cleanup runs 2 minutes after startup and then every 24 hours. If the folder is too large, the oldest files go first. Deleted files are recreated automatically when needed. Save the settings before you clean up.',
+            'Die Bereinigung läuft 2 Minuten nach dem Start und danach alle 24 Stunden. Ist der Ordner zu groß, werden die ältesten Dateien zuerst gelöscht. Gelöschte Dateien werden bei Bedarf automatisch neu erstellt. Speichere die Einstellungen, bevor du bereinigst.'],
+        btnCleanNowText: ['Nu opruimen', 'Clean up now', 'Jetzt bereinigen'],
+        btnClearAllText: ['Alles verwijderen', 'Delete everything', 'Alles löschen']
+    };
+
+    function applyTexts(view) {
+        Object.keys(TEXTS).forEach(function (id) {
+            var target = el(view, id);
+            if (target) { target.textContent = languageText(TEXTS[id][0], TEXTS[id][1], TEXTS[id][2]); }
+        });
+    }
+
     function applyLanguage(view, locale) {
         var culture = String(locale || '').toLowerCase();
         configLanguage = culture.indexOf('nl') === 0 ? 'nl' : culture.indexOf('de') === 0 ? 'de' : (culture.indexOf('nb') === 0 || culture.indexOf('nn') === 0 || culture.indexOf('no') === 0) ? 'no' : 'en';
-        var headings = view.querySelectorAll('.discoverForm h3');
-        if (headings.length > 1) { headings[1].textContent = languageText('Radarr (films)', 'Radarr (movies)', 'Radarr (Filme)'); }
-        if (headings.length > 2) { headings[2].textContent = languageText('Sonarr (series)', 'Sonarr (series)', 'Sonarr (Serien)'); }
+        var hdgRadarr = el(view, 'hdgRadarr');
+        if (hdgRadarr) { hdgRadarr.textContent = languageText('Radarr (films)', 'Radarr (movies)', 'Radarr (Filme)'); }
+        var hdgSonarr = el(view, 'hdgSonarr');
+        if (hdgSonarr) { hdgSonarr.textContent = languageText('Sonarr (series)', 'Sonarr (series)', 'Sonarr (Serien)'); }
+        applyTexts(view);
 
         function label(id, dutch, english, german) {
             var target = view.querySelector('label[for="' + id + '"]');
@@ -47,10 +86,13 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         label('txtTmdbKey', 'API key', 'API key', 'API-Schlüssel');
         label('selPluginLanguage', 'Plugin-taal', 'Plugin language', 'Plugin-Sprache');
         label('selTmdbLang', 'TMDB-taal', 'TMDB language', 'TMDB-Sprache');
-        view.querySelector('.checkboxLabel').textContent = languageText(
-            'Toon het gele debugbericht en media-informatie op itempagina\'s',
-            'Show the yellow debug message and media information on item pages',
-            'Gelbe Diagnosemeldung und Medieninformationen auf Detailseiten anzeigen');
+        var diagLabel = el(view, 'lbl_chkShowDiagnostics');
+        if (diagLabel) {
+            diagLabel.textContent = languageText(
+                'Toon het gele debugbericht en media-informatie op itempagina\'s',
+                'Show the yellow debug message and media information on item pages',
+                'Gelbe Diagnosemeldung und Medieninformationen auf Detailseiten anzeigen');
+        }
         var exclLabel = view.querySelector('#lbl_txtExcludedLangs');
         if (exclLabel) {
             exclLabel.textContent = languageText('Talen uitsluiten (oorspronkelijke taal)', 'Exclude languages (original language)', 'Sprachen ausschlie\u00dfen (Originalsprache)');
@@ -252,6 +294,119 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         });
     }
 
+    function intValue(view, id, fallback) {
+        var v = parseInt(el(view, id).value, 10);
+        return isNaN(v) || v < 0 ? fallback : v;
+    }
+
+    function normId(id) { return String(id || '').replace(/-/g, '').toLowerCase(); }
+
+    // ---- Gebruikers: vinkje = mag aanvragen; bewaard wordt de lijst van wie NIET mag ----
+    function loadUsers(view, state, blockedCsv) {
+        var list = el(view, 'userList');
+        var status = el(view, 'statusUsers');
+        var blocked = {};
+        String(blockedCsv || '').split(/[\s,;]+/).forEach(function (id) { if (id) { blocked[normId(id)] = true; } });
+        state.usersLoaded = false;
+        status.textContent = languageText('Gebruikers laden...', 'Loading users...', 'Benutzer werden geladen...');
+        ApiClient.getJSON(ApiClient.getUrl('Users')).then(function (users) {
+            users = users || [];
+            users.sort(function (a, b) { return String(a.Name).toLowerCase() < String(b.Name).toLowerCase() ? -1 : 1; });
+            var html = '';
+            users.forEach(function (u) {
+                var isAdmin = !!(u.Policy && u.Policy.IsAdministrator);
+                var disabled = !!(u.Policy && u.Policy.IsDisabled);
+                var tag = (isAdmin ? languageText('beheerder', 'administrator', 'Administrator') : '') +
+                    (isAdmin && disabled ? ', ' : '') +
+                    (disabled ? languageText('uitgeschakeld', 'disabled', 'deaktiviert') : '');
+                html += '<div class="checkboxContainer"><label class="emby-checkbox-label">' +
+                    '<input is="emby-checkbox" type="checkbox" class="chkUser" data-userid="' + esc(u.Id) + '"' +
+                    (blocked[normId(u.Id)] ? '' : ' checked') + ' />' +
+                    '<span class="checkboxLabel">' + esc(u.Name) + (tag ? ' <span class="dcUserTag">(' + esc(tag) + ')</span>' : '') + '</span>' +
+                    '<span class="emby-checkbox-outline"><span class="emby-checkbox-on"><i class="md-icon">check</i></span><span class="emby-checkbox-off"></span></span>' +
+                    '</label></div>';
+            });
+            list.innerHTML = html;
+            state.usersLoaded = true;
+            status.textContent = '';
+        }, function (err) {
+            console.error('Discover: gebruikers laden mislukt', err);
+            status.style.color = '#e53935';
+            status.textContent = languageText(
+                'Gebruikers laden mislukt; de bestaande instelling blijft ongewijzigd.',
+                'Loading users failed; the existing setting stays unchanged.',
+                'Benutzer konnten nicht geladen werden; die bestehende Einstellung bleibt unverändert.');
+        });
+    }
+
+    function blockedFromList(view) {
+        var ids = [];
+        Array.prototype.forEach.call(view.querySelectorAll('.chkUser'), function (box) {
+            if (!box.checked) { ids.push(box.getAttribute('data-userid')); }
+        });
+        return ids.join(',');
+    }
+
+    function setAllUsers(view, state, value) {
+        Array.prototype.forEach.call(view.querySelectorAll('.chkUser'), function (box) { box.checked = value; });
+        state.dirty = true;
+    }
+
+    // ---- Opslag: grootte van de bewaarde kaarten en tegels, en opruimen ----
+    function mb(bytes) { return (bytes / 1048576).toFixed(bytes >= 10485760 ? 0 : 1); }
+
+    function showCache(view, r) {
+        el(view, 'statusCache').textContent = languageText('Kaartclips: ', 'Card clips: ', 'Kartenclips: ') +
+            r.CardFiles + languageText(' bestanden (', ' files (', ' Dateien (') + mb(r.CardBytes) + ' MB)  \u00B7  ' +
+            languageText('Tegels: ', 'Tiles: ', 'Kacheln: ') +
+            r.TileFiles + languageText(' bestanden (', ' files (', ' Dateien (') + mb(r.TileBytes) + ' MB)';
+    }
+
+    function loadCache(view) {
+        ApiClient.ajax({ type: 'GET', url: ApiClient.getUrl('Discover/Cache'), dataType: 'json' }).then(function (r) {
+            if (r) { showCache(view, r); }
+        }, function (err) {
+            console.error('Discover: opslaggrootte ophalen mislukt', err);
+            el(view, 'statusCache').textContent = languageText(
+                'Grootte niet beschikbaar (alleen beheerders).', 'Size not available (administrators only).', 'Größe nicht verfügbar (nur Administratoren).');
+        });
+    }
+
+    function cleanCache(view, all) {
+        var status = el(view, 'statusClean');
+        status.style.color = '';
+        status.textContent = languageText('Bezig...', 'Working...', 'Bitte warten...');
+        ApiClient.ajax({
+            type: 'POST',
+            url: ApiClient.getUrl('Discover/Cache/Clean'),
+            data: JSON.stringify({ All: !!all }),
+            contentType: 'application/json',
+            dataType: 'json'
+        }).then(function (r) {
+            status.style.color = '#43a047';
+            status.textContent = (r && r.Message) || languageText('Klaar.', 'Done.', 'Fertig.');
+            if (r) { showCache(view, r); }
+        }, function (err) {
+            console.error('Discover: opruimen mislukt', err);
+            status.style.color = '#e53935';
+            status.textContent = languageText('Opruimen mislukt: ', 'Cleanup failed: ', 'Bereinigung fehlgeschlagen: ') + ajaxErrorMessage(err);
+        });
+    }
+
+    // ---- Tabbladen ----
+    function showTab(view, name) {
+        Array.prototype.forEach.call(view.querySelectorAll('.dcTab'), function (b) {
+            var on = b.getAttribute('data-tab') === name;
+            b.classList.toggle('active', on);
+            b.setAttribute('aria-selected', on ? 'true' : 'false');
+        });
+        Array.prototype.forEach.call(view.querySelectorAll('.dcPanel'), function (p) {
+            p.classList.toggle('active', p.getAttribute('data-panel') === name);
+        });
+        try { window.localStorage.setItem('discoverConfigTab', name); } catch (ignored) { }
+        if (name === 'storage') { loadCache(view); }
+    }
+
     function load(view, state) {
         // Nooit niet-opgeslagen invoer overschrijven
         if (state.dirty) { return; }
@@ -274,6 +429,12 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             el(view, 'chkShowTrailerTile').checked = c.ShowTrailerTile !== false;
             el(view, 'txtExcludedLangs').value = c.ExcludedOriginalLanguages || '';
             el(view, 'chkInjectWebClientLoader').checked = !!c.InjectWebClientLoader;
+            el(view, 'chkPrecreateCards').checked = !!c.PrecreateCards;
+            el(view, 'numCardDays').value = c.CardRetentionDays != null ? c.CardRetentionDays : 14;
+            el(view, 'numTileDays').value = c.TileRetentionDays != null ? c.TileRetentionDays : 30;
+            el(view, 'numMaxCacheMb').value = c.MaxCacheMb != null ? c.MaxCacheMb : 2048;
+            loadUsers(view, state, c.BlockedUserIds || '');
+            loadCache(view);
             var browserLanguage = window.navigator && navigator.language;
             applyLanguage(view, c.PluginLanguage && c.PluginLanguage !== 'auto' ? c.PluginLanguage : browserLanguage);
             el(view, 'selPluginLanguage').value = c.PluginLanguage || 'auto';
@@ -327,6 +488,12 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             c.ShowTrailerTile = el(view, 'chkShowTrailerTile').checked;
             c.ExcludedOriginalLanguages = (el(view, 'txtExcludedLangs').value || '').toLowerCase().split(/[\s,;]+/).filter(function (x) { return /^[a-z]{2,3}$/.test(x); }).join(',');
             c.InjectWebClientLoader = el(view, 'chkInjectWebClientLoader').checked;
+            c.PrecreateCards = el(view, 'chkPrecreateCards').checked;
+            c.CardRetentionDays = intValue(view, 'numCardDays', 14);
+            c.TileRetentionDays = intValue(view, 'numTileDays', 30);
+            c.MaxCacheMb = intValue(view, 'numMaxCacheMb', 2048);
+            // Alleen overschrijven als de gebruikerslijst echt is geladen; anders blijft de bestaande lijst staan.
+            if (state.usersLoaded) { c.BlockedUserIds = blockedFromList(view); }
             c.TmdbLanguageMode = tmdbLanguage === 'auto' ? 'auto' : 'manual';
             if (tmdbLanguage !== 'auto') { c.TmdbLanguage = tmdbLanguage; }
             c.RadarrUrl = el(view, 'txtRadarrUrl').value.trim();
@@ -505,6 +672,25 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
                         b.setAttribute('title', toggleLabel);
                         b.setAttribute('aria-label', toggleLabel);
             });
+        });
+
+        Array.prototype.forEach.call(view.querySelectorAll('.dcTab'), function (b) {
+            b.addEventListener('click', function () { showTab(view, b.getAttribute('data-tab')); });
+        });
+        var savedTab = 'general';
+        try { savedTab = window.localStorage.getItem('discoverConfigTab') || 'general'; } catch (ignored) { }
+        if (!view.querySelector('.dcPanel[data-panel="' + savedTab + '"]')) { savedTab = 'general'; }
+        showTab(view, savedTab);
+
+        view.querySelector('.btnAllowAll').addEventListener('click', function () { setAllUsers(view, state, true); });
+        view.querySelector('.btnAllowNone').addEventListener('click', function () { setAllUsers(view, state, false); });
+        view.querySelector('.btnCleanNow').addEventListener('click', function () { cleanCache(view, false); });
+        view.querySelector('.btnClearAll').addEventListener('click', function () {
+            var q = languageText(
+                'Alle bewaarde kaartclips en tegelplaatjes verwijderen? Ze worden bij gebruik vanzelf opnieuw gemaakt.',
+                'Delete all stored card clips and tile images? They are recreated automatically when needed.',
+                'Alle gespeicherten Kartenclips und Kachelbilder löschen? Sie werden bei Bedarf automatisch neu erstellt.');
+            if (window.confirm(q)) { cleanCache(view, true); }
         });
 
         view.querySelector('.btnStatus').addEventListener('click', function () {

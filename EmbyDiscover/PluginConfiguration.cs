@@ -44,5 +44,17 @@ namespace Emby.Plugins.Discover
 
         // Oorspronkelijke talen (ISO 639-1, komma-gescheiden, bv. "ja,ko,hi") die niet in rijen/mappen verschijnen.
         public string ExcludedOriginalLanguages { get; set; } = "";
+
+        /// <summary>Kaartclips en tekst-tegels per titel vooraf maken (tijdens de kanaalverversing). Uit = alleen als iemand ze nodig heeft.</summary>
+        public bool PrecreateCards { get; set; } = false;
+        /// <summary>Bewaartermijn kaartclips in dagen (0 = niet op leeftijd opruimen).</summary>
+        public int CardRetentionDays { get; set; } = 14;
+        /// <summary>Bewaartermijn tegelplaatjes in dagen (0 = niet op leeftijd opruimen).</summary>
+        public int TileRetentionDays { get; set; } = 30;
+        /// <summary>Maximale grootte van kaarten en tegels samen in MB (0 = geen limiet). Daarboven gaan de oudste bestanden eerst weg.</summary>
+        public int MaxCacheMb { get; set; } = 2048;
+
+        /// <summary>Emby-gebruikers (id, komma-gescheiden) die NIET mogen aanvragen. Leeg = iedereen mag.</summary>
+        public string BlockedUserIds { get; set; } = "";
     }
 }
