@@ -8,7 +8,7 @@
         console.warn('[Discover] oudere knopcode is nog actief; vernieuw de webclient om dubbele handlers te voorkomen.');
         return;
     }
-    var DC_BUILD = 'rows-progress-r1 2026-11-04T20:00';
+    var DC_BUILD = 'rows-progress-r2 2026-11-04T20:45';
     window.__discoverRequestButton = true;
     window.__discoverRequestButtonVersion = '1.3.5.5';
     window.__discoverRequestButtonBuild = DC_BUILD;
@@ -120,7 +120,8 @@
             'html.layout-tv .discover-row-arrow, html.discover-tv .discover-row-arrow { display: none; }',
             '@media (hover: none) and (pointer: coarse) { .discover-row-arrow { display: none; } }',
             /* Downloadvoortgang uit de Radarr/Sonarr-wachtrij */
-            '.discover-row-prog { position: absolute; left: 0; right: 0; bottom: 0; height: 5px; background: rgba(0,0,0,.6); }',
+            '.discover-row-prog { position: absolute; left: 0; right: 0; bottom: 0; height: 9px; background: rgba(0,0,0,.65); }',
+            'html.layout-tv .discover-row-prog, html.discover-tv .discover-row-prog { height: 11px; }',
             '.discover-row-prog i { display: block; height: 100%; width: 0; background: #ffb400; transition: width .6s; }',
             '.discover-row-prog.paused i, .discover-row-prog.stalled i { background: #9aa5b8; }',
             '.discover-row-name { margin-top: .5em; font-size: .95em; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }',

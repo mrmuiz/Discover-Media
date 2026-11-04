@@ -133,6 +133,8 @@ define([], function () {
             if (sec < 60) { return '<1 min'; }
             var h = Math.floor(sec / 3600), m = Math.round((sec % 3600) / 60);
             if (m === 60) { h++; m = 0; }
+            // Lange downloads: dagen en uren in plaats van "243u 21m".
+            if (h >= 24) { var d = Math.floor(h / 24); h = h % 24; return d + 'd' + (h ? ' ' + h + text('u', 'h', 'h', 't') : ''); }
             return h > 0 ? h + text('u ', 'h ', 'h ', 't ') + m + 'm' : m + ' min';
         }
         // Korte statusregel: "↓ 45% · 12 min", "⏸ Gepauzeerd · 32%", "5 afl. · ↓ 32% · 18 min".
