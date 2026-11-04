@@ -15,6 +15,53 @@ namespace Emby.Plugins.Discover
     internal static class CacheCleaner
     {
         private static readonly object Gate = new object();
+        private static int? _epoch;
+
+        /// <summary>
+        /// Telt op als de opruiming tegelplaatjes verwijdert. Zit in de DataVersion van het kanaal, zodat Emby daarna de
+        /// mappen opnieuw opvraagt en de plugin de plaatjes opnieuw maakt. Bewaard in discover-tiles/.epoch.
+        /// </summary>
+        internal static int TileEpoch
+        {
+            get
+            {
+                if (_epoch.HasValue) return _epoch.Value;
+                int e = 0;
+                try { int v; var f = EpochFile(); if (f != null && File.Exists(f) && int.TryParse(File.ReadAllText(f).Trim(), out v)) e = v; } catch { }
+                _epoch = e;
+                return e;
+            }
+        }
+
+        private static string EpochFile()
+        {
+            try { return Path.Combine(Plugin.Instance.WorkDir("discover-tiles"), ".epoch"); } catch { return null; }
+        }
+
+        private static void BumpEpoch()
+        {
+            var next = TileEpoch + 1;
+            _epoch = next;
+            try { var f = EpochFile(); if (f != null) File.WriteAllText(f, next.ToString()); } catch { }
+        }
+
+        /// <summary>Een plaatje dat nog gebruikt wordt houdt een verse datum, zodat de opruiming het laat staan.</summary>
+        internal static void Touch(string path)
+        {
+            try
+            {
+                var fi = new FileInfo(path);
+                if (fi.Exists && fi.LastWriteTimeUtc < DateTime.UtcNow.AddDays(-1)) fi.LastWriteTimeUtc = DateTime.UtcNow;
+            }
+            catch { }
+        }
+
+        /// <summary>Mapplaatjes (genres, studio's, netwerken, de lijsten): klein en weinig, en Emby blijft ernaar verwijzen.
+        /// Die laat de opruiming staan; alleen de tegels per titel (tile-rq…) worden opgeruimd.</summary>
+        private static bool IsFolderTile(FileInfo f)
+        {
+            return !f.Name.StartsWith("tile-rq", StringComparison.OrdinalIgnoreCase);
+        }
 
         internal sealed class Stats
         {
@@ -74,8 +121,8 @@ namespace Emby.Plugins.Discover
                 }
                 foreach (var f in tiles)
                 {
-                    if (all || (cfg.TileRetentionDays > 0 && f.LastWriteTimeUtc < now.AddDays(-cfg.TileRetentionDays))) delete(f);
-                    else keep.Add(f);
+                    if (all || (!IsFolderTile(f) && cfg.TileRetentionDays > 0 && f.LastWriteTimeUtc < now.AddDays(-cfg.TileRetentionDays))) delete(f);
+                    else if (!IsFolderTile(f)) keep.Add(f);
                 }
 
                 // Maximale grootte (kaarten en tegels samen): oudste eerst weg.
@@ -93,6 +140,9 @@ namespace Emby.Plugins.Discover
                     }
                 }
 
+                // Tegels weg? Dan moet Emby de mappen opnieuw opvragen, anders toont hij kapotte plaatjes.
+                bool tilesRemoved = tiles.Any(t => { try { t.Refresh(); return !t.Exists; } catch { return false; } });
+                if (tilesRemoved) BumpEpoch();
                 var msg = "opruimen: " + removed + " bestanden verwijderd (" + (freed / 1048576) + " MB)";
                 DiscoverDiagnostics.Add(msg);
                 return msg;

@@ -63,7 +63,9 @@ namespace Emby.Plugins.Discover
         public string HomePageUrl => "";
 
         // Ophogen als Emby oude (bewaarde) kanaalinhoud blijft tonen.
-        public string DataVersion => Plugin.GetCurrentConfiguration().ShowTrailerTile ? "72" : "72-notrailer";
+        // De tegel-epoch verandert als de opruiming tegelplaatjes heeft verwijderd: dan vraagt Emby de mappen opnieuw op
+        // en maakt de plugin de ontbrekende plaatjes opnieuw (anders verwijst Emby naar een bestand dat niet meer bestaat).
+        public string DataVersion => (Plugin.GetCurrentConfiguration().ShowTrailerTile ? "73" : "73-notrailer") + "-e" + CacheCleaner.TileEpoch;
         public ChannelParentalRating ParentalRating => ChannelParentalRating.GeneralAudience;
         public bool IsEnabledFor(string userId) => true;
 
@@ -121,8 +123,8 @@ namespace Emby.Plugins.Discover
             {
                 ChannelItemResult res = null;
                 if (id == AskRoot) res = await RequestRoot(ct).ConfigureAwait(false);
-                else if (id.StartsWith(AskTvItemPrefix)) { var two = await RequestItems(id.Substring(AskTvItemPrefix.Length), ct).ConfigureAwait(false); res = new ChannelItemResult { Items = two, TotalRecordCount = two.Count }; }
-                else if (id.StartsWith(AskItemPrefix)) { var two = await RequestItems(id.Substring(AskItemPrefix.Length), ct).ConfigureAwait(false); res = new ChannelItemResult { Items = two, TotalRecordCount = two.Count }; }
+                else if (id.StartsWith(AskTvItemPrefix)) { var two = await RequestItems(id.Substring(AskTvItemPrefix.Length), ct, query.UserId != 0).ConfigureAwait(false); res = new ChannelItemResult { Items = two, TotalRecordCount = two.Count }; }
+                else if (id.StartsWith(AskItemPrefix)) { var two = await RequestItems(id.Substring(AskItemPrefix.Length), ct, query.UserId != 0).ConfigureAwait(false); res = new ChannelItemResult { Items = two, TotalRecordCount = two.Count }; }
                 else if (id.StartsWith(AskSeasonFolderPrefix)) res = await RequestSeasons(id.Substring(AskSeasonFolderPrefix.Length), ct).ConfigureAwait(false);
                 else if (id.StartsWith(LegacyAskSeasonFolderPrefix5)) res = await RequestSeasons(id.Substring(LegacyAskSeasonFolderPrefix5.Length), ct).ConfigureAwait(false);
                 else if (id.StartsWith(LegacyAskSeasonFolderPrefix4)) res = await RequestSeasons(id.Substring(LegacyAskSeasonFolderPrefix4.Length), ct).ConfigureAwait(false);
@@ -170,7 +172,7 @@ namespace Emby.Plugins.Discover
 
         // Binnen de titelmap: een los video-item dat bij Afspelen de aanvraag doet. Met de titel in de naam,
         // zodat je op de TV ziet waarvoor je drukt.
-        private async Task<List<ChannelItemInfo>> RequestItems(string rest, CancellationToken ct)
+        private async Task<List<ChannelItemInfo>> RequestItems(string rest, CancellationToken ct, bool userBrowsing = false)
         {
             bool tv = rest.StartsWith("t:");
             int tmdbId;
@@ -289,7 +291,9 @@ namespace Emby.Plugins.Discover
             // Zet de tekst "Aanvragen" resp. "Trailer" op de tegelafbeelding, zodat je de twee tegels direct uit elkaar houdt.
             // Lukt dat niet (of duurt het te lang), dan blijft de gewone achtergrond staan.
             bool showTrailerTile = Plugin.GetCurrentConfiguration().ShowTrailerTile;
-            if (!string.IsNullOrEmpty(t.backdrop_path) && Plugin.GetCurrentConfiguration().PrecreateCards)
+            // Alleen als een gebruiker de titel echt opent (UserId gezet), niet tijdens "Refresh Internet Channels"
+            // (dat opent elke titel en zou dan voor alles ffmpeg starten), tenzij "vooraf maken" aan staat.
+            if (!string.IsNullOrEmpty(t.backdrop_path) && (userBrowsing || Plugin.GetCurrentConfiguration().PrecreateCards))
             {
                 var tileKey = "rq" + (tv ? "t" : "m") + tmdbId;
                 var askTile = FolderTile.Create(tileKey + "ask", DiscoverLanguage.Text("Aanvragen", "Request", "Anfragen", "Forespør"),

@@ -101,7 +101,7 @@ namespace Emby.Plugins.Discover
 
                 var dir = Plugin.Instance.WorkDir("discover-tiles");
                 var final = Path.Combine(dir, string.Format("tile-{0}-{1}-v{2}.jpg", key, Hash(text + "|" + backgroundUrl + "|" + fallbackColor + (width > 0 || height > 0 ? "|" + tw + "x" + th : "")), TileVersion));
-                if (File.Exists(final) && new FileInfo(final).Length > 0) return final;
+                if (File.Exists(final) && new FileInfo(final).Length > 0) { CacheCleaner.Touch(final); return final; }
 
                 // Is er al een eerder plaatje van deze tegel, toon dat dan meteen en maak het nieuwe op de achtergrond.
                 if (allowStale)
