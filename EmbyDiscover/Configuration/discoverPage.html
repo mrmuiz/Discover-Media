@@ -30,11 +30,11 @@ body.dcDiscoverActive .skinHeader .headerButton svg { fill:#fff; }
 .dcRow::-webkit-scrollbar { display:none; }
 .dcRowWrap { position:relative; }
 /* Gele pijlknoppen links en rechts van een rij. Verdwijnen aan het begin/eind en als alles al in beeld past. */
-.dcArrow { position:absolute; top:calc(50% - .5em); transform:translateY(-50%); z-index:3; width:2.4em; height:4.5em; border:0; border-radius:.6em; background:#ffb400; color:#111; font-size:1.2em; font-weight:700; cursor:pointer; box-shadow:0 .2em .7em rgba(0,0,0,.45); transition:opacity .15s, background .15s; }
-.dcArrow:hover { background:#ffc633; }
+.dcArrow { position:absolute; top:calc(50% - .5em); transform:translateY(-50%); z-index:3; width:2.6em; height:2.6em; padding:0; border:0; border-radius:50%; background:#fff; color:#111; font-size:1.2em; font-weight:700; line-height:1; cursor:pointer; box-shadow:0 .15em .6em rgba(0,0,0,.45); transition:opacity .15s, background .15s, transform .15s; }
+.dcArrow:hover { background:#e9e9e9; transform:translateY(-50%) scale(1.06); }
 .dcArrow.dcHide { opacity:0; pointer-events:none; }
-.dcArrow.left { left:-.6em; }
-.dcArrow.right { right:-.6em; }
+.dcArrow.left { left:-.4em; }
+.dcArrow.right { right:-.4em; }
 @media (hover: none) and (pointer: coarse) { .dcArrow { display:none; } }
 .dcGrid { display:flex; flex-wrap:wrap; }
 .dcRow > * { margin-right:.9em; }
@@ -168,11 +168,11 @@ body.dcDiscoverActive .skinHeader .headerButton svg { fill:#fff; }
 .dcTvPage .dcCard:focus .dcPoster { transform:scale(1.05); border-color:#ffb400; box-shadow:0 .5em 1.4em rgba(0,0,0,.5), 0 0 0 3px #ffb400; }
 .dcTvPage .dcCard:focus .dcCapT { color:#ffb400; }
 /* Downloadvoortgang (Radarr/Sonarr-wachtrij) */
-.dcProg { position:absolute; left:0; right:0; bottom:0; height:9px; background:rgba(0,0,0,.65); z-index:1; }
-.dcTvPage .dcProg { height:11px; }
+.dcProg { position:absolute; left:0; right:0; bottom:0; height:10px; background:rgba(0,0,0,.65); z-index:1; }
+.dcTvPage .dcProg { height:12px; }
 .dcProg i { display:block; height:100%; width:0; background:#ffb400; transition:width .6s; }
 .dcProg.paused i, .dcProg.stalled i { background:#9aa5b8; }
-.dcCapQ { margin-top:.25em; font-size:.78em; font-weight:600; color:#ffb400; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.dcCapQ { margin-top:.3em; font-size:.86em; font-weight:600; color:#ffb400; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .dcCapQ.paused, .dcCapQ.stalled, .dcCapQ.req { color:#c9d2ea; }
 .dcCapQ.avail { color:#5fd38d; }
 .dcQueue { display:none; margin:0 0 1em; }

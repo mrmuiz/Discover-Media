@@ -8,7 +8,7 @@
         console.warn('[Discover] oudere knopcode is nog actief; vernieuw de webclient om dubbele handlers te voorkomen.');
         return;
     }
-    var DC_BUILD = 'rows-progress-r2 2026-11-04T20:45';
+    var DC_BUILD = 'rows-progress-r3 2026-11-04T20:50';
     window.__discoverRequestButton = true;
     window.__discoverRequestButtonVersion = '1.3.5.5';
     window.__discoverRequestButtonBuild = DC_BUILD;
@@ -109,19 +109,27 @@
             '.discover-row-poster { position: relative; display: block; border-radius: .6em; overflow: hidden; background: #222; height: 14.25em; outline: 0; transition: transform .15s, box-shadow .15s; }',
             '.discover-row-poster img { width: 100%; height: 100%; object-fit: cover; display: block; }',
             /* Geselecteerde poster: dunne gele rand, 5% groter, zachte schaduw. Muis: hover; toetsenbord: focus-visible; tv: focus. */
-            '.discover-row-poster:hover, .discover-row-poster:focus-visible { transform: scale(1.05); box-shadow: 0 0 0 3px #ffb400, 0 .5em 1.2em rgba(0,0,0,.5); }',
+            '.discover-row-card:hover .discover-row-poster, .discover-row-poster:focus-visible { transform: scale(1.05); box-shadow: 0 0 0 3px #ffb400, 0 .5em 1.2em rgba(0,0,0,.5); }',
             'html.layout-tv .discover-row-poster:focus, html.discover-tv .discover-row-poster:focus { transform: scale(1.05); box-shadow: 0 0 0 3px #ffb400, 0 .5em 1.2em rgba(0,0,0,.5); }',
+            /* De knop en titel lichten mee op met de geselecteerde poster (donker randje + gele ring, zodat de ring ook om een gele knop zichtbaar is). */
+            '.discover-row-btn { transition: background .15s, box-shadow .15s; }',
+            '.discover-row-card:hover .discover-row-btn, .discover-row-poster:focus-visible ~ .discover-row-btn { box-shadow: 0 0 0 2px #111, 0 0 0 4px #ffb400; }',
+            '.discover-row-card:hover .discover-row-btn:not(:disabled), .discover-row-poster:focus-visible ~ .discover-row-btn:not(:disabled) { background: #ffc633; }',
+            'html.layout-tv .discover-row-poster:focus ~ .discover-row-btn, html.discover-tv .discover-row-poster:focus ~ .discover-row-btn { box-shadow: 0 0 0 2px #111, 0 0 0 4px #ffb400; }',
+            'html.layout-tv .discover-row-poster:focus ~ .discover-row-btn:not(:disabled), html.discover-tv .discover-row-poster:focus ~ .discover-row-btn:not(:disabled) { background: #ffc633; }',
+            '.discover-row-card:hover .discover-row-name, .discover-row-poster:focus-visible ~ .discover-row-name, html.layout-tv .discover-row-poster:focus ~ .discover-row-name, html.discover-tv .discover-row-poster:focus ~ .discover-row-name { color: #ffb400; }',
             /* Gele pijlknoppen links en rechts, zoals op de Discover-pagina. Niet op tv (afstandsbediening) en niet op touchscreens. */
-            '.discover-row-arrow { position: absolute; top: 5.95em; transform: translateY(-50%); z-index: 3; width: 2.4em; height: 4.5em; border: 0; border-radius: .6em; background: #ffb400; color: #111; font-size: 1.2em; font-weight: 700; cursor: pointer; box-shadow: 0 .2em .7em rgba(0,0,0,.45); transition: opacity .15s, background .15s; padding: 0; }',
-            '.discover-row-arrow:hover { background: #ffc633; }',
+            /* Ronde witte pijlknoppen, zoals Emby's eigen rijen. */
+            '.discover-row-arrow { position: absolute; top: 5.95em; transform: translateY(-50%); z-index: 3; width: 2.6em; height: 2.6em; border: 0; border-radius: 50%; background: #fff; color: #111; font-size: 1.2em; font-weight: 700; line-height: 1; cursor: pointer; box-shadow: 0 .15em .6em rgba(0,0,0,.45); transition: opacity .15s, background .15s, transform .15s; padding: 0; }',
+            '.discover-row-arrow:hover { background: #e9e9e9; transform: translateY(-50%) scale(1.06); }',
             '.discover-row-arrow.is-hidden { opacity: 0; pointer-events: none; }',
-            '.discover-row-arrow.left { left: -.6em; }',
-            '.discover-row-arrow.right { right: -.6em; }',
+            '.discover-row-arrow.left { left: -.4em; }',
+            '.discover-row-arrow.right { right: -.4em; }',
             'html.layout-tv .discover-row-arrow, html.discover-tv .discover-row-arrow { display: none; }',
             '@media (hover: none) and (pointer: coarse) { .discover-row-arrow { display: none; } }',
             /* Downloadvoortgang uit de Radarr/Sonarr-wachtrij */
-            '.discover-row-prog { position: absolute; left: 0; right: 0; bottom: 0; height: 9px; background: rgba(0,0,0,.65); }',
-            'html.layout-tv .discover-row-prog, html.discover-tv .discover-row-prog { height: 11px; }',
+            '.discover-row-prog { position: absolute; left: 0; right: 0; bottom: 0; height: 10px; background: rgba(0,0,0,.65); }',
+            'html.layout-tv .discover-row-prog, html.discover-tv .discover-row-prog { height: 12px; }',
             '.discover-row-prog i { display: block; height: 100%; width: 0; background: #ffb400; transition: width .6s; }',
             '.discover-row-prog.paused i, .discover-row-prog.stalled i { background: #9aa5b8; }',
             '.discover-row-name { margin-top: .5em; font-size: .95em; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }',
@@ -1798,7 +1806,7 @@
         link.className = 'discover-row-poster';
         // Klik op de poster: de Discover-popup met info en trailer.
         link.href = '#!/configurationpage?name=discoverui1081&openType=' + item.Type + '&openId=' + item.TmdbId;
-        link.title = item.Title;
+        link.setAttribute('aria-label', item.Title);   // geen title: dat gaf een tooltip-vakje over de poster
         var img = document.createElement('img');
         img.loading = 'lazy';
         img.src = item.Poster || '';
