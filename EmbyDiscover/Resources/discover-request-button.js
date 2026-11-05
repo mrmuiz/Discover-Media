@@ -8,7 +8,7 @@
         console.warn('[Discover] oudere knopcode is nog actief; vernieuw de webclient om dubbele handlers te voorkomen.');
         return;
     }
-    var DC_BUILD = 'big-r7 2026-11-05';
+    var DC_BUILD = 'big-r8 2026-11-05';
     window.__discoverRequestButton = true;
     window.__discoverRequestButtonVersion = '1.4.0.0';
     window.__discoverRequestButtonBuild = DC_BUILD;
@@ -389,6 +389,14 @@
             diagnosticsRetryAfter = Date.now() + 5000;
             console.error('[Discover] debuginstelling laden mislukt', error);
         });
+    }
+
+    // Emby 4.11 opent een kanaalmap als lijst: #!/list/list.html?parentId=... (niet als /item?id=...).
+    function listIdFromHash() {
+        var h = window.location.hash || '';
+        if (!/\/list(?:\/list\.html)?\?/i.test(h)) { return null; }
+        var m = /[?&]parentId=([^&]+)/.exec(h);
+        return m ? decodeURIComponent(m[1]) : null;
     }
 
     function itemIdFromHash() {
@@ -2448,9 +2456,11 @@
         checkAdmin();
         markFolderCards();
         syncRequestTileCards();
-        syncFolderPage(id);
+        // Mappen: als detailpagina (/item?id=) of als lijst (/list?parentId=, Emby 4.11).
+        var folderId = id || listIdFromHash();
+        syncFolderPage(folderId);
         syncExtraRows(id);
-        syncItemCast(id);
+        syncItemCast(folderId);
         syncBodyClass(id);
         var ask = !!(id && askIds[id]);
         var seasonAsk = !!(id && seasonAskIds[id]);

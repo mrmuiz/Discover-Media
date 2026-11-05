@@ -414,6 +414,7 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
                     '</label></div>';
             });
             list.innerHTML = html;
+            setTimeout(function () { fixCheckboxes(view); }, 100);
             state.usersLoaded = true;
             status.textContent = '';
         }, function (err) {
@@ -568,7 +569,18 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         if (name === 'storage') { loadCache(view); }
     }
 
+    // Emby 4.11 tekent het vinkje van emby-checkbox zelf en kent onze eigen omlijning (oude Emby-opmaak) niet meer:
+    // die verscheen dan als los "✓" onder of naast de tekst. Ongestylede omlijningen weghalen.
+    function fixCheckboxes(view) {
+        Array.prototype.forEach.call(view.querySelectorAll('.emby-checkbox-outline'), function (o) {
+            var pos = '';
+            try { pos = getComputedStyle(o).position; } catch (e) { }
+            if (pos === 'static' && o.parentNode) { o.parentNode.removeChild(o); }
+        });
+    }
+
     function load(view, state) {
+        setTimeout(function () { fixCheckboxes(view); }, 300);
         // Nooit niet-opgeslagen invoer overschrijven
         if (state.dirty) { return; }
         showLoading();

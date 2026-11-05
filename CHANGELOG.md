@@ -23,8 +23,11 @@
 - Fix: the **Cast row** now also shows on trailer and movie request pages (hiding the "About" block hid everything after it, including the plugin's own sections).
 - Change: Emby's **play button in the middle of the poster** (and the tile buttons on Discover folder tiles) is hidden on Discover pages, where playing means requesting or the trailer. The season info card is placed after the Request button and the text below it.
 - Change: channel DataVersion 74 so Emby picks up the new descriptions and tiles.
+- Fix: Emby 4.11 opens a channel folder as a list (`#!/list/list.html?parentId=…`) instead of `#!/item?id=…`. The plugin now recognises those pages as Discover folders too: the info block and cast appear, and Play/Shuffle are hidden.
+- Fix: no backdrop on Discover channel pages since the previous build: an empty backdrop element of Emby already counted as "Emby has its own backdrop". Now only a real, visible image counts.
+- Fix: stray "✓" next to the checkboxes on the settings page in Emby 4.11 (old checkbox outline markup that 4.11 no longer styles).
 - Note: backdrops for channel items in the native TV/mobile apps are not possible (Emby has no backdrop field for channel items); they work in the web client.
-- Change: page names bumped (`discoverui1086`, `discoveruijs1382`, `discoverbuttonjs1379`, `discoverconfigjs1359`).
+- Change: page names bumped (`discoverui1086`, `discoveruijs1382`, `discoverbuttonjs1380`, `discoverconfigjs1360`).
 
 ## Version 1.3.5.6
 
