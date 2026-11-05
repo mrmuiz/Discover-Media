@@ -38,8 +38,8 @@ define([], function () {
             return;
         }
         var urls = [
-            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1390' }),
-            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1390' }),
+            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1392' }),
+            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1392' }),
             ApiClient.getUrl('Plugins/Discover/Script')
         ];
         var n = 0;
@@ -70,7 +70,7 @@ define([], function () {
         })();
     }
 
-    var UI_PAGE = 'discoverui1090';
+    var UI_PAGE = 'discoverui1092';
 
     return function (view, params) {
         // embedded: alleen de popup, over een andere Emby-pagina heen (film-, serie- of acteurspagina).
@@ -561,7 +561,10 @@ define([], function () {
             if (!bt || !more) { return; }
             more.style.display = bio.classList.contains('open') || bt.scrollHeight > bt.clientHeight + 2 ? '' : 'none';
         }
-        function openPerson(pid, name) {
+        // Persoon geopend via een klik buiten Discover (film-/kanaalpagina): Terug gaat dan terug naar die pagina.
+        var personFromLink = false;
+        function openPerson(pid, name, fromLink) {
+            personFromLink = !!fromLink;
             browse = null;
             homeShown = false;
             content.innerHTML = '<div class="dcBrowseHead"><button type="button" class="dcBack">&#10094; ' + text('Terug', 'Back', 'Zurück', 'Tilbake') + '</button></div>' +
@@ -1372,7 +1375,10 @@ define([], function () {
                 openBrowse(tile.getAttribute('data-kind'), parseInt(tile.getAttribute('data-id'), 10), tile.getAttribute('data-name'));
                 return;
             }
-            if (t.closest && t.closest('.dcBack')) { loadHome(); return; }
+            if (t.closest && t.closest('.dcBack')) {
+                if (personFromLink && content.querySelector('.dcPersonHead') && window.history.length > 1) { personFromLink = false; window.history.back(); return; }
+                personFromLink = false; loadHome(); return;
+            }
             if (t.closest && t.closest('.dcMoreBtn')) { loadBrowse(); }
         });
 
@@ -1823,14 +1829,15 @@ define([], function () {
         // Wat er geopend moet worden kan ook via sessionStorage komen: Emby laat soms de extra parameters in het adres
         // weg, of hergebruikt de al geopende Discover-pagina zonder opnieuw "viewshow" te sturen.
         // Emby 4.11 toont bij een bezoek eerst een oude kopie van deze pagina en vervangt die daarna door een nieuwe.
-        // Daarom wordt de opdracht niet meteen weggegooid: elke Discover-pagina die binnen 10 seconden in beeld komt
+        // Daarom wordt de opdracht niet meteen weggegooid: elke Discover-pagina die binnen 30 seconden in beeld komt
+        // (de eerste keer laden na een herstart kan langer dan 10 s duren)
         // pakt hem op (één keer per pagina); daarna vervalt hij vanzelf.
         function takePending() {
             try {
                 var raw = sessionStorage.getItem('dcOpenNext');
                 if (!raw) { return null; }
                 var p = JSON.parse(raw);
-                if (!p || Date.now() - (p.at || 0) > 10000) { sessionStorage.removeItem('dcOpenNext'); return null; }
+                if (!p || Date.now() - (p.at || 0) > 30000) { sessionStorage.removeItem('dcOpenNext'); return null; }
                 if (view.__dcTook === p.at) { return null; }
                 view.__dcTook = p.at;
                 setTimeout(function () {
@@ -1843,7 +1850,7 @@ define([], function () {
             var pend = takePending();
             if (pend && pend.kind === 'person' && pend.id) {
                 try { history.replaceState(null, '', window.location.href.replace(/&openPerson=\d+(&openName=[^&]*)?/, '')); } catch (e) { }
-                openPerson(parseInt(pend.id, 10), pend.name || '');
+                openPerson(parseInt(pend.id, 10), pend.name || '', true);
                 return;
             }
             if (pend && pend.kind === 'title' && pend.id) {
@@ -1857,7 +1864,7 @@ define([], function () {
             if (pm) {
                 try { history.replaceState(null, '', window.location.href.replace(/&openPerson=\d+(&openName=[^&]*)?/, '')); } catch (e) { }
                 var nm = ''; try { nm = decodeURIComponent(pm[2] || ''); } catch (e) { }
-                openPerson(parseInt(pm[1], 10), nm);
+                openPerson(parseInt(pm[1], 10), nm, true);
                 return;
             }
             var m = /[?&]openType=(movie|tv)&openId=(\d+)/.exec(window.location.hash || '');

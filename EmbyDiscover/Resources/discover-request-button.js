@@ -8,7 +8,7 @@
         console.warn('[Discover] oudere knopcode is nog actief; vernieuw de webclient om dubbele handlers te voorkomen.');
         return;
     }
-    var DC_BUILD = 'big-r22c 2026-11-05';
+    var DC_BUILD = 'big-r22d 2026-11-05';
     window.__discoverRequestButton = true;
     window.__discoverRequestButtonVersion = '1.4.0.0';
     window.__discoverRequestButtonBuild = DC_BUILD;
@@ -1338,8 +1338,12 @@
             var play = findPlayButton(document.body);
             if (play) {
                 var span = play.querySelector('.detailButton-text') || play.querySelector('span');
+                // Al aangevraagd (⏳ in de titel): de knop vraagt dan opnieuw aan, dus zo heet hij ook.
+                var h1 = document.querySelector('.itemDetailPage h1') || document.querySelector('h1');
+                var already = /\u23f3/.test((h1 && h1.textContent) || document.title || '');
                 var label = renamePlay === 'ask'
-                    ? text('Aanvragen', 'Request', 'Anfragen', 'Forespør')
+                    ? (already ? text('Opnieuw aanvragen', 'Request again', 'Erneut anfragen', 'Forespør igjen')
+                               : text('Aanvragen', 'Request', 'Anfragen', 'Forespør'))
                     : text('Trailer', 'Trailer', 'Trailer', 'Trailer');
                 if (span && span.textContent !== label) { span.textContent = label; }
                 play.setAttribute('title', label);
@@ -1915,7 +1919,7 @@
         var link = document.createElement('a');
         link.className = 'discover-row-poster';
         // Klik op de poster: de Discover-popup met info en trailer.
-        link.href = '#!/configurationpage?name=discoverui1090&openType=' + item.Type + '&openId=' + item.TmdbId;
+        link.href = '#!/configurationpage?name=discoverui1092&openType=' + item.Type + '&openId=' + item.TmdbId;
         link.setAttribute('aria-label', item.Title);   // geen title: dat gaf een tooltip-vakje over de poster
         // Gewone klik: de popup hier op de pagina openen (Ctrl/middenklik volgt de link naar Discover).
         link.addEventListener('click', function (e) {
@@ -2214,7 +2218,7 @@
     // ---- De Discover-popup boven de huidige pagina ----
     // Laadt de Discover-pagina één keer onzichtbaar (alleen de popup wordt gebruikt) met dezelfde controller
     // als de echte pagina, in "embedded"-modus. Zo is de popup overal gelijk: info, cast, seizoenen, trailer, aanvragen.
-    var DC_UI_PAGE = 'discoverui1090', DC_UI_JS = 'discoveruijs1387';
+    var DC_UI_PAGE = 'discoverui1092', DC_UI_JS = 'discoveruijs1389';
     var embedPromise = null;
     function pageText(c, name) {
         var url = c.getUrl('web/ConfigurationPage', { name: name });

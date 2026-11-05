@@ -5,7 +5,7 @@
     <title>Discover</title>
 </head>
 <body>
-<div data-role="page" class="page type-interior discoverUiPage" data-controller="__plugin/discoveruijs1387">
+<div data-role="page" class="page type-interior discoverUiPage" data-controller="__plugin/discoveruijs1389">
 <style>
 /* Header on the Discover page only (body.dcDiscoverActive is set while this page is the active route): white text and icons on the dark page. The side drawer is deliberately left alone. */
 body.dcDiscoverActive .skinHeader .pageTitle,
@@ -80,6 +80,7 @@ body.dcDiscoverActive .skinHeader .headerButton svg { fill:#fff; }
 .dcModalBack { height:220px; background-size:cover; background-position:center top; border-radius:1em 1em 0 0; position:relative; }
 .dcModalBack:after { content:""; position:absolute; top:0; left:0; right:0; bottom:0; background:linear-gradient(transparent,#0b1426); }
 .dcModalBody { display:flex; padding:0 1.6em 1.6em; margin-top:-90px; position:relative; z-index:1; }
+.dcModalInfo { flex:1 1 auto; min-width:0; } /* anders wordt het info-deel zo breed als de castrij en loopt de tekst rechts weg */
 .dcModalBody img { width:180px; height:270px; object-fit:cover; border-radius:.7em; flex:0 0 auto; background:#10192b; }
 .dcModalInfo h2 { margin:.2em 0 .2em; font-size:1.8em; }
 .dcMeta { color:#b8c0d4; margin-bottom:.8em; }
