@@ -8,7 +8,7 @@
         console.warn('[Discover] oudere knopcode is nog actief; vernieuw de webclient om dubbele handlers te voorkomen.');
         return;
     }
-    var DC_BUILD = 'big-r21 2026-11-05';
+    var DC_BUILD = 'big-r22 2026-11-05';
     window.__discoverRequestButton = true;
     window.__discoverRequestButtonVersion = '1.4.0.0';
     window.__discoverRequestButtonBuild = DC_BUILD;
@@ -2361,10 +2361,12 @@
             })).then(function (r) {
                 // Films en series apart: bij iemand met veel titels werd één rij erg lang.
                 var all = (r && r.Items) || [];
+                var nm = item.Name || '';
                 return [
-                    { key: 'person_movie', title: text('Films \u00B7 niet in je bibliotheek', 'Movies \u00B7 not in your library', 'Filme \u00B7 nicht in deiner Bibliothek', 'Filmer \u00B7 ikke i biblioteket ditt'),
+                    // Zelfde namen als op de persoonspagina in Discover: "Meer films met <naam>" (alleen wat je nog niet hebt).
+                    { key: 'person_movie', title: text('Meer films met ' + nm, 'More movies with ' + nm, 'Weitere Filme mit ' + nm, 'Flere filmer med ' + nm),
                         items: all.filter(function (x) { return x.Type !== 'tv'; }) },
-                    { key: 'person_tv', title: text('Series \u00B7 niet in je bibliotheek', 'Series \u00B7 not in your library', 'Serien \u00B7 nicht in deiner Bibliothek', 'Serier \u00B7 ikke i biblioteket ditt'),
+                    { key: 'person_tv', title: text('Meer series met ' + nm, 'More series with ' + nm, 'Weitere Serien mit ' + nm, 'Flere serier med ' + nm),
                         items: all.filter(function (x) { return x.Type === 'tv'; }) }
                 ];
             });

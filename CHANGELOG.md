@@ -11,7 +11,7 @@
 - New: **cast with round photos** in the popup (name and role, up to 15). On the Discover page a click opens the Discover person page; above an Emby page it opens Emby's own person page when that person is in your library, otherwise the Discover person page.
 - New: **person page in Discover** (`GET /Discover/Person`): photo, born/died with age, place of birth, biography (English fallback, "More"), a backdrop of their best-known title, and rows **In your library** (opens the title in Emby), **Movies · not in your library** and **Series · not in your library**, newest first. Up to 150 credits.
 - Change: the person page rows are called **More movies with <name>** and **More series with <name>** ("by <name>" for directors), each card shows the **role** (character or "Director") under the year, and duplicate TMDB entries of the same title (same type and year with nearly the same title, or the same poster) are shown once (also in the rows on Emby's person pages).
-- Change: on Emby's person pages the plugin row is split into **Movies · not in your library** and **Series · not in your library**.
+- Change: on Emby's person pages the plugin row is split into **More movies with <name>** and **More series with <name>** (titles not in your library), the same names as on the Discover person page.
 - New: **Cast row with round photos** under Discover channel pages in the web client: a title folder, the "Request: <series>" season list, request items and the trailer item (`GET /Discover/ItemCast?Id=<Emby item id>`, up to 20). A click opens Emby's person page when that person is in your library, otherwise the Discover person page.
 - Fix: the Discover popup above an Emby page now loads the **download progress** right away and keeps refreshing it (every 15 s while something downloads) as long as it is open.
 - Change: on a season request page ("Season 1") the season info now sits **to the right of the poster**, under the description: season name, TMDB score, aired from–to, status, network, original language, country and streaming services (`GET /Discover/SeriesCard?TmdbId=&Season=`). The blocks **About**, **Links (Trakt)** and **Media information** are hidden there; this also works on the Emby 4.11 detail page layout (`.itemView`).
@@ -35,7 +35,7 @@
 - Change: in a title folder with only the Request and Trailer tiles, the two tiles have a little more space between them (web client).
 - Fix: clicking an actor (or a poster that falls back to the Discover page) sometimes only opened the Discover home page: Emby can drop the extra parameters or reuse the open Discover page without a new `viewshow`. Emby 4.11 even creates a second, hidden copy of the Discover page when the address has extra parameters. The plugin now opens the plain Discover address (so Emby reuses its page) and passes the person or title via sessionStorage. (Emby 4.11 creates a new Discover page on every visit; it first shows an old copy and then replaces it, so every Discover page that appears within 10 seconds opens the target once; then it expires.)
 - Note: backdrops for channel items in the native TV/mobile apps are not possible (Emby has no backdrop field for channel items); they work in the web client.
-- Change: page names bumped (`discoverui1090`, `discoveruijs1387`, `discoverbuttonjs1389`, `discoverconfigjs1360`, `discoverstatusjs1103`).
+- Change: page names bumped (`discoverui1090`, `discoveruijs1387`, `discoverbuttonjs1390`, `discoverconfigjs1360`, `discoverstatusjs1103`).
 
 ## Version 1.3.5.6
 
