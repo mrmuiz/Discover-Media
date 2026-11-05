@@ -340,8 +340,12 @@ define([], function () {
             var inner = t.Image
                 ? '<img class="dcTileLogo" loading="lazy" src="' + esc(t.Image) + '" alt="' + esc(t.Name) + '" />'
                 : '<span>' + esc(t.Name) + '</span>';
-            return '<div class="dcTile focusable' + (t.Image ? ' logo' : '') + '" tabindex="0" role="button" data-kind="' + esc(r.TileKind) + '" data-id="' + esc(t.Id) +
-                '" data-name="' + esc(t.Name) + '" title="' + esc(t.Name) + '" style="background:' + esc(t.Color || '#1c2640') + '">' + inner + '</div>';
+            // Genres: foto in de genrekleur (zoals Seerr) met de naam erop; anders de effen kleur.
+            var bg = t.Backdrop
+                ? 'background:' + esc(t.Color || '#1c2640') + ' url(&quot;' + esc(t.Backdrop) + '&quot;) center/cover no-repeat'
+                : 'background:' + esc(t.Color || '#1c2640');
+            return '<div class="dcTile focusable' + (t.Image ? ' logo' : '') + (t.Backdrop ? ' photo' : '') + '" tabindex="0" role="button" data-kind="' + esc(r.TileKind) + '" data-id="' + esc(t.Id) +
+                '" data-name="' + esc(t.Name) + '" title="' + esc(t.Name) + '" style="' + bg + '">' + inner + '</div>';
         }
 
         // ---- genre / studio / netwerk: alles in een raster met "Meer laden" ----

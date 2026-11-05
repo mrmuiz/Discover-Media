@@ -724,7 +724,7 @@ namespace Emby.Plugins.Discover
             return "https://www.themoviedb.org/t/p/w1280_filter(duotone," + c[0] + "," + c[1] + ")" + backdrop;
         }
 
-        private static string GenreImageUrl(int genreId, string backdrop)
+        internal static string GenreImageUrl(int genreId, string backdrop)
         {
             string name;
             if (!GenreColor.TryGetValue(genreId, out name)) name = GenreColor[0];
@@ -769,7 +769,10 @@ namespace Emby.Plugins.Discover
         }
 
         // Zoals Seerr: de vijfde achtergrond uit de populairste titels van dat genre.
-        private async Task<string> GenreBackdrop(bool tv, int genreId, CancellationToken ct)
+        private Task<string> GenreBackdrop(bool tv, int genreId, CancellationToken ct) => GenreBackdropFor(_tmdb, tv, genreId, ct);
+
+        /// <summary>Ook gebruikt door de Discover-pagina (genretegels met foto), dezelfde cache van 12 uur.</summary>
+        internal static async Task<string> GenreBackdropFor(TmdbClient tmdb, bool tv, int genreId, CancellationToken ct)
         {
             var key = TmdbClient.Language() + "|" + (tv ? "t" : "m") + genreId;
             lock (GenreBackdropCache)
@@ -780,7 +783,7 @@ namespace Emby.Plugins.Discover
             string chosen = null;
             try
             {
-                var items = await _tmdb.BrowsePages(tv, "&with_genres=" + genreId, 1, 1, ct).ConfigureAwait(false);
+                var items = await tmdb.BrowsePages(tv, "&with_genres=" + genreId, 1, 1, ct).ConfigureAwait(false);
                 var backs = items.Where(x => !string.IsNullOrEmpty(x.backdrop_path)).Select(x => x.backdrop_path).ToList();
                 if (backs.Count > 0) chosen = backs.Count > 4 ? backs[4] : backs[backs.Count - 1];
             }

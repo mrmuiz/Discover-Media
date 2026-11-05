@@ -197,6 +197,8 @@ namespace Emby.Plugins.Discover
         /// <summary>Logo-URL (studio/netwerk), anders leeg.</summary>
         public string Image { get; set; }
         public string Color { get; set; }
+        /// <summary>Genre: achtergrondfoto in de genrekleur (duotone, zoals Seerr), anders leeg.</summary>
+        public string Backdrop { get; set; }
     }
 
     [Route("/Discover/Browse", "GET", Summary = "Films/series per genre, studio of netwerk")]
@@ -554,15 +556,28 @@ namespace Emby.Plugins.Discover
             var tiles = new List<DiscoverTileDto>();
             if (kind == "genre_movie" || kind == "genre_tv")
             {
-                var genres = await _tmdb.GetGenres(kind == "genre_tv", CancellationToken.None).ConfigureAwait(false);
-                foreach (var g in genres)
+                bool tvGenres = kind == "genre_tv";
+                var genres = await _tmdb.GetGenres(tvGenres, CancellationToken.None).ConfigureAwait(false);
+                // Foto per genre (zelfde bron en cache als de kanaaltegels); lukt het niet, dan blijft de effen kleur.
+                string[] backs;
+                try
                 {
-                    bool tv = kind == "genre_tv";
+                    backs = await Task.WhenAll(genres.Select(g => DiscoverMediaChannel.GenreBackdropFor(_tmdb, tvGenres, g.id, CancellationToken.None))).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    DiscoverDiagnostics.Add("genrefoto's ophalen mislukt: " + ex.Message);
+                    backs = new string[genres.Count];
+                }
+                for (int gi = 0; gi < genres.Count; gi++)
+                {
+                    var g = genres[gi];
                     tiles.Add(new DiscoverTileDto
                     {
                         Id = g.id.ToString(),
-                        Name = DiscoverMediaChannel.LocalizedGenreName(g.id, tv, g.name),
-                        Color = Palette[Math.Abs(g.id) % Palette.Length]
+                        Name = DiscoverMediaChannel.LocalizedGenreName(g.id, tvGenres, g.name),
+                        Color = Palette[Math.Abs(g.id) % Palette.Length],
+                        Backdrop = DiscoverMediaChannel.GenreImageUrl(g.id, backs[gi])
                     });
                 }
                 return tiles;
