@@ -8,7 +8,7 @@
         console.warn('[Discover] oudere knopcode is nog actief; vernieuw de webclient om dubbele handlers te voorkomen.');
         return;
     }
-    var DC_BUILD = 'big-r1 2026-11-05';
+    var DC_BUILD = 'big-r2 2026-11-05';
     window.__discoverRequestButton = true;
     window.__discoverRequestButtonVersion = '1.4.0.0';
     window.__discoverRequestButtonBuild = DC_BUILD;
@@ -1818,8 +1818,14 @@
         var link = document.createElement('a');
         link.className = 'discover-row-poster';
         // Klik op de poster: de Discover-popup met info en trailer.
-        link.href = '#!/configurationpage?name=discoverui1083&openType=' + item.Type + '&openId=' + item.TmdbId;
+        link.href = '#!/configurationpage?name=discoverui1084&openType=' + item.Type + '&openId=' + item.TmdbId;
         link.setAttribute('aria-label', item.Title);   // geen title: dat gaf een tooltip-vakje over de poster
+        // Gewone klik: de popup hier op de pagina openen (Ctrl/middenklik volgt de link naar Discover).
+        link.addEventListener('click', function (e) {
+            if (e.button || e.ctrlKey || e.metaKey || e.shiftKey) { return; }
+            e.preventDefault(); e.stopPropagation();
+            openPopupHere(item.Type, item.TmdbId);
+        });
         var img = document.createElement('img');
         img.loading = 'lazy';
         img.src = item.Poster || '';
@@ -1956,15 +1962,80 @@
         return String(t || '').toLowerCase().normalize ? String(t || '').toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '')
             : String(t || '').toLowerCase().replace(/[^a-z0-9]/g, '');
     }
-    function filmReqOpen(type, tmdbId) {
-        try { window.location.hash = '#!/configurationpage?name=discoverui1083&openType=' + type + '&openId=' + tmdbId; } catch (e) { }
+    function filmReqOpen(type, tmdbId) { openPopupHere(type, tmdbId); }
+
+    // ---- De Discover-popup boven de huidige pagina ----
+    // Laadt de Discover-pagina één keer onzichtbaar (alleen de popup wordt gebruikt) met dezelfde controller
+    // als de echte pagina, in "embedded"-modus. Zo is de popup overal gelijk: info, cast, seizoenen, trailer, aanvragen.
+    var DC_UI_PAGE = 'discoverui1084', DC_UI_JS = 'discoveruijs1378';
+    var embedPromise = null;
+    function pageText(c, name) {
+        var url = c.getUrl('web/ConfigurationPage', { name: name });
+        return Promise.resolve(c.ajax({ type: 'GET', url: url, dataType: 'text' })).then(function (r) {
+            if (r && typeof r.text === 'function') { return r.text(); }
+            return typeof r === 'string' ? r : Promise.reject(new Error('geen tekst'));
+        });
+    }
+    function loadEmbeddedPopup() {
+        if (embedPromise) { return embedPromise; }
+        var c = api();
+        if (!c) { return Promise.reject(new Error('geen ApiClient')); }
+        embedPromise = pageText(c, DC_UI_PAGE).then(function (html) {
+            var doc = new DOMParser().parseFromString(html, 'text/html');
+            var page = doc.querySelector('[data-role="page"]');
+            if (!page) { throw new Error('Discover-pagina niet gevonden'); }
+            if (!document.getElementById('discover-embed-style')) {
+                var st = document.createElement('style');
+                st.id = 'discover-embed-style';
+                st.textContent = '.dcEmbedded > .dcRoot { display:none !important; } .dcEmbedded { position:static; }';
+                document.head.appendChild(st);
+            }
+            var host = document.createElement('div');
+            host.className = 'discoverUiPage dcEmbedded';
+            host.innerHTML = page.innerHTML;
+            return new Promise(function (resolve, reject) {
+                var prev = window.define, factory = null, taken = false;
+                var shim = function (deps, f) {
+                    if (!taken && typeof f === 'function') { taken = true; factory = f(); return; }
+                    if (prev) { return prev.apply(this, arguments); }
+                };
+                if (prev && prev.amd) { shim.amd = prev.amd; }
+                window.define = shim;
+                var s = document.createElement('script');
+                s.src = c.getUrl('web/ConfigurationPage', { name: DC_UI_JS });
+                s.async = true;
+                s.onload = function () {
+                    window.define = prev;
+                    if (typeof factory !== 'function') { reject(new Error('controller niet geladen')); return; }
+                    document.body.appendChild(host);
+                    try { factory(host, { embedded: true }); } catch (err) { reject(err); return; }
+                    if (typeof host.__dcOpen !== 'function') { reject(new Error('oude Discover-pagina')); return; }
+                    resolve(host);
+                };
+                s.onerror = function () { window.define = prev; reject(new Error('script laden mislukt')); };
+                document.head.appendChild(s);
+            });
+        });
+        embedPromise.then(null, function (err) {
+            dbg('popup op de pagina mislukt: ' + (err && err.message ? err.message : err));
+            embedPromise = null;
+        });
+        return embedPromise;
+    }
+    function openPopupHere(type, tmdbId) {
+        loadEmbeddedPopup().then(function (host) {
+            host.__dcOpen(type, parseInt(tmdbId, 10));
+        }, function () {
+            // Reserve: naar de Discover-pagina met de popup.
+            try { window.location.hash = '#!/configurationpage?name=' + DC_UI_PAGE + '&openType=' + type + '&openId=' + tmdbId; } catch (e) { }
+        });
     }
     // Persoonspagina: Emby's filmografielijst verbergen zolang onze posterrij "Niet in je bibliotheek" er staat
     // (wat je al hebt toont Emby als posterrijen, wat je nog niet hebt staat in onze rij). Geen rij = lijst blijft.
     function syncFilmographyList(id) {
         var section = document.querySelector('.mainCreditsSection');
         if (!section) { return; }
-        var ours = document.querySelector('.discover-row-section[data-itemid="' + id + '"][data-row="person"]');
+        var ours = document.querySelector('.discover-row-section[data-itemid="' + id + '"][data-row^="person"]');
         section.classList.toggle('discover-hidden-credits', !!ours);
     }
     // Emby bouwt zijn eigen "More Like This" soms pas na onze rij op: dan onze rij(en) er alsnog onder zetten.
@@ -1984,7 +2055,7 @@
         var data = rowData[id];
         if (!data || !data.length) { return; }
         var items = [];
-        for (var i = 0; i < data.length; i++) { if (data[i].key === 'person') { items = data[i].items; break; } }
+        for (var i = 0; i < data.length; i++) { if (String(data[i].key).indexOf('person') === 0) { items = items.concat(data[i].items); } }
         if (!items.length) { return; }
         var section = document.querySelector('.mainCreditsSection');
         if (!section || !visible(section)) { return; }
@@ -2040,8 +2111,14 @@
                 type: 'GET', dataType: 'json',
                 url: c.getUrl('Discover/PersonCredits', { Name: item.Name, TmdbPersonId: tmdb })
             })).then(function (r) {
-                return [{ key: 'person', title: text('Niet in je bibliotheek', 'Not in your library', 'Nicht in deiner Bibliothek', 'Ikke i biblioteket ditt'),
-                    items: (r && r.Items) || [] }];
+                // Films en series apart: bij iemand met veel titels werd één rij erg lang.
+                var all = (r && r.Items) || [];
+                return [
+                    { key: 'person_movie', title: text('Films \u00B7 niet in je bibliotheek', 'Movies \u00B7 not in your library', 'Filme \u00B7 nicht in deiner Bibliothek', 'Filmer \u00B7 ikke i biblioteket ditt'),
+                        items: all.filter(function (x) { return x.Type !== 'tv'; }) },
+                    { key: 'person_tv', title: text('Series \u00B7 niet in je bibliotheek', 'Series \u00B7 not in your library', 'Serien \u00B7 nicht in deiner Bibliothek', 'Serier \u00B7 ikke i biblioteket ditt'),
+                        items: all.filter(function (x) { return x.Type === 'tv'; }) }
+                ];
             });
         } else {
             var type = item.Type === 'Series' ? 'tv' : 'movie';

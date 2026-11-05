@@ -6,8 +6,13 @@
 - New: **New seasons** row on the Discover page (`GET /Discover/ContinueSeries`): series in your library where TMDB already has a later aired season. Per user (only libraries they can see), cached 3 hours; can be turned off.
 - New: optional **Trakt watchlist** (username + Client ID, public watchlist) and **TMDB list** (id or link) rows, each with a test button, and **Request all** on those rows (stops when the limit is reached). `GET /Discover/Watchlist`, `POST /Discover/TestWatchlist`.
 - New: quick menu (right-click / long press), filters in the grid (year, score, language, not in library), people results in search, 4K request button (Seerr with a 4K server), and a backdrop behind the Discover page.
+- New: the short rows at the top of the Discover page (My requests, New seasons, watchlists) sit **side by side** while they fit; a row with many titles gets the full width.
+- New: clicking a poster in the "More like this / not in your library" rows (and a title in the filmography list on a person page) opens the **Discover popup on the page you are on**, instead of jumping to the Discover page. Closing it returns you to the same spot. The popup is the same as on the Discover page (embedded controller, loaded once).
+- New: **cast with round photos** in the popup (name and role, up to 15). On the Discover page a click opens the Discover person page; above an Emby page it opens Emby's own person page when that person is in your library, otherwise the Discover person page.
+- New: **person page in Discover** (`GET /Discover/Person`): photo, born/died with age, place of birth, biography (English fallback, "More"), a backdrop of their best-known title, and rows **In your library** (opens the title in Emby), **Movies · not in your library** and **Series · not in your library**, newest first. Up to 150 credits.
+- Change: on Emby's person pages the plugin row is split into **Movies · not in your library** and **Series · not in your library**.
 - Note: backdrops for channel items in the native TV/mobile apps are not possible (Emby has no backdrop field for channel items); they work in the web client.
-- Change: page names bumped (`discoverui1083`, `discoveruijs1377`, `discoverconfigjs1359`).
+- Change: page names bumped (`discoverui1084`, `discoveruijs1378`, `discoverbuttonjs1376`, `discoverconfigjs1359`).
 
 ## Version 1.3.5.6
 

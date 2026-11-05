@@ -77,6 +77,8 @@ namespace Emby.Plugins.Discover
     public class DiscoverInfoResult
     {
         public List<string> Lines { get; set; } = new List<string>();
+        /// <summary>Belangrijkste cast (max. 15) met foto, voor de ronde fotootjes in de popup.</summary>
+        public List<DiscoverPersonDto> Cast { get; set; } = new List<DiscoverPersonDto>();
     }
 
     [Route("/Discover/TrailerKey", "GET", Summary = "YouTube-sleutel van de trailer van een film of serie")]
@@ -240,6 +242,8 @@ namespace Emby.Plugins.Discover
         public string Photo { get; set; }
         /// <summary>"Acting", "Directing", ...</summary>
         public string Department { get; set; }
+        /// <summary>Rol (personage), alleen bij de cast in de popup.</summary>
+        public string Character { get; set; }
     }
 
     public class DiscoverHomeResponse
@@ -801,6 +805,21 @@ namespace Emby.Plugins.Discover
                         "\u2713 Partially available",
                         "\u2713 Teilweise verfügbar"));
                 res.Lines.AddRange(InfoText.Lines(null, x, tv, true));
+                if (x.credits != null && x.credits.cast != null)
+                {
+                    res.Cast = x.credits.cast
+                        .Where(c => c != null && c.id > 0 && !string.IsNullOrWhiteSpace(c.name))
+                        .OrderBy(c => c.order)
+                        .Take(15)
+                        .Select(c => new DiscoverPersonDto
+                        {
+                            Id = c.id,
+                            Name = c.name.Trim(),
+                            Character = string.IsNullOrWhiteSpace(c.character) ? null : c.character.Trim(),
+                            Photo = string.IsNullOrEmpty(c.profile_path) ? null : "https://image.tmdb.org/t/p/w185" + c.profile_path,
+                            Department = "Acting"
+                        }).ToList();
+                }
             }
             catch (Exception ex)
             {

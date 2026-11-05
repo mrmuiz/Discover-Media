@@ -21,6 +21,26 @@ namespace Emby.Plugins.Discover
         public int TmdbPersonId { get; set; }
     }
 
+    [Route("/Discover/Person", "GET", Summary = "Gegevens van een persoon (TMDB) voor de persoonspagina in Discover")]
+    [Authenticated]
+    public class DiscoverPersonRequest : IReturn<DiscoverPersonResult>
+    {
+        public int Id { get; set; }
+    }
+
+    public class DiscoverPersonResult
+    {
+        public bool Found { get; set; }
+        public int Id { get; set; }
+        public string Name { get; set; }
+        public string Photo { get; set; }
+        public string Biography { get; set; }
+        public string Birthday { get; set; }
+        public string Deathday { get; set; }
+        public string PlaceOfBirth { get; set; }
+        public string Department { get; set; }
+    }
+
     [Route("/Discover/Related", "GET", Summary = "TMDB-aanbevelingen en collectie bij een film of serie")]
     [Authenticated]
     public class DiscoverRelatedRequest : IReturn<DiscoverRelatedResult>
@@ -101,7 +121,7 @@ namespace Emby.Plugins.Discover
 
     public class RelatedApiService : IService
     {
-        private const int MaxPersonItems = 80;
+        private const int MaxPersonItems = 150;
         private const int MaxRecommendations = 20;
 
         private readonly TmdbClient _tmdb;
@@ -204,6 +224,32 @@ namespace Emby.Plugins.Discover
         public object Get(DiscoverLoaderConfigRequest request)
         {
             return new DiscoverLoaderConfigResult { RedirectTile = Plugin.GetCurrentConfiguration().InjectWebClientLoader };
+        }
+
+        public async Task<object> Get(DiscoverPersonRequest request)
+        {
+            var res = new DiscoverPersonResult();
+            if (!TmdbReady || request.Id <= 0) return res;
+            try
+            {
+                var p = await _tmdb.GetPerson(request.Id, CancellationToken.None).ConfigureAwait(false);
+                if (p == null) return res;
+                res.Found = true;
+                res.Id = p.id;
+                res.Name = p.name;
+                res.Photo = string.IsNullOrEmpty(p.profile_path) ? null : "https://image.tmdb.org/t/p/h632" + p.profile_path;
+                res.Biography = p.biography;
+                res.Birthday = p.birthday;
+                res.Deathday = p.deathday;
+                res.PlaceOfBirth = p.place_of_birth;
+                res.Department = p.known_for_department;
+            }
+            catch (Exception ex)
+            {
+                if (ex is OperationCanceledException) throw;
+                DiscoverDiagnostics.Add("FOUT persoon " + request.Id + ": " + ex.Message);
+            }
+            return res;
         }
 
         public async Task<object> Get(DiscoverPersonCreditsRequest request)

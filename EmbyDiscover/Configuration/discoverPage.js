@@ -38,8 +38,8 @@ define([], function () {
             return;
         }
         var urls = [
-            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1375' }),
-            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1375' }),
+            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1376' }),
+            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1376' }),
             ApiClient.getUrl('Plugins/Discover/Script')
         ];
         var n = 0;
@@ -70,7 +70,15 @@ define([], function () {
         })();
     }
 
+    var UI_PAGE = 'discoverui1084';
+
     return function (view, params) {
+        // embedded: alleen de popup, over een andere Emby-pagina heen (film-, serie- of acteurspagina).
+        var embedded = !!(params && params.embedded);
+        if (embedded) {
+            var lc = String(document.documentElement.lang || '').toLowerCase();
+            uiLanguage = lc.indexOf('nl') === 0 ? 'nl' : lc.indexOf('de') === 0 ? 'de' : (lc.indexOf('nb') === 0 || lc.indexOf('nn') === 0 || lc.indexOf('no') === 0) ? 'no' : 'en';
+        }
         diagEl = view.querySelector('.dcDiag');
         diagEl.style.display = 'none';
         loadButtonScript();
@@ -236,8 +244,9 @@ define([], function () {
             }, function () { });
         }
         function renderMine() {
-            var old = content.querySelector('.dcMine');
-            if (!homeShown) { return; }
+            var top = content.querySelector('.dcTop');
+            if (!homeShown || !top) { return; }
+            var old = top.querySelector('.dcMine');
             var list = (mineRow && mineRow.Items) || [];
             if (!list.length) { if (old) { old.parentNode.removeChild(old); } return; }
             var scroll = old ? old.querySelector('.dcRow').scrollLeft : 0;
@@ -245,8 +254,8 @@ define([], function () {
                 rowWrapHtml('<div class="dcRow" data-row="my_requests">' + list.map(function (i) { return cardHtml(i, true); }).join('') + '</div>') + '</div>';
             var hadFocus = old && old.contains(document.activeElement) ? document.activeElement.getAttribute('data-key') : null;
             if (old) { old.insertAdjacentHTML('afterend', html); old.parentNode.removeChild(old); }
-            else { content.insertAdjacentHTML('afterbegin', html); }
-            var box = content.querySelector('.dcMine');
+            else { top.insertAdjacentHTML('afterbegin', html); }
+            var box = top.querySelector('.dcMine');
             var row = box.querySelector('.dcRow');
             row.scrollLeft = scroll;
             if (hadFocus) { var f = row.querySelector('.dcCard[data-key="' + hadFocus + '"]'); if (f) { focusEl(f); } }
@@ -265,31 +274,30 @@ define([], function () {
             return r.Title;
         }
         function renderExtras() {
-            var old = content.querySelector('.dcExtra');
-            if (!homeShown) { return; }
+            var top = content.querySelector('.dcTop');
+            if (!homeShown || !top) { return; }
+            var olds = top.querySelectorAll('.dcExtra');
             var rows = [];
             if (extraRows.cont && extraRows.cont.Items && extraRows.cont.Items.length) { rows.push(extraRows.cont); }
             extraRows.watch.forEach(function (r) { if (r.Items && r.Items.length) { rows.push(r); } });
-            if (!rows.length) { if (old) { old.parentNode.removeChild(old); } return; }
             var scrolls = {};
-            if (old) { Array.prototype.forEach.call(old.querySelectorAll('.dcRow'), function (rw) { scrolls[rw.getAttribute('data-row')] = rw.scrollLeft; }); }
-            var html = '<div class="dcExtra">';
+            Array.prototype.forEach.call(olds, function (o) {
+                Array.prototype.forEach.call(o.querySelectorAll('.dcRow'), function (rw) { scrolls[rw.getAttribute('data-row')] = rw.scrollLeft; });
+                o.parentNode.removeChild(o);
+            });
+            if (!rows.length) { return; }
+            // Elke rij een eigen blok in .dcTop: korte rijen staan zo naast elkaar, lange krijgen de hele breedte.
+            var html = '';
             rows.forEach(function (r) {
                 var open = r.Items.filter(function (i) { return i.Status === 0; }).length;
                 var all = (r.Key.indexOf('watch_') === 0 && open > 0)
                     ? ' <button type="button" class="dcReqAll focusable" data-row="' + esc(r.Key) + '">' + esc(text('Alles aanvragen', 'Request all', 'Alle anfragen', 'Be om alle')) + ' (' + open + ')</button>'
                     : '';
-                html += '<div class="dcRowTitle">' + esc(extraTitle(r)) + all + '</div>' +
-                    rowWrapHtml('<div class="dcRow" data-row="' + esc(r.Key) + '">' + r.Items.map(function (i) { return cardHtml(i); }).join('') + '</div>');
+                html += '<div class="dcExtra"><div class="dcRowTitle">' + esc(extraTitle(r)) + all + '</div>' +
+                    rowWrapHtml('<div class="dcRow" data-row="' + esc(r.Key) + '">' + r.Items.map(function (i) { return cardHtml(i); }).join('') + '</div>') + '</div>';
             });
-            html += '</div>';
-            if (old) { old.insertAdjacentHTML('afterend', html); old.parentNode.removeChild(old); }
-            else {
-                var mine = content.querySelector('.dcMine');
-                if (mine) { mine.insertAdjacentHTML('afterend', html); } else { content.insertAdjacentHTML('afterbegin', html); }
-            }
-            var box = content.querySelector('.dcExtra');
-            Array.prototype.forEach.call(box.querySelectorAll('.dcRow'), function (rw) {
+            top.insertAdjacentHTML('beforeend', html);
+            Array.prototype.forEach.call(top.querySelectorAll('.dcExtra .dcRow'), function (rw) {
                 rw.scrollLeft = scrolls[rw.getAttribute('data-row')] || 0;
                 updateArrows(rw.parentNode);
             });
@@ -366,7 +374,7 @@ define([], function () {
             for (var w = 0; w < wraps.length; w++) { updateArrows(wraps[w]); }
         }
 
-        function cardHtml(i, mine) {
+        function cardHtml(i, mine, embyId) {
             items[key(i)] = i;
             var poster = i.Poster
                 ? '<img loading="lazy" src="' + esc(i.Poster) + '" alt="" />'
@@ -374,7 +382,8 @@ define([], function () {
             var sub = [];
             if (typeof i.Rating === 'number' && i.Rating > 0) { sub.push('<span class="dcStar">&#9733; ' + i.Rating.toFixed(1) + '</span>'); }
             if (i.Year) { sub.push('<span>' + i.Year + '</span>'); }
-            return '<div class="dcCard focusable" tabindex="0" role="button" data-key="' + key(i) + '"' + (mine === true ? ' data-mine="1"' : '') + '>' +
+            return '<div class="dcCard focusable" tabindex="0" role="button" data-key="' + key(i) + '"' + (mine === true ? ' data-mine="1"' : '') +
+                (embyId ? ' data-emby="' + esc(embyId) + '"' : '') + '>' +
                 '<div class="dcPoster">' + poster +
                 '<span class="dcBadge ' + i.Type + '">' + (i.Type === 'tv' ? text('SERIE', 'SERIES', 'SERIE') : text('FILM', 'MOVIE', 'FILM')) + '</span>' +
                 '<span class="dcStatus s' + i.Status + '">' + statusIcon(i.Status) + '</span>' + queueHtml(i) + '</div>' +
@@ -491,25 +500,136 @@ define([], function () {
                 '<div class="dcPersonName">' + esc(p.Name) + '</div>' +
                 (dep ? '<div class="dcPersonDep">' + esc(dep) + '</div>' : '') + '</div>';
         }
+        // ---- Persoonspagina in Discover: foto, gegevens, biografie en rijen (in je bibliotheek / films / series) ----
+        // Zoekt de persoon ook in Emby op (op TMDB-id, anders op naam): wat je al hebt komt in "In je bibliotheek"
+        // en opent in Emby; de rest staat per soort in "niet in je bibliotheek" en opent de popup.
+        function findEmbyPerson(pid, name) {
+            var uid = ApiClient.getCurrentUserId();
+            return Promise.resolve(ApiClient.getJSON(ApiClient.getUrl('Persons', { SearchTerm: name || '', UserId: uid, Fields: 'ProviderIds', Limit: 30 })))
+                .then(function (r) {
+                    var list = (r && r.Items) || [];
+                    var exact = null;
+                    for (var k = 0; k < list.length; k++) {
+                        var t = list[k].ProviderIds && (list[k].ProviderIds.Tmdb || list[k].ProviderIds.tmdb);
+                        if (t && String(t) === String(pid)) { return list[k]; }
+                        if (!exact && String(list[k].Name || '').toLowerCase() === String(name || '').toLowerCase()) { exact = list[k]; }
+                    }
+                    return exact;
+                }, function () { return null; });
+        }
+        function ownedByPerson(person) {
+            if (!person) { return Promise.resolve([]); }
+            var uid = ApiClient.getCurrentUserId();
+            return Promise.resolve(ApiClient.getJSON(ApiClient.getUrl('Users/' + uid + '/Items', {
+                PersonIds: person.Id, Recursive: true, IncludeItemTypes: 'Movie,Series',
+                Fields: 'ProviderIds,ProductionYear,CommunityRating', SortBy: 'PremiereDate,SortName', SortOrder: 'Descending', Limit: 200
+            }))).then(function (r) { return (r && r.Items) || []; }, function () { return []; });
+        }
+        function fmtDay(d) {
+            if (!d) { return ''; }
+            var dt = new Date(d + 'T12:00:00');
+            if (isNaN(dt.getTime())) { return d; }
+            try { return dt.toLocaleDateString(uiLanguage === 'nl' ? 'nl-NL' : uiLanguage === 'de' ? 'de-DE' : uiLanguage === 'no' ? 'nb-NO' : 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' }); }
+            catch (e) { return d; }
+        }
+        function ageOn(birth, end) {
+            var b = new Date(birth + 'T12:00:00'), e2 = end ? new Date(end + 'T12:00:00') : new Date();
+            if (isNaN(b.getTime()) || isNaN(e2.getTime())) { return null; }
+            var a = e2.getFullYear() - b.getFullYear();
+            if (e2.getMonth() < b.getMonth() || (e2.getMonth() === b.getMonth() && e2.getDate() < b.getDate())) { a--; }
+            return a;
+        }
+        function personRow(title, keyName, list, embyIds) {
+            if (!list.length) { return ''; }
+            return '<div class="dcRowTitle">' + esc(title) + ' <span class="dcRowCount">' + list.length + '</span></div>' +
+                rowWrapHtml('<div class="dcRow" data-row="' + esc(keyName) + '">' + list.map(function (i) {
+                    return cardHtml(i, false, embyIds ? embyIds[key(i)] : null);
+                }).join('') + '</div>');
+        }
+        // "Meer" alleen tonen als de biografie echt is afgekapt (ook na draaien of een ander venster).
+        function updateBioMore() {
+            var bio = content.querySelector('.dcPersonBio');
+            if (!bio) { return; }
+            var bt = bio.querySelector('.dcBioText'), more = bio.querySelector('.dcBioMore');
+            if (!bt || !more) { return; }
+            more.style.display = bio.classList.contains('open') || bt.scrollHeight > bt.clientHeight + 2 ? '' : 'none';
+        }
         function openPerson(pid, name) {
             browse = null;
             homeShown = false;
-            content.innerHTML = '<div class="dcBrowseHead"><button type="button" class="dcBack">&#10094; ' + text('Terug', 'Back', 'Zurück') + '</button>' +
-                '<span class="dcBrowseTitle">' + text('Bekend van: ', 'Known for: ', 'Bekannt aus: ') + esc(name) + '</span></div>' +
-                '<div class="dcGrid dcPersonGrid">' + skelCards(8) + '</div>';
+            content.innerHTML = '<div class="dcBrowseHead"><button type="button" class="dcBack">&#10094; ' + text('Terug', 'Back', 'Zurück', 'Tilbake') + '</button></div>' +
+                '<div class="dcPersonHead"><div class="dcPersonBig"></div><div class="dcPersonText"><h2 class="dcPersonTitle">' + esc(name || '') + '</h2>' +
+                '<div class="dcPersonMeta"></div><div class="dcPersonBio"></div></div></div>' +
+                '<div class="dcPersonRows">' + skeletonHtml(2) + '</div>';
             var root = view.querySelector('.dcRoot');
             if (root) { root.scrollTop = 0; }
-            api('GET', 'Discover/PersonCredits', { TmdbPersonId: pid, Name: name }).then(function (r) {
-                var list = (r && r.Items) || [];
-                var grid = content.querySelector('.dcPersonGrid');
-                if (!grid) { return; }
-                grid.innerHTML = list.length
-                    ? list.map(function (i) { return cardHtml(i); }).join('')
-                    : '<div class="dcMsg">' + text('Geen titels gevonden.', 'No titles found.', 'Keine Titel gefunden.') + '</div>';
-                if (isTvClient && grid.firstElementChild) { focusEl(grid.firstElementChild); }
+            try { window.scrollTo(0, 0); } catch (e) { }
+
+            api('GET', 'Discover/Person', { Id: pid }).then(function (p) {
+                if (!p || !p.Found || !content.querySelector('.dcPersonHead')) { return; }
+                content.querySelector('.dcPersonTitle').textContent = p.Name || name || '';
+                if (p.Photo) { content.querySelector('.dcPersonBig').style.backgroundImage = 'url("' + p.Photo + '")'; }
+                var meta = [];
+                if (p.Birthday) {
+                    var age = ageOn(p.Birthday, p.Deathday);
+                    meta.push(text('Geboren: ', 'Born: ', 'Geboren: ', 'Født: ') + fmtDay(p.Birthday) + (age != null && !p.Deathday ? ' (' + text('leeftijd ', 'age ', 'Alter ', 'alder ') + age + ')' : ''));
+                }
+                if (p.Deathday) { meta.push(text('Overleden: ', 'Died: ', 'Gestorben: ', 'Død: ') + fmtDay(p.Deathday) + (ageOn(p.Birthday, p.Deathday) != null ? ' (' + ageOn(p.Birthday, p.Deathday) + ')' : '')); }
+                if (p.PlaceOfBirth) { meta.push(p.PlaceOfBirth); }
+                content.querySelector('.dcPersonMeta').innerHTML = meta.map(function (m) { return '<div>' + esc(m) + '</div>'; }).join('');
+                var bio = content.querySelector('.dcPersonBio');
+                if (p.Biography) {
+                    bio.innerHTML = '<div class="dcBioText">' + esc(p.Biography) + '</div><button type="button" class="dcBioMore">' + text('Meer', 'More', 'Mehr', 'Mer') + '</button>';
+                    var more = bio.querySelector('.dcBioMore');
+                    setTimeout(updateBioMore, 0);
+                    more.addEventListener('click', function () {
+                        var open = bio.classList.toggle('open');
+                        more.textContent = open ? text('Minder', 'Less', 'Weniger', 'Mindre') : text('Meer', 'More', 'Mehr', 'Mer');
+                    });
+                }
+            }, function () { });
+
+            var creditsP = api('GET', 'Discover/PersonCredits', { TmdbPersonId: pid, Name: name });
+            var ownedP = findEmbyPerson(pid, name).then(ownedByPerson);
+            Promise.all([creditsP, ownedP]).then(function (res) {
+                var box = content.querySelector('.dcPersonRows');
+                if (!box) { return; }
+                var list = (res[0] && res[0].Items) || [];
+                var owned = res[1] || [];
+                // Wat je hebt: koppelen aan de TMDB-titels (zelfde poster en info), Emby-id voor de klik.
+                var ownedByTmdb = {}, embyIds = {}, mine = [];
+                owned.forEach(function (o) {
+                    var t = o.ProviderIds && (o.ProviderIds.Tmdb || o.ProviderIds.tmdb);
+                    if (t) { ownedByTmdb[(o.Type === 'Series' ? 'tv:' : 'movie:') + t] = o; }
+                });
+                var films = [], series = [];
+                list.forEach(function (i) {
+                    var o = ownedByTmdb[key(i)];
+                    if (o) { i.Status = 2; embyIds[key(i)] = o.Id; mine.push(i); delete ownedByTmdb[key(i)]; return; }
+                    (i.Type === 'tv' ? series : films).push(i);
+                });
+                // Emby-titels zonder TMDB-match toch tonen (poster uit Emby).
+                Object.keys(ownedByTmdb).forEach(function (k) {
+                    var o = ownedByTmdb[k];
+                    var tag = o.ImageTags && o.ImageTags.Primary;
+                    var it = { TmdbId: parseInt(k.split(':')[1], 10), Type: o.Type === 'Series' ? 'tv' : 'movie', Title: o.Name, Year: o.ProductionYear || 0,
+                        Poster: tag ? ApiClient.getScaledImageUrl(o.Id, { type: 'Primary', maxHeight: 360, tag: tag }) : null, Rating: o.CommunityRating || 0, Status: 2 };
+                    embyIds[key(it)] = o.Id; mine.push(it);
+                });
+                function newest(a, b) { return (b.Year || 0) - (a.Year || 0); }
+                films.sort(newest); series.sort(newest); mine.sort(newest);
+                var html = personRow(text('In je bibliotheek', 'In your library', 'In deiner Bibliothek', 'I biblioteket ditt'), 'person_lib', mine, embyIds) +
+                    personRow(text('Films \u00B7 niet in je bibliotheek', 'Movies \u00B7 not in your library', 'Filme \u00B7 nicht in deiner Bibliothek', 'Filmer \u00B7 ikke i biblioteket ditt'), 'person_movie', films) +
+                    personRow(text('Series \u00B7 niet in je bibliotheek', 'Series \u00B7 not in your library', 'Serien \u00B7 nicht in deiner Bibliothek', 'Serier \u00B7 ikke i biblioteket ditt'), 'person_tv', series);
+                box.innerHTML = html || '<div class="dcMsg">' + text('Geen titels gevonden.', 'No titles found.', 'Keine Titel gefunden.') + '</div>';
+                setTimeout(updateAllArrows, 0);
+                // Achtergrond: de bekendste titel (hoogste score met achtergrond).
+                var withBd = list.filter(function (i) { return i.Backdrop; }).sort(function (a, b) { return (b.Rating || 0) - (a.Rating || 0); });
+                if (withBd.length) { setPageBackdrop(withBd[0].Backdrop); }
+                if (isTvClient) { var f = box.querySelector('.dcCard'); if (f) { focusEl(f); } }
             }, function () {
-                var grid = content.querySelector('.dcPersonGrid');
-                if (grid) { grid.innerHTML = '<div class="dcMsg">' + text('Laden mislukt.', 'Loading failed.', 'Laden fehlgeschlagen.') + '</div>'; }
+                var box = content.querySelector('.dcPersonRows');
+                if (box) { box.innerHTML = '<div class="dcMsg">' + text('Laden mislukt.', 'Loading failed.', 'Laden fehlgeschlagen.') + '</div>'; }
             });
         }
 
@@ -596,7 +716,7 @@ define([], function () {
                 html += rowTitleHtml(r.Key, r.Title) +
                     rowWrapHtml('<div class="dcRow" data-row="' + esc(r.Key) + '">' + r.Items.map(function (i) { return cardHtml(i); }).join('') + '</div>');
             });
-            content.innerHTML = html || '<div class="dcMsg">' + text('Geen resultaten.', 'No results.', 'Keine Ergebnisse.') + '</div>';
+            content.innerHTML = '<div class="dcTop"></div>' + (html || '<div class="dcMsg">' + text('Geen resultaten.', 'No results.', 'Keine Ergebnisse.') + '</div>');
             homeShown = true;
             renderMine();
             renderExtras();
@@ -639,6 +759,8 @@ define([], function () {
                 input.placeholder = text('Films en series zoeken', 'Search movies and series', 'Filme und Serien suchen', 'Søk filmer og serier');
                 if (r.Message) { content.innerHTML = '<div class="dcMsg">' + esc(r.Message) + '</div>'; return; }
                 if (r.LanguageAuto) { (r.Rows || []).forEach(function (row) { row.Title = rowTitle(row.Key) || row.Title; }); }
+                // Intussen een persoonspagina of overzicht geopend (directe link): die niet overschrijven.
+                if (browse || content.querySelector('.dcPersonHead')) { loaded = true; return; }
                 renderRows(r.Rows || []);
                 loaded = true;
                 randomPageBackdrop();
@@ -860,8 +982,18 @@ define([], function () {
             setTimeout(function () { updateOverviewHint(ovEl); }, 0);
             var infoEl = overlay.querySelector('.dcInfo');
             infoEl.textContent = '';
+            var castEl = overlay.querySelector('.dcCast');
+            castEl.innerHTML = '';
             api('GET', 'Discover/Info', { Type: i.Type, TmdbId: i.TmdbId }).then(function (r) {
-                if (current === i && r && r.Lines && r.Lines.length) { infoEl.textContent = r.Lines.join('\n'); }
+                if (current !== i || !r) { return; }
+                if (r.Lines && r.Lines.length) { infoEl.textContent = r.Lines.join('\n'); }
+                castEl.innerHTML = (r.Cast || []).map(function (p) {
+                    var initials = String(p.Name || '?').split(/\s+/).map(function (w) { return w.charAt(0); }).slice(0, 2).join('');
+                    return '<button type="button" class="dcCastP" data-pid="' + p.Id + '" data-name="' + esc(p.Name) + '" title="' + esc(p.Name) + '">' +
+                        '<div class="dcCastPh"' + (p.Photo ? ' style="background-image:url(&quot;' + esc(p.Photo) + '&quot;)">' : '>' + esc(initials)) + '</div>' +
+                        '<div class="dcCastN">' + esc(p.Name) + '</div>' + (p.Character ? '<div class="dcCastR">' + esc(p.Character) + '</div>' : '') + '</button>';
+                }).join('');
+                castEl.scrollLeft = 0;
             }, function () { });
             var ob = overlay.querySelector('.dcBtnOpen');
             ob.classList.remove('show'); ob.removeAttribute('data-id');
@@ -1195,6 +1327,7 @@ define([], function () {
         content.addEventListener('click', function (e) {
             if (Date.now() - quickJustOpened < 700) { return; }   // de klik na lang indrukken opent geen popup
             var card = e.target.closest ? e.target.closest('.dcCard') : null;
+            if (card && card.getAttribute('data-emby')) { goToEmbyItem(card.getAttribute('data-emby')); return; }   // al in je bibliotheek
             if (card && items[card.getAttribute('data-key')]) { openItem(items[card.getAttribute('data-key')]); }
         });
 
@@ -1244,7 +1377,7 @@ define([], function () {
             var el = e.target;
             if (el && el.classList && el.classList.contains('dcRow')) { maybeLoadMore(el); updateArrows(el.parentNode); }
         }, true);
-        window.addEventListener('resize', function () { if (pageActive()) { updateAllArrows(); } });
+        window.addEventListener('resize', function () { if (pageActive()) { updateAllArrows(); updateBioMore(); } });
 
         content.addEventListener('click', function (e) {
             var btn = e.target.closest ? e.target.closest('.dcArrow') : null;
@@ -1259,6 +1392,19 @@ define([], function () {
         });
 
         overlay.querySelector('.dcClose').addEventListener('click', closeModal);
+        // Klik op een acteur in de popup: op de Discover-pagina de persoonspagina hier; boven een Emby-pagina
+        // naar Emby's eigen acteurspagina als die persoon in je bibliotheek staat, anders naar die van Discover.
+        overlay.querySelector('.dcCast').addEventListener('click', function (e) {
+            var b = e.target.closest ? e.target.closest('.dcCastP') : null;
+            if (!b) { return; }
+            var pid = parseInt(b.getAttribute('data-pid'), 10), name = b.getAttribute('data-name');
+            if (!embedded) { closeModal(); openPerson(pid, name); return; }
+            findEmbyPerson(pid, name).then(function (p) {
+                closeModal();
+                if (p) { goToEmbyItem(p.Id); return; }
+                window.location.hash = '#!/configurationpage?name=' + UI_PAGE + '&openPerson=' + pid + '&openName=' + encodeURIComponent(name || '');
+            });
+        });
         overlay.addEventListener('click', function (e) { if (e.target === overlay) { closeModal(); } });
 
         overlay.querySelector('.dcBtn4k').addEventListener('click', function () {
@@ -1604,6 +1750,43 @@ define([], function () {
             var on = onDiscoverRoute() && document.body.contains(view);
             document.body.classList.toggle('dcDiscoverActive', !!on);
         }
+        // ---- Popup boven een andere Emby-pagina (aangeroepen vanuit het knop-script) ----
+        function openByIds(type, tmdbId) {
+            api('GET', 'Discover/Title', { Type: type, TmdbId: tmdbId }).then(function (r) {
+                if (!r || !r.Found || !r.Item) { showToast(text('Titel niet gevonden.', 'Title not found.', 'Titel nicht gefunden.'), true); return; }
+                items[key(r.Item)] = r.Item;
+                openItem(r.Item);
+            }, function () {
+                showToast(text('Titel laden mislukt.', 'Loading title failed.', 'Titel konnte nicht geladen werden.'), true);
+            });
+        }
+        if (embedded) {
+            view.__dcOpen = openByIds;
+            view.__dcClose = function () { if (trailerOverlay.classList.contains('open')) { closeTrailer(); } closeModal(); };
+            view.__dcIsOpen = function () { return overlay.classList.contains('open') || trailerOverlay.classList.contains('open'); };
+            // TV-afstandsbediening: alleen zolang de popup open is; anders doet Emby alles zelf.
+            document.addEventListener('command', function (e) {
+                if (!document.body.contains(view) || !view.__dcIsOpen()) { return; }
+                var cmd = e.detail && e.detail.command;
+                if (cmd === 'back') {
+                    e.preventDefault();
+                    if (trailerOverlay.classList.contains('open')) { closeTrailer(); } else { closeModal(); }
+                    return;
+                }
+                if (cmd === 'up' || cmd === 'down' || cmd === 'left' || cmd === 'right') { e.preventDefault(); navModal(cmd, document.activeElement); }
+            }, true);
+            document.addEventListener('keydown', function (e) {
+                var c = e.keyCode;
+                if (c !== 27 && c !== 461 && c !== 10009) { return; }
+                if (!document.body.contains(view) || !view.__dcIsOpen()) { return; }
+                e.preventDefault(); e.stopPropagation();
+                if (trailerOverlay.classList.contains('open')) { closeTrailer(); } else { closeModal(); }
+            }, true);
+            // Weg van deze pagina (Emby navigeert): popup dicht.
+            window.addEventListener('hashchange', function () { if (view.__dcIsOpen()) { view.__dcClose(); } });
+            return;
+        }
+
         if (window.__dcHeaderSync) { window.removeEventListener('hashchange', window.__dcHeaderSync); }
         window.__dcHeaderSync = syncHeader;
         window.addEventListener('hashchange', syncHeader);
@@ -1613,6 +1796,13 @@ define([], function () {
 
         // ---- Directe link vanaf een film-/seriepagina: #!/configurationpage?name=...&openType=movie&openId=123 ----
         function openFromLink() {
+            var pm = /[?&]openPerson=(\d+)(?:&openName=([^&]*))?/.exec(window.location.hash || '');
+            if (pm) {
+                try { history.replaceState(null, '', window.location.href.replace(/&openPerson=\d+(&openName=[^&]*)?/, '')); } catch (e) { }
+                var nm = ''; try { nm = decodeURIComponent(pm[2] || ''); } catch (e) { }
+                openPerson(parseInt(pm[1], 10), nm);
+                return;
+            }
             var m = /[?&]openType=(movie|tv)&openId=(\d+)/.exec(window.location.hash || '');
             if (!m) { return; }
             // Parameters weghalen, anders brengt de terugknop je weer naar dezelfde titel.
