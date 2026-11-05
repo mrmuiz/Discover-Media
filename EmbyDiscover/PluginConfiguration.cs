@@ -39,13 +39,6 @@ namespace Emby.Plugins.Discover
         /// <summary>Rij "Nieuwe seizoenen" (series in de bibliotheek met een nieuwer seizoen op TMDB).</summary>
         public bool ShowNewSeasons { get; set; } = true;
 
-        /// <summary>Map "Cast" in het kanaal naast Request en Trailer (ook in de tv-/mobiele apps). Standaard uit.</summary>
-        public bool ChannelCastFolder { get; set; } = false;
-        /// <summary>Regisseur (film) of makers (serie) bij de cast tonen.</summary>
-        public bool CastIncludeCrew { get; set; } = true;
-        /// <summary>Klik op een acteur in de webclient: "popup" (over de huidige pagina) of "page" (naar de Discover-pagina).</summary>
-        public string CastClick { get; set; } = "popup";
-
         /// <summary>Optioneel: map van de Emby-webclient (met index.html) als die niet vanzelf gevonden wordt.</summary>
         public string DashboardUiPath { get; set; } = "";
 

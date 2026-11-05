@@ -123,16 +123,14 @@ namespace Emby.Plugins.Discover
             {
                 new PluginPageInfo
                 {
-                    Name = "discoverconfig1082",
-                    // Eigen naam, zodat het dashboard niet twee keer "Discover" onder elkaar toont.
-                    DisplayName = DiscoverLanguage.Text("Discover-instellingen", "Discover settings", "Discover-Einstellungen"),
+                    Name = "discoverconfig1080",
                     EmbeddedResourcePath = GetType().Namespace + ".Configuration.configPage.html",
                     EnableInMainMenu = true,
                     IsMainConfigPage = true
                 },
                 new PluginPageInfo
                 {
-                    Name = "discoverui1091",
+                    Name = "discoverui1090",
                     DisplayName = "Discover",
                     EmbeddedResourcePath = GetType().Namespace + ".Configuration.discoverPage.html",
                     EnableInMainMenu = true,
@@ -141,20 +139,17 @@ namespace Emby.Plugins.Discover
                 },
                 new PluginPageInfo
                 {
-                    Name = "discoveruijs1388",
+                    Name = "discoveruijs1387",
                     EmbeddedResourcePath = GetType().Namespace + ".Configuration.discoverPage.js"
                 },
                 new PluginPageInfo
                 {
-                    Name = "discoverbuttonjs1391",
+                    Name = "discoverbuttonjs1390",
                     EmbeddedResourcePath = GetType().Namespace + ".Resources.discover-request-button.js"
                 },
                 new PluginPageInfo
                 {
                     Name = "discoverstatus1079",
-                    // Zelfde naam als de instellingenpagina: Emby sorteert op DisplayName en de Plug-ins-pagina opent
-                    // de eerste pagina; zo blijft de instellingenpagina (eerder in deze lijst) vóór de statuspagina.
-                    DisplayName = DiscoverLanguage.Text("Discover-instellingen", "Discover settings", "Discover-Einstellungen"),
                     EmbeddedResourcePath = GetType().Namespace + ".Configuration.statusPage.html"
                 },
                 new PluginPageInfo
@@ -164,7 +159,7 @@ namespace Emby.Plugins.Discover
                 },
                 new PluginPageInfo
                 {
-                    Name = "discoverconfigjs1362",
+                    Name = "discoverconfigjs1360",
                     EmbeddedResourcePath = GetType().Namespace + ".Configuration.configPage.js"
                 }
             };

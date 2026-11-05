@@ -83,10 +83,6 @@ namespace Emby.Plugins.Discover
         public string Name { get; set; }
     }
 
-    [Route("/Discover/RefreshChannel", "POST", Summary = "Plan een kanaalverversing (bv. na het aan-/uitzetten van de map Cast)")]
-    [Authenticated(Roles = "Admin")]
-    public class DiscoverRefreshChannelRequest : IReturnVoid { }
-
     [Route("/Discover/IsDiscoverItem", "GET", Summary = "Hoort dit Emby-item bij het Discover-kanaal? (Emby 4.11 geeft ChannelId niet altijd mee)")]
     [Authenticated]
     public class DiscoverIsItemRequest : IReturn<DiscoverIsItemResult>
@@ -241,28 +237,6 @@ namespace Emby.Plugins.Discover
         private static DiscoverChannelInfoResult _channel;
         private static DateTime _channelAt;
 
-        /// <summary>Cast met foto (max. <paramref name="max"/>) en, als ingesteld, regisseur (film) of makers (serie) achteraan.</summary>
-        internal static List<DiscoverPersonDto> CastList(TmdbExtra x, bool tv, int max)
-        {
-            var res = new List<DiscoverPersonDto>();
-            if (x == null) return res;
-            var seen = new HashSet<int>();
-            Func<string, string> photo = p => string.IsNullOrEmpty(p) ? null : "https://image.tmdb.org/t/p/w185" + p;
-            if (x.credits != null && x.credits.cast != null)
-                foreach (var c in x.credits.cast.Where(c => c != null && c.id > 0 && !string.IsNullOrWhiteSpace(c.name)).OrderBy(c => c.order).Take(max))
-                    if (seen.Add(c.id)) res.Add(new DiscoverPersonDto { Id = c.id, Name = c.name.Trim(), Character = string.IsNullOrWhiteSpace(c.character) ? null : c.character.Trim(), Photo = photo(c.profile_path), Department = "Acting" });
-            if (Plugin.GetCurrentConfiguration().CastIncludeCrew)
-            {
-                if (tv && x.created_by != null)
-                    foreach (var c in x.created_by.Where(c => c != null && c.id > 0 && !string.IsNullOrWhiteSpace(c.name)).Take(4))
-                        if (seen.Add(c.id)) res.Add(new DiscoverPersonDto { Id = c.id, Name = c.name.Trim(), Character = DiscoverLanguage.Text("Maker", "Creator", "Schöpfer"), Photo = photo(c.profile_path), Department = "Creator" });
-                if (!tv && x.credits != null && x.credits.crew != null)
-                    foreach (var c in x.credits.crew.Where(c => c != null && c.id > 0 && c.job == "Director").Take(3))
-                        if (seen.Add(c.id)) res.Add(new DiscoverPersonDto { Id = c.id, Name = c.name.Trim(), Character = DiscoverLanguage.Text("Regie", "Director", "Regie"), Photo = photo(c.profile_path), Department = "Directing" });
-            }
-            return res;
-        }
-
         private static bool OurExternalId(string ext) =>
             !string.IsNullOrEmpty(ext) && (ext.StartsWith("ask", StringComparison.Ordinal) || ext.StartsWith("tr", StringComparison.Ordinal));
 
@@ -294,11 +268,6 @@ namespace Emby.Plugins.Discover
             catch (Exception ex) { DiscoverDiagnostics.Add("kanaal opzoeken mislukt: " + ex.Message); }
             lock (ChannelGate) { if (res.Id != null) { _channel = res; _channelAt = DateTime.UtcNow; } }
             return res;
-        }
-
-        public void Post(DiscoverRefreshChannelRequest request)
-        {
-            ChannelRefresher.Request("instelling gewijzigd", true);
         }
 
         public object Get(DiscoverIsItemRequest request)
@@ -373,7 +342,19 @@ namespace Emby.Plugins.Discover
                 res.Rating = x.vote_average;
                 res.Overview = x.overview;
                 try { res.Lines = InfoText.Lines(null, x, tv, false); } catch { }
-                res.Cast = CastList(x, tv, 20);
+                if (x.credits == null || x.credits.cast == null) return res;
+                res.Cast = x.credits.cast
+                    .Where(c => c != null && c.id > 0 && !string.IsNullOrWhiteSpace(c.name))
+                    .OrderBy(c => c.order)
+                    .Take(20)
+                    .Select(c => new DiscoverPersonDto
+                    {
+                        Id = c.id,
+                        Name = c.name.Trim(),
+                        Character = string.IsNullOrWhiteSpace(c.character) ? null : c.character.Trim(),
+                        Photo = string.IsNullOrEmpty(c.profile_path) ? null : "https://image.tmdb.org/t/p/w185" + c.profile_path,
+                        Department = "Acting"
+                    }).ToList();
             }
             catch (Exception ex)
             {

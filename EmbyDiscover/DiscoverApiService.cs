@@ -173,8 +173,6 @@ namespace Emby.Plugins.Discover
         public bool TmdbKeySet { get; set; }
         public bool ShowDiagnostics { get; set; }
         public bool ShowTrailerTile { get; set; }
-        /// <summary>"popup" of "page": wat een klik op een acteur in de webclient doet.</summary>
-        public string CastClick { get; set; }
         public string PluginLanguage { get; set; }
         public string TmdbLanguage { get; set; }
         public bool RadarrSet { get; set; }
@@ -421,7 +419,6 @@ namespace Emby.Plugins.Discover
                 TmdbKeySet = !string.IsNullOrWhiteSpace(cfg.TmdbApiKey),
                 ShowDiagnostics = cfg.ShowDiagnostics,
                 ShowTrailerTile = cfg.ShowTrailerTile,
-                CastClick = cfg.CastClick == "page" ? "page" : "popup",
                 PluginLanguage = DiscoverLanguage.PluginLanguage,
                 PluginLanguageAuto = DiscoverLanguage.IsAuto,
                 TmdbLanguage = TmdbClient.Language(),
@@ -820,7 +817,21 @@ namespace Emby.Plugins.Discover
                         "\u2713 Partially available",
                         "\u2713 Teilweise verfügbar"));
                 res.Lines.AddRange(InfoText.Lines(null, x, tv, true));
-                res.Cast = RelatedApiService.CastList(x, tv, 15);
+                if (x.credits != null && x.credits.cast != null)
+                {
+                    res.Cast = x.credits.cast
+                        .Where(c => c != null && c.id > 0 && !string.IsNullOrWhiteSpace(c.name))
+                        .OrderBy(c => c.order)
+                        .Take(15)
+                        .Select(c => new DiscoverPersonDto
+                        {
+                            Id = c.id,
+                            Name = c.name.Trim(),
+                            Character = string.IsNullOrWhiteSpace(c.character) ? null : c.character.Trim(),
+                            Photo = string.IsNullOrEmpty(c.profile_path) ? null : "https://image.tmdb.org/t/p/w185" + c.profile_path,
+                            Department = "Acting"
+                        }).ToList();
+                }
             }
             catch (Exception ex)
             {

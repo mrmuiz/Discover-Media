@@ -38,8 +38,6 @@ namespace Emby.Plugins.Discover
         private const string AskGenrePrefix = "ask16genres:";   // map met genretegels (movie of tv)
         private const string AskStudioRoot = "ask16studios";       // map met studio- en netwerktegels
         internal const string AskPrefix = "ask16:";           // het aanvraagitem zelf
-        private const string AskCastPrefix = "ask26cast:";      // map "Cast" bij een titel: "ask26cast:m:123"
-        private const string AskPersonPrefix = "ask26person:";  // map van één persoon: "ask26person:6968"
         /// <summary>
         /// Achtervoegsel aan het id van het aanvraag-/traileritem zodra de tegel met tekst klaar is. Emby zet de afbeelding van
         /// een kanaalitem alleen bij het aanmaken; met een nieuw id maakt Emby het item opnieuw aan, nu met de tegel met tekst.
@@ -74,7 +72,7 @@ namespace Emby.Plugins.Discover
         // Ophogen als Emby oude (bewaarde) kanaalinhoud blijft tonen.
         // De tegel-epoch verandert als de opruiming tegelplaatjes heeft verwijderd: dan vraagt Emby de mappen opnieuw op
         // en maakt de plugin de ontbrekende plaatjes opnieuw (anders verwijst Emby naar een bestand dat niet meer bestaat).
-        public string DataVersion => (Plugin.GetCurrentConfiguration().ShowTrailerTile ? "75" : "75-notrailer") + "-e" + CacheCleaner.TileEpoch;
+        public string DataVersion => (Plugin.GetCurrentConfiguration().ShowTrailerTile ? "76" : "76-notrailer") + "-e" + CacheCleaner.TileEpoch;
         public ChannelParentalRating ParentalRating => ChannelParentalRating.GeneralAudience;
         public bool IsEnabledFor(string userId) => true;
 
@@ -140,8 +138,6 @@ namespace Emby.Plugins.Discover
                 else if (id.StartsWith(LegacyAskSeasonFolderPrefix3)) res = await RequestSeasons(id.Substring(LegacyAskSeasonFolderPrefix3.Length), ct).ConfigureAwait(false);
                 else if (id.StartsWith(LegacyAskSeasonFolderPrefix2)) res = await RequestSeasons(id.Substring(LegacyAskSeasonFolderPrefix2.Length), ct).ConfigureAwait(false);
                 else if (id.StartsWith(LegacyAskSeasonFolderPrefix)) res = await RequestSeasons(id.Substring(LegacyAskSeasonFolderPrefix.Length), ct).ConfigureAwait(false);
-                else if (id.StartsWith(AskCastPrefix)) res = await CastFolder(StripTileMark(id.Substring(AskCastPrefix.Length)), ct).ConfigureAwait(false);
-                else if (id.StartsWith(AskPersonPrefix)) res = await PersonFolder(id.Substring(AskPersonPrefix.Length), ct).ConfigureAwait(false);
                 else if (id.StartsWith(AskGenrePrefix)) res = await GenreTiles(id.Substring(AskGenrePrefix.Length) == "tv", ct).ConfigureAwait(false);
                 else if (id == AskStudioRoot) res = await StudioTiles(ct).ConfigureAwait(false);
                 else if (id.StartsWith(AskListPrefix)) res = await GetList(id.Substring(AskListPrefix.Length), query, ct, true).ConfigureAwait(false);
@@ -302,7 +298,6 @@ namespace Emby.Plugins.Discover
             // Zet de tekst "Aanvragen" resp. "Trailer" op de tegelafbeelding, zodat je de twee tegels direct uit elkaar houdt.
             // Lukt dat niet (of duurt het te lang), dan blijft de gewone achtergrond staan.
             bool showTrailerTile = Plugin.GetCurrentConfiguration().ShowTrailerTile;
-            var bgUrlForTiles = item.ImageUrl;   // gewone achtergrond, vóór de tegels met tekst
             // Alleen als een gebruiker de titel echt opent (UserId gezet), niet tijdens "Refresh Internet Channels"
             // (dat opent elke titel en zou dan voor alles ffmpeg starten), tenzij "vooraf maken" aan staat.
             if (!string.IsNullOrEmpty(t.backdrop_path) && (userBrowsing || Plugin.GetCurrentConfiguration().PrecreateCards))
@@ -344,115 +339,13 @@ namespace Emby.Plugins.Discover
                     DiscoverLanguage.Text("Kies een seizoen om alleen dat seizoen aan te vragen.",
                         "Choose a season to request only that season.",
                         "Wähle eine Staffel aus, um nur diese anzufordern."));
-                var tvList = showTrailerTile
+                return showTrailerTile
                     ? new List<ChannelItemInfo> { trailer, seasonFolder }
                     : new List<ChannelItemInfo> { seasonFolder };
-                AddCastFolder(tvList, rest, title, item.ImageUrl, bgUrlForTiles, userBrowsing);
-                return tvList;
             }
-            var mList = showTrailerTile
+            return showTrailerTile
                 ? new List<ChannelItemInfo> { trailer, item }
                 : new List<ChannelItemInfo> { item };
-            AddCastFolder(mList, rest, title, item.ImageUrl, bgUrlForTiles, userBrowsing);
-            return mList;
-        }
-
-        /// <summary>Optionele derde tegel "Cast" (instelling ChannelCastFolder), met tekst-tegel zoals Request/Trailer.</summary>
-        private void AddCastFolder(List<ChannelItemInfo> list, string rest, string title, string currentImage, string bgUrl, bool userBrowsing)
-        {
-            if (!Plugin.GetCurrentConfiguration().ChannelCastFolder) return;
-            var tileKey = "rq" + rest.Replace(":", "") + "cast";
-            var text = DiscoverLanguage.Text("Cast", "Cast", "Besetzung", "Rolleliste");
-            string tile = null;
-            if (!string.IsNullOrEmpty(bgUrl))
-            {
-                tile = FolderTile.Existing(tileKey, text, bgUrl);
-                if (tile == null) FolderTile.EnsureInBackground(tileKey, text, bgUrl);
-            }
-            list.Add(Folder(AskCastPrefix + rest + (tile != null ? TileMark : ""),
-                DiscoverLanguage.Text("Cast: ", "Cast: ", "Besetzung: ", "Rolleliste: ") + title,
-                tile ?? bgUrl ?? currentImage,
-                DiscoverLanguage.Text("De acteurs (en makers) van deze titel. Kies iemand om zijn of haar films en series te zien.",
-                    "The cast (and creators) of this title. Pick someone to see their movies and series.",
-                    "Die Besetzung dieses Titels. Wähle jemanden, um die Filme und Serien zu sehen.")));
-        }
-
-        /// <summary>Inhoud van de map "Cast": acteurs met foto en rol, en (instelling) regisseur of makers.</summary>
-        private async Task<ChannelItemResult> CastFolder(string rest, CancellationToken ct)
-        {
-            bool tv = rest.StartsWith("t:");
-            int tmdbId;
-            if (rest.Length < 3 || !int.TryParse(rest.Substring(2), out tmdbId)) throw new InvalidOperationException("Onbekende castmap: " + rest);
-            var x = await _tmdb.GetExtraCached(tv, tmdbId, ct).ConfigureAwait(false);
-            var items = new List<ChannelItemInfo>();
-            var seen = new HashSet<int>();
-            if (x != null && x.credits != null && x.credits.cast != null)
-            {
-                foreach (var c in x.credits.cast.Where(c => c != null && c.id > 0 && !string.IsNullOrWhiteSpace(c.name)).OrderBy(c => c.order).Take(20))
-                {
-                    if (!seen.Add(c.id)) continue;
-                    items.Add(PersonItem(c.id, c.name, c.profile_path, c.character));
-                }
-            }
-            if (x != null && Plugin.GetCurrentConfiguration().CastIncludeCrew)
-            {
-                if (tv && x.created_by != null)
-                    foreach (var c in x.created_by.Where(c => c != null && c.id > 0 && !string.IsNullOrWhiteSpace(c.name)).Take(4))
-                    { if (seen.Add(c.id)) items.Add(PersonItem(c.id, c.name, c.profile_path, DiscoverLanguage.Text("Maker", "Creator", "Schöpfer"))); }
-                if (!tv && x.credits != null && x.credits.crew != null)
-                    foreach (var c in x.credits.crew.Where(c => c != null && c.id > 0 && c.job == "Director").Take(3))
-                    { if (seen.Add(c.id)) items.Add(PersonItem(c.id, c.name, c.profile_path, DiscoverLanguage.Text("Regie", "Director", "Regie"))); }
-            }
-            return new ChannelItemResult { Items = items, TotalRecordCount = items.Count };
-        }
-
-        private static ChannelItemInfo PersonItem(int id, string name, string profile, string role) =>
-            new ChannelItemInfo
-            {
-                Id = AskPersonPrefix + id.ToString(CultureInfo.InvariantCulture),
-                Name = name.Trim(),
-                Type = ChannelItemType.Folder,
-                FolderType = ChannelFolderType.Container,
-                ImageUrl = string.IsNullOrEmpty(profile) ? null : "https://image.tmdb.org/t/p/h632" + profile,
-                Overview = string.IsNullOrWhiteSpace(role) ? null : role.Trim()
-            };
-
-        /// <summary>Inhoud van de map van één persoon: films en series (nieuwste eerst), als titelmappen met Request/Trailer.</summary>
-        private async Task<ChannelItemResult> PersonFolder(string rest, CancellationToken ct)
-        {
-            int pid;
-            if (!int.TryParse(rest, out pid)) throw new InvalidOperationException("Onbekende persoonsmap: " + rest);
-            var credits = await _tmdb.GetPersonCredits(pid, ct).ConfigureAwait(false) ?? new List<TmdbPersonCredit>();
-            var ms = await SafeStates(false, ct).ConfigureAwait(false);
-            var ts = await SafeStates(true, ct).ConfigureAwait(false);
-            var items = new List<ChannelItemInfo>();
-            var seen = new HashSet<string>();
-            foreach (var c in credits
-                .Where(c => c != null && c.Item != null && !c.Item.adult && !string.IsNullOrEmpty(c.Item.poster_path))
-                .OrderByDescending(c => (c.Tv ? c.Item.first_air_date : c.Item.release_date) ?? "")
-                .Take(150))
-            {
-                var i = c.Item;
-                if (!seen.Add((c.Tv ? "t" : "m") + i.id)) continue;
-                var states = c.Tv ? ts : ms;
-                string suffix = states.TryGetValue(i.id, out var hasFiles) ? (hasFiles ? " \u2713" : " \u23F3") : "";
-                var f = new ChannelItemInfo
-                {
-                    Id = (c.Tv ? AskTvItemPrefix : AskItemPrefix) + (c.Tv ? "t:" : "m:") + i.id,
-                    Name = TitleOf(i, c.Tv) + suffix,
-                    Type = ChannelItemType.Folder,
-                    FolderType = ChannelFolderType.Container,
-                    MediaType = ChannelMediaType.Video,
-                    ContentType = ChannelMediaContentType.Trailer,
-                    ImageUrl = TmdbClient.PosterUrl(i.poster_path),
-                    Overview = (string.IsNullOrWhiteSpace(c.Role) ? "" : (c.Role == "Director" ? DiscoverLanguage.Text("Regie", "Director", "Regie") : c.Role) + "\n\n") + WithDate(i, c.Tv),
-                    ProviderIds = new ProviderIdDictionary { { "Tmdb", i.id.ToString() } },
-                    ProductionYear = YearOf(c.Tv ? i.first_air_date : i.release_date)
-                };
-                if (i.vote_average > 0) f.CommunityRating = (float)i.vote_average;
-                items.Add(f);
-            }
-            return new ChannelItemResult { Items = items, TotalRecordCount = items.Count };
         }
 
         private async Task<ChannelItemResult> RequestSeasons(string rest, CancellationToken ct)
