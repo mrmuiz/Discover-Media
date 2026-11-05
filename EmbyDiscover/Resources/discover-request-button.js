@@ -8,7 +8,7 @@
         console.warn('[Discover] oudere knopcode is nog actief; vernieuw de webclient om dubbele handlers te voorkomen.');
         return;
     }
-    var DC_BUILD = 'big-r15 2026-11-05';
+    var DC_BUILD = 'big-r16 2026-11-05';
     window.__discoverRequestButton = true;
     window.__discoverRequestButtonVersion = '1.4.0.0';
     window.__discoverRequestButtonBuild = DC_BUILD;
@@ -105,6 +105,8 @@
             /* De rijen nemen Emby's eigen maten over (zelfde postergrootte en uitlijning als "More Like This"):
                de sectie en titel krijgen Emby's klassen, de maten komen uit --dc-w/--dc-h (gemeten op de pagina). */
             '.discover-row-section { position: relative; }',
+            /* Titelmap met alleen Request en Trailer: de twee tegels iets verder uit elkaar (niet bij lange seizoenslijsten). */
+            'body.discover-folder-page .itemsContainer.virtualItemsContainer:not(:has(> .card:nth-child(4))) > .card .cardBox { margin-left: 1.4em !important; margin-right: 1.4em !important; }',
             /* Emby's afspeelknop midden op de poster: op Discover-pagina's betekent afspelen aanvragen of trailer; daar weg. */
             'body.discover-ask-page .detailImageContainer [class*="verlay"], body.discover-ask-page .detailImageContainer .cardOverlayContainer, body.discover-ask-page .itemDetailImage ~ [class*="verlay"] { display: none !important; }',
             'body.discover-folder-page .card [class*="cardOverlayButton"], body.discover-folder-page .card [class*="cardOverlayFab"], body.discover-folder-page .card .cardOverlayContainer { display: none !important; }',

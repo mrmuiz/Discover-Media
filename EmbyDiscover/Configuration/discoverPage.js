@@ -38,8 +38,8 @@ define([], function () {
             return;
         }
         var urls = [
-            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1383' }),
-            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1383' }),
+            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1384' }),
+            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1384' }),
             ApiClient.getUrl('Plugins/Discover/Script')
         ];
         var n = 0;
