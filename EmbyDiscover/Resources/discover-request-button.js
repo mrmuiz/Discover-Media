@@ -8,7 +8,7 @@
         console.warn('[Discover] oudere knopcode is nog actief; vernieuw de webclient om dubbele handlers te voorkomen.');
         return;
     }
-    var DC_BUILD = 'big-r17 2026-11-05';
+    var DC_BUILD = 'big-r18 2026-11-05';
     window.__discoverRequestButton = true;
     window.__discoverRequestButtonVersion = '1.4.0.0';
     window.__discoverRequestButtonBuild = DC_BUILD;
@@ -1915,7 +1915,7 @@
         var link = document.createElement('a');
         link.className = 'discover-row-poster';
         // Klik op de poster: de Discover-popup met info en trailer.
-        link.href = '#!/configurationpage?name=discoverui1086&openType=' + item.Type + '&openId=' + item.TmdbId;
+        link.href = '#!/configurationpage?name=discoverui1087&openType=' + item.Type + '&openId=' + item.TmdbId;
         link.setAttribute('aria-label', item.Title);   // geen title: dat gaf een tooltip-vakje over de poster
         // Gewone klik: de popup hier op de pagina openen (Ctrl/middenklik volgt de link naar Discover).
         link.addEventListener('click', function (e) {
@@ -2091,7 +2091,9 @@
         findEmbyPersonRB(pid, name).then(function (p) {
             if (p) { goEmbyItem(p.Id); return; }
             try { sessionStorage.setItem('dcOpenNext', JSON.stringify({ kind: 'person', id: pid, name: name || '', at: Date.now() })); } catch (e) { }
-            window.location.hash = '#!/configurationpage?name=' + DC_UI_PAGE + '&openPerson=' + pid + '&openName=' + encodeURIComponent(name || '');
+            // Zonder extra parameters: dan hergebruikt Emby de al geopende Discover-pagina (anders maakt 4.11 een tweede,
+            // onzichtbare kopie). Wat er geopend moet worden staat in sessionStorage.
+            window.location.hash = '#!/configurationpage?name=' + DC_UI_PAGE;
         });
     }
     function castHost(id) {
@@ -2212,7 +2214,7 @@
     // ---- De Discover-popup boven de huidige pagina ----
     // Laadt de Discover-pagina één keer onzichtbaar (alleen de popup wordt gebruikt) met dezelfde controller
     // als de echte pagina, in "embedded"-modus. Zo is de popup overal gelijk: info, cast, seizoenen, trailer, aanvragen.
-    var DC_UI_PAGE = 'discoverui1086', DC_UI_JS = 'discoveruijs1383';
+    var DC_UI_PAGE = 'discoverui1087', DC_UI_JS = 'discoveruijs1384';
     var embedPromise = null;
     function pageText(c, name) {
         var url = c.getUrl('web/ConfigurationPage', { name: name });
@@ -2273,7 +2275,7 @@
         }, function () {
             // Reserve: naar de Discover-pagina met de popup.
             try { sessionStorage.setItem('dcOpenNext', JSON.stringify({ kind: 'title', type: type, id: tmdbId, at: Date.now() })); } catch (e) { }
-            try { window.location.hash = '#!/configurationpage?name=' + DC_UI_PAGE + '&openType=' + type + '&openId=' + tmdbId; } catch (e) { }
+            try { window.location.hash = '#!/configurationpage?name=' + DC_UI_PAGE; } catch (e) { }
         });
     }
     // Persoonspagina: Emby's filmografielijst verbergen zolang onze posterrij "Niet in je bibliotheek" er staat

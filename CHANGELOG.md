@@ -33,9 +33,9 @@
 - Fix: Emby only sets the image of a channel item when it creates the item, so a text tile made later never showed up. Once the "Request"/"Trailer" tile (or the new "All seasons" tile) is ready, the item now gets a slightly different id (suffix `:x`), so Emby creates it again with the tile. The same goes for the "Request: <series>" season folder. The suffix is stripped wherever the plugin reads these ids (play, request on play, season list, item lookups).
 - Fix: **Emby 4.11 no longer returns `ChannelId`** for channel items, so the web script did not recognise Discover folders and tiles (no info block, cast, hidden Play/Shuffle or tile buttons). New `GET /Discover/IsDiscoverItem?Id=` / `?Ids=a,b,c` answers from the item's ExternalId; the script uses it wherever it used `ChannelId`.
 - Change: in a title folder with only the Request and Trailer tiles, the two tiles have a little more space between them (web client).
-- Fix: clicking an actor (or a poster that falls back to the Discover page) sometimes only opened the Discover home page: Emby can drop the extra parameters or reuse the open Discover page without a new `viewshow`. The target is now also passed via sessionStorage and picked up on `hashchange`.
+- Fix: clicking an actor (or a poster that falls back to the Discover page) sometimes only opened the Discover home page: Emby can drop the extra parameters or reuse the open Discover page without a new `viewshow`. Emby 4.11 even creates a second, hidden copy of the Discover page when the address has extra parameters. The plugin now opens the plain Discover address (so Emby reuses its page) and passes the person or title via sessionStorage, also picked up on `hashchange`.
 - Note: backdrops for channel items in the native TV/mobile apps are not possible (Emby has no backdrop field for channel items); they work in the web client.
-- Change: page names bumped (`discoverui1086`, `discoveruijs1383`, `discoverbuttonjs1385`, `discoverconfigjs1360`, `discoverstatusjs1103`).
+- Change: page names bumped (`discoverui1087`, `discoveruijs1384`, `discoverbuttonjs1386`, `discoverconfigjs1360`, `discoverstatusjs1103`).
 
 ## Version 1.3.5.6
 

@@ -38,8 +38,8 @@ define([], function () {
             return;
         }
         var urls = [
-            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1385' }),
-            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1385' }),
+            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1386' }),
+            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1386' }),
             ApiClient.getUrl('Plugins/Discover/Script')
         ];
         var n = 0;
@@ -70,7 +70,7 @@ define([], function () {
         })();
     }
 
-    var UI_PAGE = 'discoverui1086';
+    var UI_PAGE = 'discoverui1087';
 
     return function (view, params) {
         // embedded: alleen de popup, over een andere Emby-pagina heen (film-, serie- of acteurspagina).
@@ -1425,7 +1425,7 @@ define([], function () {
                 closeModal();
                 if (p) { goToEmbyItem(p.Id); return; }
                 try { sessionStorage.setItem('dcOpenNext', JSON.stringify({ kind: 'person', id: pid, name: name || '', at: Date.now() })); } catch (e) { }
-                window.location.hash = '#!/configurationpage?name=' + UI_PAGE + '&openPerson=' + pid + '&openName=' + encodeURIComponent(name || '');
+                window.location.hash = '#!/configurationpage?name=' + UI_PAGE;
             });
         });
         overlay.addEventListener('click', function (e) { if (e.target === overlay) { closeModal(); } });
