@@ -35,7 +35,13 @@
 - Change: in a title folder with only the Request and Trailer tiles, the two tiles have a little more space between them (web client).
 - Fix: clicking an actor (or a poster that falls back to the Discover page) sometimes only opened the Discover home page: Emby can drop the extra parameters or reuse the open Discover page without a new `viewshow`. Emby 4.11 even creates a second, hidden copy of the Discover page when the address has extra parameters. The plugin now opens the plain Discover address (so Emby reuses its page) and passes the person or title via sessionStorage. (Emby 4.11 creates a new Discover page on every visit; it first shows an old copy and then replaces it, so every Discover page that appears within 10 seconds opens the target once; then it expires.)
 - Note: backdrops for channel items in the native TV/mobile apps are not possible (Emby has no backdrop field for channel items); they work in the web client.
-- Change: page names bumped (`discoverui1090`, `discoveruijs1387`, `discoverbuttonjs1390`, `discoverconfigjs1360`, `discoverstatusjs1103`).
+- Fix: the settings page always opens on the **General** tab (it remembered the last tab, so it could open straight on Diagnostics).
+- Fix: an actor click from a channel page now waits up to 30 seconds for the Discover page (the first load after a restart can take longer than 10 seconds).
+- Fix: **Back** on a person page goes back to where you came from: the Emby or channel page you clicked the actor on, or, inside Discover, the search results, list or home page exactly as you left them.
+- Fix: text in the Discover popup no longer runs off the right edge for titles with a long cast row.
+- Change: on a request page of something that is already requested (⏳) the button says **Request again**.
+- Change: channel DataVersion 76.
+- Change: page names bumped (`discoverconfig1083`, `discoverconfigjs1363`, `discoverui1092`, `discoveruijs1389`, `discoverbuttonjs1393`, `discoverstatusjs1103`).
 
 ## Version 1.3.5.6
 

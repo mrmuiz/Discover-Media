@@ -8,7 +8,7 @@
         console.warn('[Discover] oudere knopcode is nog actief; vernieuw de webclient om dubbele handlers te voorkomen.');
         return;
     }
-    var DC_BUILD = 'big-r22d 2026-11-05';
+    var DC_BUILD = '1.4.0.0 2026-11-05';
     window.__discoverRequestButton = true;
     window.__discoverRequestButtonVersion = '1.4.0.0';
     window.__discoverRequestButtonBuild = DC_BUILD;
