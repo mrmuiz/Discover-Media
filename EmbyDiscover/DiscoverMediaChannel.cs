@@ -331,7 +331,9 @@ namespace Emby.Plugins.Discover
             if (tv)
             {
                 // The Aanvragen: <series> folder is the season selector; do not add a whole-series request tile.
-                var seasonFolder = Folder(AskSeasonFolderPrefix + rest,
+                // Ook de seizoensmap ("Request: serie") krijgt met de tegel met tekst een nieuw id, anders houdt Emby de oude foto.
+                bool askHasTile = item.Id.EndsWith(TileMark, StringComparison.Ordinal);
+                var seasonFolder = Folder(AskSeasonFolderPrefix + rest + (askHasTile ? TileMark : ""),
                     DiscoverLanguage.Text("Aanvragen: ", "Request: ", "Anfragen: ", "Forespør: ") + title,
                     item.ImageUrl,
                     DiscoverLanguage.Text("Kies een seizoen om alleen dat seizoen aan te vragen.",
@@ -348,6 +350,7 @@ namespace Emby.Plugins.Discover
 
         private async Task<ChannelItemResult> RequestSeasons(string rest, CancellationToken ct)
         {
+            rest = StripTileMark(rest);
             var parts = rest.Split(':');
             int tmdbId;
             if (parts.Length != 2 || parts[0] != "t" || !int.TryParse(parts[1], out tmdbId))
