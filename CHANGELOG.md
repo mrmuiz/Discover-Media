@@ -12,8 +12,10 @@
 - New: **person page in Discover** (`GET /Discover/Person`): photo, born/died with age, place of birth, biography (English fallback, "More"), a backdrop of their best-known title, and rows **In your library** (opens the title in Emby), **Movies · not in your library** and **Series · not in your library**, newest first. Up to 150 credits.
 - Change: the person page rows are called **More movies with <name>** and **More series with <name>** ("by <name>" for directors), each card shows the **role** (character or "Director") under the year, and duplicate TMDB entries of the same title (same type and year with nearly the same title, or the same poster) are shown once (also in the rows on Emby's person pages).
 - Change: on Emby's person pages the plugin row is split into **Movies · not in your library** and **Series · not in your library**.
+- New: **Cast row with round photos** under Discover channel pages in the web client: a title folder, the "Request: <series>" season list, request items and the trailer item (`GET /Discover/ItemCast?Id=<Emby item id>`, up to 20). A click opens Emby's person page when that person is in your library, otherwise the Discover person page.
+- Fix: the Discover popup above an Emby page now loads the **download progress** right away and keeps refreshing it (every 15 s while something downloads) as long as it is open.
 - Note: backdrops for channel items in the native TV/mobile apps are not possible (Emby has no backdrop field for channel items); they work in the web client.
-- Change: page names bumped (`discoverui1085`, `discoveruijs1380`, `discoverbuttonjs1376`, `discoverconfigjs1359`).
+- Change: page names bumped (`discoverui1085`, `discoveruijs1381`, `discoverbuttonjs1377`, `discoverconfigjs1359`).
 
 ## Version 1.3.5.6
 

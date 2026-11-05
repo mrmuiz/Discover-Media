@@ -8,7 +8,7 @@
         console.warn('[Discover] oudere knopcode is nog actief; vernieuw de webclient om dubbele handlers te voorkomen.');
         return;
     }
-    var DC_BUILD = 'big-r4 2026-11-05';
+    var DC_BUILD = 'big-r5 2026-11-05';
     window.__discoverRequestButton = true;
     window.__discoverRequestButtonVersion = '1.4.0.0';
     window.__discoverRequestButtonBuild = DC_BUILD;
@@ -103,6 +103,16 @@
             /* De rijen nemen Emby's eigen maten over (zelfde postergrootte en uitlijning als "More Like This"):
                de sectie en titel krijgen Emby's klassen, de maten komen uit --dc-w/--dc-h (gemeten op de pagina). */
             '.discover-row-section { position: relative; }',
+            /* Cast onder kanaalpagina's ("Request: titel", titelmap, trailer): ronde foto's zoals in de Discover-popup. */
+            '.discover-cast-section { margin-top: 1.5em; }',
+            '.discover-cast-row { display: flex; gap: 14px; overflow-x: auto; padding-top: 6px; padding-bottom: 12px; scrollbar-width: none; }',
+            '.discover-cast-row::-webkit-scrollbar { display: none; }',
+            '.discover-cast-p { flex: 0 0 auto; width: 96px; display: flex; flex-direction: column; align-items: center; text-align: center; background: none; border: 0; color: inherit; cursor: pointer; padding: 4px; border-radius: 8px; font: inherit; }',
+            '.discover-cast-ph { width: 80px; height: 80px; border-radius: 50%; background: #1c2640 center/cover no-repeat; border: 2px solid rgba(255,255,255,.15); display: flex; align-items: center; justify-content: center; font-weight: 600; margin-bottom: 6px; transition: border-color .15s, transform .15s; }',
+            '.discover-cast-p:hover .discover-cast-ph, .discover-cast-p:focus .discover-cast-ph { border-color: #ffb400; transform: scale(1.05); }',
+            '.discover-cast-p:focus { outline: 0; }',
+            '.discover-cast-n { font-size: .85em; font-weight: 600; line-height: 1.2; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }',
+            '.discover-cast-r { font-size: .75em; opacity: .65; line-height: 1.2; margin-top: 2px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }',
             '.mainCreditsSection.discover-hidden-credits { display: none !important; }',
             '.discover-row-wrap { position: relative; }',
             '.discover-row-scroller { display: flex; overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none; -ms-overflow-style: none; }',
@@ -1964,10 +1974,105 @@
     }
     function filmReqOpen(type, tmdbId) { openPopupHere(type, tmdbId); }
 
+    // ---- Cast onder kanaalpagina's van Discover (titelmap, "Request: serie", aanvraag- en traileritem) ----
+    var castData = {};   // Emby-item-id -> { Cast: [...] } | 'loading'
+    function goEmbyItem(embyId) {
+        var c = api();
+        var fallback = function () { window.location.hash = '#!/item?id=' + encodeURIComponent(embyId) + '&serverId=' + encodeURIComponent(c.serverId()); };
+        try {
+            Promise.resolve(c.getItem(c.getCurrentUserId(), embyId)).then(function (item) {
+                try { require(['appRouter'], function (router) { try { router.showItem(item); } catch (e) { fallback(); } }, fallback); }
+                catch (e) { fallback(); }
+            }, fallback);
+        } catch (e) { fallback(); }
+    }
+    function findEmbyPersonRB(pid, name) {
+        var c = api();
+        return Promise.resolve(c.getJSON(c.getUrl('Persons', { SearchTerm: name || '', UserId: c.getCurrentUserId(), Fields: 'ProviderIds', Limit: 30 })))
+            .then(function (r) {
+                var list = (r && r.Items) || [], exact = null;
+                for (var k = 0; k < list.length; k++) {
+                    var t = list[k].ProviderIds && (list[k].ProviderIds.Tmdb || list[k].ProviderIds.tmdb);
+                    if (t && String(t) === String(pid)) { return list[k]; }
+                    if (!exact && String(list[k].Name || '').toLowerCase() === String(name || '').toLowerCase()) { exact = list[k]; }
+                }
+                return exact;
+            }, function () { return null; });
+    }
+    // In je bibliotheek: Emby's acteurspagina; anders de persoonspagina van Discover.
+    function openCastPerson(pid, name) {
+        findEmbyPersonRB(pid, name).then(function (p) {
+            if (p) { goEmbyItem(p.Id); return; }
+            window.location.hash = '#!/configurationpage?name=' + DC_UI_PAGE + '&openPerson=' + pid + '&openName=' + encodeURIComponent(name || '');
+        });
+    }
+    function castHost(id) {
+        // Mappagina (lijst met seizoenen of tegels): direct onder de lijst.
+        if (folderPage[id] === true) {
+            var conts = document.querySelectorAll('.itemsContainer');
+            for (var i = conts.length - 1; i >= 0; i--) {
+                if (visible(conts[i]) && conts[i].parentNode) { return { parent: conts[i].parentNode, after: conts[i] }; }
+            }
+            return null;
+        }
+        var p = rowParent();
+        return p ? { parent: p, after: null } : null;
+    }
+    function syncItemCast(id) {
+        var old = document.querySelectorAll('.discover-cast-section');
+        for (var o = 0; o < old.length; o++) {
+            if (old[o].getAttribute('data-itemid') !== id && old[o].parentNode) { old[o].parentNode.removeChild(old[o]); }
+        }
+        if (!id || !api() || !(folderPage[id] === true || askIds[id] || trailerIds[id])) { return; }
+        var mine = document.querySelector('.discover-cast-section[data-itemid="' + id + '"]');
+        if (mine && visible(mine)) { return; }
+        if (mine && mine.parentNode) { mine.parentNode.removeChild(mine); }
+        if (castData[id] === undefined) {
+            castData[id] = 'loading';
+            var c = api();
+            Promise.resolve(c.ajax({ type: 'GET', dataType: 'json', url: c.getUrl('Discover/ItemCast', { Id: id }) })).then(function (r) {
+                castData[id] = r || { Cast: [] };
+                schedule();
+            }, function () { castData[id] = { Cast: [] }; });
+            return;
+        }
+        var d = castData[id];
+        if (!d || d === 'loading' || !d.Cast || !d.Cast.length) { return; }
+        var host = castHost(id);
+        if (!host) { return; }
+        var sec = document.createElement('div');
+        sec.className = 'discover-cast-section verticalSection';
+        sec.setAttribute('data-itemid', id);
+        var h = document.createElement('h2');
+        h.className = 'sectionTitle sectionTitle-cards padded-left padded-left-page padded-right';
+        h.textContent = text('Cast', 'Cast', 'Besetzung', 'Rolleliste');
+        sec.appendChild(h);
+        var row = document.createElement('div');
+        row.className = 'discover-cast-row padded-left padded-left-page padded-right';
+        d.Cast.forEach(function (p) {
+            var b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'discover-cast-p';
+            b.title = p.Name;
+            var ph = document.createElement('div');
+            ph.className = 'discover-cast-ph';
+            if (p.Photo) { ph.style.backgroundImage = 'url("' + p.Photo + '")'; }
+            else { ph.textContent = String(p.Name || '?').split(/\s+/).map(function (w) { return w.charAt(0); }).slice(0, 2).join(''); }
+            var n = document.createElement('div'); n.className = 'discover-cast-n'; n.textContent = p.Name;
+            b.appendChild(ph); b.appendChild(n);
+            if (p.Character) { var r = document.createElement('div'); r.className = 'discover-cast-r'; r.textContent = p.Character; b.appendChild(r); }
+            b.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); openCastPerson(p.Id, p.Name); });
+            row.appendChild(b);
+        });
+        sec.appendChild(row);
+        if (host.after && host.after.parentNode === host.parent) { host.parent.insertBefore(sec, host.after.nextSibling); }
+        else { host.parent.appendChild(sec); }
+    }
+
     // ---- De Discover-popup boven de huidige pagina ----
     // Laadt de Discover-pagina één keer onzichtbaar (alleen de popup wordt gebruikt) met dezelfde controller
     // als de echte pagina, in "embedded"-modus. Zo is de popup overal gelijk: info, cast, seizoenen, trailer, aanvragen.
-    var DC_UI_PAGE = 'discoverui1085', DC_UI_JS = 'discoveruijs1380';
+    var DC_UI_PAGE = 'discoverui1085', DC_UI_JS = 'discoveruijs1381';
     var embedPromise = null;
     function pageText(c, name) {
         var url = c.getUrl('web/ConfigurationPage', { name: name });
@@ -2233,6 +2338,7 @@
         syncRequestTileCards();
         syncFolderPage(id);
         syncExtraRows(id);
+        syncItemCast(id);
         syncBodyClass(id);
         var ask = !!(id && askIds[id]);
         var seasonAsk = !!(id && seasonAskIds[id]);

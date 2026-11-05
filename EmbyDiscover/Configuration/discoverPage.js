@@ -38,8 +38,8 @@ define([], function () {
             return;
         }
         var urls = [
-            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1376' }),
-            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1376' }),
+            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1377' }),
+            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1377' }),
             ApiClient.getUrl('Plugins/Discover/Script')
         ];
         var n = 0;
@@ -176,7 +176,11 @@ define([], function () {
                 if (cap) { cap.insertAdjacentHTML('beforeend', capQueueHtml(i, card.hasAttribute('data-mine'))); }
             }
         }
-        function pageActive() { return onDiscoverRoute() && document.body.contains(view); }
+        // Boven een Emby-pagina (embedded) alleen zolang de popup open is: dan ververst de voortgang daarin ook.
+        function pageActive() {
+            if (embedded) { return document.body.contains(view) && overlay.classList.contains('open'); }
+            return onDiscoverRoute() && document.body.contains(view);
+        }
         function scheduleQueue(ms) {
             clearTimeout(queueTimer);
             queueTimer = setTimeout(loadQueue, ms);
@@ -1765,6 +1769,8 @@ define([], function () {
                 if (!r || !r.Found || !r.Item) { showToast(text('Titel niet gevonden.', 'Title not found.', 'Titel nicht gefunden.'), true); return; }
                 items[key(r.Item)] = r.Item;
                 openItem(r.Item);
+                // Downloadvoortgang meteen ophalen en blijven verversen zolang de popup open is.
+                setTimeout(function () { scheduleQueue(0); }, 300);
             }, function () {
                 showToast(text('Titel laden mislukt.', 'Loading title failed.', 'Titel konnte nicht geladen werden.'), true);
             });

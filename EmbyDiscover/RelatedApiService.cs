@@ -73,6 +73,21 @@ namespace Emby.Plugins.Discover
         public List<string> Urls { get; set; } = new List<string>();
     }
 
+    [Route("/Discover/ItemCast", "GET", Summary = "Cast (met foto) bij een titel in het Discover-kanaal")]
+    [Authenticated]
+    public class DiscoverItemCastRequest : IReturn<DiscoverItemCastResult>
+    {
+        /// <summary>Emby-item-id van een kanaalmap of kanaalitem.</summary>
+        public string Id { get; set; }
+    }
+
+    public class DiscoverItemCastResult
+    {
+        public string Type { get; set; }
+        public int TmdbId { get; set; }
+        public List<DiscoverPersonDto> Cast { get; set; } = new List<DiscoverPersonDto>();
+    }
+
     [Route("/Discover/ItemBackdrop", "GET", Summary = "Achtergrond voor een pagina of tegel in het Discover-kanaal")]
     [Authenticated]
     public class DiscoverItemBackdropRequest : IReturn<DiscoverItemBackdropResult>
@@ -186,6 +201,51 @@ namespace Emby.Plugins.Discover
         /// Zoekt bij een kanaalpagina (titelmap, aanvraagmap, seizoen, trailer) de TMDB-achtergrond van die titel.
         /// Kanaalitems herken je aan hun ExternalId ("ask..."/"tr..."), met daarin "m:123" (film) of "t:123" (serie).
         /// </summary>
+        public async Task<object> Get(DiscoverItemCastRequest request)
+        {
+            var res = new DiscoverItemCastResult();
+            if (!TmdbReady) return res;
+            try
+            {
+                var raw = (request.Id ?? "").Trim();
+                if (raw.Length == 0) return res;
+                MediaBrowser.Controller.Entities.BaseItem item = null;
+                long internalId;
+                Guid guid;
+                if (long.TryParse(raw, out internalId)) item = _library.GetItemById(internalId);
+                else if (Guid.TryParse(raw, out guid)) item = _library.GetItemById(guid);
+                var ext = item == null ? null : item.ExternalId;
+                if (string.IsNullOrEmpty(ext) || !(ext.StartsWith("ask", StringComparison.Ordinal) || ext.StartsWith("tr", StringComparison.Ordinal)))
+                    return res;
+                var m = ChannelTitleId.Match(ext);
+                if (!m.Success) return res;
+                bool tv = m.Groups[1].Value == "t";
+                int tmdbId = int.Parse(m.Groups[2].Value);
+                res.Type = tv ? "tv" : "movie";
+                res.TmdbId = tmdbId;
+                var x = await _tmdb.GetExtraCached(tv, tmdbId, CancellationToken.None).ConfigureAwait(false);
+                if (x == null || x.credits == null || x.credits.cast == null) return res;
+                res.Cast = x.credits.cast
+                    .Where(c => c != null && c.id > 0 && !string.IsNullOrWhiteSpace(c.name))
+                    .OrderBy(c => c.order)
+                    .Take(20)
+                    .Select(c => new DiscoverPersonDto
+                    {
+                        Id = c.id,
+                        Name = c.name.Trim(),
+                        Character = string.IsNullOrWhiteSpace(c.character) ? null : c.character.Trim(),
+                        Photo = string.IsNullOrEmpty(c.profile_path) ? null : "https://image.tmdb.org/t/p/w185" + c.profile_path,
+                        Department = "Acting"
+                    }).ToList();
+            }
+            catch (Exception ex)
+            {
+                if (ex is OperationCanceledException) throw;
+                DiscoverDiagnostics.Add("cast item " + request.Id + ": " + ex.Message);
+            }
+            return res;
+        }
+
         public async Task<object> Get(DiscoverItemBackdropRequest request)
         {
             var res = new DiscoverItemBackdropResult();
