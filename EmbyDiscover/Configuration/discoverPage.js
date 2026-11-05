@@ -38,8 +38,8 @@ define([], function () {
             return;
         }
         var urls = [
-            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1384' }),
-            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1384' }),
+            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1385' }),
+            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1385' }),
             ApiClient.getUrl('Plugins/Discover/Script')
         ];
         var n = 0;
@@ -1424,6 +1424,7 @@ define([], function () {
             findEmbyPerson(pid, name).then(function (p) {
                 closeModal();
                 if (p) { goToEmbyItem(p.Id); return; }
+                try { sessionStorage.setItem('dcOpenNext', JSON.stringify({ kind: 'person', id: pid, name: name || '', at: Date.now() })); } catch (e) { }
                 window.location.hash = '#!/configurationpage?name=' + UI_PAGE + '&openPerson=' + pid + '&openName=' + encodeURIComponent(name || '');
             });
         });
@@ -1819,7 +1820,31 @@ define([], function () {
         view.addEventListener('viewhide', function () { document.body.classList.remove('dcDiscoverActive'); document.removeEventListener('command', onCommand, true); });
 
         // ---- Directe link vanaf een film-/seriepagina: #!/configurationpage?name=...&openType=movie&openId=123 ----
+        // Wat er geopend moet worden kan ook via sessionStorage komen: Emby laat soms de extra parameters in het adres
+        // weg, of hergebruikt de al geopende Discover-pagina zonder opnieuw "viewshow" te sturen.
+        function takePending() {
+            try {
+                var raw = sessionStorage.getItem('dcOpenNext');
+                if (!raw) { return null; }
+                sessionStorage.removeItem('dcOpenNext');
+                var p = JSON.parse(raw);
+                return p && Date.now() - (p.at || 0) < 60000 ? p : null;
+            } catch (e) { return null; }
+        }
         function openFromLink() {
+            var pend = takePending();
+            if (pend && pend.kind === 'person' && pend.id) {
+                try { history.replaceState(null, '', window.location.href.replace(/&openPerson=\d+(&openName=[^&]*)?/, '')); } catch (e) { }
+                openPerson(parseInt(pend.id, 10), pend.name || '');
+                return;
+            }
+            if (pend && pend.kind === 'title' && pend.id) {
+                api('GET', 'Discover/Title', { Type: pend.type, TmdbId: parseInt(pend.id, 10) }).then(function (r) {
+                    if (r && r.Found && r.Item) { items[key(r.Item)] = r.Item; openItem(r.Item); }
+                }, function () { });
+                try { history.replaceState(null, '', window.location.href.replace(/&openType=[^&]*&openId=\d+/, '').replace(/&openPerson=\d+(&openName=[^&]*)?/, '')); } catch (e) { }
+                return;
+            }
             var pm = /[?&]openPerson=(\d+)(?:&openName=([^&]*))?/.exec(window.location.hash || '');
             if (pm) {
                 try { history.replaceState(null, '', window.location.href.replace(/&openPerson=\d+(&openName=[^&]*)?/, '')); } catch (e) { }
@@ -1844,6 +1869,10 @@ define([], function () {
             if (!loaded) { loadHome(); }
             else { scheduleQueue(0); loadMyRequests(); }
             openFromLink();
+        });
+        // Hergebruikte pagina (geen viewshow): bij een adreswijziging naar Discover toch kijken of er iets te openen is.
+        window.addEventListener('hashchange', function () {
+            if (!embedded && onDiscoverRoute() && document.body.contains(view)) { setTimeout(openFromLink, 150); }
         });
         view.addEventListener('viewhide', function () { clearTimeout(queueTimer); queueTimer = null; });
     };

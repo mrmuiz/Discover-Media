@@ -8,7 +8,7 @@
         console.warn('[Discover] oudere knopcode is nog actief; vernieuw de webclient om dubbele handlers te voorkomen.');
         return;
     }
-    var DC_BUILD = 'big-r16 2026-11-05';
+    var DC_BUILD = 'big-r17 2026-11-05';
     window.__discoverRequestButton = true;
     window.__discoverRequestButtonVersion = '1.4.0.0';
     window.__discoverRequestButtonBuild = DC_BUILD;
@@ -2090,6 +2090,7 @@
     function openCastPerson(pid, name) {
         findEmbyPersonRB(pid, name).then(function (p) {
             if (p) { goEmbyItem(p.Id); return; }
+            try { sessionStorage.setItem('dcOpenNext', JSON.stringify({ kind: 'person', id: pid, name: name || '', at: Date.now() })); } catch (e) { }
             window.location.hash = '#!/configurationpage?name=' + DC_UI_PAGE + '&openPerson=' + pid + '&openName=' + encodeURIComponent(name || '');
         });
     }
@@ -2211,7 +2212,7 @@
     // ---- De Discover-popup boven de huidige pagina ----
     // Laadt de Discover-pagina één keer onzichtbaar (alleen de popup wordt gebruikt) met dezelfde controller
     // als de echte pagina, in "embedded"-modus. Zo is de popup overal gelijk: info, cast, seizoenen, trailer, aanvragen.
-    var DC_UI_PAGE = 'discoverui1086', DC_UI_JS = 'discoveruijs1382';
+    var DC_UI_PAGE = 'discoverui1086', DC_UI_JS = 'discoveruijs1383';
     var embedPromise = null;
     function pageText(c, name) {
         var url = c.getUrl('web/ConfigurationPage', { name: name });
@@ -2271,6 +2272,7 @@
             host.__dcOpen(type, parseInt(tmdbId, 10));
         }, function () {
             // Reserve: naar de Discover-pagina met de popup.
+            try { sessionStorage.setItem('dcOpenNext', JSON.stringify({ kind: 'title', type: type, id: tmdbId, at: Date.now() })); } catch (e) { }
             try { window.location.hash = '#!/configurationpage?name=' + DC_UI_PAGE + '&openType=' + type + '&openId=' + tmdbId; } catch (e) { }
         });
     }
