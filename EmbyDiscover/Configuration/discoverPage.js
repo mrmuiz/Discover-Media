@@ -1871,7 +1871,10 @@ define([], function () {
             if (!document.body.contains(view)) { return; }
             var r = view.getBoundingClientRect();
             if (r.width > 0 && r.height > 0 && !view.classList.contains('hide')) { openFromLink(); return; }
-            if (n < 30) { setTimeout(function () { openWhenVisible(n + 1); }, 100); }
+            if (n < 30) { setTimeout(function () { openWhenVisible(n + 1); }, 100); return; }
+            // Geen afmetingen te meten (sommige clients): dan alleen de nieuwste Discover-pagina in het document.
+            var all = document.querySelectorAll('.discoverUiPage');
+            if (all.length && all[all.length - 1] === view) { openFromLink(); }
         }
         view.addEventListener('viewshow', function () {
             if (!loaded) { loadHome(); }
