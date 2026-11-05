@@ -569,7 +569,6 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         Array.prototype.forEach.call(view.querySelectorAll('.dcPanel'), function (p) {
             p.classList.toggle('active', p.getAttribute('data-panel') === name);
         });
-        try { window.localStorage.setItem('discoverConfigTab', name); } catch (ignored) { }
         if (name === 'storage') { loadCache(view); }
     }
 
@@ -892,10 +891,8 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         Array.prototype.forEach.call(view.querySelectorAll('.dcTab'), function (b) {
             b.addEventListener('click', function () { showTab(view, b.getAttribute('data-tab')); });
         });
-        var savedTab = 'general';
-        try { savedTab = window.localStorage.getItem('discoverConfigTab') || 'general'; } catch (ignored) { }
-        if (!view.querySelector('.dcPanel[data-panel="' + savedTab + '"]')) { savedTab = 'general'; }
-        showTab(view, savedTab);
+        // Altijd op Algemeen openen (de laatst gekozen tab onthouden liet de pagina op Diagnose openen).
+        showTab(view, 'general');
 
         view.querySelector('.btnAllowAll').addEventListener('click', function () { setAllUsers(view, state, true); });
         view.querySelector('.btnAllowNone').addEventListener('click', function () { setAllUsers(view, state, false); });
