@@ -26,8 +26,6 @@ namespace Emby.Plugins.Discover
         public string RequestService { get; set; } = "arr";
         public string SeerrUrl { get; set; } = "";
         public string SeerrApiKey { get; set; } = "";
-        /// <summary>Aanvragen op naam van de Seerr-gebruiker die bij de Emby-gebruiker hoort (rechten, limieten, goedkeuring). Uit = altijd als eigenaar van de API key.</summary>
-        public bool SeerrRequestAsUser { get; set; } = true;
 
         /// <summary>Optioneel: map van de Emby-webclient (met index.html) als die niet vanzelf gevonden wordt.</summary>
         public string DashboardUiPath { get; set; } = "";

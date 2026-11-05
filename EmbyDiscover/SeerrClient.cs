@@ -246,7 +246,6 @@ namespace Emby.Plugins.Discover
         /// </summary>
         internal static async Task<int?> MapUser(IJsonSerializer json, object embyUserId, CancellationToken ct)
         {
-            if (!Plugin.GetCurrentConfiguration().SeerrRequestAsUser) return null;
             var key = RequestAccess.Normalize(embyUserId);
             if (key.Length == 0) return null;
             var users = _users;

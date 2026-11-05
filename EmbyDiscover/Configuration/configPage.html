@@ -5,7 +5,7 @@
     <title>Discover</title>
 </head>
 <body>
-<div data-role="page" class="page type-interior pluginConfigurationPage discoverConfigPage" data-require="emby-input,emby-button,emby-select,emby-checkbox" data-controller="__plugin/discoverconfigjs1357">
+<div data-role="page" class="page type-interior pluginConfigurationPage discoverConfigPage" data-require="emby-input,emby-button,emby-select,emby-checkbox" data-controller="__plugin/discoverconfigjs1358">
     <style>
         .discoverConfigPage .keyWrap { position: relative; }
         .discoverConfigPage .keyWrap input { padding-right: 2.8em; }
@@ -120,20 +120,13 @@
                     <label class="inputLabel inputLabelUnfocused" for="txtSeerrKey">API key</label>
                     <input is="emby-input" type="password" id="txtSeerrKey" autocomplete="new-password" spellcheck="false" />
                     <button is="emby-button" type="button" class="paper-icon-button-light btnToggleKey" data-target="txtSeerrKey" title="Tonen" aria-label="Tonen"><i class="md-icon">visibility</i></button>
-                    <div class="fieldDescription" id="desc_seerrKey">Te vinden in Seerr onder Instellingen &gt; Algemeen.</div>
                 </div>
+                <div class="fieldDescription" id="desc_seerrKey" style="margin:-1em 0 1.5em;">Te vinden in Seerr onder Instellingen &gt; Algemeen.</div>
                 <div>
                     <button is="emby-button" type="button" class="raised btnTestSeerr"><span>Test verbinding</span></button>
                     <div class="fieldDescription testStatus" id="statusSeerr" style="margin-top:.5em;"></div>
                 </div>
-                <div class="selectContainer" style="margin-top:1.5em;">
-                    <label class="selectLabel" for="selSeerrRequestAs">Aanvragen op naam van</label>
-                    <select is="emby-select" id="selSeerrRequestAs">
-                        <option value="user">De Seerr-gebruiker die bij de Emby-gebruiker hoort</option>
-                        <option value="owner">De eigenaar van de API key</option>
-                    </select>
-                    <div class="fieldDescription" id="desc_seerrAsUser">Seerr-gebruikers die uit Emby zijn geïmporteerd worden herkend. Dan gelden hun rechten, limieten en goedkeuring in Seerr. Zonder koppeling (of met dit vinkje uit) gaat de aanvraag op naam van de eigenaar van de API key.</div>
-                </div>
+                <div class="fieldDescription" id="desc_seerrAsUser" style="margin-top:1em;">Wie in Emby is aangemeld en ook in Seerr bestaat, vraagt aan op zijn eigen Seerr-account (met de rechten, limieten en goedkeuring uit Seerr). Staat iemand niet in Seerr, dan gaat de aanvraag op naam van de eigenaar van de API key.</div>
                 </div>
 
                 <!-- Radarr & Sonarr -->
