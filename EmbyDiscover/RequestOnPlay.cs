@@ -74,7 +74,7 @@ namespace Emby.Plugins.Discover
                 bool allSeasons = ext.StartsWith(DiscoverMediaChannel.AskAllPrefix, StringComparison.Ordinal);
                 if (!allSeasons && !ext.StartsWith(DiscoverMediaChannel.AskPrefix, StringComparison.Ordinal)) return;
 
-                var rest = ext.Substring((allSeasons ? DiscoverMediaChannel.AskAllPrefix : DiscoverMediaChannel.AskPrefix).Length);   // "m:123" of "t:123"
+                var rest = DiscoverMediaChannel.StripTileMark(ext.Substring((allSeasons ? DiscoverMediaChannel.AskAllPrefix : DiscoverMediaChannel.AskPrefix).Length));   // "m:123" of "t:123"
                 bool tv = rest.StartsWith("t:", StringComparison.Ordinal);
                 int tmdbId;
                 if (rest.Length < 3 || !int.TryParse(rest.Substring(2), out tmdbId))

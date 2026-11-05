@@ -38,6 +38,13 @@ namespace Emby.Plugins.Discover
         private const string AskGenrePrefix = "ask16genres:";   // map met genretegels (movie of tv)
         private const string AskStudioRoot = "ask16studios";       // map met studio- en netwerktegels
         internal const string AskPrefix = "ask16:";           // het aanvraagitem zelf
+        /// <summary>
+        /// Achtervoegsel aan het id van het aanvraag-/traileritem zodra de tegel met tekst klaar is. Emby zet de afbeelding van
+        /// een kanaalitem alleen bij het aanmaken; met een nieuw id maakt Emby het item opnieuw aan, nu met de tegel met tekst.
+        /// </summary>
+        internal const string TileMark = ":x";
+        internal static string StripTileMark(string id) =>
+            id != null && id.EndsWith(TileMark, StringComparison.Ordinal) ? id.Substring(0, id.Length - TileMark.Length) : id;
         internal const string AskSeasonPrefix = "ask22season:"; // seizoenaanvraagitems
         internal const string AskAllPrefix = "ask22all:";       // "Alle seizoenen"-item: de hele serie in een keer aanvragen
         private const string TrailerPrefix = "tr10:";         // het trailer-item naast het aanvraagitem
@@ -304,8 +311,8 @@ namespace Emby.Plugins.Discover
                     : null;
                 var askFile = await TileWithin(askTile, TimeSpan.FromSeconds(8)).ConfigureAwait(false);
                 var trailerFile = trailerTile == null ? null : await TileWithin(trailerTile, TimeSpan.FromSeconds(8)).ConfigureAwait(false);
-                if (askFile != null) item.ImageUrl = askFile;
-                if (trailerFile != null) trailer.ImageUrl = trailerFile;
+                if (askFile != null) { item.ImageUrl = askFile; item.Id += TileMark; }
+                if (trailerFile != null) { trailer.ImageUrl = trailerFile; trailer.Id += TileMark; }
             }
             else if (!string.IsNullOrEmpty(t.backdrop_path))
             {
@@ -317,8 +324,8 @@ namespace Emby.Plugins.Discover
                 var trailerFile = showTrailerTile ? FolderTile.Existing(tileKey + "tr", DiscoverLanguage.Text("Trailer", "Trailer", "Trailer"), bgUrl) : null;
                 if (askFile == null) FolderTile.EnsureInBackground(tileKey + "ask", DiscoverLanguage.Text("Aanvragen", "Request", "Anfragen", "Forespør"), bgUrl);
                 if (showTrailerTile && trailerFile == null) FolderTile.EnsureInBackground(tileKey + "tr", DiscoverLanguage.Text("Trailer", "Trailer", "Trailer"), bgUrl);
-                if (askFile != null) item.ImageUrl = askFile;
-                if (trailerFile != null) trailer.ImageUrl = trailerFile;
+                if (askFile != null) { item.ImageUrl = askFile; item.Id += TileMark; }
+                if (trailerFile != null) { trailer.ImageUrl = trailerFile; trailer.Id += TileMark; }
             }
 
             if (tv)
@@ -383,6 +390,7 @@ namespace Emby.Plugins.Discover
                 var allSub = DiscoverLanguage.Text(seasonCount == 1 ? "1 seizoen" : seasonCount + " seizoenen",
                     seasonCount == 1 ? "1 season" : seasonCount + " seasons", seasonCount == 1 ? "1 Staffel" : seasonCount + " Staffeln");
                 string allTile = null;
+                bool allTileNew = false;
                 if (Plugin.GetCurrentConfiguration().TileTextImages)
                 {
                     string logoPath = null;
@@ -393,6 +401,7 @@ namespace Emby.Plugins.Discover
                         allTile = await TileWithin(FolderTile.CreateAllSeasons("t" + tmdbId, bdUrl,
                             string.IsNullOrEmpty(logoPath) ? null : "https://image.tmdb.org/t/p/w500" + logoPath,
                             TitleOf(detail, true), allLabel, allSub, CancellationToken.None), TimeSpan.FromSeconds(20)).ConfigureAwait(false);
+                    allTileNew = allTile != null;
                     if (allTile == null)
                         allTile = await TileWithin(FolderTile.Create("allseasons", allLabel.Replace(' ', '\n'), null, CancellationToken.None, "5B6573", true, 720, 1080),
                             TimeSpan.FromSeconds(20)).ConfigureAwait(false);
@@ -424,7 +433,8 @@ namespace Emby.Plugins.Discover
 
                 items.Add(new ChannelItemInfo
                 {
-                    Id = AskAllPrefix + "t:" + tmdbId,
+                    // Met de nieuwe tegel een ander id, zodat Emby het item opnieuw aanmaakt (oude grijze tegel weg).
+                    Id = AskAllPrefix + "t:" + tmdbId + (allTileNew ? TileMark : ""),
                     Name = DiscoverLanguage.Text("Alle seizoenen", "All seasons", "Alle Staffeln"),
                     Type = ChannelItemType.Media,
                     MediaType = ChannelMediaType.Video,
@@ -1057,6 +1067,7 @@ namespace Emby.Plugins.Discover
         public async Task<IEnumerable<MediaSourceInfo>> GetChannelItemMediaInfo(string id, CancellationToken ct)
         {
             DiscoverDiagnostics.Add("trailer afspelen: " + id);
+            id = StripTileMark(id);
             bool isSeasonReq = id.StartsWith(AskSeasonPrefix);
             bool isAllReq = id.StartsWith(AskAllPrefix);
             bool isReq = id.StartsWith(AskPrefix) || isSeasonReq || isAllReq;
