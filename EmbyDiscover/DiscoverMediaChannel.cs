@@ -307,6 +307,17 @@ namespace Emby.Plugins.Discover
                 if (askFile != null) item.ImageUrl = askFile;
                 if (trailerFile != null) trailer.ImageUrl = trailerFile;
             }
+            else if (!string.IsNullOrEmpty(t.backdrop_path))
+            {
+                // Kanaalverversing zonder gebruiker: geen ffmpeg starten, maar wel de al gemaakte tegels gebruiken.
+                // Anders zet Emby bij elke verversing de gewone foto terug en verdwijnt de tekst "Aanvragen"/"Trailer".
+                var tileKey = "rq" + (tv ? "t" : "m") + tmdbId;
+                var bgUrl = item.ImageUrl;
+                var askFile = FolderTile.Existing(tileKey + "ask", DiscoverLanguage.Text("Aanvragen", "Request", "Anfragen", "Forespør"), bgUrl);
+                var trailerFile = showTrailerTile ? FolderTile.Existing(tileKey + "tr", DiscoverLanguage.Text("Trailer", "Trailer", "Trailer"), bgUrl) : null;
+                if (askFile != null) item.ImageUrl = askFile;
+                if (trailerFile != null) trailer.ImageUrl = trailerFile;
+            }
 
             if (tv)
             {

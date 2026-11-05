@@ -81,6 +81,23 @@ namespace Emby.Plugins.Discover
         }
 
         /// <summary>Geeft het pad van het plaatje (uit de bewaarde bestanden of net gemaakt), of null als het niet lukt.</summary>
+        /// <summary>
+        /// Al gemaakte tegel (liggend, zonder ffmpeg te starten), of een oudere versie ervan; anders null.
+        /// Voor de kanaalverversing zonder gebruiker: dan blijft de tekst op de tegel staan in plaats van te verdwijnen.
+        /// </summary>
+        public static string Existing(string key, string text, string backgroundUrl)
+        {
+            try
+            {
+                if (!Plugin.GetCurrentConfiguration().TileTextImages || string.IsNullOrEmpty(text)) return null;
+                var dir = Plugin.Instance.WorkDir("discover-tiles");
+                var final = Path.Combine(dir, string.Format("tile-{0}-{1}-v{2}.jpg", key, Hash(text + "|" + backgroundUrl + "|" + (string)null), TileVersion));
+                if (File.Exists(final) && new FileInfo(final).Length > 0) { CacheCleaner.Touch(final); return final; }
+                return FindStale(dir, "tile-" + key + "-????????-v" + TileVersion + ".jpg", final);
+            }
+            catch { return null; }
+        }
+
         public static async Task<string> Create(string key, string text, string backgroundUrl, CancellationToken ct, string fallbackColor = null, bool allowStale = true, int width = 0, int height = 0)
         {
             try
