@@ -84,6 +84,7 @@ namespace Emby.Plugins.Discover
         // Achtergrondrij voor tegels die tijdens een kanaalverversing nog ontbreken: één tegelijk, zodat Emby niet stil valt.
         private static readonly SemaphoreSlim BackgroundLane = new SemaphoreSlim(1, 1);
         private static int _backgroundQueued;
+        private static int _backgroundMade;
 
         /// <summary>
         /// Maak een tegel op de achtergrond (niet wachten). Emby 4.11 vraagt kanaalmappen bij het openen niet altijd opnieuw op
@@ -104,11 +105,21 @@ namespace Emby.Plugins.Discover
                 try
                 {
                     await BackgroundLane.WaitAsync().ConfigureAwait(false);
-                    try { await Create(key, text, backgroundUrl, CancellationToken.None, null, false).ConfigureAwait(false); }
+                    try
+                    {
+                        var made = await Create(key, text, backgroundUrl, CancellationToken.None, null, false).ConfigureAwait(false);
+                        if (made != null) Interlocked.Increment(ref _backgroundMade);
+                    }
                     finally { BackgroundLane.Release(); }
                 }
                 catch (Exception ex) { DiscoverDiagnostics.Add("tegel op de achtergrond mislukt: " + ex.Message); }
-                finally { lock (Building) { Building.Remove(tag); _backgroundQueued--; } }
+                finally
+                {
+                    bool drained;
+                    lock (Building) { Building.Remove(tag); _backgroundQueued--; drained = _backgroundQueued == 0; }
+                    // Rij leeg en er is iets gemaakt: Emby laten verversen, zodat de tegels met tekst ook echt verschijnen.
+                    if (drained && Interlocked.Exchange(ref _backgroundMade, 0) > 0) ChannelRefresher.Request("nieuwe tegels klaar");
+                }
             });
         }
 
