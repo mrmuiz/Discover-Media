@@ -38,8 +38,8 @@ define([], function () {
             return;
         }
         var urls = [
-            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1388' }),
-            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1388' }),
+            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1389' }),
+            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1389' }),
             ApiClient.getUrl('Plugins/Discover/Script')
         ];
         var n = 0;
@@ -70,7 +70,7 @@ define([], function () {
         })();
     }
 
-    var UI_PAGE = 'discoverui1089';
+    var UI_PAGE = 'discoverui1090';
 
     return function (view, params) {
         // embedded: alleen de popup, over een andere Emby-pagina heen (film-, serie- of acteurspagina).
@@ -1822,13 +1822,21 @@ define([], function () {
         // ---- Directe link vanaf een film-/seriepagina: #!/configurationpage?name=...&openType=movie&openId=123 ----
         // Wat er geopend moet worden kan ook via sessionStorage komen: Emby laat soms de extra parameters in het adres
         // weg, of hergebruikt de al geopende Discover-pagina zonder opnieuw "viewshow" te sturen.
+        // Emby 4.11 toont bij een bezoek eerst een oude kopie van deze pagina en vervangt die daarna door een nieuwe.
+        // Daarom wordt de opdracht niet meteen weggegooid: elke Discover-pagina die binnen 10 seconden in beeld komt
+        // pakt hem op (één keer per pagina); daarna vervalt hij vanzelf.
         function takePending() {
             try {
                 var raw = sessionStorage.getItem('dcOpenNext');
                 if (!raw) { return null; }
-                sessionStorage.removeItem('dcOpenNext');
                 var p = JSON.parse(raw);
-                return p && Date.now() - (p.at || 0) < 60000 ? p : null;
+                if (!p || Date.now() - (p.at || 0) > 10000) { sessionStorage.removeItem('dcOpenNext'); return null; }
+                if (view.__dcTook === p.at) { return null; }
+                view.__dcTook = p.at;
+                setTimeout(function () {
+                    try { var cur = sessionStorage.getItem('dcOpenNext'); if (cur === raw) { sessionStorage.removeItem('dcOpenNext'); } } catch (e) { }
+                }, 10000);
+                return p;
             } catch (e) { return null; }
         }
         function openFromLink() {
@@ -1865,21 +1873,10 @@ define([], function () {
             });
         }
 
-        // Emby 4.11 stuurt viewshow soms ook naar een oude, verborgen kopie van deze pagina. Alleen de pagina die echt
-        // in beeld komt mag de opdracht (acteur/titel) oppakken; anders opent die op een plek die je niet ziet.
-        function openWhenVisible(n) {
-            if (!document.body.contains(view)) { return; }
-            var r = view.getBoundingClientRect();
-            if (r.width > 0 && r.height > 0 && !view.classList.contains('hide')) { openFromLink(); return; }
-            if (n < 30) { setTimeout(function () { openWhenVisible(n + 1); }, 100); return; }
-            // Geen afmetingen te meten (sommige clients): dan alleen de nieuwste Discover-pagina in het document.
-            var all = document.querySelectorAll('.discoverUiPage');
-            if (all.length && all[all.length - 1] === view) { openFromLink(); }
-        }
         view.addEventListener('viewshow', function () {
             if (!loaded) { loadHome(); }
             else { scheduleQueue(0); loadMyRequests(); }
-            openWhenVisible(0);
+            openFromLink();
         });
         // Geen hashchange-luisteraar: Emby 4.11 maakt bij elke navigatie een nieuwe Discover-pagina (met eigen viewshow);
         // een oude, verborgen kopie zou de opdracht anders "opeten" en de persoon tonen waar je hem niet ziet.
