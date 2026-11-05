@@ -148,6 +148,9 @@ namespace Emby.Plugins.Discover
         public string air_date { get; set; }
         public string overview { get; set; }
         public string poster_path { get; set; }
+        /// <summary>Alleen bij /tv/{id}/season/{n}.</summary>
+        public List<TmdbEpisodeBrief> episodes { get; set; }
+        public double vote_average { get; set; }
     }
 
     public class TmdbTvDetail : TmdbItem

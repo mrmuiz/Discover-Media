@@ -14,8 +14,10 @@
 - Change: on Emby's person pages the plugin row is split into **Movies · not in your library** and **Series · not in your library**.
 - New: **Cast row with round photos** under Discover channel pages in the web client: a title folder, the "Request: <series>" season list, request items and the trailer item (`GET /Discover/ItemCast?Id=<Emby item id>`, up to 20). A click opens Emby's person page when that person is in your library, otherwise the Discover person page.
 - Fix: the Discover popup above an Emby page now loads the **download progress** right away and keeps refreshing it (every 15 s while something downloads) as long as it is open.
+- Change: on a season request page ("Season 1") the season info now sits **to the right of the poster**, under the description: season name, TMDB score, season description, number of episodes, aired from–to, status, network, original language, country and streaming services (`GET /Discover/SeriesCard?TmdbId=&Season=`). The blocks **About**, **Links (Trakt)** and **Media information** are hidden there; this also works on the Emby 4.11 detail page layout (`.itemView`).
+- Fix: the bar at the top of a Discover channel page could flicker now and then: Emby and the plugin kept replacing each other's backdrop. On a channel page where Emby shows its own backdrop, the plugin now leaves it to Emby.
 - Note: backdrops for channel items in the native TV/mobile apps are not possible (Emby has no backdrop field for channel items); they work in the web client.
-- Change: page names bumped (`discoverui1085`, `discoveruijs1381`, `discoverbuttonjs1377`, `discoverconfigjs1359`).
+- Change: page names bumped (`discoverui1085`, `discoveruijs1381`, `discoverbuttonjs1378`, `discoverconfigjs1359`).
 
 ## Version 1.3.5.6
 

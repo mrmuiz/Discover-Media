@@ -16,7 +16,7 @@
 
     var CHANNEL_NAME = 'Discover Media';
     var KNOWN_UI = ['discoverui1085', 'discoverui1084', 'discoverui1083', 'discoverui1082', 'discoverui1081', 'discoverui1080', 'discoverui1079', 'discoverui1078', 'discoverui1077', 'discoverui1076', 'discoverui1075'];
-    var KNOWN_BTN = ['discoverbuttonjs1377', 'discoverbuttonjs1376', 'discoverbuttonjs1375', 'discoverbuttonjs1374', 'discoverbuttonjs1373', 'discoverbuttonjs1372', 'discoverbuttonjs1371', 'discoverbuttonjs1370', 'discoverbuttonjs1360', 'discoverbuttonjs1354', 'discoverbuttonjs1353', 'discoverbuttonjs1352', 'discoverbuttonjs1351', 'discoverbuttonjs1350', 'discoverbuttonjs1340'];
+    var KNOWN_BTN = ['discoverbuttonjs1378', 'discoverbuttonjs1377', 'discoverbuttonjs1376', 'discoverbuttonjs1375', 'discoverbuttonjs1374', 'discoverbuttonjs1373', 'discoverbuttonjs1372', 'discoverbuttonjs1371', 'discoverbuttonjs1370', 'discoverbuttonjs1360', 'discoverbuttonjs1354', 'discoverbuttonjs1353', 'discoverbuttonjs1352', 'discoverbuttonjs1351', 'discoverbuttonjs1350', 'discoverbuttonjs1340'];
 
     function log(m) { try { console.log('[Discover web] ' + m); } catch (e) { } }
     function api() {
@@ -235,6 +235,16 @@
                     if (n !== bd.layer && n.nodeType === 1) { bd.seenEmby = true; }
                 }
             }
+            // Op een kanaalpagina met een eigen achtergrond van Emby: Emby laten winnen. Anders vechten Emby en wij
+            // om de laag en de klasse withBackdrop, en knippert de balk bovenin af en toe.
+            var embyOwn = false;
+            for (var k = 0; k < container.children.length; k++) { if (container.children[k] !== bd.layer) { embyOwn = true; break; } }
+            if (embyOwn && bd.page) {
+                if (bd.layer && bd.layer.parentNode === container) { container.removeChild(bd.layer); }
+                bd.yielded = true;
+                return;
+            }
+            if (bd.yielded && bd.page) { return; }   // deze pagina is van Emby: niet terugzetten
             // Emby ruimt zijn achtergrond op bij een tegel zonder eigen foto: dan zetten we de onze terug.
             if (bd.on && bd.layer && bd.layer.parentNode !== container) { container.appendChild(bd.layer); }
         }).observe(container, { childList: true });
@@ -250,6 +260,10 @@
         if (!container) { return; }
         bdWatch(container);
         if (!bdAllowed()) { return; }
+        // Kanaalpagina waar Emby al een eigen achtergrond toont: niets doen.
+        if (bd.page) {
+            for (var k = 0; k < container.children.length; k++) { if (container.children[k] !== bd.layer) { return; } }
+        }
         bd.on = true;
         var token = ++bd.seq;
         (fixedUrl ? Promise.resolve([fixedUrl]) : bdLoadUrls()).then(function (urls) {
@@ -363,6 +377,7 @@
         });
     }
     function bdOnNavigate() {
+        bd.yielded = false;
         bdHide();
         bd.page = null;
         bd.hoverId = null;

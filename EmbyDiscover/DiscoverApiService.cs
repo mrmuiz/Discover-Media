@@ -115,6 +115,8 @@ namespace Emby.Plugins.Discover
     public class DiscoverSeriesCardRequest : IReturn<DiscoverSeriesCardResult>
     {
         public int TmdbId { get; set; }
+        /// <summary>Optioneel: seizoensnummer voor de seizoensgegevens.</summary>
+        public int Season { get; set; }
     }
 
     public class DiscoverSeriesCardResult
@@ -126,6 +128,12 @@ namespace Emby.Plugins.Discover
         public string Network { get; set; }
         public int TmdbRating { get; set; }
         public List<string> StreamingOn { get; set; } = new List<string>();
+        public string SeasonName { get; set; }
+        public string SeasonAirDate { get; set; }
+        public string SeasonLastAirDate { get; set; }
+        public int SeasonEpisodes { get; set; }
+        public string SeasonOverview { get; set; }
+        public int SeasonRating { get; set; }
     }
 
     public class DiscoverSeasonInfo
@@ -867,6 +875,23 @@ namespace Emby.Plugins.Discover
                         .Concat(providers.ads ?? new List<TmdbNamed>())
                         .Where(x => !string.IsNullOrWhiteSpace(x?.name))
                         .Select(x => x.name.Trim()).Distinct().Take(5).ToList();
+
+                if (request.Season > 0)
+                {
+                    var s = await _tmdb.GetTvSeasonDetail(request.TmdbId, request.Season, CancellationToken.None).ConfigureAwait(false);
+                    if (s != null)
+                    {
+                        result.SeasonName = s.name;
+                        result.SeasonOverview = s.overview;
+                        var eps = s.episodes ?? new List<TmdbEpisodeBrief>();
+                        result.SeasonEpisodes = eps.Count > 0 ? eps.Count : s.episode_count;
+                        DateTime d;
+                        if (InfoText.TryDate(s.air_date, out d)) result.SeasonAirDate = InfoText.LongDate(d);
+                        var last = eps.Where(e => !string.IsNullOrEmpty(e.air_date)).Select(e => e.air_date).OrderBy(x => x, StringComparer.Ordinal).LastOrDefault();
+                        if (last != null && InfoText.TryDate(last, out d) && last != s.air_date) result.SeasonLastAirDate = InfoText.LongDate(d);
+                        result.SeasonRating = (int)Math.Round(s.vote_average * 10);
+                    }
+                }
             }
             catch (Exception ex)
             {

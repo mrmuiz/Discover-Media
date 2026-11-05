@@ -8,7 +8,7 @@
         console.warn('[Discover] oudere knopcode is nog actief; vernieuw de webclient om dubbele handlers te voorkomen.');
         return;
     }
-    var DC_BUILD = 'big-r5 2026-11-05';
+    var DC_BUILD = 'big-r6 2026-11-05';
     window.__discoverRequestButton = true;
     window.__discoverRequestButtonVersion = '1.4.0.0';
     window.__discoverRequestButtonBuild = DC_BUILD;
@@ -91,12 +91,14 @@
             '.discover-season-request-card [class*="playedIndicator"], .discover-no-played [class*="playedIndicator"] { display: none !important; }',
             '.discover-channel-landscape-card .cardScalable { aspect-ratio: 16 / 9 !important; height: auto !important; padding: 0 !important; }',
             '.discover-season-request-card .cardScalable { aspect-ratio: 2 / 3 !important; height: auto !important; padding: 0 !important; }',
-            '.discover-season-info { box-sizing: border-box; margin-top: 12px; overflow: hidden; border: 1px solid #344154; border-radius: 8px; background: #111a2a; color: #e8edf6; font-size: 12px; line-height: 1.3; }',
-            '.discover-season-info-rating { display: flex; justify-content: flex-end; padding: 9px 12px; color: #eef3fb; font-weight: 700; }',
-            '.discover-season-info-row { display: flex; justify-content: space-between; gap: 10px; padding: 7px 12px; border-top: 1px solid #344154; }',
+            '.discover-season-info { box-sizing: border-box; margin-top: 14px; max-width: 640px; overflow: hidden; border: 1px solid rgba(255,255,255,.14); border-radius: 10px; background: rgba(10,16,28,.72); color: #e8edf6; font-size: 13px; line-height: 1.35; }',
+            '.discover-season-info-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 14px; font-weight: 700; font-size: 14px; }',
+            '.discover-season-info-rating { color: #ffb400; white-space: nowrap; }',
+            '.discover-season-info-overview { padding: 0 14px 10px; color: #cfd8e6; white-space: pre-line; }',
+            '.discover-season-info-row { display: flex; justify-content: space-between; gap: 10px; padding: 7px 14px; border-top: 1px solid rgba(255,255,255,.1); }',
             '.discover-season-info-label { font-weight: 700; }',
             '.discover-season-info-value { color: #b9c7dc; text-align: right; }',
-            '.discover-season-info-providers { padding: 8px 12px; border-top: 1px solid #344154; }',
+            '.discover-season-info-providers { padding: 8px 14px 10px; border-top: 1px solid rgba(255,255,255,.1); }',
             '.discover-season-info-provider-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }',
             '.discover-season-info-provider { padding: 3px 7px; border-radius: 4px; background: #26364c; color: #dce7f5; }',
             'body.discover-folder-page .btnPlay, body.discover-folder-page .btnShuffle, body.discover-folder-page .btnQueue { display: none !important; }',
@@ -486,6 +488,7 @@
     var seasonCardIds = {};
     var seasonCardCache = {};
     var seasonCardPending = {};
+    var seasonCardSeason = {};   // item-id -> seizoensnummer
     var askLast = null;
     var trailerIds = {};
 
@@ -562,8 +565,11 @@
                 askStatus[id] = 0;
                 var seasonProviderIds = item.ProviderIds || {};
                 var seriesTmdbId = parseInt(seasonProviderIds.Tmdb || seasonProviderIds.tmdb || String(seasonProviderIds.DiscoverSeasonTmdb || '').split('-')[0] || 0, 10) || 0;
+                var seasonNo = parseInt(String(seasonProviderIds.DiscoverSeasonTmdb || '').split('-')[1] || 0, 10) ||
+                    parseInt((/(?:Seizoen|Season|Staffel)\s+(\d+)/i.exec(nm) || [])[1] || 0, 10) || 0;
                 if (seriesTmdbId > 0) {
                     seasonCardIds[id] = seriesTmdbId;
+                    seasonCardSeason[id] = seasonNo;
                     loadSeasonCardInfo(id, seriesTmdbId);
                 }
                 dbg('seizoensaanvraag herkend: ' + nm);
@@ -943,7 +949,7 @@
     // Verbergt het blok "Media informatie" (pad van de clip/YouTube-link) op Discover-pagina's.
     function hideMediaInfo(force) {
         if (diagnosticsEnabled && !force) { return; }
-        var pages = document.querySelectorAll('.itemDetailPage');
+        var pages = document.querySelectorAll('.itemDetailPage, .itemView, .view-item-item');
         for (var p = 0; p < pages.length; p++) {
             if (!visible(pages[p])) { continue; }
             var els = pages[p].querySelectorAll('div, h1, h2, h3, h4, span, label');
@@ -1001,7 +1007,7 @@
     // Verbergt het hele blok "Over" (genres, links, media-informatie, video/geluid) en alles daaronder.
     function hideOverSection() {
         if (diagnosticsEnabled) { return; }
-        var pages = document.querySelectorAll('.itemDetailPage');
+        var pages = document.querySelectorAll('.itemDetailPage, .itemView, .view-item-item');
         for (var p = 0; p < pages.length; p++) {
             if (!visible(pages[p])) { continue; }
             var els = pages[p].querySelectorAll('h1, h2, h3, h4, div, span');
@@ -1019,7 +1025,7 @@
     }
 
     function hideSeasonMetadata() {
-        var page = document.querySelector('.itemDetailPage');
+        var page = detailPageEl();
         if (!page) { return; }
         var labels = page.querySelectorAll('h1, h2, h3, h4, h5, div, span, label, p');
         for (var i = 0; i < labels.length; i++) {
@@ -1070,77 +1076,109 @@
         card.appendChild(row);
     }
 
+    // Zichtbare detailpagina: Emby 4.10 (.itemDetailPage) of 4.11 (.itemView / .view-item-item).
+    function detailPageEl() {
+        var pages = document.querySelectorAll('.itemDetailPage, .itemView, .view-item-item');
+        for (var i = 0; i < pages.length; i++) { if (visible(pages[i])) { return pages[i]; } }
+        return null;
+    }
+    // Seizoensinfo rechts van de poster, onder de beschrijving (in plaats van het blok "Over").
     function renderSeasonCard(id) {
-        var tmdbId = seasonCardIds[id];
-        var info = seasonCardCache[tmdbId];
-        if (!tmdbId || !info || itemIdFromHash() !== id) { return; }
-        var page = document.querySelector('.itemDetailPage');
-        if (!page || !visible(page)) { return; }
-        var poster = page.querySelector('.detailImageContainer');
-        if (!poster) {
-            var image = page.querySelector('.itemDetailImage img, .cardImageContainer img');
-            poster = image && image.closest ? image.closest('.card') || image.parentElement : null;
+        var key = seasonCardKey(id);
+        var info = key ? seasonCardCache[key] : null;
+        if (!info || itemIdFromHash() !== id) { return; }
+        var page = detailPageEl();
+        if (!page) { return; }
+        var anchor = null;
+        var cands = page.querySelectorAll('.overview-text, .itemOverview, .overview, [class*="verview"]');
+        for (var i = 0; i < cands.length; i++) {
+            if (visible(cands[i]) && !(cands[i].closest && cands[i].closest('.discover-season-info'))) { anchor = cands[i]; break; }
         }
-        if (!poster || !poster.parentElement) { return; }
+        if (!anchor) {
+            var btns = page.querySelector('.mainDetailButtons, .detailButtons');
+            if (btns && visible(btns)) { anchor = btns; }
+        }
+        if (!anchor || !anchor.parentElement) { return; }
 
         var card = page.querySelector('.discover-season-info');
-        if (!card) {
-            card = document.createElement('div');
-            card.className = 'discover-season-info';
+        if (!card) { card = document.createElement('div'); card.className = 'discover-season-info'; }
+        if (card.getAttribute('data-key') !== key) {
+            card.setAttribute('data-key', key);
+            card.textContent = '';
+            var head = document.createElement('div');
+            head.className = 'discover-season-info-head';
+            var hn = document.createElement('span');
+            hn.textContent = info.SeasonName || '';
+            head.appendChild(hn);
+            var score = info.SeasonRating > 0 ? info.SeasonRating : info.TmdbRating;
+            if (score > 0) {
+                var rt = document.createElement('span');
+                rt.className = 'discover-season-info-rating';
+                rt.textContent = 'TMDB ' + score + '%';
+                head.appendChild(rt);
+            }
+            if (head.textContent) { card.appendChild(head); }
+            if (info.SeasonOverview) {
+                var ov = document.createElement('div');
+                ov.className = 'discover-season-info-overview';
+                ov.textContent = info.SeasonOverview;
+                card.appendChild(ov);
+            }
+            if (info.SeasonEpisodes > 0) {
+                appendSeasonInfoRow(card, text('Afleveringen', 'Episodes', 'Episoden', 'Episoder'), String(info.SeasonEpisodes));
+            }
+            if (info.SeasonAirDate) {
+                appendSeasonInfoRow(card, text('Uitgezonden', 'Aired', 'Ausgestrahlt', 'Sendt'),
+                    info.SeasonAirDate + (info.SeasonLastAirDate ? ' \u2013 ' + info.SeasonLastAirDate : ''));
+            }
+            appendSeasonInfoRow(card, seasonInfoLabel('status'), info.Status);
+            if (!info.SeasonAirDate) { appendSeasonInfoRow(card, seasonInfoLabel('firstAirDate'), info.FirstAirDate); }
+            appendSeasonInfoRow(card, seasonInfoLabel('network'), info.Network);
+            appendSeasonInfoRow(card, seasonInfoLabel('originalLanguage'), info.OriginalLanguage);
+            appendSeasonInfoRow(card, seasonInfoLabel('productionCountry'), info.ProductionCountry);
+            if (info.StreamingOn && info.StreamingOn.length) {
+                var providers = document.createElement('div');
+                providers.className = 'discover-season-info-providers';
+                var title = document.createElement('div');
+                title.className = 'discover-season-info-label';
+                title.textContent = seasonInfoLabel('streamingOn');
+                var list = document.createElement('div');
+                list.className = 'discover-season-info-provider-list';
+                info.StreamingOn.forEach(function (provider) {
+                    var chip = document.createElement('span');
+                    chip.className = 'discover-season-info-provider';
+                    chip.textContent = provider;
+                    list.appendChild(chip);
+                });
+                providers.appendChild(title);
+                providers.appendChild(list);
+                card.appendChild(providers);
+            }
         }
-        card.setAttribute('data-series-id', String(tmdbId));
-        card.textContent = '';
-        var width = poster.getBoundingClientRect().width;
-        card.style.width = width > 0 ? Math.round(width) + 'px' : 'min(100%, 340px)';
-
-        if (info.TmdbRating > 0) {
-            var rating = document.createElement('div');
-            rating.className = 'discover-season-info-rating';
-            rating.textContent = 'TMDB  ' + info.TmdbRating + '%';
-            card.appendChild(rating);
-        }
-        appendSeasonInfoRow(card, seasonInfoLabel('status'), info.Status);
-        appendSeasonInfoRow(card, seasonInfoLabel('firstAirDate'), info.FirstAirDate);
-        appendSeasonInfoRow(card, seasonInfoLabel('originalLanguage'), info.OriginalLanguage);
-        appendSeasonInfoRow(card, seasonInfoLabel('productionCountry'), info.ProductionCountry);
-        appendSeasonInfoRow(card, seasonInfoLabel('network'), info.Network);
-        if (info.StreamingOn && info.StreamingOn.length) {
-            var providers = document.createElement('div');
-            providers.className = 'discover-season-info-providers';
-            var title = document.createElement('div');
-            title.className = 'discover-season-info-label';
-            title.textContent = seasonInfoLabel('streamingOn');
-            var list = document.createElement('div');
-            list.className = 'discover-season-info-provider-list';
-            info.StreamingOn.forEach(function (provider) {
-                var chip = document.createElement('span');
-                chip.className = 'discover-season-info-provider';
-                chip.textContent = provider;
-                list.appendChild(chip);
-            });
-            providers.appendChild(title);
-            providers.appendChild(list);
-            card.appendChild(providers);
-        }
-        if (poster.nextSibling !== card) { poster.parentElement.insertBefore(card, poster.nextSibling); }
+        if (anchor.nextSibling !== card) { anchor.parentElement.insertBefore(card, anchor.nextSibling); }
+    }
+    function seasonCardKey(id) {
+        var t = seasonCardIds[id];
+        return t ? t + ':' + (seasonCardSeason[id] || 0) : null;
     }
 
     function loadSeasonCardInfo(itemId, tmdbId) {
-        if (seasonCardCache[tmdbId]) { renderSeasonCard(itemId); return; }
-        if (seasonCardPending[tmdbId]) { return; }
+        var key = seasonCardKey(itemId);
+        if (seasonCardCache[key]) { renderSeasonCard(itemId); return; }
+        if (seasonCardPending[key]) { return; }
         var c = api();
         if (!c) { return; }
-        seasonCardPending[tmdbId] = true;
+        seasonCardPending[key] = true;
         c.ajax({
             type: 'GET',
-            url: c.getUrl('Discover/SeriesCard', { TmdbId: tmdbId }),
+            url: c.getUrl('Discover/SeriesCard', { TmdbId: tmdbId, Season: seasonCardSeason[itemId] || 0 }),
             dataType: 'json'
         }).then(function (info) {
-            seasonCardCache[tmdbId] = info || {};
-            delete seasonCardPending[tmdbId];
+            seasonCardCache[key] = info || {};
+            delete seasonCardPending[key];
             renderSeasonCard(itemId);
         }, function (error) {
-            delete seasonCardPending[tmdbId];
+            delete seasonCardPending[key];
             console.warn('[Discover] seriegegevens laden mislukt voor TMDB ' + tmdbId, error);
         });
     }
@@ -1286,7 +1324,8 @@
         else { hideOverSection(); }
         hideMediaInfo(preserveOverview);
         hideExtraButtons();
-        if (!preserveOverview) { hideSectionsByLabel(); }
+        // Ook op seizoenspagina's: Over, Links (Trakt) en Media informatie weg; de seizoensinfo staat rechts van de poster.
+        hideSectionsByLabel();
         hideFilePathLines(true, false, preserveOverview);
         expandOverview();
     }
