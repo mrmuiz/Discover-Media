@@ -38,8 +38,8 @@ define([], function () {
             return;
         }
         var urls = [
-            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1387' }),
-            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1387' }),
+            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1388' }),
+            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1388' }),
             ApiClient.getUrl('Plugins/Discover/Script')
         ];
         var n = 0;
@@ -70,7 +70,7 @@ define([], function () {
         })();
     }
 
-    var UI_PAGE = 'discoverui1088';
+    var UI_PAGE = 'discoverui1089';
 
     return function (view, params) {
         // embedded: alleen de popup, over een andere Emby-pagina heen (film-, serie- of acteurspagina).
@@ -1865,10 +1865,18 @@ define([], function () {
             });
         }
 
+        // Emby 4.11 stuurt viewshow soms ook naar een oude, verborgen kopie van deze pagina. Alleen de pagina die echt
+        // in beeld komt mag de opdracht (acteur/titel) oppakken; anders opent die op een plek die je niet ziet.
+        function openWhenVisible(n) {
+            if (!document.body.contains(view)) { return; }
+            var r = view.getBoundingClientRect();
+            if (r.width > 0 && r.height > 0 && !view.classList.contains('hide')) { openFromLink(); return; }
+            if (n < 30) { setTimeout(function () { openWhenVisible(n + 1); }, 100); }
+        }
         view.addEventListener('viewshow', function () {
             if (!loaded) { loadHome(); }
             else { scheduleQueue(0); loadMyRequests(); }
-            openFromLink();
+            openWhenVisible(0);
         });
         // Geen hashchange-luisteraar: Emby 4.11 maakt bij elke navigatie een nieuwe Discover-pagina (met eigen viewshow);
         // een oude, verborgen kopie zou de opdracht anders "opeten" en de persoon tonen waar je hem niet ziet.
