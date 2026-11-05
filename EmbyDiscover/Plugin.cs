@@ -152,6 +152,9 @@ namespace Emby.Plugins.Discover
                 new PluginPageInfo
                 {
                     Name = "discoverstatus1079",
+                    // Zelfde naam als de instellingenpagina: Emby sorteert op DisplayName en de Plug-ins-pagina opent
+                    // de eerste pagina; zo blijft de instellingenpagina (eerder in deze lijst) vóór de statuspagina.
+                    DisplayName = DiscoverLanguage.Text("Discover-instellingen", "Discover settings", "Discover-Einstellungen"),
                     EmbeddedResourcePath = GetType().Namespace + ".Configuration.statusPage.html"
                 },
                 new PluginPageInfo
