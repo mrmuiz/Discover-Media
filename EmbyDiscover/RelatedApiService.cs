@@ -42,6 +42,15 @@ namespace Emby.Plugins.Discover
         public bool RedirectTile { get; set; }
     }
 
+    [Route("/Discover/Backdrops", "GET", Summary = "Achtergronden (TMDB trending) voor de tegel Discover Media op de Emby-startpagina")]
+    [Authenticated]
+    public class DiscoverBackdropsRequest : IReturn<DiscoverBackdropsResult> { }
+
+    public class DiscoverBackdropsResult
+    {
+        public List<string> Urls { get; set; } = new List<string>();
+    }
+
     [Route("/Discover/Seasons", "GET", Summary = "Seizoenen van een serie (voor de seizoenskeuze vanuit een rij)")]
     [Authenticated]
     public class DiscoverSeasonsRequest : IReturn<DiscoverSeasonsResult>
@@ -91,6 +100,42 @@ namespace Emby.Plugins.Discover
         }
 
         private static bool TmdbReady => !string.IsNullOrWhiteSpace(Plugin.GetCurrentConfiguration().TmdbApiKey);
+
+        private static List<string> _backdrops;
+        private static DateTime _backdropsAt;
+
+        /// <summary>Achtergronden van wat nu trending is (films en series), 6 uur bewaard.</summary>
+        public async Task<object> Get(DiscoverBackdropsRequest request)
+        {
+            var res = new DiscoverBackdropsResult();
+            if (!TmdbReady) return res;
+            var cached = _backdrops;
+            if (cached != null && DateTime.UtcNow - _backdropsAt < TimeSpan.FromHours(6)) { res.Urls = cached; return res; }
+            try
+            {
+                var list = new List<string>();
+                for (int page = 1; page <= 2; page++)
+                {
+                    var p = await _tmdb.GetList("/trending/all/week", page, CancellationToken.None).ConfigureAwait(false);
+                    if (p == null || p.results == null) break;
+                    foreach (var x in p.results)
+                        if (x != null && !x.adult && !string.IsNullOrEmpty(x.backdrop_path))
+                        {
+                            var url = "https://image.tmdb.org/t/p/w1280" + x.backdrop_path;
+                            if (!list.Contains(url)) list.Add(url);
+                        }
+                }
+                if (list.Count > 0) { _backdrops = list; _backdropsAt = DateTime.UtcNow; }
+                res.Urls = list;
+            }
+            catch (Exception ex)
+            {
+                if (ex is OperationCanceledException) throw;
+                DiscoverDiagnostics.Add("achtergronden voor de startpagina mislukt: " + ex.Message);
+                if (cached != null) res.Urls = cached;
+            }
+            return res;
+        }
 
         public object Get(DiscoverLoaderConfigRequest request)
         {

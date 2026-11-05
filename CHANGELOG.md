@@ -9,6 +9,7 @@
 - Change: coloured buttons in the Discover popup: **Trailer** blue, **Open in Emby** Emby green, **Delete / Cancel request** red; on hover they get slightly brighter instead of turning yellow.
 - Change: for series the **Trailer** button sits in the row with the season buttons (on phones it stays in the button bar pinned to the bottom of the popup, so it is always visible).
 - Change: the **Channel tiles** button on the Discover page is gone. The channel folders are still reachable through Emby's own channel view.
+- New: **backdrop for the "Discover Media" tile on the Emby home screen**, like Emby does for the other libraries: hovering or selecting the tile shows a random backdrop of a currently trending movie or series full screen (TMDB trending, `GET /Discover/Backdrops`, cached 6 hours). Only when *Enable backdrops* is on in the user's Emby display settings; the image goes into Emby's own backdrop layer so Emby's dimming applies. Web client only (browser and apps that load the server's web client); needs the web loader in index.html.
 - Change: page names bumped (`discoverui1082`, `discoveruijs1376`, `discoverbuttonjs1375`, `discoverconfigjs1358`, `discoverstatusjs1101`) so browsers load the new scripts.
 - After updating, restart Emby once and hard-refresh the browser (Ctrl+F5).
 

@@ -120,7 +120,7 @@
         });
         return redirectLoading;
     }
-    window.__discoverDebug = function () { return { redirectOn: redirectOn, configAgeMs: Date.now() - redirectAt, stay: !!window.__discoverStay, route: routeOf(location.href), channelIds: info && info.ids }; };
+    window.__discoverDebug = function () { return { backdrop: { allowed: (typeof bdAllowed === 'function') ? bdAllowed() : null, on: bd && bd.on, urls: bd && bd.urls ? bd.urls.length : 0 }, redirectOn: redirectOn, configAgeMs: Date.now() - redirectAt, stay: !!window.__discoverStay, route: routeOf(location.href), channelIds: info && info.ids }; };
 
     // Decision: redirect only for a fresh open of the channel root (tile / menu), never when the setting is off,
     // when the user asked for the channel tiles, or when coming back (Back) from inside the channel.
@@ -170,6 +170,145 @@
             if (r[0] === true && routeOf(location.href) === route && shouldRedirect(route, 'traverse', from, true)) { redirect(); }
         });
     });
+
+    // ---- Achtergrond bij de tegel "Discover Media" (zoals Emby dat bij andere bibliotheken doet) ----
+    // Alleen als de gebruiker in Emby "Achtergronden inschakelen" aan heeft. De foto komt in Emby's eigen
+    // achtergrondlaag (.backdropContainer), zodat Emby's verduistering er gewoon overheen valt.
+    var bd = { urls: null, loading: null, on: false, timer: null, layer: null, addedClass: false, seenEmby: false, pref: null, prefAsked: false, last: '' };
+    function bdPrefFromStorage() {
+        try {
+            for (var i = 0; i < localStorage.length; i++) {
+                var k = localStorage.key(i);
+                if (k && /enablebackdrops/i.test(k)) {
+                    var v = String(localStorage.getItem(k));
+                    if (v === 'true') { return true; }
+                    if (v === 'false') { return false; }
+                }
+            }
+        } catch (e) { }
+        return null;
+    }
+    function bdAskServerPref() {
+        var a = api();
+        if (!a || bd.prefAsked) { return; }
+        bd.prefAsked = true;
+        try {
+            Promise.resolve(a.getJSON(a.getUrl('DisplayPreferences/usersettings', { userId: a.getCurrentUserId(), client: 'emby' }))).then(function (p) {
+                var v = p && p.CustomPrefs ? p.CustomPrefs.enableBackdrops : undefined;
+                if (v === 'true' || v === true) { bd.pref = true; } else if (v === 'false' || v === false) { bd.pref = false; }
+            }, function () { });
+        } catch (e) { }
+    }
+    function bdAllowed() {
+        var s = bdPrefFromStorage();
+        if (s !== null) { return s; }
+        if (bd.pref !== null) { return bd.pref; }
+        return bd.seenEmby;   // onbekend: alleen als Emby zelf al achtergronden laat zien
+    }
+    function bdLoadUrls() {
+        if (bd.urls) { return Promise.resolve(bd.urls); }
+        if (bd.loading) { return bd.loading; }
+        var a = api();
+        if (!a) { return Promise.resolve([]); }
+        bd.loading = Promise.resolve(a.getJSON(a.getUrl('Discover/Backdrops'))).then(function (r) {
+            bd.urls = (r && r.Urls) || [];
+            bd.loading = null;
+            return bd.urls;
+        }, function () { bd.loading = null; return []; });
+        return bd.loading;
+    }
+    function bdStyle() {
+        if (document.getElementById('dcHomeBackdropStyle')) { return; }
+        var st = document.createElement('style');
+        st.id = 'dcHomeBackdropStyle';
+        st.textContent = '.dcHomeBackdrop{position:absolute;top:0;left:0;right:0;bottom:0;background-size:cover;background-position:center center;background-repeat:no-repeat;opacity:0;transition:opacity .6s ease;pointer-events:none;}.dcHomeBackdrop.on{opacity:1;}';
+        document.head.appendChild(st);
+    }
+    var bdObserved = null;
+    function bdWatch(container) {
+        if (!container || bdObserved === container || typeof MutationObserver !== 'function') { return; }
+        bdObserved = container;
+        new MutationObserver(function (muts) {
+            for (var i = 0; i < muts.length; i++) {
+                for (var j = 0; j < muts[i].addedNodes.length; j++) {
+                    var n = muts[i].addedNodes[j];
+                    if (n !== bd.layer && n.nodeType === 1) { bd.seenEmby = true; }
+                }
+            }
+            // Emby ruimt zijn achtergrond op bij een tegel zonder eigen foto: dan zetten we de onze terug.
+            if (bd.on && bd.layer && bd.layer.parentNode !== container) { container.appendChild(bd.layer); }
+        }).observe(container, { childList: true });
+    }
+    function bdShow() {
+        var container = document.querySelector('.backdropContainer');
+        if (!container) { return; }
+        bdWatch(container);
+        if (!bdAllowed()) { return; }
+        bd.on = true;
+        bdLoadUrls().then(function (urls) {
+            if (!bd.on || !urls.length) { return; }
+            var pick = urls[Math.floor(Math.random() * urls.length)];
+            if (urls.length > 1 && pick === bd.last) { pick = urls[(urls.indexOf(pick) + 1) % urls.length]; }
+            bd.last = pick;
+            var img = new Image();
+            img.onload = function () {
+                if (!bd.on) { return; }
+                bdStyle();
+                if (!bd.layer) { bd.layer = document.createElement('div'); bd.layer.className = 'dcHomeBackdrop'; }
+                bd.layer.classList.remove('on');
+                bd.layer.style.backgroundImage = 'url("' + pick + '")';
+                if (bd.layer.parentNode !== container) { container.appendChild(bd.layer); }
+                var bg = document.querySelector('.backgroundContainer');
+                if (bg && !bg.classList.contains('withBackdrop')) { bg.classList.add('withBackdrop'); bd.addedClass = true; }
+                requestAnimationFrame(function () { if (bd.on && bd.layer) { bd.layer.classList.add('on'); } });
+            };
+            img.src = pick;
+        });
+    }
+    function bdHide() {
+        clearTimeout(bd.timer);
+        if (!bd.on) { return; }
+        bd.on = false;
+        var layer = bd.layer;
+        if (layer) { layer.classList.remove('on'); }
+        setTimeout(function () {
+            if (bd.on) { return; }
+            if (layer && layer.parentNode) { layer.parentNode.removeChild(layer); }
+            if (bd.addedClass) {
+                var container = document.querySelector('.backdropContainer');
+                var bg = document.querySelector('.backgroundContainer');
+                if (bg && (!container || !container.children.length)) { bg.classList.remove('withBackdrop'); }
+                bd.addedClass = false;
+            }
+        }, 650);
+    }
+    function bdCardId(el) {
+        var card = el && el.closest ? el.closest('.card, [data-id]') : null;
+        if (!card) { return null; }
+        var id = card.getAttribute('data-id');
+        if (!id) {
+            var link = card.querySelector('a[href*="id="]') || (card.tagName === 'A' ? card : null);
+            var m = link && /[?&](?:parent)?id=([0-9a-z]+)/i.exec(link.getAttribute('href') || '');
+            id = m ? m[1] : '';
+        }
+        return String(id || '').toLowerCase();
+    }
+    function bdOnPointer(e) {
+        var id = bdCardId(e.target);
+        if (id === null) { return; }             // geen kaart: niets veranderen
+        if (info && info.ids.indexOf(id) !== -1) {
+            if (bd.on) { return; }                // al zichtbaar: niet bij elk kind-element een nieuwe foto
+            bdAskServerPref();
+            clearTimeout(bd.timer);
+            bd.timer = setTimeout(bdShow, 120);
+        } else {
+            bdHide();                             // een andere tegel: Emby toont zijn eigen achtergrond
+        }
+    }
+    document.addEventListener('mouseover', bdOnPointer, true);
+    document.addEventListener('focusin', bdOnPointer, true);
+    window.addEventListener('hashchange', bdHide);
+    if (window.navigation && typeof navigation.addEventListener === 'function') { navigation.addEventListener('navigate', bdHide); }
 
     log('lader actief (v' + 3 + '); controleer in de console met: __discoverDebug()');
     setInterval(function () {
