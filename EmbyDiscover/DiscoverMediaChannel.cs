@@ -65,7 +65,7 @@ namespace Emby.Plugins.Discover
         // Ophogen als Emby oude (bewaarde) kanaalinhoud blijft tonen.
         // De tegel-epoch verandert als de opruiming tegelplaatjes heeft verwijderd: dan vraagt Emby de mappen opnieuw op
         // en maakt de plugin de ontbrekende plaatjes opnieuw (anders verwijst Emby naar een bestand dat niet meer bestaat).
-        public string DataVersion => (Plugin.GetCurrentConfiguration().ShowTrailerTile ? "74" : "74-notrailer") + "-e" + CacheCleaner.TileEpoch;
+        public string DataVersion => (Plugin.GetCurrentConfiguration().ShowTrailerTile ? "75" : "75-notrailer") + "-e" + CacheCleaner.TileEpoch;
         public ChannelParentalRating ParentalRating => ChannelParentalRating.GeneralAudience;
         public bool IsEnabledFor(string userId) => true;
 
@@ -315,6 +315,8 @@ namespace Emby.Plugins.Discover
                 var bgUrl = item.ImageUrl;
                 var askFile = FolderTile.Existing(tileKey + "ask", DiscoverLanguage.Text("Aanvragen", "Request", "Anfragen", "Forespør"), bgUrl);
                 var trailerFile = showTrailerTile ? FolderTile.Existing(tileKey + "tr", DiscoverLanguage.Text("Trailer", "Trailer", "Trailer"), bgUrl) : null;
+                if (askFile == null) FolderTile.EnsureInBackground(tileKey + "ask", DiscoverLanguage.Text("Aanvragen", "Request", "Anfragen", "Forespør"), bgUrl);
+                if (showTrailerTile && trailerFile == null) FolderTile.EnsureInBackground(tileKey + "tr", DiscoverLanguage.Text("Trailer", "Trailer", "Trailer"), bgUrl);
                 if (askFile != null) item.ImageUrl = askFile;
                 if (trailerFile != null) trailer.ImageUrl = trailerFile;
             }

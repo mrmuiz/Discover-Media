@@ -16,7 +16,7 @@
 
     var CHANNEL_NAME = 'Discover Media';
     var KNOWN_UI = ['discoverui1086', 'discoverui1085', 'discoverui1084', 'discoverui1083', 'discoverui1082', 'discoverui1081', 'discoverui1080', 'discoverui1079', 'discoverui1078', 'discoverui1077', 'discoverui1076', 'discoverui1075'];
-    var KNOWN_BTN = ['discoverbuttonjs1380', 'discoverbuttonjs1379', 'discoverbuttonjs1378', 'discoverbuttonjs1377', 'discoverbuttonjs1376', 'discoverbuttonjs1375', 'discoverbuttonjs1374', 'discoverbuttonjs1373', 'discoverbuttonjs1372', 'discoverbuttonjs1371', 'discoverbuttonjs1370', 'discoverbuttonjs1360', 'discoverbuttonjs1354', 'discoverbuttonjs1353', 'discoverbuttonjs1352', 'discoverbuttonjs1351', 'discoverbuttonjs1350', 'discoverbuttonjs1340'];
+    var KNOWN_BTN = ['discoverbuttonjs1381', 'discoverbuttonjs1380', 'discoverbuttonjs1379', 'discoverbuttonjs1378', 'discoverbuttonjs1377', 'discoverbuttonjs1376', 'discoverbuttonjs1375', 'discoverbuttonjs1374', 'discoverbuttonjs1373', 'discoverbuttonjs1372', 'discoverbuttonjs1371', 'discoverbuttonjs1370', 'discoverbuttonjs1360', 'discoverbuttonjs1354', 'discoverbuttonjs1353', 'discoverbuttonjs1352', 'discoverbuttonjs1351', 'discoverbuttonjs1350', 'discoverbuttonjs1340'];
 
     function log(m) { try { console.log('[Discover web] ' + m); } catch (e) { } }
     function api() {
@@ -45,7 +45,8 @@
         var p = Promise.all([
             safe(a.getJSON(a.getUrl('web/configurationpages', { PageType: 'PluginConfiguration', UserId: uid }))),
             safe(a.getJSON(a.getUrl('Channels', { UserId: uid }))),
-            safe(a.getJSON(a.getUrl('Users/' + uid + '/Views')))
+            safe(a.getJSON(a.getUrl('Users/' + uid + '/Views'))),
+            safe(a.getJSON(a.getUrl('Discover/ChannelInfo')))
         ]).then(function (r) {
             var names = [];
             items(r[0]).forEach(function (pg) { var n = pg && (pg.Name || pg.name); if (n && names.indexOf(n) === -1) { names.push(n); } });
@@ -56,6 +57,8 @@
                     if (ids.indexOf(id) === -1) { ids.push(id); }
                 }
             });
+            // Hernoemd kanaal (bv. "Aanvragen"): de server weet welk kanaal van Discover is.
+            if (r[3] && r[3].Id) { var cid = String(r[3].Id).toLowerCase(); if (ids.indexOf(cid) === -1) { ids.push(cid); } }
             var ui = newest(names, /^discoverui\d+$/i);
             var btn = newest(names, /^discoverbuttonjs\d+$/i);
             KNOWN_UI.forEach(function (n) { if (ui.indexOf(n) === -1) { ui.push(n); } });

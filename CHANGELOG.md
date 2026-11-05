@@ -27,8 +27,10 @@
 - Fix: no backdrop on Discover channel pages since the previous build: an empty backdrop element of Emby already counted as "Emby has its own backdrop". Now only a real, visible image counts.
 - Fix: stray "✓" next to the checkboxes on the settings page in Emby 4.11 (old checkbox outline markup that 4.11 no longer styles).
 - Fix: the "Request"/"Trailer" text on the tiles of a title folder disappeared after a channel refresh without a user (scheduled refresh, DataVersion change): the refresh used the plain backdrop. It now reuses the tiles that were already made, without starting ffmpeg.
+- Fix: a **renamed channel** (e.g. "Aanvragen" instead of "Discover Media") was not recognised by the web scripts and the status page, so the info block, cast and hidden Play/Shuffle buttons did not appear on Discover folders. New `GET /Discover/ChannelInfo` finds the Discover channel by its content (folder ids "ask…"/"tr…"), whatever its name.
+- Fix: Emby 4.11 often shows channel folders from its own database without asking the plugin, so the "Request"/"Trailer" text tiles were never made "on open". Missing tiles are now made in the background (one at a time) during a channel refresh and used from the next refresh on. Channel DataVersion 75.
 - Note: backdrops for channel items in the native TV/mobile apps are not possible (Emby has no backdrop field for channel items); they work in the web client.
-- Change: page names bumped (`discoverui1086`, `discoveruijs1382`, `discoverbuttonjs1380`, `discoverconfigjs1360`).
+- Change: page names bumped (`discoverui1086`, `discoveruijs1382`, `discoverbuttonjs1381`, `discoverconfigjs1360`, `discoverstatusjs1102`).
 
 ## Version 1.3.5.6
 

@@ -81,6 +81,37 @@ namespace Emby.Plugins.Discover
         }
 
         /// <summary>Geeft het pad van het plaatje (uit de bewaarde bestanden of net gemaakt), of null als het niet lukt.</summary>
+        // Achtergrondrij voor tegels die tijdens een kanaalverversing nog ontbreken: één tegelijk, zodat Emby niet stil valt.
+        private static readonly SemaphoreSlim BackgroundLane = new SemaphoreSlim(1, 1);
+        private static int _backgroundQueued;
+
+        /// <summary>
+        /// Maak een tegel op de achtergrond (niet wachten). Emby 4.11 vraagt kanaalmappen bij het openen niet altijd opnieuw op
+        /// bij de plugin; dan worden de tegels nooit "bij het openen" gemaakt. Zo staan ze er bij de volgende verversing wel.
+        /// </summary>
+        public static void EnsureInBackground(string key, string text, string backgroundUrl)
+        {
+            if (!Plugin.GetCurrentConfiguration().TileTextImages || string.IsNullOrEmpty(text) || string.IsNullOrEmpty(backgroundUrl)) return;
+            var tag = "bg|" + key + "|" + text + "|" + backgroundUrl;
+            lock (Building)
+            {
+                if (Building.Contains(tag) || _backgroundQueued >= 5000) return;
+                Building.Add(tag);
+                _backgroundQueued++;
+            }
+            Task.Run(async () =>
+            {
+                try
+                {
+                    await BackgroundLane.WaitAsync().ConfigureAwait(false);
+                    try { await Create(key, text, backgroundUrl, CancellationToken.None, null, false).ConfigureAwait(false); }
+                    finally { BackgroundLane.Release(); }
+                }
+                catch (Exception ex) { DiscoverDiagnostics.Add("tegel op de achtergrond mislukt: " + ex.Message); }
+                finally { lock (Building) { Building.Remove(tag); _backgroundQueued--; } }
+            });
+        }
+
         /// <summary>
         /// Al gemaakte tegel (liggend, zonder ffmpeg te starten), of een oudere versie ervan; anders null.
         /// Voor de kanaalverversing zonder gebruiker: dan blijft de tekst op de tegel staan in plaats van te verdwijnen.

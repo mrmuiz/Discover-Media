@@ -8,7 +8,7 @@
         console.warn('[Discover] oudere knopcode is nog actief; vernieuw de webclient om dubbele handlers te voorkomen.');
         return;
     }
-    var DC_BUILD = 'big-r8 2026-11-05';
+    var DC_BUILD = 'big-r9 2026-11-05';
     window.__discoverRequestButton = true;
     window.__discoverRequestButtonVersion = '1.4.0.0';
     window.__discoverRequestButtonBuild = DC_BUILD;
@@ -1378,13 +1378,17 @@
         if (chPromise) { return chPromise; }
         var c = api();
         if (!c) { return Promise.resolve(null); }
-        chPromise = Promise.resolve(c.getJSON(c.getUrl('Channels', { UserId: c.getCurrentUserId() }))).then(function (r) {
-            var items = (r && r.Items) || [];
-            for (var i = 0; i < items.length; i++) {
-                if (/^Discover(?: Media)?$/i.test(items[i].Name || '')) { return items[i].Id; }
-            }
-            return null;
-        }, function () { chPromise = null; return null; });
+        // Eerst de server vragen (vindt het kanaal ook als het in Emby hernoemd is, bv. "Aanvragen"), anders op naam.
+        chPromise = Promise.resolve(c.getJSON(c.getUrl('Discover/ChannelInfo'))).then(function (ci) {
+            if (ci && ci.Id) { return String(ci.Id); }
+            return Promise.resolve(c.getJSON(c.getUrl('Channels', { UserId: c.getCurrentUserId() }))).then(function (r) {
+                var items = (r && r.Items) || [];
+                for (var i = 0; i < items.length; i++) {
+                    if (/^Discover(?: Media)?$/i.test(items[i].Name || '')) { return items[i].Id; }
+                }
+                return null;
+            });
+        }).then(null, function () { chPromise = null; return null; });
         return chPromise;
     }
 

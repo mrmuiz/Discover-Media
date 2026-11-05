@@ -140,7 +140,9 @@ define(['emby-button'], function () {
         });
     }
 
+    var discoverChannelIdFromServer = null;   // gevuld via Discover/ChannelInfo (werkt ook bij een hernoemd kanaal)
     function isDiscoverChannel(channel) {
+        if (channel && discoverChannelIdFromServer && String(channel.Id) === String(discoverChannelIdFromServer)) { return true; }
         var name = String(channel && channel.Name || '').trim();
         return /discover/i.test(name) || /^films\s*&\s*series\s+aanvragen$/i.test(name);
     }
@@ -284,7 +286,8 @@ define(['emby-button'], function () {
             lines.push('');
             lines.push('== ' + text('Kanaal', 'Channel', 'Kanal') + ' ==');
             return step(lines, text('Kanalen ophalen', 'Get channels', 'Kanäle abrufen'), function () {
-                return getJson('Channels', { UserId: adminId }).then(function (r) {
+                return getJson('Discover/ChannelInfo').then(function (ci) { discoverChannelIdFromServer = ci && ci.Id; }, function () { })
+                    .then(function () { return getJson('Channels', { UserId: adminId }); }).then(function (r) {
                     var names = (r.Items || []).map(function (c) { return c.Name; });
                     var found = (r.Items || []).filter(isDiscoverChannel)[0];
                     if (found) { ok(lines, text('Kanaal "', 'Channel "', 'Kanal "') + found.Name + text('" is bekend bij Emby en zichtbaar voor jou.', '" is listed by Emby and visible to you.', '" ist bei Emby bekannt und für dich sichtbar.')); }

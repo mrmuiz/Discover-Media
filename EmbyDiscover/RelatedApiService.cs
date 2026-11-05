@@ -73,6 +73,16 @@ namespace Emby.Plugins.Discover
         public List<string> Urls { get; set; } = new List<string>();
     }
 
+    [Route("/Discover/ChannelInfo", "GET", Summary = "Emby-id van het Discover-kanaal (ook als het kanaal in Emby een andere naam heeft gekregen)")]
+    [Authenticated]
+    public class DiscoverChannelInfoRequest : IReturn<DiscoverChannelInfoResult> { }
+
+    public class DiscoverChannelInfoResult
+    {
+        public string Id { get; set; }
+        public string Name { get; set; }
+    }
+
     [Route("/Discover/ItemCast", "GET", Summary = "Cast (met foto) bij een titel in het Discover-kanaal")]
     [Authenticated]
     public class DiscoverItemCastRequest : IReturn<DiscoverItemCastResult>
@@ -207,6 +217,43 @@ namespace Emby.Plugins.Discover
         /// Zoekt bij een kanaalpagina (titelmap, aanvraagmap, seizoen, trailer) de TMDB-achtergrond van die titel.
         /// Kanaalitems herken je aan hun ExternalId ("ask..."/"tr..."), met daarin "m:123" (film) of "t:123" (serie).
         /// </summary>
+        private static readonly object ChannelGate = new object();
+        private static DiscoverChannelInfoResult _channel;
+        private static DateTime _channelAt;
+
+        private static bool OurExternalId(string ext) =>
+            !string.IsNullOrEmpty(ext) && (ext.StartsWith("ask", StringComparison.Ordinal) || ext.StartsWith("tr", StringComparison.Ordinal));
+
+        /// <summary>
+        /// Zoekt het Discover-kanaal op inhoud in plaats van op naam: het kanaal waarvan de mappen onze ExternalId's hebben
+        /// ("ask..."/"tr..."). Zo werkt alles ook als iemand het kanaal in Emby hernoemt (bv. naar "Aanvragen").
+        /// </summary>
+        public object Get(DiscoverChannelInfoRequest request)
+        {
+            lock (ChannelGate)
+            {
+                if (_channel != null && DateTime.UtcNow - _channelAt < TimeSpan.FromMinutes(10)) return _channel;
+            }
+            var res = new DiscoverChannelInfoResult();
+            try
+            {
+                var channels = _library.GetItemList(new MediaBrowser.Controller.Entities.InternalItemsQuery { IncludeItemTypes = new[] { "Channel" } });
+                foreach (var ch in channels)
+                {
+                    var kids = _library.GetItemList(new MediaBrowser.Controller.Entities.InternalItemsQuery { ParentIds = new[] { ch.InternalId }, Limit = 25 });
+                    if (kids.Any(k => OurExternalId(k.ExternalId)) || string.Equals(ch.Name, "Discover Media", StringComparison.OrdinalIgnoreCase))
+                    {
+                        res.Id = ch.InternalId.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                        res.Name = ch.Name;
+                        break;
+                    }
+                }
+            }
+            catch (Exception ex) { DiscoverDiagnostics.Add("kanaal opzoeken mislukt: " + ex.Message); }
+            lock (ChannelGate) { if (res.Id != null) { _channel = res; _channelAt = DateTime.UtcNow; } }
+            return res;
+        }
+
         public async Task<object> Get(DiscoverItemCastRequest request)
         {
             var res = new DiscoverItemCastResult();
