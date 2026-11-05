@@ -356,7 +356,23 @@ namespace Emby.Plugins.Discover
                             chain += ",format=yuvj420p[v]";
                             var args = "-y -hide_banner -loglevel error -i bg.jpg" + (hasLogo ? " -i logo.png" : "") +
                                        " -filter_complex \"" + chain + "\" -map [v] -frames:v 1 -q:v 3 out.jpg";
-                            await RunFfmpeg(ffmpeg, work, args).ConfigureAwait(false);
+                            try { await RunFfmpeg(ffmpeg, work, args).ConfigureAwait(false); }
+                            catch (Exception lex) when (hasLogo)
+                            {
+                                // Logo onleesbaar (bv. een formaat dat ffmpeg niet kent): dan de naam als tekst.
+                                DiscoverDiagnostics.Add("logo voor 'alle seizoenen' onbruikbaar, naam als tekst: " + lex.Message);
+                                var nm2 = string.IsNullOrWhiteSpace(name) ? label : name.Trim();
+                                File.WriteAllText(Path.Combine(work, "name.txt"), nm2, new UTF8Encoding(false));
+                                int ns2 = 84;
+                                double nw2 = RequestCard.Measure(nm2, ns2, true);
+                                if (nw2 > tw * 0.86) ns2 = Math.Max(40, (int)Math.Floor(ns2 * tw * 0.86 / nw2));
+                                var chain2 = chain.Substring(0, chain.IndexOf("[1:v]", StringComparison.Ordinal)) +
+                                    "[b0]drawtext=fontfile=bold.ttf:textfile=name.txt:expansion=none:fontsize=" + ns2 +
+                                    ":fontcolor=white:x=(w-text_w)/2:y=" + (int)(th * 0.63) + "-text_h/2:shadowcolor=black@0.7:shadowx=3:shadowy=3[b1];" +
+                                    chain.Substring(chain.IndexOf("[b1]drawbox", StringComparison.Ordinal));
+                                var args2 = "-y -hide_banner -loglevel error -i bg.jpg -filter_complex \"" + chain2 + "\" -map [v] -frames:v 1 -q:v 3 out.jpg";
+                                await RunFfmpeg(ffmpeg, work, args2).ConfigureAwait(false);
+                            }
                             var made = Path.Combine(work, "out.jpg");
                             if (!File.Exists(made) || new FileInfo(made).Length == 0) throw new InvalidOperationException("ffmpeg maakte geen bestand");
                             if (File.Exists(final)) File.Delete(final);

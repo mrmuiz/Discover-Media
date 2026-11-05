@@ -498,10 +498,12 @@ namespace Emby.Plugins.Discover
                 var lang = (Language() ?? "en").Split('-')[0].ToLowerInvariant();
                 var r = await Get<TmdbImagesPage>((tv ? "/tv/" : "/movie/") + id + "/images", "&include_image_language=" + lang + ",en,null", FallbackLanguage, ct).ConfigureAwait(false);
                 var list = (r?.logos ?? new List<TmdbImage>()).Where(l => l != null && !string.IsNullOrEmpty(l.file_path)).ToList();
+                // ffmpeg leest geen SVG: PNG-logo's eerst; is er alleen een SVG, dan de PNG-versie die TMDB daarvan maakt.
+                Func<TmdbImage, bool> isSvg = l => l.file_path.EndsWith(".svg", StringComparison.OrdinalIgnoreCase);
                 Func<string, TmdbImage> pick = code => list.Where(l => string.Equals(l.iso_639_1 ?? "", code, StringComparison.OrdinalIgnoreCase))
-                    .OrderByDescending(l => l.vote_average).FirstOrDefault();
+                    .OrderBy(l => isSvg(l) ? 1 : 0).ThenByDescending(l => l.vote_average).FirstOrDefault();
                 var best = pick(lang) ?? pick("en") ?? pick("") ?? list.FirstOrDefault();
-                if (best != null) logo = best.file_path;
+                if (best != null) logo = isSvg(best) ? best.file_path.Substring(0, best.file_path.Length - 4) + ".png" : best.file_path;
             }
             catch (Exception ex)
             {
