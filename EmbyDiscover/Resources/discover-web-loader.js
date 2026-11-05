@@ -237,9 +237,7 @@
             }
             // Op een kanaalpagina met een eigen achtergrond van Emby: Emby laten winnen. Anders vechten Emby en wij
             // om de laag en de klasse withBackdrop, en knippert de balk bovenin af en toe.
-            var embyOwn = false;
-            for (var k = 0; k < container.children.length; k++) { if (container.children[k] !== bd.layer) { embyOwn = true; break; } }
-            if (embyOwn && bd.page) {
+            if (bd.page && embyHasImage(container)) {
                 if (bd.layer && bd.layer.parentNode === container) { container.removeChild(bd.layer); }
                 bd.yielded = true;
                 return;
@@ -255,6 +253,21 @@
             }).observe(bg, { attributes: true, attributeFilter: ['class'] });
         }
     }
+    // Toont Emby zelf een echte achtergrondfoto? (Een leeg of uitfadend element telt niet: dat liet de onze ten onrechte weg.)
+    function embyHasImage(container) {
+        for (var k = 0; k < container.children.length; k++) {
+            var ch = container.children[k];
+            if (ch === bd.layer) { continue; }
+            var bg = (ch.style && ch.style.backgroundImage) || '';
+            if (!bg || bg === 'none') { try { bg = getComputedStyle(ch).backgroundImage || ''; } catch (e) { bg = ''; } }
+            var hasImg = (bg && bg !== 'none' && bg.indexOf('url(') !== -1) || !!(ch.querySelector && ch.querySelector('img[src]'));
+            if (!hasImg) { continue; }
+            var op = 1;
+            try { op = parseFloat(getComputedStyle(ch).opacity); } catch (e) { }
+            if (isNaN(op) || op > 0.05) { return true; }
+        }
+        return false;
+    }
     function bdShow(fixedUrl) {
         var container = document.querySelector('.backdropContainer');
         if (!container) { return; }
@@ -262,7 +275,7 @@
         if (!bdAllowed()) { return; }
         // Kanaalpagina waar Emby al een eigen achtergrond toont: niets doen.
         if (bd.page) {
-            for (var k = 0; k < container.children.length; k++) { if (container.children[k] !== bd.layer) { return; } }
+            if (embyHasImage(container)) { return; }
         }
         bd.on = true;
         var token = ++bd.seq;
