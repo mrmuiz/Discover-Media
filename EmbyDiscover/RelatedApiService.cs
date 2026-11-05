@@ -39,6 +39,8 @@ namespace Emby.Plugins.Discover
         public string Deathday { get; set; }
         public string PlaceOfBirth { get; set; }
         public string Department { get; set; }
+        /// <summary>0 onbekend, 1 vrouw, 2 man, 3 non-binair (TMDB)</summary>
+        public int Gender { get; set; }
     }
 
     [Route("/Discover/Related", "GET", Summary = "TMDB-aanbevelingen en collectie bij een film of serie")]
@@ -243,6 +245,7 @@ namespace Emby.Plugins.Discover
                 res.Deathday = p.deathday;
                 res.PlaceOfBirth = p.place_of_birth;
                 res.Department = p.known_for_department;
+                res.Gender = p.gender;
             }
             catch (Exception ex)
             {
@@ -272,10 +275,18 @@ namespace Emby.Plugins.Discover
                 var tsTask = SafeStates(true);
                 await Task.WhenAll(creditsTask, msTask, tsTask).ConfigureAwait(false);
 
-                foreach (var c in creditsTask.Result.Take(MaxPersonItems))
+                // Dubbele TMDB-pagina's van dezelfde titel (bv. "Night in Color" en "Night in Colors"):
+                // zelfde soort en jaar en vrijwel dezelfde titel, of precies dezelfde poster -> één houden.
+                var seenTitle = new HashSet<string>();
+                var seenPoster = new HashSet<string>();
+                foreach (var c in creditsTask.Result)
                 {
+                    if (row.Items.Count >= MaxPersonItems) break;
                     var dto = ToDto(c.Item, c.Tv, c.Tv ? tsTask.Result : msTask.Result);
                     dto.Role = c.Role;
+                    var tk = dto.Type + "|" + dto.Year + "|" + LooseTitle(dto.Title);
+                    if (!seenTitle.Add(tk)) continue;
+                    if (!string.IsNullOrEmpty(dto.Poster) && !seenPoster.Add(dto.Poster)) continue;
                     row.Items.Add(dto);
                 }
             }
@@ -286,6 +297,21 @@ namespace Emby.Plugins.Discover
                 DiscoverDiagnostics.Add("FOUT persoonscredits '" + request.Name + "': " + ex.Message);
             }
             return row;
+        }
+
+        /// <summary>Titel zonder hoofdletters, accenten, leestekens en de letter s (voor het herkennen van dubbelen).</summary>
+        internal static string LooseTitle(string t)
+        {
+            if (string.IsNullOrEmpty(t)) return "";
+            var d = t.Normalize(System.Text.NormalizationForm.FormD);
+            var sb = new System.Text.StringBuilder();
+            foreach (var ch in d)
+            {
+                if (System.Globalization.CharUnicodeInfo.GetUnicodeCategory(ch) == System.Globalization.UnicodeCategory.NonSpacingMark) continue;
+                var c = char.ToLowerInvariant(ch);
+                if (char.IsLetterOrDigit(c) && c != 's') sb.Append(c);
+            }
+            return sb.ToString();
         }
 
         public async Task<object> Get(DiscoverRelatedRequest request)

@@ -32,6 +32,8 @@ namespace Emby.Plugins.Discover
         public string place_of_birth { get; set; }
         public string profile_path { get; set; }
         public string known_for_department { get; set; }
+        /// <summary>0 onbekend, 1 vrouw, 2 man, 3 non-binair</summary>
+        public int gender { get; set; }
     }
 
     public class TmdbPersonHit

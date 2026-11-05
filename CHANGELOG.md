@@ -10,9 +10,10 @@
 - New: clicking a poster in the "More like this / not in your library" rows (and a title in the filmography list on a person page) opens the **Discover popup on the page you are on**, instead of jumping to the Discover page. Closing it returns you to the same spot. The popup is the same as on the Discover page (embedded controller, loaded once).
 - New: **cast with round photos** in the popup (name and role, up to 15). On the Discover page a click opens the Discover person page; above an Emby page it opens Emby's own person page when that person is in your library, otherwise the Discover person page.
 - New: **person page in Discover** (`GET /Discover/Person`): photo, born/died with age, place of birth, biography (English fallback, "More"), a backdrop of their best-known title, and rows **In your library** (opens the title in Emby), **Movies · not in your library** and **Series · not in your library**, newest first. Up to 150 credits.
+- Change: the person page rows are called **More movies from this actor / actress / director** and **More series from …** (gender and main department from TMDB), each card shows the **role** (character or "Director") under the year, and duplicate TMDB entries of the same title (same type and year with nearly the same title, or the same poster) are shown once (also in the rows on Emby's person pages).
 - Change: on Emby's person pages the plugin row is split into **Movies · not in your library** and **Series · not in your library**.
 - Note: backdrops for channel items in the native TV/mobile apps are not possible (Emby has no backdrop field for channel items); they work in the web client.
-- Change: page names bumped (`discoverui1084`, `discoveruijs1378`, `discoverbuttonjs1376`, `discoverconfigjs1359`).
+- Change: page names bumped (`discoverui1085`, `discoveruijs1379`, `discoverbuttonjs1376`, `discoverconfigjs1359`).
 
 ## Version 1.3.5.6
 

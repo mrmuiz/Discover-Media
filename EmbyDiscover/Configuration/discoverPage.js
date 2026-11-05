@@ -70,7 +70,7 @@ define([], function () {
         })();
     }
 
-    var UI_PAGE = 'discoverui1084';
+    var UI_PAGE = 'discoverui1085';
 
     return function (view, params) {
         // embedded: alleen de popup, over een andere Emby-pagina heen (film-, serie- of acteurspagina).
@@ -382,6 +382,8 @@ define([], function () {
             var sub = [];
             if (typeof i.Rating === 'number' && i.Rating > 0) { sub.push('<span class="dcStar">&#9733; ' + i.Rating.toFixed(1) + '</span>'); }
             if (i.Year) { sub.push('<span>' + i.Year + '</span>'); }
+            // Persoonspagina: welke rol (personage of regie), op een eigen regel.
+            var role = i.Role ? (i.Role === 'Director' ? text('Regie', 'Director', 'Regie', 'Regi') : i.Role) : '';
             return '<div class="dcCard focusable" tabindex="0" role="button" data-key="' + key(i) + '"' + (mine === true ? ' data-mine="1"' : '') +
                 (embyId ? ' data-emby="' + esc(embyId) + '"' : '') + '>' +
                 '<div class="dcPoster">' + poster +
@@ -389,6 +391,7 @@ define([], function () {
                 '<span class="dcStatus s' + i.Status + '">' + statusIcon(i.Status) + '</span>' + queueHtml(i) + '</div>' +
                 '<div class="dcCap"><div class="dcCapT">' + esc(i.Title) + '</div>' +
                 (sub.length ? '<div class="dcCapSub">' + sub.join('') + '</div>' : '') +
+                (role ? '<div class="dcRole" title="' + esc(role) + '">' + esc(role) + '</div>' : '') +
                 capQueueHtml(i, mine === true) +
                 '</div></div>';
         }
@@ -565,7 +568,8 @@ define([], function () {
             if (root) { root.scrollTop = 0; }
             try { window.scrollTo(0, 0); } catch (e) { }
 
-            api('GET', 'Discover/Person', { Id: pid }).then(function (p) {
+            var personInfo = api('GET', 'Discover/Person', { Id: pid });
+            personInfo.then(function (p) {
                 if (!p || !p.Found || !content.querySelector('.dcPersonHead')) { return; }
                 content.querySelector('.dcPersonTitle').textContent = p.Name || name || '';
                 if (p.Photo) { content.querySelector('.dcPersonBig').style.backgroundImage = 'url("' + p.Photo + '")'; }
@@ -591,7 +595,8 @@ define([], function () {
 
             var creditsP = api('GET', 'Discover/PersonCredits', { TmdbPersonId: pid, Name: name });
             var ownedP = findEmbyPerson(pid, name).then(ownedByPerson);
-            Promise.all([creditsP, ownedP]).then(function (res) {
+            Promise.all([creditsP, ownedP, personInfo.then(null, function () { return null; })]).then(function (res) {
+                var who = res[2] || {};
                 var box = content.querySelector('.dcPersonRows');
                 if (!box) { return; }
                 var list = (res[0] && res[0].Items) || [];
@@ -618,9 +623,15 @@ define([], function () {
                 });
                 function newest(a, b) { return (b.Year || 0) - (a.Year || 0); }
                 films.sort(newest); series.sort(newest); mine.sort(newest);
+                // "Meer films van deze acteur / actrice / regisseur" (geslacht en vak uit TMDB).
+                var dir = who.Department === 'Directing', fem = who.Gender === 1;
+                var whoNl = dir ? 'deze regisseur' : fem ? 'deze actrice' : 'deze acteur';
+                var whoEn = dir ? 'this director' : fem ? 'this actress' : 'this actor';
+                var whoDe = dir ? (fem ? 'dieser Regisseurin' : 'dieses Regisseurs') : fem ? 'dieser Schauspielerin' : 'dieses Schauspielers';
+                var whoNo = dir ? 'denne regissøren' : fem ? 'denne skuespillerinnen' : 'denne skuespilleren';
                 var html = personRow(text('In je bibliotheek', 'In your library', 'In deiner Bibliothek', 'I biblioteket ditt'), 'person_lib', mine, embyIds) +
-                    personRow(text('Films \u00B7 niet in je bibliotheek', 'Movies \u00B7 not in your library', 'Filme \u00B7 nicht in deiner Bibliothek', 'Filmer \u00B7 ikke i biblioteket ditt'), 'person_movie', films) +
-                    personRow(text('Series \u00B7 niet in je bibliotheek', 'Series \u00B7 not in your library', 'Serien \u00B7 nicht in deiner Bibliothek', 'Serier \u00B7 ikke i biblioteket ditt'), 'person_tv', series);
+                    personRow(text('Meer films van ' + whoNl, 'More movies from ' + whoEn, 'Weitere Filme ' + whoDe, 'Flere filmer med ' + whoNo), 'person_movie', films) +
+                    personRow(text('Meer series van ' + whoNl, 'More series from ' + whoEn, 'Weitere Serien ' + whoDe, 'Flere serier med ' + whoNo), 'person_tv', series);
                 box.innerHTML = html || '<div class="dcMsg">' + text('Geen titels gevonden.', 'No titles found.', 'Keine Titel gefunden.') + '</div>';
                 setTimeout(updateAllArrows, 0);
                 // Achtergrond: de bekendste titel (hoogste score met achtergrond).
