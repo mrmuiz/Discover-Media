@@ -38,8 +38,8 @@ define([], function () {
             return;
         }
         var urls = [
-            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1386' }),
-            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1386' }),
+            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1387' }),
+            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1387' }),
             ApiClient.getUrl('Plugins/Discover/Script')
         ];
         var n = 0;
@@ -70,7 +70,7 @@ define([], function () {
         })();
     }
 
-    var UI_PAGE = 'discoverui1087';
+    var UI_PAGE = 'discoverui1088';
 
     return function (view, params) {
         // embedded: alleen de popup, over een andere Emby-pagina heen (film-, serie- of acteurspagina).
@@ -1870,10 +1870,8 @@ define([], function () {
             else { scheduleQueue(0); loadMyRequests(); }
             openFromLink();
         });
-        // Hergebruikte pagina (geen viewshow): bij een adreswijziging naar Discover toch kijken of er iets te openen is.
-        window.addEventListener('hashchange', function () {
-            if (!embedded && onDiscoverRoute() && document.body.contains(view)) { setTimeout(openFromLink, 150); }
-        });
+        // Geen hashchange-luisteraar: Emby 4.11 maakt bij elke navigatie een nieuwe Discover-pagina (met eigen viewshow);
+        // een oude, verborgen kopie zou de opdracht anders "opeten" en de persoon tonen waar je hem niet ziet.
         view.addEventListener('viewhide', function () { clearTimeout(queueTimer); queueTimer = null; });
     };
 });
