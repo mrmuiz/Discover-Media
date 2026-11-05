@@ -42,14 +42,10 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             'With Seerr, requests go to Seerr, which passes them on to its own Radarr and Sonarr. You then do not need to set up Radarr and Sonarr here.',
             'Mit Seerr gehen Anfragen an Seerr, das sie an sein eigenes Radarr und Sonarr weitergibt. Radarr und Sonarr musst du hier dann nicht einrichten.'],
         desc_seerrKey: ['Te vinden in Seerr onder Instellingen > Algemeen.', 'Found in Seerr under Settings > General.', 'Zu finden in Seerr unter Einstellungen > Allgemein.'],
-        lbl_chkSeerrRequestAsUser: [
-            'Aanvragen op naam van de Seerr-gebruiker die bij de Emby-gebruiker hoort',
-            'Request as the Seerr user that belongs to the Emby user',
-            'Im Namen des Seerr-Benutzers anfordern, der zum Emby-Benutzer gehört'],
         desc_seerrAsUser: [
-            'Seerr-gebruikers die uit Emby zijn geïmporteerd worden herkend. Dan gelden hun rechten, limieten en goedkeuring in Seerr. Zonder koppeling (of met dit vinkje uit) gaat de aanvraag op naam van de eigenaar van de API key.',
-            'Seerr users imported from Emby are recognised, so their permissions, limits and approval in Seerr apply. Without a match (or with this box unticked) the request is made as the owner of the API key.',
-            'Aus Emby importierte Seerr-Benutzer werden erkannt; dann gelten ihre Rechte, Limits und Freigaben in Seerr. Ohne Zuordnung (oder ohne diesen Haken) wird im Namen des Besitzers des API-Schlüssels angefordert.'],
+            'Seerr-gebruikers die uit Emby zijn geïmporteerd worden herkend; dan gelden hun rechten, limieten en goedkeuring in Seerr. Wie niet gekoppeld is, vraagt aan op naam van de eigenaar van de API key.',
+            'Seerr users imported from Emby are recognised, so their permissions, limits and approval in Seerr apply. Anyone without a match requests as the owner of the API key.',
+            'Aus Emby importierte Seerr-Benutzer werden erkannt; dann gelten ihre Rechte, Limits und Freigaben in Seerr. Wer nicht zugeordnet ist, fordert im Namen des Besitzers des API-Schlüssels an.'],
         tab_users: ['Gebruikers', 'Users', 'Benutzer'],
         tab_storage: ['Opslag', 'Storage', 'Speicher'],
         tab_diag: ['Diagnose', 'Diagnostics', 'Diagnose'],
@@ -103,6 +99,12 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         var serviceSelect = el(view, 'selRequestService');
         if (serviceSelect && serviceSelect.options.length > 1) {
             serviceSelect.options[0].textContent = languageText('Radarr & Sonarr (rechtstreeks)', 'Radarr & Sonarr (directly)', 'Radarr & Sonarr (direkt)');
+        }
+        label('selSeerrRequestAs', 'Aanvragen op naam van', 'Request as', 'Anfordern im Namen von');
+        var asSelect = el(view, 'selSeerrRequestAs');
+        if (asSelect && asSelect.options.length > 1) {
+            asSelect.options[0].textContent = languageText('De Seerr-gebruiker die bij de Emby-gebruiker hoort', 'The Seerr user that belongs to the Emby user', 'Den Seerr-Benutzer, der zum Emby-Benutzer gehört');
+            asSelect.options[1].textContent = languageText('De eigenaar van de API key', 'The owner of the API key', 'Den Besitzer des API-Schlüssels');
         }
         var seerrTest = view.querySelector('.btnTestSeerr span');
         if (seerrTest) { seerrTest.textContent = languageText('Test verbinding', 'Test connection', 'Verbindung testen'); }
@@ -530,7 +532,7 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             el(view, 'selRequestService').value = c.RequestService === 'seerr' ? 'seerr' : 'arr';
             el(view, 'txtSeerrUrl').value = c.SeerrUrl || '';
             el(view, 'txtSeerrKey').value = c.SeerrApiKey || '';
-            el(view, 'chkSeerrRequestAsUser').checked = c.SeerrRequestAsUser !== false;
+            el(view, 'selSeerrRequestAs').value = c.SeerrRequestAsUser === false ? 'owner' : 'user';
             updateServiceView(view);
             el(view, 'txtRadarrUrl').value = c.RadarrUrl || '';
             el(view, 'txtRadarrKey').value = c.RadarrApiKey || '';
@@ -575,7 +577,7 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             c.RequestService = el(view, 'selRequestService').value === 'seerr' ? 'seerr' : 'arr';
             c.SeerrUrl = el(view, 'txtSeerrUrl').value.trim();
             c.SeerrApiKey = el(view, 'txtSeerrKey').value.trim();
-            c.SeerrRequestAsUser = el(view, 'chkSeerrRequestAsUser').checked;
+            c.SeerrRequestAsUser = el(view, 'selSeerrRequestAs').value !== 'owner';
             c.RadarrUrl = el(view, 'txtRadarrUrl').value.trim();
             c.RadarrApiKey = el(view, 'txtRadarrKey').value.trim();
             c.RadarrQualityProfileId = parseInt(el(view, 'selRadarrProfile').value, 10) || 0;
