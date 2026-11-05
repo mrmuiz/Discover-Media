@@ -563,8 +563,17 @@ define([], function () {
         }
         // Persoon geopend via een klik buiten Discover (film-/kanaalpagina): Terug gaat dan terug naar die pagina.
         var personFromLink = false;
+        // Wat er vóór de persoon in beeld was (zoekresultaten, lijst, startpagina): Terug zet dat ongewijzigd terug.
+        var personPrev = null;
+        function scrollBox() { return view.querySelector('.scrollY') || document.scrollingElement || document.documentElement; }
         function openPerson(pid, name, fromLink) {
             personFromLink = !!fromLink;
+            personPrev = null;
+            if (!fromLink && content.firstChild) {
+                var frag = document.createDocumentFragment();
+                while (content.firstChild) { frag.appendChild(content.firstChild); }
+                personPrev = { frag: frag, browse: browse, homeShown: homeShown, top: scrollBox().scrollTop };
+            }
             browse = null;
             homeShown = false;
             content.innerHTML = '<div class="dcBrowseHead"><button type="button" class="dcBack">&#10094; ' + text('Terug', 'Back', 'Zurück', 'Tilbake') + '</button></div>' +
@@ -1377,7 +1386,16 @@ define([], function () {
             }
             if (t.closest && t.closest('.dcBack')) {
                 if (personFromLink && content.querySelector('.dcPersonHead') && window.history.length > 1) { personFromLink = false; window.history.back(); return; }
-                personFromLink = false; loadHome(); return;
+                personFromLink = false;
+                if (personPrev && content.querySelector('.dcPersonHead')) {
+                    var prev = personPrev; personPrev = null;
+                    content.innerHTML = '';
+                    content.appendChild(prev.frag);
+                    browse = prev.browse; homeShown = prev.homeShown;
+                    try { scrollBox().scrollTop = prev.top; } catch (ignored) { }
+                    return;
+                }
+                personPrev = null; loadHome(); return;
             }
             if (t.closest && t.closest('.dcMoreBtn')) { loadBrowse(); }
         });
