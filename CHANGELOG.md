@@ -1,3 +1,14 @@
+## Version 1.4.0.0
+
+- New: **request limit per user** (Users tab): at most N requests per X days through Discover to Radarr/Sonarr, also when pressing Play in the channel. Administrators are exempt; in Seerr mode Seerr's own quotas apply.
+- New: **overview of all requests** for administrators (Users tab, `GET /Discover/AllRequests`): title, user, date and status (requested / available / removed), with a count per user.
+- New: **"… is available to watch" notification** in Emby for the requester once a requested title has files (Radarr/Sonarr or Seerr). Checked every 10 minutes; if the user is not active, the message follows on a later check (up to 30 days). No messages for old requests.
+- New: **New seasons** row on the Discover page (`GET /Discover/ContinueSeries`): series in your library where TMDB already has a later aired season. Per user (only libraries they can see), cached 3 hours; can be turned off.
+- New: optional **Trakt watchlist** (username + Client ID, public watchlist) and **TMDB list** (id or link) rows, each with a test button, and **Request all** on those rows (stops when the limit is reached). `GET /Discover/Watchlist`, `POST /Discover/TestWatchlist`.
+- New: quick menu (right-click / long press), filters in the grid (year, score, language, not in library), people results in search, 4K request button (Seerr with a 4K server), and a backdrop behind the Discover page.
+- Note: backdrops for channel items in the native TV/mobile apps are not possible (Emby has no backdrop field for channel items); they work in the web client.
+- Change: page names bumped (`discoverui1083`, `discoveruijs1377`, `discoverconfigjs1359`).
+
 ## Version 1.3.5.6
 
 - New: **requests through Seerr** as an alternative to Radarr & Sonarr. The settings tab *Radarr & Sonarr* is now called **Requests** and starts with **Send requests to**: *Radarr & Sonarr (directly)* (default, unchanged) or *Seerr*. With Seerr you only fill in the Seerr URL and API key (Seerr > Settings > General); Seerr passes requests on to its own Radarr and Sonarr, so Radarr and Sonarr do not have to be set up in the plugin. **Test connection** shows the Seerr version and how many Radarr/Sonarr servers Seerr has.

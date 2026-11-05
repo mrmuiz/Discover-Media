@@ -53,6 +53,27 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             'Vink aan wie mag aanvragen. Een gebruiker zonder vinkje kan wel bladeren en trailers bekijken, maar een aanvraag wordt niet doorgestuurd naar Radarr of Sonarr en de gebruiker krijgt een melding. Nieuwe gebruikers mogen standaard wel aanvragen.',
             'Tick who may make requests. A user without a tick can still browse and watch trailers, but a request is not sent to Radarr or Sonarr and the user gets a message. New users are allowed by default.',
             'Wähle aus, wer anfordern darf. Ein Benutzer ohne Haken kann weiter stöbern und Trailer ansehen, aber die Anfrage wird nicht an Radarr oder Sonarr gesendet und der Benutzer erhält eine Meldung. Neue Benutzer dürfen standardmäßig anfordern.'],
+        hdgExtraRows: ['Extra rijen op de Discover-pagina', 'Extra rows on the Discover page', 'Zusätzliche Reihen auf der Discover-Seite'],
+        lbl_chkShowNewSeasons: ['Rij "Nieuwe seizoenen": series uit je bibliotheek met een nieuwer seizoen', 'Row "New seasons": series in your library with a newer season', 'Reihe „Neue Staffeln“: Serien in deiner Bibliothek mit einer neueren Staffel'],
+        lbl_txtTmdbList: ['TMDB-lijst (id of link, optioneel)', 'TMDB list (id or link, optional)', 'TMDB-Liste (ID oder Link, optional)'],
+        desc_txtTmdbList: ['Een openbare lijst op TMDB, bijvoorbeeld je eigen watchlist-lijst. Leeg = geen rij.', 'A public list on TMDB, for example your own watchlist list. Empty = no row.', 'Eine öffentliche Liste auf TMDB, zum Beispiel deine eigene Merkliste. Leer = keine Reihe.'],
+        btnTestTmdbListText: ['Test lijst', 'Test list', 'Liste testen'],
+        lbl_txtTraktUser: ['Trakt-gebruikersnaam (optioneel)', 'Trakt username (optional)', 'Trakt-Benutzername (optional)'],
+        lbl_txtTraktClient: ['Trakt Client ID', 'Trakt Client ID', 'Trakt Client-ID'],
+        desc_trakt: [
+            'Maak op trakt.tv onder Settings > Your API Apps een app aan (redirect: urn:ietf:wg:oauth:2.0:oob) en plak de Client ID hier. Je watchlist moet openbaar zijn. Leeg = geen rij.',
+            'Create an app on trakt.tv under Settings > Your API Apps (redirect: urn:ietf:wg:oauth:2.0:oob) and paste the Client ID here. Your watchlist must be public. Empty = no row.',
+            'Erstelle auf trakt.tv unter Settings > Your API Apps eine App (Redirect: urn:ietf:wg:oauth:2.0:oob) und füge die Client-ID hier ein. Deine Merkliste muss öffentlich sein. Leer = keine Reihe.'],
+        btnTestTraktText: ['Test Trakt', 'Test Trakt', 'Trakt testen'],
+        hdgLimit: ['Limiet per gebruiker', 'Limit per user', 'Limit pro Benutzer'],
+        lbl_numRequestLimit: ['Maximaal aantal aanvragen (0 = geen limiet)', 'Maximum number of requests (0 = no limit)', 'Maximale Anzahl Anfragen (0 = kein Limit)'],
+        lbl_numRequestLimitDays: ['Per aantal dagen', 'Per number of days', 'Pro Anzahl Tage'],
+        desc_limit: [
+            'Geldt voor aanvragen via Discover naar Radarr en Sonarr. Beheerders hebben geen limiet. Met Seerr gelden de limieten die je in Seerr per gebruiker instelt.',
+            'Applies to requests through Discover to Radarr and Sonarr. Administrators have no limit. With Seerr, the limits you set per user in Seerr apply.',
+            'Gilt für Anfragen über Discover an Radarr und Sonarr. Administratoren haben kein Limit. Mit Seerr gelten die Limits, die du in Seerr pro Benutzer einstellst.'],
+        hdgAllRequests: ['Alle aanvragen', 'All requests', 'Alle Anfragen'],
+        btnLoadRequestsText: ['Overzicht laden', 'Load overview', 'Übersicht laden'],
         btnAllowAllText: ['Iedereen toestaan', 'Allow everyone', 'Alle zulassen'],
         btnAllowNoneText: ['Niemand toestaan', 'Allow no one', 'Niemanden zulassen'],
         lbl_chkPrecreateCards: ['Kaarten en tegels per titel vooraf maken', 'Pre-create cards and tiles for every title', 'Karten und Kacheln für jeden Titel vorab erstellen'],
@@ -418,6 +439,80 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         state.dirty = true;
     }
 
+    // ---- Test van de watchlist-bronnen ----
+    function testWatch(view, kind) {
+        var status = el(view, kind === 'trakt' ? 'statusTrakt' : 'statusTmdbList');
+        status.style.color = '';
+        status.textContent = languageText('Testen...', 'Testing...', 'Wird getestet...');
+        ApiClient.ajax({
+            type: 'POST',
+            url: ApiClient.getUrl('Discover/TestWatchlist'),
+            data: JSON.stringify({
+                Kind: kind,
+                User: el(view, 'txtTraktUser').value.trim(),
+                ClientId: el(view, 'txtTraktClient').value.trim(),
+                ListId: el(view, 'txtTmdbList').value.trim()
+            }),
+            contentType: 'application/json',
+            dataType: 'json'
+        }).then(function (r) {
+            status.style.color = r && r.Success ? '#43a047' : '#e53935';
+            status.textContent = (r && r.Message) || '?';
+        }, function (err) {
+            status.style.color = '#e53935';
+            status.textContent = ajaxErrorMessage(err);
+        });
+    }
+
+    // ---- Overzicht van alle aanvragen (beheerder) ----
+    function fmtDate(iso) {
+        var d = new Date(iso);
+        if (isNaN(d.getTime())) { return ''; }
+        try { return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) + ' ' + d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }); }
+        catch (e) { return d.toISOString().slice(0, 16).replace('T', ' '); }
+    }
+
+    function loadAllRequests(view) {
+        var box = el(view, 'allRequests');
+        var status = el(view, 'statusAllRequests');
+        status.style.color = '';
+        status.textContent = languageText('Laden...', 'Loading...', 'Wird geladen...');
+        var names = {};
+        var usersP = ApiClient.getJSON(ApiClient.getUrl('Users')).then(function (users) {
+            (users || []).forEach(function (u) { names[normId(u.Id)] = u.Name; });
+        }, function () { });
+        var reqP = ApiClient.getJSON(ApiClient.getUrl('Discover/AllRequests'));
+        Promise.all([usersP, reqP]).then(function (res) {
+            var r = res[1] || {};
+            var items = r.Items || [];
+            if (!items.length) {
+                box.innerHTML = '';
+                status.textContent = languageText('Nog geen aanvragen via Discover.', 'No requests through Discover yet.', 'Noch keine Anfragen über Discover.');
+                return;
+            }
+            var perUser = {};
+            items.forEach(function (i) { var n = names[normId(i.UserId)] || '?'; perUser[n] = (perUser[n] || 0) + 1; });
+            var sum = Object.keys(perUser).sort(function (a, b) { return perUser[b] - perUser[a]; })
+                .map(function (n) { return esc(n) + ': ' + perUser[n]; }).join(' \u00B7 ');
+            var st = [languageText('Verwijderd', 'Removed', 'Entfernt'), languageText('Aangevraagd', 'Requested', 'Angefordert'), languageText('Beschikbaar', 'Available', 'Verfügbar')];
+            var html = '<div class="dcReqSum">' + sum + '</div><table class="dcReqTable"><thead><tr><th></th><th>' +
+                languageText('Titel', 'Title', 'Titel') + '</th><th>' + languageText('Gebruiker', 'User', 'Benutzer') + '</th><th>' +
+                languageText('Datum', 'Date', 'Datum') + '</th><th>' + languageText('Status', 'Status', 'Status') + '</th></tr></thead><tbody>';
+            items.forEach(function (i) {
+                var poster = i.Poster ? '<img loading="lazy" src="' + esc(i.Poster) + '" alt="">' : '';
+                html += '<tr><td>' + poster + '</td><td>' + esc(i.Title || '?') + (i.Year ? ' (' + i.Year + ')' : '') +
+                    ' <span class="dcUserTag">' + (i.Type === 'tv' ? languageText('serie', 'series', 'Serie') : languageText('film', 'movie', 'Film')) + '</span></td><td>' +
+                    esc(names[normId(i.UserId)] || '?') + '</td><td>' + esc(fmtDate(i.Added)) + '</td><td class="dcReqSt' + (i.Status | 0) + '">' + st[i.Status | 0] + '</td></tr>';
+            });
+            box.innerHTML = html + '</tbody></table>';
+            status.textContent = items.length + languageText(' aanvragen', ' requests', ' Anfragen');
+        }, function (err) {
+            console.error('Discover: aanvragenoverzicht mislukt', err);
+            status.style.color = '#e53935';
+            status.textContent = languageText('Overzicht laden mislukt: ', 'Loading the overview failed: ', 'Übersicht laden fehlgeschlagen: ') + ajaxErrorMessage(err);
+        });
+    }
+
     // ---- Opslag: grootte van de bewaarde kaarten en tegels, en opruimen ----
     function mb(bytes) { return (bytes / 1048576).toFixed(bytes >= 10485760 ? 0 : 1); }
 
@@ -499,6 +594,12 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             el(view, 'numCardDays').value = c.CardRetentionDays != null ? c.CardRetentionDays : 14;
             el(view, 'numTileDays').value = c.TileRetentionDays != null ? c.TileRetentionDays : 30;
             el(view, 'numMaxCacheMb').value = c.MaxCacheMb != null ? c.MaxCacheMb : 2048;
+            el(view, 'numRequestLimit').value = c.RequestLimit != null ? c.RequestLimit : 0;
+            el(view, 'chkShowNewSeasons').checked = c.ShowNewSeasons !== false;
+            el(view, 'txtTmdbList').value = c.TmdbListId || '';
+            el(view, 'txtTraktUser').value = c.TraktUser || '';
+            el(view, 'txtTraktClient').value = c.TraktClientId || '';
+            el(view, 'numRequestLimitDays').value = c.RequestLimitDays ? c.RequestLimitDays : 7;
             loadUsers(view, state, c.BlockedUserIds || '');
             loadCache(view);
             var browserLanguage = window.navigator && navigator.language;
@@ -563,6 +664,12 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             c.CardRetentionDays = intValue(view, 'numCardDays', 14);
             c.TileRetentionDays = intValue(view, 'numTileDays', 30);
             c.MaxCacheMb = intValue(view, 'numMaxCacheMb', 2048);
+            c.RequestLimit = intValue(view, 'numRequestLimit', 0);
+            c.ShowNewSeasons = el(view, 'chkShowNewSeasons').checked;
+            c.TmdbListId = el(view, 'txtTmdbList').value.trim();
+            c.TraktUser = el(view, 'txtTraktUser').value.trim();
+            c.TraktClientId = el(view, 'txtTraktClient').value.trim();
+            c.RequestLimitDays = Math.max(1, intValue(view, 'numRequestLimitDays', 7));
             // Alleen overschrijven als de gebruikerslijst echt is geladen; anders blijft de bestaande lijst staan.
             if (state.usersLoaded) { c.BlockedUserIds = blockedFromList(view); }
             c.TmdbLanguageMode = tmdbLanguage === 'auto' ? 'auto' : 'manual';
@@ -765,6 +872,9 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         view.querySelector('.btnAllowAll').addEventListener('click', function () { setAllUsers(view, state, true); });
         view.querySelector('.btnAllowNone').addEventListener('click', function () { setAllUsers(view, state, false); });
         view.querySelector('.btnCleanNow').addEventListener('click', function () { cleanCache(view, false); });
+        view.querySelector('.btnLoadRequests').addEventListener('click', function () { loadAllRequests(view); });
+        view.querySelector('.btnTestTrakt').addEventListener('click', function () { testWatch(view, 'trakt'); });
+        view.querySelector('.btnTestTmdbList').addEventListener('click', function () { testWatch(view, 'tmdb'); });
         view.querySelector('.btnClearAll').addEventListener('click', function () {
             var q = languageText(
                 'Alle bewaarde kaartclips en tegelplaatjes verwijderen? Ze worden bij gebruik vanzelf opnieuw gemaakt.',

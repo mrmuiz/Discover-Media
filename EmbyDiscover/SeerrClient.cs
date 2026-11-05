@@ -48,6 +48,7 @@ namespace Emby.Plugins.Discover
     public class SeerrMessageDto { public string message { get; set; } }
     public class SeerrStatusDto { public string version { get; set; } }
     public class SeerrMeDto { public int id { get; set; } public string displayName { get; set; } }
+    public class SeerrServerDto { public int id { get; set; } public bool is4k { get; set; } public bool isDefault { get; set; } }
     public class SeerrMediaInfoHolder { public SeerrMediaDto mediaInfo { get; set; } }
     /// <summary>Aanvraag zoals Seerr hem teruggeeft: status 1 = wacht op goedkeuring, 2 = goedgekeurd.</summary>
     public class SeerrRequestDto { public int id { get; set; } public int status { get; set; } }
@@ -98,6 +99,40 @@ namespace Emby.Plugins.Discover
         }
 
         internal static void Invalidate() { _media = null; }
+
+        // ---------- 4K: alleen als Seerr een aparte 4K-server heeft ----------
+        private static bool _has4kMovie, _has4kTv;
+        private static DateTime _4kAt;
+        private static int _4kBusy;
+
+        /// <summary>Bewaarde waarde (10 min); ververst op de achtergrond. Alleen in de Seerr-modus.</summary>
+        internal static bool Has4k(IJsonSerializer json, bool tv)
+        {
+            if (!Configured) return false;
+            if (DateTime.UtcNow - _4kAt > TimeSpan.FromMinutes(10) && Interlocked.Exchange(ref _4kBusy, 1) == 0)
+            {
+                Task.Run(async () =>
+                {
+                    try
+                    {
+                        _has4kMovie = await AnyFourK(json, "/settings/radarr").ConfigureAwait(false);
+                        _has4kTv = await AnyFourK(json, "/settings/sonarr").ConfigureAwait(false);
+                        _4kAt = DateTime.UtcNow;
+                    }
+                    catch (Exception ex) { DiscoverDiagnostics.Add("Seerr 4K-servers opvragen mislukt: " + ex.Message); _4kAt = DateTime.UtcNow; }
+                    finally { Interlocked.Exchange(ref _4kBusy, 0); }
+                });
+            }
+            return tv ? _has4kTv : _has4kMovie;
+        }
+
+        private static async Task<bool> AnyFourK(IJsonSerializer json, string path)
+        {
+            var r = await Call(HttpMethod.Get, path, null, CancellationToken.None).ConfigureAwait(false);
+            if (r.Code < 200 || r.Code > 299) return false;
+            var list = json.DeserializeFromString<List<SeerrServerDto>>(r.Text) ?? new List<SeerrServerDto>();
+            return list.Any(s => s != null && s.is4k);
+        }
 
         // ---------- HTTP ----------
 
@@ -293,7 +328,7 @@ namespace Emby.Plugins.Discover
         // ---------- Aanvragen ----------
 
         /// <returns>true = aangevraagd, false = stond al aangevraagd / niets nieuws om aan te vragen.</returns>
-        internal static async Task<bool> Request(IJsonSerializer json, bool tv, int tmdbId, int tvdbId, int[] seasons, object embyUserId, CancellationToken ct)
+        internal static async Task<bool> Request(IJsonSerializer json, bool tv, int tmdbId, int tvdbId, int[] seasons, object embyUserId, CancellationToken ct, bool is4k = false)
         {
             if (!Configured) throw new InvalidOperationException("Seerr is niet ingesteld.");
             string body;
@@ -302,11 +337,11 @@ namespace Emby.Plugins.Discover
                 var s = seasons == null || seasons.Length == 0
                     ? "\"all\""
                     : "[" + string.Join(",", seasons.Where(n => n > 0).Distinct().OrderBy(n => n)) + "]";
-                body = "{\"mediaType\":\"tv\",\"mediaId\":" + tmdbId + (tvdbId > 0 ? ",\"tvdbId\":" + tvdbId : "") + ",\"seasons\":" + s + "}";
+                body = "{\"mediaType\":\"tv\",\"mediaId\":" + tmdbId + (tvdbId > 0 ? ",\"tvdbId\":" + tvdbId : "") + ",\"seasons\":" + s + (is4k ? ",\"is4k\":true" : "") + "}";
             }
             else
             {
-                body = "{\"mediaType\":\"movie\",\"mediaId\":" + tmdbId + "}";
+                body = "{\"mediaType\":\"movie\",\"mediaId\":" + tmdbId + (is4k ? ",\"is4k\":true" : "") + "}";
             }
 
             var asUser = await MapUser(json, embyUserId, ct).ConfigureAwait(false);
@@ -327,6 +362,7 @@ namespace Emby.Plugins.Discover
             }
             catch { }
             _pending[(tv ? "t:" : "m:") + tmdbId] = pending;
+            if (is4k) DiscoverDiagnostics.Add("Seerr: 4K-aanvraag voor " + (tv ? "serie " : "film ") + tmdbId);
             Invalidate();
             DownloadQueue.Invalidate();
             DiscoverDiagnostics.Add("Seerr " + (tv ? "serie " : "film ") + tmdbId + " aangevraagd" + (asUser.HasValue ? " als Seerr-gebruiker " + asUser.Value : "") +

@@ -27,6 +27,18 @@ namespace Emby.Plugins.Discover
         public string SeerrUrl { get; set; } = "";
         public string SeerrApiKey { get; set; } = "";
 
+        /// <summary>Maximaal aantal aanvragen per gebruiker binnen RequestLimitDays (0 = geen limiet). Beheerders tellen niet mee. In de Seerr-modus regelt Seerr dit.</summary>
+        public int RequestLimit { get; set; } = 0;
+        public int RequestLimitDays { get; set; } = 7;
+
+        /// <summary>Optioneel: Trakt-watchlist als rij op de Discover-pagina (openbaar profiel nodig).</summary>
+        public string TraktUser { get; set; } = "";
+        public string TraktClientId { get; set; } = "";
+        /// <summary>Optioneel: openbare TMDB-lijst (id of link) als rij op de Discover-pagina.</summary>
+        public string TmdbListId { get; set; } = "";
+        /// <summary>Rij "Nieuwe seizoenen" (series in de bibliotheek met een nieuwer seizoen op TMDB).</summary>
+        public bool ShowNewSeasons { get; set; } = true;
+
         /// <summary>Optioneel: map van de Emby-webclient (met index.html) als die niet vanzelf gevonden wordt.</summary>
         public string DashboardUiPath { get; set; } = "";
 

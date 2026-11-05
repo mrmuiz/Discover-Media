@@ -26,6 +26,25 @@ namespace Emby.Plugins.Discover
                 .Any(b => Normalize(b) == key);
         }
 
+        /// <summary>
+        /// Limiet per gebruiker (alleen rechtstreeks naar Radarr/Sonarr; Seerr heeft zijn eigen limieten).
+        /// null = mag aanvragen, anders de melding voor de gebruiker.
+        /// </summary>
+        internal static string LimitMessage(MediaBrowser.Model.Serialization.IJsonSerializer json, object userId, bool isAdmin)
+        {
+            var cfg = Plugin.GetCurrentConfiguration();
+            if (isAdmin || cfg.RequestLimit <= 0 || SeerrClient.Enabled) return null;
+            int days = cfg.RequestLimitDays > 0 ? cfg.RequestLimitDays : 7;
+            var since = DateTime.UtcNow.AddDays(-days);
+            var dates = RequestStore.DatesSince(json, userId, since);
+            if (dates.Count < cfg.RequestLimit) return null;
+            var again = dates[dates.Count - cfg.RequestLimit].AddDays(days).ToLocalTime();
+            return DiscoverLanguage.Text(
+                "Je limiet is bereikt (" + cfg.RequestLimit + " per " + days + " dagen). Weer mogelijk vanaf " + again.ToString("d MMM HH:mm", new CultureInfo("nl-NL")) + ".",
+                "You have reached your limit (" + cfg.RequestLimit + " per " + days + " days). Possible again from " + again.ToString("d MMM HH:mm", CultureInfo.InvariantCulture) + ".",
+                "Dein Limit ist erreicht (" + cfg.RequestLimit + " pro " + days + " Tage). Wieder möglich ab " + again.ToString("d. MMM HH:mm", new CultureInfo("de-DE")) + ".");
+        }
+
         internal static string DeniedMessage()
         {
             return DiscoverLanguage.Text(

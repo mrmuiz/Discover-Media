@@ -60,6 +60,20 @@ namespace Emby.Plugins.Discover
         public List<TmdbNamed> production_companies { get; set; }
         public List<TmdbNamed> networks { get; set; }
         public TmdbEpisodeBrief next_episode_to_air { get; set; }
+        public TmdbEpisodeBrief last_episode_to_air { get; set; }
+        public string name { get; set; }
+        public string overview { get; set; }
+        public string poster_path { get; set; }
+        public string backdrop_path { get; set; }
+        public string original_language { get; set; }
+        public string title { get; set; }
+    }
+
+    public class TmdbListPage
+    {
+        public string name { get; set; }
+        public List<TmdbItem> items { get; set; }
+        public int total_pages { get; set; }
     }
 
     public class TmdbEpisodeBrief
@@ -549,6 +563,21 @@ namespace Emby.Plugins.Discover
                 DiscoverDiagnostics.Add("TMDB extra's " + (tv ? "tv/" : "film/") + id + " mislukt: " + ex.Message);
                 return null;
             }
+        }
+
+        /// <summary>Openbare TMDB-lijst (v3 /list/{id}), max. 5 pagina's.</summary>
+        public async Task<TmdbListPage> GetList(string listId, CancellationToken ct)
+        {
+            var first = await Get<TmdbListPage>("/list/" + Uri.EscapeDataString(listId), "&page=1", Language(), ct).ConfigureAwait(false);
+            if (first == null) return null;
+            if (first.items == null) first.items = new List<TmdbItem>();
+            for (int p = 2; p <= Math.Min(5, first.total_pages); p++)
+            {
+                var more = await Get<TmdbListPage>("/list/" + Uri.EscapeDataString(listId), "&page=" + p, Language(), ct).ConfigureAwait(false);
+                if (more == null || more.items == null || more.items.Count == 0) break;
+                first.items.AddRange(more.items);
+            }
+            return first;
         }
 
         public Task<TmdbItem> GetMovie(int id, CancellationToken ct) => GetDetail("/movie/" + id, ct);

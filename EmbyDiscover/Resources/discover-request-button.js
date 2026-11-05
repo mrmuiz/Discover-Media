@@ -3,16 +3,16 @@
  * Verbergt ook "Media informatie" op Discover/Trailers-detailpagina's. */
 (function () {
     'use strict';
-    if (window.__discoverRequestButtonVersion === '1.3.5.6') { return; }
+    if (window.__discoverRequestButtonVersion === '1.4.0.0') { return; }
     if (window.__discoverRequestButton) {
         console.warn('[Discover] oudere knopcode is nog actief; vernieuw de webclient om dubbele handlers te voorkomen.');
         return;
     }
-    var DC_BUILD = 'seerr-r2 2026-11-05';
+    var DC_BUILD = 'big-r1 2026-11-05';
     window.__discoverRequestButton = true;
-    window.__discoverRequestButtonVersion = '1.3.5.6';
+    window.__discoverRequestButtonVersion = '1.4.0.0';
     window.__discoverRequestButtonBuild = DC_BUILD;
-    console.log('[Discover] request-button script loaded v1.3.5.6 build ' + DC_BUILD);
+    console.log('[Discover] request-button script loaded v1.4.0.0 build ' + DC_BUILD);
 
     var uiLanguage = 'nl';
     function text(dutch, english, german, norwegian) {
@@ -43,7 +43,7 @@
                     'color:#ffd666;background:rgba(0,0,0,.7);padding:4px 8px;border-radius:4px;pointer-events:none;white-space:pre-wrap;';
                 document.body.appendChild(el);
             }
-            el.textContent = 'Discover v1.3.5.6 | ' + msg;
+            el.textContent = 'Discover v1.4.0.0 | ' + msg;
         } catch (e) { }
     }
     var isAdmin = false;
@@ -258,7 +258,7 @@
             var bcs = btn ? getComputedStyle(btn) : null;
             var vv = window.visualViewport;
             el.textContent = [
-                'Discover v1.3.5.6 build ' + DC_BUILD + ' (' + (window.__discoverRequestButtonBuild || '?') + ')',
+                'Discover v1.4.0.0 build ' + DC_BUILD + ' (' + (window.__discoverRequestButtonBuild || '?') + ')',
                 'item page: ' + (document.querySelector('.itemDetailPage') ? 'ja' : 'nee') + ' body=' + document.body.className.split(/\s+/).filter(function (c) { return /^(dc|discover)/.test(c); }).join(' '),
                 'bar: ' + (info.bar ? describe(info.bar) + ' ' + rectText(info.bar) : 'niet gevonden') + ' h=' + info.measured,
                 'mode=' + info.mode + ' --dc-bottom-clear=' + (document.documentElement.style.getPropertyValue('--dc-bottom-clear') || '(leeg)'),
@@ -1818,7 +1818,7 @@
         var link = document.createElement('a');
         link.className = 'discover-row-poster';
         // Klik op de poster: de Discover-popup met info en trailer.
-        link.href = '#!/configurationpage?name=discoverui1082&openType=' + item.Type + '&openId=' + item.TmdbId;
+        link.href = '#!/configurationpage?name=discoverui1083&openType=' + item.Type + '&openId=' + item.TmdbId;
         link.setAttribute('aria-label', item.Title);   // geen title: dat gaf een tooltip-vakje over de poster
         var img = document.createElement('img');
         img.loading = 'lazy';
@@ -1957,7 +1957,7 @@
             : String(t || '').toLowerCase().replace(/[^a-z0-9]/g, '');
     }
     function filmReqOpen(type, tmdbId) {
-        try { window.location.hash = '#!/configurationpage?name=discoverui1082&openType=' + type + '&openId=' + tmdbId; } catch (e) { }
+        try { window.location.hash = '#!/configurationpage?name=discoverui1083&openType=' + type + '&openId=' + tmdbId; } catch (e) { }
     }
     // Persoonspagina: Emby's filmografielijst verbergen zolang onze posterrij "Niet in je bibliotheek" er staat
     // (wat je al hebt toont Emby als posterrijen, wat je nog niet hebt staat in onze rij). Geen rij = lijst blijft.

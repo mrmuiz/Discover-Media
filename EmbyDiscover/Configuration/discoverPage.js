@@ -32,8 +32,8 @@ define([], function () {
 
     // Load as an external script so Emby's Content-Security-Policy does not block inline execution.
     function loadButtonScript() {
-        if (window.__discoverRequestButtonVersion === '1.3.5.6') {
-            diag.load = text('script is al actief v1.3.5.6', 'script already active v1.3.5.6', 'Skript bereits aktiv v1.3.5.6');
+        if (window.__discoverRequestButtonVersion === '1.4.0.0') {
+            diag.load = text('script is al actief v1.4.0.0', 'script already active v1.4.0.0', 'Skript bereits aktiv v1.4.0.0');
             showDiag();
             return;
         }
@@ -51,7 +51,7 @@ define([], function () {
             script.src = u + (u.indexOf('?') === -1 ? '?' : '&') + '_=' + Date.now();
             script.async = true;
             script.onload = function () {
-                if (window.__discoverRequestButtonVersion === '1.3.5.6') {
+                if (window.__discoverRequestButtonVersion === '1.4.0.0') {
                     diag.load = text('OK via extern script ', 'OK via external script ', 'OK über externes Skript ') + u;
                     showDiag();
                 } else {
@@ -77,6 +77,7 @@ define([], function () {
         api('GET', 'Discover/Status').then(function (r) {
             diagEl.style.display = r.ShowDiagnostics ? '' : 'none';
             showTrailer = r.ShowTrailerTile !== false;
+            fourK = { movie: !!r.Seerr4kMovie, tv: !!r.Seerr4kTv };
             window.__discoverRequestService = r.RequestService || '';
             diag.status = 'v' + (r.PluginVersion || '?') + ' | ' + text('pluginresource: ', 'plugin resource: ', 'Pluginressource: ') + (r.ButtonScript || text('onbekend', 'unknown', 'unbekannt'));
             showDiag();
@@ -93,6 +94,7 @@ define([], function () {
         var loaded = false;
         var isAdmin = false;
         var showTrailer = true;
+        var fourK = { movie: false, tv: false };   // Seerr met 4K-server: knop "4K aanvragen"
         try {
             ApiClient.getCurrentUser().then(function (u) {
                 isAdmin = !!(u && u.Policy && (u.Policy.IsAdministrator || u.Policy.EnableContentDeletion)); // mag verwijderen/annuleren
@@ -251,6 +253,77 @@ define([], function () {
             updateArrows(box.querySelector('.dcRowWrap'));
         }
 
+        // ---- Extra rijen onder "Mijn aanvragen": Nieuwe seizoenen, Trakt-watchlist, TMDB-lijst ----
+        var extraRows = { cont: null, watch: [] };
+        function loadExtras() {
+            api('GET', 'Discover/ContinueSeries').then(function (r) { extraRows.cont = r || null; renderExtras(); }, function () { });
+            api('GET', 'Discover/Watchlist').then(function (r) { extraRows.watch = (r && r.Rows) || []; renderExtras(); }, function () { });
+        }
+        function extraTitle(r) {
+            if (r.Key === 'continue_series') { return text('Nieuwe seizoenen', 'New seasons', 'Neue Staffeln', 'Nye sesonger'); }
+            if (r.Key === 'watch_trakt') { return text('Trakt-watchlist', 'Trakt watchlist', 'Trakt-Merkliste', 'Trakt-ønskeliste'); }
+            return r.Title;
+        }
+        function renderExtras() {
+            var old = content.querySelector('.dcExtra');
+            if (!homeShown) { return; }
+            var rows = [];
+            if (extraRows.cont && extraRows.cont.Items && extraRows.cont.Items.length) { rows.push(extraRows.cont); }
+            extraRows.watch.forEach(function (r) { if (r.Items && r.Items.length) { rows.push(r); } });
+            if (!rows.length) { if (old) { old.parentNode.removeChild(old); } return; }
+            var scrolls = {};
+            if (old) { Array.prototype.forEach.call(old.querySelectorAll('.dcRow'), function (rw) { scrolls[rw.getAttribute('data-row')] = rw.scrollLeft; }); }
+            var html = '<div class="dcExtra">';
+            rows.forEach(function (r) {
+                var open = r.Items.filter(function (i) { return i.Status === 0; }).length;
+                var all = (r.Key.indexOf('watch_') === 0 && open > 0)
+                    ? ' <button type="button" class="dcReqAll focusable" data-row="' + esc(r.Key) + '">' + esc(text('Alles aanvragen', 'Request all', 'Alle anfragen', 'Be om alle')) + ' (' + open + ')</button>'
+                    : '';
+                html += '<div class="dcRowTitle">' + esc(extraTitle(r)) + all + '</div>' +
+                    rowWrapHtml('<div class="dcRow" data-row="' + esc(r.Key) + '">' + r.Items.map(function (i) { return cardHtml(i); }).join('') + '</div>');
+            });
+            html += '</div>';
+            if (old) { old.insertAdjacentHTML('afterend', html); old.parentNode.removeChild(old); }
+            else {
+                var mine = content.querySelector('.dcMine');
+                if (mine) { mine.insertAdjacentHTML('afterend', html); } else { content.insertAdjacentHTML('afterbegin', html); }
+            }
+            var box = content.querySelector('.dcExtra');
+            Array.prototype.forEach.call(box.querySelectorAll('.dcRow'), function (rw) {
+                rw.scrollLeft = scrolls[rw.getAttribute('data-row')] || 0;
+                updateArrows(rw.parentNode);
+            });
+        }
+        function requestAll(rowKey, btn) {
+            var row = null;
+            extraRows.watch.forEach(function (r) { if (r.Key === rowKey) { row = r; } });
+            if (!row) { return; }
+            var todo = row.Items.filter(function (i) { return i.Status === 0; });
+            if (!todo.length) { return; }
+            if (!window.confirm(text(todo.length + ' titels aanvragen?', 'Request ' + todo.length + ' titles?', todo.length + ' Titel anfragen?', 'Be om ' + todo.length + ' titler?'))) { return; }
+            btn.disabled = true;
+            var ok = 0, fail = 0, lastErr = '';
+            (function next(n) {
+                if (n >= todo.length) {
+                    showToast(text(ok + ' aangevraagd', ok + ' requested', ok + ' angefragt', ok + ' forespurt') + (fail ? ' \u00B7 ' + text(fail + ' mislukt: ', fail + ' failed: ', fail + ' fehlgeschlagen: ', fail + ' mislyktes: ') + lastErr : ''), fail > 0);
+                    afterRequest();
+                    renderExtras();
+                    return;
+                }
+                var i = todo[n];
+                btn.textContent = text('Aanvragen... ', 'Requesting... ', 'Wird angefragt... ', 'Ber om... ') + (n + 1) + '/' + todo.length;
+                api('POST', 'Discover/RequestItem', null, { Type: i.Type, TmdbId: i.TmdbId }).then(function (r) {
+                    if (r && r.Success) { ok++; i.Status = 1; refreshCards(i); }
+                    else {
+                        fail++; lastErr = (r && r.Message) || '?';
+                        // Limiet bereikt of geen toegang: de rest heeft geen zin.
+                        if (r && /limiet|limit|toegang|access|Zugriff/i.test(lastErr)) { fail += todo.length - n - 1; n = todo.length; }
+                    }
+                    next(n + 1);
+                }, function () { fail++; lastErr = text('netwerkfout', 'network error', 'Netzwerkfehler', 'nettverksfeil'); next(n + 1); });
+            })(0);
+        }
+
         var CHEV_L = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.7 6.3a1 1 0 0 1 0 1.4L10.4 12l4.3 4.3a1 1 0 0 1-1.4 1.4l-5-5a1 1 0 0 1 0-1.4l5-5a1 1 0 0 1 1.4 0z"/></svg>';
         var CHEV_R = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.3 6.3a1 1 0 0 0 0 1.4l4.3 4.3-4.3 4.3a1 1 0 1 0 1.4 1.4l5-5a1 1 0 0 0 0-1.4l-5-5a1 1 0 0 0-1.4 0z"/></svg>';
         // Rijtitels in de taal van deze Emby-app (bij plugintaal Automatisch).
@@ -332,6 +405,7 @@ define([], function () {
                 ? 'background:' + esc(t.Color || '#1c2640') + ' url(&quot;' + esc(t.Backdrop) + '&quot;) center/cover no-repeat'
                 : 'background:' + esc(t.Color || '#1c2640');
             return '<div class="dcTile focusable' + (t.Image ? ' logo' : '') + (t.Backdrop ? ' photo' : '') + '" tabindex="0" role="button" data-kind="' + esc(r.TileKind) + '" data-id="' + esc(t.Id) +
+                (t.Backdrop ? '" data-bd="' + esc(t.Backdrop) : '') +
                 '" data-name="' + esc(t.Name) + '" title="' + esc(t.Name) + '" style="' + bg + '">' + inner + '</div>';
         }
 
@@ -347,15 +421,116 @@ define([], function () {
         // ---- genre / studio / netwerk en hele rijen: alles in een raster met "Meer laden" ----
         var browse = null;
 
+        // ---- filters in het raster (op wat al geladen is; te weinig over: automatisch meer laden) ----
+        function langName(code) {
+            try {
+                if (window.Intl && Intl.DisplayNames) {
+                    var dn = new Intl.DisplayNames([uiLanguage === 'nl' ? 'nl' : uiLanguage === 'de' ? 'de' : uiLanguage === 'no' ? 'nb' : 'en'], { type: 'language' });
+                    return dn.of(code) || code;
+                }
+            } catch (e) { }
+            return code;
+        }
+        function updateLangOptions(b) {
+            var sel = content.querySelector('.dcFLang');
+            if (!sel || browse !== b) { return; }
+            var have = {};
+            Array.prototype.forEach.call(sel.options, function (o) { have[o.value] = true; });
+            Object.keys(b.langs).sort(function (x, y) { return b.langs[y] - b.langs[x]; }).forEach(function (code) {
+                if (have[code]) { return; }
+                var o = document.createElement('option');
+                o.value = code;
+                o.textContent = langName(code);
+                sel.appendChild(o);
+            });
+        }
+        function passes(i, f) {
+            if (f.year && (!i.Year || i.Year < f.year)) { return false; }
+            if (f.score && (!i.Rating || i.Rating < f.score)) { return false; }
+            if (f.lang && i.Lang !== f.lang) { return false; }
+            if (f.hideOwned && i.Status === 2) { return false; }
+            return true;
+        }
+        function applyFilters(b) {
+            if (!b || browse !== b) { return; }
+            var grid = content.querySelector('.dcBrowseGrid');
+            if (!grid) { return; }
+            var shown = 0, total = 0;
+            Array.prototype.forEach.call(grid.querySelectorAll('.dcCard'), function (card) {
+                var i = items[card.getAttribute('data-key')];
+                var ok = !i || passes(i, b.filter);
+                card.style.display = ok ? '' : 'none';
+                total++;
+                if (ok) { shown++; }
+            });
+            var f = b.filter, active = f.year || f.score || f.lang || f.hideOwned;
+            var cnt = content.querySelector('.dcFCount');
+            if (cnt) { cnt.textContent = active ? shown + ' / ' + total : ''; }
+            // Filter laat bijna niets over: nog een paar pagina's bijladen.
+            if (active && shown < 12 && !b.done && !b.loading && b.auto < 6) { b.auto++; loadBrowse(); }
+        }
+        content.addEventListener('change', function (e) {
+            var b = browse;
+            if (!b || !e.target || !e.target.closest || !e.target.closest('.dcFilters')) { return; }
+            var bar = content.querySelector('.dcFilters');
+            b.filter = {
+                year: parseInt(bar.querySelector('.dcFYear').value, 10) || 0,
+                score: parseFloat(bar.querySelector('.dcFScore').value) || 0,
+                lang: bar.querySelector('.dcFLang').value || '',
+                hideOwned: !!bar.querySelector('.dcFOwned').checked
+            };
+            b.auto = 0;
+            applyFilters(b);
+        });
+
+        // ---- personen: zoekresultaat en "Bekend van" ----
+        function personHtml(p) {
+            var dep = p.Department === 'Directing' ? text('Regisseur', 'Director', 'Regie') : p.Department === 'Acting' ? text('Acteur', 'Actor', 'Schauspiel') : (p.Department || '');
+            return '<div class="dcPerson focusable" tabindex="0" role="button" data-pid="' + p.Id + '" data-name="' + esc(p.Name) + '">' +
+                '<div class="dcPersonPhoto"' + (p.Photo ? ' style="background-image:url(&quot;' + esc(p.Photo) + '&quot;)"' : '') + '></div>' +
+                '<div class="dcPersonName">' + esc(p.Name) + '</div>' +
+                (dep ? '<div class="dcPersonDep">' + esc(dep) + '</div>' : '') + '</div>';
+        }
+        function openPerson(pid, name) {
+            browse = null;
+            homeShown = false;
+            content.innerHTML = '<div class="dcBrowseHead"><button type="button" class="dcBack">&#10094; ' + text('Terug', 'Back', 'Zurück') + '</button>' +
+                '<span class="dcBrowseTitle">' + text('Bekend van: ', 'Known for: ', 'Bekannt aus: ') + esc(name) + '</span></div>' +
+                '<div class="dcGrid dcPersonGrid">' + skelCards(8) + '</div>';
+            var root = view.querySelector('.dcRoot');
+            if (root) { root.scrollTop = 0; }
+            api('GET', 'Discover/PersonCredits', { TmdbPersonId: pid, Name: name }).then(function (r) {
+                var list = (r && r.Items) || [];
+                var grid = content.querySelector('.dcPersonGrid');
+                if (!grid) { return; }
+                grid.innerHTML = list.length
+                    ? list.map(function (i) { return cardHtml(i); }).join('')
+                    : '<div class="dcMsg">' + text('Geen titels gevonden.', 'No titles found.', 'Keine Titel gefunden.') + '</div>';
+                if (isTvClient && grid.firstElementChild) { focusEl(grid.firstElementChild); }
+            }, function () {
+                var grid = content.querySelector('.dcPersonGrid');
+                if (grid) { grid.innerHTML = '<div class="dcMsg">' + text('Laden mislukt.', 'Loading failed.', 'Laden fehlgeschlagen.') + '</div>'; }
+            });
+        }
+
         function openRowGrid(rowKey, title) {
             openBrowse(null, null, title, rowKey);
         }
 
         function openBrowse(kind, id, name, rowKey) {
             homeShown = false;
-            browse = { kind: kind, id: id, row: rowKey || null, next: 1, loading: false, done: false, seen: {} };
+            browse = { kind: kind, id: id, row: rowKey || null, next: 1, loading: false, done: false, seen: {}, langs: {}, auto: 0,
+                filter: { year: 0, score: 0, lang: '', hideOwned: false } };
+            var years = [0, 2025, 2020, 2015, 2010, 2000, 1990];
             content.innerHTML = '<div class="dcBrowseHead"><button type="button" class="dcBack">&#10094; ' + text('Terug', 'Back', 'Zurück') + '</button>' +
                 '<span class="dcBrowseTitle">' + esc(name) + '</span></div>' +
+                '<div class="dcFilters">' +
+                '<label>' + text('Jaar', 'Year', 'Jahr') + ' <select class="dcFYear">' + years.map(function (y) { return '<option value="' + y + '">' + (y ? y + '+' : text('alle', 'all', 'alle')) + '</option>'; }).join('') + '</select></label>' +
+                '<label>' + text('Score', 'Score', 'Bewertung') + ' <select class="dcFScore"><option value="0">' + text('alle', 'all', 'alle') + '</option><option value="6">6+</option><option value="7">7+</option><option value="8">8+</option></select></label>' +
+                '<label>' + text('Taal', 'Language', 'Sprache') + ' <select class="dcFLang"><option value="">' + text('alle', 'all', 'alle') + '</option></select></label>' +
+                '<label class="dcFCheck"><input type="checkbox" class="dcFOwned" /> ' + text('Niet in mijn bibliotheek', 'Not in my library', 'Nicht in meiner Bibliothek') + '</label>' +
+                '<span class="dcFCount"></span>' +
+                '</div>' +
                 '<div class="dcGrid dcBrowseGrid"></div>' +
                 '<div class="dcMore"><button type="button" class="dcBtn dcMoreBtn">' + text('Meer laden', 'Load more', 'Mehr laden') + '</button></div>';
             var root = view.querySelector('.dcRoot');
@@ -383,6 +558,7 @@ define([], function () {
                 var grid = content.querySelector('.dcBrowseGrid');
                 var firstPage = grid && !grid.children.length;
                 if (grid && fresh.length) { grid.insertAdjacentHTML('beforeend', fresh.map(function (i) { return cardHtml(i); }).join('')); }
+                fresh.forEach(function (i) { if (i.Lang) { b.langs[i.Lang] = (b.langs[i.Lang] || 0) + 1; } });
                 if (isTvClient && firstPage && grid.firstElementChild && !overlay.classList.contains('open')) { focusEl(grid.firstElementChild); }
                 b.next = (r && r.NextPage) || (b.next + (b.row ? 1 : 2));
                 b.loading = false;
@@ -390,6 +566,8 @@ define([], function () {
                 var more = content.querySelector('.dcMore');
                 if (more) { more.style.display = b.done ? 'none' : 'block'; }
                 if (btn) { btn.disabled = false; btn.textContent = text('Meer laden', 'Load more', 'Mehr laden'); }
+                updateLangOptions(b);
+                applyFilters(b);
                 if (b.done && !b.seenAny && !fresh.length && grid && !grid.children.length) {
                     grid.innerHTML = '<div class="dcMsg">' + text('Geen resultaten.', 'No results.', 'Keine Ergebnisse.') + '</div>';
                 }
@@ -421,6 +599,7 @@ define([], function () {
             content.innerHTML = html || '<div class="dcMsg">' + text('Geen resultaten.', 'No results.', 'Keine Ergebnisse.') + '</div>';
             homeShown = true;
             renderMine();
+            renderExtras();
             setTimeout(updateAllArrows, 0);
         }
 
@@ -452,6 +631,7 @@ define([], function () {
             homeShown = false;
             content.innerHTML = skeletonHtml(3);
             loadMyRequests();
+            loadExtras();
             scheduleQueue(0);
             api('GET', 'Discover/Home').then(function (r) {
                 var culture = String((r.LanguageAuto && document.documentElement.lang) || r.Language || '').toLowerCase();
@@ -461,6 +641,7 @@ define([], function () {
                 if (r.LanguageAuto) { (r.Rows || []).forEach(function (row) { row.Title = rowTitle(row.Key) || row.Title; }); }
                 renderRows(r.Rows || []);
                 loaded = true;
+                randomPageBackdrop();
                 // TV: meteen op de eerste kaart, behalve als je net in de zoekbalk aan het typen bent.
                 if (isTvClient && document.activeElement !== input && !overlay.classList.contains('open')) { focusFirstItem(); }
             }, function () {
@@ -477,9 +658,17 @@ define([], function () {
             content.innerHTML = '<div class="dcRowTitle">' + text('Zoeken...', 'Searching...', 'Suchen...') + '</div><div class="dcSkelRow">' + skelCards(8) + '</div>';
             api('GET', 'Discover/Search', { Query: q }).then(function (r) {
                 var list = r.Items || [];
-                content.innerHTML = list.length
-                    ? '<div class="dcRowTitle">' + text('Zoekresultaten', 'Search results', 'Suchergebnisse') + '</div><div class="dcGrid">' + list.map(function (i) { return cardHtml(i); }).join('') + '</div>'
-                    : '<div class="dcMsg">' + text('Niets gevonden voor "', 'Nothing found for "', 'Keine Ergebnisse für "') + esc(q) + '".</div>';
+                var people = r.People || [];
+                var html = '';
+                if (people.length) {
+                    html += '<div class="dcRowTitle">' + text('Personen', 'People', 'Personen') + '</div>' +
+                        rowWrapHtml('<div class="dcRow dcPeopleRow">' + people.map(personHtml).join('') + '</div>');
+                }
+                if (list.length) {
+                    html += '<div class="dcRowTitle">' + text('Zoekresultaten', 'Search results', 'Suchergebnisse') + '</div><div class="dcGrid">' + list.map(function (i) { return cardHtml(i); }).join('') + '</div>';
+                }
+                content.innerHTML = html || '<div class="dcMsg">' + text('Niets gevonden voor "', 'Nothing found for "', 'Keine Ergebnisse für "') + esc(q) + '".</div>';
+                setTimeout(updateAllArrows, 0);
             });
         }
 
@@ -495,6 +684,12 @@ define([], function () {
             var b = overlay.querySelector('.dcBtn');
             var d = overlay.querySelector('.dcBtnDel');
             if (!current) { return; }
+            var k4 = overlay.querySelector('.dcBtn4k');
+            if (k4) {
+                k4.textContent = current.Type === 'tv' ? text('Alle seizoenen in 4K', 'All seasons in 4K', 'Alle Staffeln in 4K') : text('4K aanvragen', 'Request in 4K', 'In 4K anfordern');
+                k4.classList.toggle('show', !!fourK[current.Type === 'tv' ? 'tv' : 'movie']);
+                k4.disabled = false;
+            }
             var tb = overlay.querySelector('.dcBtnTrailer');
             tb.textContent = text('Trailer', 'Trailer', 'Trailer', 'Trailer');
             if (showTrailer) { tb.classList.add('show'); } else { tb.classList.remove('show'); }
@@ -893,14 +1088,125 @@ define([], function () {
             });
         }
 
+        // ---- achtergrond van de titel onder de muis / met focus (zoals Emby's achtergronden) ----
+        var pageBd = { layers: view.querySelectorAll('.dcPageBdImg'), idx: 0, cur: '', timer: null, seq: 0 };
+        function pageBdAllowed() {
+            try {
+                for (var i = 0; i < localStorage.length; i++) {
+                    var k = localStorage.key(i);
+                    if (k && /enablebackdrops/i.test(k) && String(localStorage.getItem(k)) === 'false') { return false; }
+                }
+            } catch (e) { }
+            return true;
+        }
+        function setPageBackdrop(url) {
+            if (url) { url = String(url).replace('/t/p/w780/', '/t/p/w1280/'); }
+            if (!url || url === pageBd.cur || !pageBd.layers.length || !pageBdAllowed()) { return; }
+            var token = ++pageBd.seq;
+            var img = new Image();
+            img.onload = function () {
+                if (token !== pageBd.seq) { return; }
+                pageBd.cur = url;
+                var next = pageBd.layers[pageBd.idx = 1 - pageBd.idx];
+                var prev = pageBd.layers[1 - pageBd.idx];
+                next.style.backgroundImage = 'url("' + url.replace(/"/g, '%22') + '")';
+                next.classList.add('on');
+                prev.classList.remove('on');
+            };
+            img.src = url;
+        }
+        function backdropOf(el) {
+            if (!el || !el.closest) { return null; }
+            var card = el.closest('.dcCard');
+            if (card) { var it = items[card.getAttribute('data-key')]; return it && it.Backdrop; }
+            var tile = el.closest('.dcTile');
+            return tile ? tile.getAttribute('data-bd') : null;
+        }
+        function onBackdropHover(e) {
+            var url = backdropOf(e.target);
+            if (!url) { return; }
+            clearTimeout(pageBd.timer);
+            pageBd.timer = setTimeout(function () { setPageBackdrop(url); }, 120);
+        }
+        content.addEventListener('mouseover', onBackdropHover);
+        content.addEventListener('focusin', onBackdropHover);
+        // Na het laden van de startpagina: een willekeurige achtergrond uit wat er te zien is.
+        function randomPageBackdrop() {
+            var all = Object.keys(items).map(function (k) { return items[k] && items[k].Backdrop; }).filter(Boolean);
+            if (all.length) { setPageBackdrop(all[Math.floor(Math.random() * all.length)]); }
+        }
+
+        // ---- snelmenu: rechtsklik of lang indrukken op een poster ----
+        var quick = document.createElement('div');
+        quick.className = 'dcQuick';
+        view.appendChild(quick);
+        var quickJustOpened = 0;
+        function closeQuick() { quick.classList.remove('open'); }
+        function openQuick(i, x, y) {
+            var canRequest = i.Status === 0 || (i.Type === 'tv' && i.Status !== 1);
+            quick.innerHTML = '<div class="dcQuickTitle">' + esc(i.Title) + (i.Year ? ' (' + i.Year + ')' : '') + '</div>' +
+                '<button type="button" class="req"' + (canRequest ? '' : ' disabled') + '>' +
+                (i.Type === 'tv' ? text('Alle seizoenen aanvragen', 'Request all seasons', 'Alle Staffeln anfordern') : text('Aanvragen', 'Request', 'Anfordern')) +
+                (i.Status === 2 && i.Type !== 'tv' ? ' \u2713' : i.Status === 1 ? ' \u23F3' : '') + '</button>' +
+                '<button type="button" class="det">' + text('Details en trailer', 'Details and trailer', 'Details und Trailer') + '</button>';
+            quick.querySelector('.req').addEventListener('click', function () {
+                closeQuick();
+                requestSeasons(i, null, { disabled: false });
+            });
+            quick.querySelector('.det').addEventListener('click', function () { closeQuick(); openItem(i); });
+            quick.classList.add('open');
+            var w = quick.offsetWidth || 220, h = quick.offsetHeight || 120;
+            quick.style.left = Math.max(8, Math.min(x, window.innerWidth - w - 8)) + 'px';
+            quick.style.top = Math.max(8, Math.min(y, window.innerHeight - h - 8)) + 'px';
+            quickJustOpened = Date.now();
+            var first = quick.querySelector('button:not([disabled])');
+            if (first && isTvClient) { first.focus(); }
+        }
+        content.addEventListener('contextmenu', function (e) {
+            var card = e.target.closest ? e.target.closest('.dcCard') : null;
+            var i = card && items[card.getAttribute('data-key')];
+            if (!i) { return; }
+            e.preventDefault();
+            openQuick(i, e.clientX, e.clientY);
+        });
+        var pressTimer = null, pressStart = null;
+        content.addEventListener('touchstart', function (e) {
+            var card = e.target.closest ? e.target.closest('.dcCard') : null;
+            var i = card && items[card.getAttribute('data-key')];
+            if (!i || !e.touches || e.touches.length !== 1) { return; }
+            pressStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            clearTimeout(pressTimer);
+            pressTimer = setTimeout(function () { pressTimer = null; openQuick(i, pressStart.x, pressStart.y); }, 550);
+        }, { passive: true });
+        content.addEventListener('touchmove', function (e) {
+            if (!pressTimer || !pressStart || !e.touches || !e.touches.length) { return; }
+            if (Math.abs(e.touches[0].clientX - pressStart.x) > 10 || Math.abs(e.touches[0].clientY - pressStart.y) > 10) { clearTimeout(pressTimer); pressTimer = null; }
+        }, { passive: true });
+        content.addEventListener('touchend', function () { clearTimeout(pressTimer); pressTimer = null; });
+        document.addEventListener('click', function (e) {
+            if (!quick.classList.contains('open')) { return; }
+            if (quick.contains(e.target)) { return; }
+            closeQuick();
+        }, true);
+        document.addEventListener('keydown', function (e) { if ((e.key === 'Escape' || e.keyCode === 27) && quick.classList.contains('open')) { closeQuick(); } });
+        window.addEventListener('scroll', closeQuick, true);
+
         // ---- events ----
         content.addEventListener('click', function (e) {
+            if (Date.now() - quickJustOpened < 700) { return; }   // de klik na lang indrukken opent geen popup
             var card = e.target.closest ? e.target.closest('.dcCard') : null;
             if (card && items[card.getAttribute('data-key')]) { openItem(items[card.getAttribute('data-key')]); }
         });
 
         content.addEventListener('click', function (e) {
             var t = e.target;
+            var person = t.closest ? t.closest('.dcPerson') : null;
+            if (person) {
+                openPerson(parseInt(person.getAttribute('data-pid'), 10), person.getAttribute('data-name'));
+                return;
+            }
+            var reqAll = t.closest ? t.closest('.dcReqAll') : null;
+            if (reqAll) { requestAll(reqAll.getAttribute('data-row'), reqAll); return; }
             var rowLink = t.closest ? t.closest('.dcRowLink') : null;
             if (rowLink) {
                 openRowGrid(rowLink.getAttribute('data-rowkey'), rowLink.getAttribute('data-title'));
@@ -921,14 +1227,14 @@ define([], function () {
             var k = e.key || '';
             if (k !== 'Enter' && k !== ' ' && e.keyCode !== 13 && e.keyCode !== 32) { return; }
             var el = e.target;
-            if (el && el.classList && (el.classList.contains('dcCard') || el.classList.contains('dcTile') || el.classList.contains('dcRowLink'))) {
+            if (el && el.classList && (el.classList.contains('dcCard') || el.classList.contains('dcTile') || el.classList.contains('dcRowLink') || el.classList.contains('dcPerson'))) {
                 e.preventDefault();
                 el.click();
             }
         });
         content.addEventListener('focusin', function (e) {
             var el = e.target;
-            if (el && el.classList && (el.classList.contains('dcCard') || el.classList.contains('dcTile')) && el.scrollIntoView) {
+            if (el && el.classList && (el.classList.contains('dcCard') || el.classList.contains('dcTile') || el.classList.contains('dcPerson')) && el.scrollIntoView) {
                 try { el.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch (x) { el.scrollIntoView(); }
             }
         });
@@ -954,6 +1260,16 @@ define([], function () {
 
         overlay.querySelector('.dcClose').addEventListener('click', closeModal);
         overlay.addEventListener('click', function (e) { if (e.target === overlay) { closeModal(); } });
+
+        overlay.querySelector('.dcBtn4k').addEventListener('click', function () {
+            var i = current, b = this;
+            if (!i || b.disabled) { return; }
+            b.disabled = true;
+            api('POST', 'Discover/RequestItem', null, { Type: i.Type, TmdbId: i.TmdbId, Is4k: true }).then(function (r) {
+                showToast(r && r.Success ? i.Title + ': ' + r.Message : text('Mislukt: ', 'Failed: ', 'Fehlgeschlagen: ') + ((r && r.Message) || '?'), !(r && r.Success));
+                b.disabled = false;
+            }, function () { showToast(text('Aanvraag mislukt.', 'Request failed.', 'Anfrage fehlgeschlagen.'), true); b.disabled = false; });
+        });
 
         overlay.querySelector('.dcBtn').addEventListener('click', function () {
             var i = current;
@@ -1125,7 +1441,7 @@ define([], function () {
                     return;
                 }
                 var kids = Array.prototype.filter.call(p.children, function (c) {
-                    return c.classList && (c.classList.contains('dcCard') || c.classList.contains('dcTile'));
+                    return c.classList && (c.classList.contains('dcCard') || c.classList.contains('dcTile') || c.classList.contains('dcPerson'));
                 });
                 if (!kids.length) { return; }
                 if (p.classList.contains('dcRow')) { lines.push(kids); return; }

@@ -39,6 +39,8 @@ namespace Emby.Plugins.Discover
         public int TmdbId { get; set; }
         /// <summary>Optioneel: seizoensnummers om te monitoren (alleen series). Leeg/null = alle seizoenen.</summary>
         public int[] Seasons { get; set; }
+        /// <summary>Alleen in de Seerr-modus met een 4K-server: aanvraag voor de 4K-versie.</summary>
+        public bool Is4k { get; set; }
     }
 
     [Route("/Discover/RemoveItem", "POST", Summary = "Verwijder een film of serie uit Radarr/Sonarr (beheerders en gebruikers met Emby-verwijderrechten)")]
@@ -163,6 +165,9 @@ namespace Emby.Plugins.Discover
         public bool SonarrSet { get; set; }
         /// <summary>"Seerr" in de Seerr-modus, anders leeg (rechtstreeks naar Radarr/Sonarr).</summary>
         public string RequestService { get; set; }
+        /// <summary>Seerr heeft een 4K-server voor films / series: dan toont de popup "4K aanvragen".</summary>
+        public bool Seerr4kMovie { get; set; }
+        public bool Seerr4kTv { get; set; }
         public string LoadedAt { get; set; }
         public int ChannelCalls { get; set; }
         public int Requests { get; set; }
@@ -185,6 +190,8 @@ namespace Emby.Plugins.Discover
         public string Poster { get; set; }
         public string Backdrop { get; set; }
         public double Rating { get; set; }
+        /// <summary>Oorspronkelijke taal (ISO 639-1), voor het taalfilter.</summary>
+        public string Lang { get; set; }
         public string Overview { get; set; }
         /// <summary>0 = niet aangevraagd, 1 = aangevraagd, 2 = beschikbaar</summary>
         public int Status { get; set; }
@@ -222,6 +229,17 @@ namespace Emby.Plugins.Discover
         /// <summary>Eerstvolgende TMDB-pagina die /Discover/List kan ophalen.</summary>
         public int NextPage { get; set; }
         public List<DiscoverItemDto> Items { get; set; } = new List<DiscoverItemDto>();
+        /// <summary>Alleen bij zoeken: acteurs en regisseurs.</summary>
+        public List<DiscoverPersonDto> People { get; set; } = new List<DiscoverPersonDto>();
+    }
+
+    public class DiscoverPersonDto
+    {
+        public int Id { get; set; }
+        public string Name { get; set; }
+        public string Photo { get; set; }
+        /// <summary>"Acting", "Directing", ...</summary>
+        public string Department { get; set; }
     }
 
     public class DiscoverHomeResponse
@@ -391,6 +409,8 @@ namespace Emby.Plugins.Discover
                 RadarrSet = ArrClient.RadarrConfigured,
                 SonarrSet = ArrClient.SonarrConfigured,
                 RequestService = SeerrClient.Enabled ? "Seerr" : "",
+                Seerr4kMovie = SeerrClient.Has4k(_json, false),
+                Seerr4kTv = SeerrClient.Has4k(_json, true),
                 LoadedAt = DiscoverDiagnostics.LoadedUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss"),
                 ChannelCalls = DiscoverDiagnostics.ChannelCalls,
                 Requests = DiscoverDiagnostics.Requests,
@@ -671,6 +691,16 @@ namespace Emby.Plugins.Discover
             return res;
         }
 
+        private async Task<List<TmdbPersonHit>> SafePeople(string q)
+        {
+            try { return await _tmdb.SearchPeople(q, CancellationToken.None).ConfigureAwait(false); }
+            catch (Exception ex)
+            {
+                DiscoverDiagnostics.Add("personen zoeken mislukt: " + ex.Message);
+                return new List<TmdbPersonHit>();
+            }
+        }
+
         public async Task<object> Get(DiscoverSearchRequest request)
         {
             var row = new DiscoverRow { Key = "search", Title = "Zoekresultaten" };
@@ -683,7 +713,16 @@ namespace Emby.Plugins.Discover
                 var tvStatesTask = SafeStates(true);
                 var movieTask = _tmdb.SearchTyped(q, false, 2, CancellationToken.None);
                 var tvTask = _tmdb.SearchTyped(q, true, 2, CancellationToken.None);
-                await Task.WhenAll(movieStatesTask, tvStatesTask, movieTask, tvTask).ConfigureAwait(false);
+                var peopleTask = SafePeople(q);
+                await Task.WhenAll(movieStatesTask, tvStatesTask, movieTask, tvTask, peopleTask).ConfigureAwait(false);
+                foreach (var p in peopleTask.Result.Where(p => !string.IsNullOrEmpty(p.profile_path) && p.popularity >= 1).Take(12))
+                    row.People.Add(new DiscoverPersonDto
+                    {
+                        Id = p.id,
+                        Name = p.name,
+                        Photo = "https://image.tmdb.org/t/p/w185" + p.profile_path,
+                        Department = p.known_for_department
+                    });
 
                 var combined = movieTask.Result.Select(i => new { Item = i, Tv = false })
                     .Concat(tvTask.Result.Select(i => new { Item = i, Tv = true }))
@@ -974,10 +1013,33 @@ namespace Emby.Plugins.Discover
                     res.Message = RequestAccess.DeniedMessage();
                     return res;
                 }
+                bool isAdminRequester = false;
+                try { var ai = _auth.GetAuthorizationInfo(Request); isAdminRequester = ai != null && ai.User != null && ai.User.Policy != null && ai.User.Policy.IsAdministrator; }
+                catch { }
+                var limitMsg = RequestAccess.LimitMessage(_json, requesterId, isAdminRequester);
+                if (limitMsg != null)
+                {
+                    DiscoverDiagnostics.Add("aanvraag (webpagina) boven de limiet voor " + (requesterName ?? "?") + ": " + request.Type + " " + request.TmdbId);
+                    res.Success = false;
+                    res.Message = limitMsg;
+                    return res;
+                }
                 bool tv = string.Equals(request.Type, "tv", StringComparison.OrdinalIgnoreCase);
                 bool added;
                 TmdbItem requested;
-                if (tv)
+                if (request.Is4k && SeerrClient.Enabled)
+                {
+                    requested = tv ? await _tmdb.GetTv(request.TmdbId, CancellationToken.None).ConfigureAwait(false)
+                                   : await _tmdb.GetMovie(request.TmdbId, CancellationToken.None).ConfigureAwait(false);
+                    int tvdb = 0;
+                    if (tv)
+                    {
+                        try { var ext4k = await _tmdb.GetTvExternalIds(request.TmdbId, CancellationToken.None).ConfigureAwait(false); tvdb = ext4k?.tvdb_id ?? 0; }
+                        catch { }
+                    }
+                    added = await SeerrClient.Request(_json, tv, request.TmdbId, tvdb, request.Seasons, requesterGuid, CancellationToken.None, true).ConfigureAwait(false);
+                }
+                else if (tv)
                 {
                     var t = await _tmdb.GetTv(request.TmdbId, CancellationToken.None).ConfigureAwait(false);
                     var ext = await _tmdb.GetTvExternalIds(request.TmdbId, CancellationToken.None).ConfigureAwait(false);
@@ -1001,6 +1063,7 @@ namespace Emby.Plugins.Discover
                 if (tv && request.Seasons != null && request.Seasons.Length > 0)
                     seasonNote = " (" + DiscoverLanguage.Text("seizoen ", "season ", "Staffel ") +
                         string.Join(", ", request.Seasons.OrderBy(x => x)) + ")";
+                if (request.Is4k && SeerrClient.Enabled) seasonNote += " (4K)";
                 res.Message = added
                     ? DiscoverLanguage.Text("Aangevraagd", "Requested", "Angefordert") + seasonNote +
                         (SeerrClient.WaitsForApproval(tv, request.TmdbId)
@@ -1170,7 +1233,7 @@ namespace Emby.Plugins.Discover
             return names.Count == 0 ? null : string.Join(", ", names);
         }
 
-        private static DiscoverItemDto ToDto(TmdbItem i, bool tv, Dictionary<int, bool> states)
+        internal static DiscoverItemDto ToDto(TmdbItem i, bool tv, Dictionary<int, bool> states)
         {
             int status = 0;
             if (states != null && states.TryGetValue(i.id, out var hasFiles)) status = hasFiles ? 2 : 1;
@@ -1184,6 +1247,7 @@ namespace Emby.Plugins.Discover
                 Poster = string.IsNullOrEmpty(i.poster_path) ? null : "https://image.tmdb.org/t/p/w342" + i.poster_path,
                 Backdrop = string.IsNullOrEmpty(i.backdrop_path) ? null : "https://image.tmdb.org/t/p/w780" + i.backdrop_path,
                 Rating = i.vote_average,
+                Lang = i.original_language,
                 Overview = i.overview,
                 Status = status
             };

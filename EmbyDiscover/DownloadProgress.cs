@@ -274,6 +274,30 @@ namespace Emby.Plugins.Discover
         public double Rating { get; set; }
         public string Overview { get; set; }
         public string Added { get; set; }
+        /// <summary>Er is al een melding "beschikbaar" naar de aanvrager gestuurd.</summary>
+        public bool Notified { get; set; }
+        /// <summary>Is ooit gezien als "nog niet beschikbaar"; alleen dan volgt een melding (geen meldingen voor oude aanvragen).</summary>
+        public bool SeenPending { get; set; }
+    }
+
+    public class AdminRequestDto
+    {
+        public string UserId { get; set; }
+        public string Type { get; set; }
+        public int TmdbId { get; set; }
+        public string Title { get; set; }
+        public int Year { get; set; }
+        public string Poster { get; set; }
+        public string Added { get; set; }
+        /// <summary>0 = niet (meer) in Radarr/Sonarr/Seerr, 1 = aangevraagd, 2 = beschikbaar</summary>
+        public int Status { get; set; }
+    }
+
+    public class AdminRequestsDto
+    {
+        public List<AdminRequestDto> Items { get; set; } = new List<AdminRequestDto>();
+        public int Limit { get; set; }
+        public int LimitDays { get; set; }
     }
 
     public class StoredRequestFile { public List<StoredRequest> Requests { get; set; } = new List<StoredRequest>(); }
@@ -358,6 +382,39 @@ namespace Emby.Plugins.Discover
             catch (Exception ex) { DiscoverDiagnostics.Add("aanvraag onthouden mislukt: " + ex.Message); }
         }
 
+        /// <summary>Aanvragen van deze gebruiker sinds een moment, oudste datum eerst (voor de limiet).</summary>
+        internal static List<DateTime> DatesSince(IJsonSerializer json, object userId, DateTime sinceUtc)
+        {
+            var uid = RequestAccess.Normalize(userId);
+            var res = new List<DateTime>();
+            lock (Gate)
+            {
+                foreach (var r in Load(json).Requests)
+                {
+                    DateTime d;
+                    if (r.UserId == uid && DateTime.TryParse(r.Added, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out d) &&
+                        d.ToUniversalTime() >= sinceUtc) res.Add(d.ToUniversalTime());
+                }
+            }
+            res.Sort();
+            return res;
+        }
+
+        /// <summary>Wijzig de lijst onder het slot en sla op als de functie true teruggeeft.</summary>
+        internal static void Update(IJsonSerializer json, Func<List<StoredRequest>, bool> change)
+        {
+            lock (Gate)
+            {
+                var d = Load(json);
+                if (change(d.Requests)) Save(json);
+            }
+        }
+
+        internal static List<StoredRequest> All(IJsonSerializer json)
+        {
+            lock (Gate) { return new List<StoredRequest>(Load(json).Requests); }
+        }
+
         internal static List<StoredRequest> For(IJsonSerializer json, object userId)
         {
             var uid = RequestAccess.Normalize(userId);
@@ -377,6 +434,10 @@ namespace Emby.Plugins.Discover
     [Route("/Discover/MyRequests", "GET", Summary = "Wat de ingelogde gebruiker via Discover heeft aangevraagd")]
     [Authenticated]
     public class DiscoverMyRequestsRequest : IReturn<DiscoverRow> { }
+
+    [Route("/Discover/AllRequests", "GET", Summary = "Alle aanvragen via Discover, voor beheerders")]
+    [Authenticated(Roles = "Admin")]
+    public class DiscoverAllRequestsRequest : IReturn<AdminRequestsDto> { }
 
     public class DownloadProgressService : IService, IRequiresRequest
     {
@@ -413,6 +474,33 @@ namespace Emby.Plugins.Discover
                 res.Items = DownloadQueue.Group(parts, admin);
             }
             catch (Exception ex) { DiscoverDiagnostics.Add("FOUT wachtrij: " + ex.Message); }
+            return res;
+        }
+
+        public async Task<object> Get(DiscoverAllRequestsRequest request)
+        {
+            var cfg = Plugin.GetCurrentConfiguration();
+            var res = new AdminRequestsDto { Limit = cfg.RequestLimit, LimitDays = cfg.RequestLimitDays };
+            var all = RequestStore.All(_json);
+            Dictionary<int, bool> ms = new Dictionary<int, bool>(), ts = new Dictionary<int, bool>();
+            try
+            {
+                if (all.Any(r => r.Type == "movie")) ms = await _arr.GetMovieStates(CancellationToken.None).ConfigureAwait(false);
+                if (all.Any(r => r.Type == "tv")) ts = await _arr.GetSeriesStates(CancellationToken.None).ConfigureAwait(false);
+            }
+            catch (Exception ex) { DiscoverDiagnostics.Add("FOUT status voor aanvragenoverzicht: " + ex.Message); }
+            foreach (var r in all)
+            {
+                var states = r.Type == "tv" ? ts : ms;
+                bool hasFiles;
+                int status = states.TryGetValue(r.TmdbId, out hasFiles) ? (hasFiles ? 2 : 1) : 0;
+                res.Items.Add(new AdminRequestDto
+                {
+                    UserId = r.UserId, Type = r.Type, TmdbId = r.TmdbId, Title = r.Title, Year = r.Year,
+                    Poster = r.Poster, Added = r.Added, Status = status
+                });
+            }
+            res.Items = res.Items.OrderByDescending(x => x.Added ?? "").ToList();
             return res;
         }
 

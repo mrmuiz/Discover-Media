@@ -44,7 +44,7 @@ namespace Emby.Plugins.Discover
 
         // Stopt het afspelen en toont een melding bij de geblokkeerde gebruiker. Mislukt dit, dan is de aanvraag
         // toch al niet gedaan; alleen de melding ontbreekt dan.
-        private void NotifyBlocked(PlaybackProgressEventArgs e)
+        private void NotifyBlocked(PlaybackProgressEventArgs e, string text = null)
         {
             try
             {
@@ -54,7 +54,7 @@ namespace Emby.Plugins.Discover
                 _sessions.SendMessageCommand(sessionId, sessionId, new MessageCommand
                 {
                     Header = "Discover",
-                    Text = RequestAccess.DeniedMessage(),
+                    Text = text ?? RequestAccess.DeniedMessage(),
                     TimeoutMs = 8000
                 }, CancellationToken.None);
             }
@@ -91,6 +91,16 @@ namespace Emby.Plugins.Discover
                     _logger.Info("Discover: aanvraag {0} geblokkeerd voor gebruiker {1}", ext, user.Name);
                     NotifyBlocked(e);
                     return;
+                }
+                if (user != null)
+                {
+                    var limitMsg = RequestAccess.LimitMessage(_json, user.Id, user.Policy != null && user.Policy.IsAdministrator);
+                    if (limitMsg != null)
+                    {
+                        DiscoverDiagnostics.Add("aanvraag (Afspelen) boven de limiet voor " + user.Name + ": " + ext);
+                        NotifyBlocked(e, limitMsg);
+                        return;
+                    }
                 }
 
                 Task.Run(async () =>

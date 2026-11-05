@@ -5,7 +5,7 @@
     <title>Discover</title>
 </head>
 <body>
-<div data-role="page" class="page type-interior pluginConfigurationPage discoverConfigPage" data-require="emby-input,emby-button,emby-select,emby-checkbox" data-controller="__plugin/discoverconfigjs1358">
+<div data-role="page" class="page type-interior pluginConfigurationPage discoverConfigPage" data-require="emby-input,emby-button,emby-select,emby-checkbox" data-controller="__plugin/discoverconfigjs1359">
     <style>
         .discoverConfigPage .keyWrap { position: relative; }
         .discoverConfigPage .keyWrap input { padding-right: 2.8em; }
@@ -20,6 +20,12 @@
         .discoverConfigPage .dcPanel.active { display: block; }
         .discoverConfigPage .dcPanel h3:first-child { margin-top: 0; }
         .discoverConfigPage .dcUserRow { display: flex; align-items: center; justify-content: space-between; gap: 1em; }
+        .discoverConfigPage .dcReqTable { width: 100%; border-collapse: collapse; font-size: .9em; margin-top: .5em; }
+        .discoverConfigPage .dcReqTable th, .discoverConfigPage .dcReqTable td { text-align: left; padding: .35em .5em; border-bottom: 1px solid rgba(128,128,128,.2); vertical-align: middle; }
+        .discoverConfigPage .dcReqTable th { opacity: .7; font-weight: 500; }
+        .discoverConfigPage .dcReqTable img { width: 32px; height: 48px; object-fit: cover; border-radius: 3px; display: block; }
+        .discoverConfigPage .dcReqSt0 { opacity: .55; } .discoverConfigPage .dcReqSt1 { color: #fb8c00; } .discoverConfigPage .dcReqSt2 { color: #43a047; }
+        .discoverConfigPage .dcReqSum { margin: .5em 0; opacity: .8; }
         .discoverConfigPage .dcUserRow .dcUserTag { opacity: .6; font-size: .85em; white-space: nowrap; }
         .discoverConfigPage .dcButtons button { margin: 0 .6em .6em 0; }
     </style>
@@ -94,6 +100,41 @@
                 <div>
                     <button is="emby-button" type="button" class="raised btnTestTmdb"><span>Test TMDB-key</span></button>
                     <div class="fieldDescription testStatus" id="statusTmdb" style="margin-top:.5em;"></div>
+                </div>
+
+                <h3 id="hdgExtraRows">Extra rijen op de Discover-pagina</h3>
+                <div class="checkboxContainer">
+                    <label class="emby-checkbox-label">
+                        <input is="emby-checkbox" type="checkbox" id="chkShowNewSeasons" />
+                        <span class="checkboxLabel" id="lbl_chkShowNewSeasons">Rij "Nieuwe seizoenen": series uit je bibliotheek met een nieuwer seizoen</span>
+                        <span class="emby-checkbox-outline">
+                            <span class="emby-checkbox-on"><i class="md-icon">check</i></span>
+                            <span class="emby-checkbox-off"></span>
+                        </span>
+                    </label>
+                </div>
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused" for="txtTmdbList" id="lbl_txtTmdbList">TMDB-lijst (id of link, optioneel)</label>
+                    <input is="emby-input" type="text" id="txtTmdbList" spellcheck="false" placeholder="https://www.themoviedb.org/list/123456" />
+                    <div class="fieldDescription" id="desc_txtTmdbList">Een openbare lijst op TMDB, bijvoorbeeld je eigen watchlist-lijst. Leeg = geen rij.</div>
+                </div>
+                <div>
+                    <button is="emby-button" type="button" class="raised btnTestTmdbList"><span id="btnTestTmdbListText">Test lijst</span></button>
+                    <div class="fieldDescription testStatus" id="statusTmdbList" style="margin-top:.5em;"></div>
+                </div>
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused" for="txtTraktUser" id="lbl_txtTraktUser">Trakt-gebruikersnaam (optioneel)</label>
+                    <input is="emby-input" type="text" id="txtTraktUser" spellcheck="false" />
+                </div>
+                <div class="inputContainer keyWrap">
+                    <label class="inputLabel inputLabelUnfocused" for="txtTraktClient" id="lbl_txtTraktClient">Trakt Client ID</label>
+                    <input is="emby-input" type="password" id="txtTraktClient" autocomplete="new-password" spellcheck="false" />
+                    <button is="emby-button" type="button" class="paper-icon-button-light btnToggleKey" data-target="txtTraktClient" title="Tonen" aria-label="Tonen"><i class="md-icon">visibility</i></button>
+                </div>
+                <div class="fieldDescription" id="desc_trakt">Maak op trakt.tv onder Settings &gt; Your API Apps een app aan (redirect: urn:ietf:wg:oauth:2.0:oob) en plak de Client ID hier. Je watchlist moet openbaar zijn. Leeg = geen rij.</div>
+                <div>
+                    <button is="emby-button" type="button" class="raised btnTestTrakt"><span id="btnTestTraktText">Test Trakt</span></button>
+                    <div class="fieldDescription testStatus" id="statusTrakt" style="margin-top:.5em;"></div>
                 </div>
 
                 </div>
@@ -189,6 +230,24 @@
                     </div>
                     <div id="userList"></div>
                     <div class="fieldDescription" id="statusUsers" style="margin-top:.5em;"></div>
+
+                    <h3 id="hdgLimit">Limiet per gebruiker</h3>
+                    <div class="inputContainer">
+                        <label class="inputLabel inputLabelUnfocused" for="numRequestLimit" id="lbl_numRequestLimit">Maximaal aantal aanvragen (0 = geen limiet)</label>
+                        <input is="emby-input" type="number" min="0" step="1" id="numRequestLimit" />
+                    </div>
+                    <div class="inputContainer">
+                        <label class="inputLabel inputLabelUnfocused" for="numRequestLimitDays" id="lbl_numRequestLimitDays">Per aantal dagen</label>
+                        <input is="emby-input" type="number" min="1" step="1" id="numRequestLimitDays" />
+                    </div>
+                    <div class="fieldDescription" id="desc_limit">Geldt voor aanvragen via Discover naar Radarr en Sonarr. Beheerders hebben geen limiet. Met Seerr gelden de limieten die je in Seerr per gebruiker instelt.</div>
+
+                    <h3 id="hdgAllRequests">Alle aanvragen</h3>
+                    <div class="dcButtons">
+                        <button is="emby-button" type="button" class="raised btnLoadRequests"><span id="btnLoadRequestsText">Overzicht laden</span></button>
+                    </div>
+                    <div id="allRequests"></div>
+                    <div class="fieldDescription" id="statusAllRequests" style="margin-top:.5em;"></div>
                 </div>
 
                 <!-- Opslag -->
