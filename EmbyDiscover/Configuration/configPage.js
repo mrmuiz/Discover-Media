@@ -65,6 +65,10 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             'Create an app on trakt.tv under Settings > Your API Apps (redirect: urn:ietf:wg:oauth:2.0:oob) and paste the Client ID here. Your watchlist must be public. Empty = no row.',
             'Erstelle auf trakt.tv unter Settings > Your API Apps eine App (Redirect: urn:ietf:wg:oauth:2.0:oob) und füge die Client-ID hier ein. Deine Merkliste muss öffentlich sein. Leer = keine Reihe.'],
         btnTestTraktText: ['Test Trakt', 'Test Trakt', 'Trakt testen'],
+        hdgCast: ['Cast', 'Cast', 'Besetzung'],
+        lbl_chkChannelCastFolder: ['Map "Cast" in het kanaal naast Request en Trailer (ook in de tv- en mobiele apps)', '"Cast" folder in the channel next to Request and Trailer (also in the TV and mobile apps)', 'Ordner "Besetzung" im Kanal neben Anfragen und Trailer (auch in den TV- und Mobil-Apps)'],
+        desc_chkChannelCastFolder: ['Met acteurs als tegels; kies iemand om zijn of haar films en series te zien. Na aan- of uitzetten is één kanaalverversing nodig.', 'With actors as tiles; pick someone to see their movies and series. After switching it on or off one channel refresh is needed.', 'Mit Schauspielern als Kacheln; wähle jemanden, um Filme und Serien zu sehen. Nach dem Ein- oder Ausschalten ist eine Kanalaktualisierung nötig.'],
+        lbl_chkCastIncludeCrew: ['Regisseur (film) of makers (serie) bij de cast tonen', 'Show the director (movie) or creators (series) with the cast', 'Regie (Film) bzw. Schöpfer (Serie) bei der Besetzung zeigen'],
         hdgLimit: ['Limiet per gebruiker', 'Limit per user', 'Limit pro Benutzer'],
         lbl_numRequestLimit: ['Maximaal aantal aanvragen (0 = geen limiet)', 'Maximum number of requests (0 = no limit)', 'Maximale Anzahl Anfragen (0 = kein Limit)'],
         lbl_numRequestLimitDays: ['Per aantal dagen', 'Per number of days', 'Pro Anzahl Tage'],
@@ -608,6 +612,9 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             el(view, 'numMaxCacheMb').value = c.MaxCacheMb != null ? c.MaxCacheMb : 2048;
             el(view, 'numRequestLimit').value = c.RequestLimit != null ? c.RequestLimit : 0;
             el(view, 'chkShowNewSeasons').checked = c.ShowNewSeasons !== false;
+            el(view, 'chkChannelCastFolder').checked = !!c.ChannelCastFolder;
+            el(view, 'chkCastIncludeCrew').checked = c.CastIncludeCrew !== false;
+            el(view, 'selCastClick').value = c.CastClick === 'page' ? 'page' : 'popup';
             el(view, 'txtTmdbList').value = c.TmdbListId || '';
             el(view, 'txtTraktUser').value = c.TraktUser || '';
             el(view, 'txtTraktClient').value = c.TraktClientId || '';
@@ -678,6 +685,11 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             c.MaxCacheMb = intValue(view, 'numMaxCacheMb', 2048);
             c.RequestLimit = intValue(view, 'numRequestLimit', 0);
             c.ShowNewSeasons = el(view, 'chkShowNewSeasons').checked;
+            var castWas = !!c.ChannelCastFolder;
+            c.ChannelCastFolder = el(view, 'chkChannelCastFolder').checked;
+            c.CastIncludeCrew = el(view, 'chkCastIncludeCrew').checked;
+            c.CastClick = el(view, 'selCastClick').value === 'page' ? 'page' : 'popup';
+            state.castChanged = castWas !== c.ChannelCastFolder;
             c.TmdbListId = el(view, 'txtTmdbList').value.trim();
             c.TraktUser = el(view, 'txtTraktUser').value.trim();
             c.TraktClientId = el(view, 'txtTraktClient').value.trim();
@@ -698,6 +710,10 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             c.SonarrQualityProfileId = parseInt(el(view, 'selSonarrProfile').value, 10) || 0;
             c.SonarrRootFolder = el(view, 'selSonarrRoot').value || '';
             return ApiClient.updatePluginConfiguration(pluginId, c).then(function (result) {
+                if (state.castChanged) {
+                    state.castChanged = false;
+                    ApiClient.ajax({ type: 'POST', url: ApiClient.getUrl('Discover/RefreshChannel') }).then(null, function () { });
+                }
                 return ApiClient.getPluginConfiguration(pluginId).then(function (saved) {
                     if (saved.TmdbApiKey !== apiKey ||
                         saved.PluginLanguage !== c.PluginLanguage ||

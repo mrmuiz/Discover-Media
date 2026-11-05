@@ -25,7 +25,7 @@ namespace Emby.Plugins.Discover
         public void Dispose() { }
 
         /// <summary>Vraag om een kanaalverversing (wacht eerst even, zodat een reeks tegels samen meegaat).</summary>
-        internal static void Request(string why)
+        internal static void Request(string why, bool force = false)
         {
             if (_tasks == null) return;
             if (Interlocked.Exchange(ref _pending, 1) == 1) return;
@@ -35,9 +35,9 @@ namespace Emby.Plugins.Discover
                 {
                     for (int attempt = 0; attempt < 48; attempt++)
                     {
-                        await Task.Delay(TimeSpan.FromMinutes(attempt == 0 ? 2 : 15)).ConfigureAwait(false);
+                        await Task.Delay(attempt == 0 ? TimeSpan.FromSeconds(force ? 10 : 120) : TimeSpan.FromMinutes(force ? 2 : 15)).ConfigureAwait(false);
                         var wait = _last + MinGap - DateTime.UtcNow;
-                        if (wait > TimeSpan.Zero) { await Task.Delay(wait).ConfigureAwait(false); }
+                        if (!force && wait > TimeSpan.Zero) { await Task.Delay(wait).ConfigureAwait(false); }
                         var worker = Find();
                         if (worker == null) { DiscoverDiagnostics.Add("kanaalverversing: taak 'Refresh Internet Channels' niet gevonden"); return; }
                         if (worker.State != TaskState.Idle) continue;   // loopt al: straks opnieuw kijken

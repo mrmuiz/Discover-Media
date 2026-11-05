@@ -34,8 +34,12 @@
 - Fix: **Emby 4.11 no longer returns `ChannelId`** for channel items, so the web script did not recognise Discover folders and tiles (no info block, cast, hidden Play/Shuffle or tile buttons). New `GET /Discover/IsDiscoverItem?Id=` / `?Ids=a,b,c` answers from the item's ExternalId; the script uses it wherever it used `ChannelId`.
 - Change: in a title folder with only the Request and Trailer tiles, the two tiles have a little more space between them (web client).
 - Fix: clicking an actor (or a poster that falls back to the Discover page) sometimes only opened the Discover home page: Emby can drop the extra parameters or reuse the open Discover page without a new `viewshow`. Emby 4.11 even creates a second, hidden copy of the Discover page when the address has extra parameters. The plugin now opens the plain Discover address (so Emby reuses its page) and passes the person or title via sessionStorage. (Emby 4.11 creates a new Discover page on every visit; it first shows an old copy and then replaces it, so every Discover page that appears within 10 seconds opens the target once; then it expires.)
+- New (setting, off by default): **"Cast" folder in the channel** next to Request and Trailer, so the cast also works in the TV and mobile apps. It lists the actors (photo, role) and, optionally, the director or creators; each person opens a folder with their movies and series (newest first) as normal title folders. Switching it on or off schedules a channel refresh.
+- New (setting, on by default): **director (movie) or creators (series)** are shown with the cast (popup, info block, cast row, Cast folder).
+- New (setting): **clicking an actor in the web client** opens the person page as a **popup over the current page** (default) or goes to the Discover page. People in your library still open Emby's own person page.
+- Change: the settings page has its own menu name ("Discover settings"), so the dashboard no longer shows "Discover" twice.
 - Note: backdrops for channel items in the native TV/mobile apps are not possible (Emby has no backdrop field for channel items); they work in the web client.
-- Change: page names bumped (`discoverui1090`, `discoveruijs1387`, `discoverbuttonjs1390`, `discoverconfigjs1360`, `discoverstatusjs1103`).
+- Change: page names bumped (`discoverui1091`, `discoveruijs1388`, `discoverbuttonjs1391`, `discoverconfigjs1361`, `discoverstatusjs1103`).
 
 ## Version 1.3.5.6
 

@@ -8,7 +8,7 @@
         console.warn('[Discover] oudere knopcode is nog actief; vernieuw de webclient om dubbele handlers te voorkomen.');
         return;
     }
-    var DC_BUILD = 'big-r22 2026-11-05';
+    var DC_BUILD = 'big-r23 2026-11-05';
     window.__discoverRequestButton = true;
     window.__discoverRequestButtonVersion = '1.4.0.0';
     window.__discoverRequestButtonBuild = DC_BUILD;
@@ -1915,7 +1915,7 @@
         var link = document.createElement('a');
         link.className = 'discover-row-poster';
         // Klik op de poster: de Discover-popup met info en trailer.
-        link.href = '#!/configurationpage?name=discoverui1090&openType=' + item.Type + '&openId=' + item.TmdbId;
+        link.href = '#!/configurationpage?name=discoverui1091&openType=' + item.Type + '&openId=' + item.TmdbId;
         link.setAttribute('aria-label', item.Title);   // geen title: dat gaf een tooltip-vakje over de poster
         // Gewone klik: de popup hier op de pagina openen (Ctrl/middenklik volgt de link naar Discover).
         link.addEventListener('click', function (e) {
@@ -2087,14 +2087,37 @@
             }, function () { return null; });
     }
     // In je bibliotheek: Emby's acteurspagina; anders de persoonspagina van Discover.
+    var castClickPref = null;
+    function castClickMode() {
+        if (castClickPref) { return Promise.resolve(castClickPref); }
+        var c = api();
+        return Promise.resolve(c.getJSON(c.getUrl('Discover/Status'))).then(function (r) {
+            castClickPref = r && r.CastClick === 'page' ? 'page' : 'popup';
+            return castClickPref;
+        }, function () { return 'popup'; });
+    }
     function openCastPerson(pid, name) {
-        findEmbyPersonRB(pid, name).then(function (p) {
+        Promise.all([findEmbyPersonRB(pid, name), castClickMode()]).then(function (res) {
+            var p = res[0];
             if (p) { goEmbyItem(p.Id); return; }
+            if (res[1] !== 'page') {
+                // Popup over de huidige pagina; lukt dat niet, dan alsnog naar de Discover-pagina.
+                loadEmbeddedPopup().then(function (host) {
+                    if (typeof host.__dcOpenPerson === 'function') { host.__dcOpenPerson(pid, name); }
+                    else { toDiscoverPerson(pid, name); }
+                }, function () { toDiscoverPerson(pid, name); });
+                return;
+            }
+            toDiscoverPerson(pid, name);
+        });
+    }
+    function toDiscoverPerson(pid, name) {
+        {
             try { sessionStorage.setItem('dcOpenNext', JSON.stringify({ kind: 'person', id: pid, name: name || '', at: Date.now() })); } catch (e) { }
             // Zonder extra parameters: dan hergebruikt Emby de al geopende Discover-pagina (anders maakt 4.11 een tweede,
             // onzichtbare kopie). Wat er geopend moet worden staat in sessionStorage.
             window.location.hash = '#!/configurationpage?name=' + DC_UI_PAGE;
-        });
+        }
     }
     function castHost(id) {
         // Mappagina (lijst met seizoenen of tegels): direct onder de lijst.
@@ -2214,7 +2237,7 @@
     // ---- De Discover-popup boven de huidige pagina ----
     // Laadt de Discover-pagina één keer onzichtbaar (alleen de popup wordt gebruikt) met dezelfde controller
     // als de echte pagina, in "embedded"-modus. Zo is de popup overal gelijk: info, cast, seizoenen, trailer, aanvragen.
-    var DC_UI_PAGE = 'discoverui1090', DC_UI_JS = 'discoveruijs1387';
+    var DC_UI_PAGE = 'discoverui1091', DC_UI_JS = 'discoveruijs1388';
     var embedPromise = null;
     function pageText(c, name) {
         var url = c.getUrl('web/ConfigurationPage', { name: name });
@@ -2234,7 +2257,10 @@
             if (!document.getElementById('discover-embed-style')) {
                 var st = document.createElement('style');
                 st.id = 'discover-embed-style';
-                st.textContent = '.dcEmbedded > .dcRoot { display:none !important; } .dcEmbedded { position:static; }';
+                st.textContent = '.dcEmbedded > .dcRoot { display:none !important; } .dcEmbedded { position:static; }' +
+                    // Persoonspagina als popup: de Discover-inhoud (zonder zoekbalk) als venster over de huidige pagina.
+                    '.dcEmbedded.dcPersonMode > .dcRoot { display:block !important; position:fixed !important; top:0; left:0; right:0; bottom:0; z-index:99990; overflow:auto; background:rgba(10,14,22,.97); padding:1.5em 2.5em 3em; box-sizing:border-box; }' +
+                    '.dcEmbedded.dcPersonMode > .dcRoot > .dcSearch, .dcEmbedded.dcPersonMode > .dcRoot > .dcDiag { display:none !important; }';
                 document.head.appendChild(st);
             }
             var host = document.createElement('div');

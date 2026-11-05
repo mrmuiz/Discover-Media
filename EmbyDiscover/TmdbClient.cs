@@ -86,6 +86,8 @@ namespace Emby.Plugins.Discover
     public class TmdbNamed
     {
         public string name { get; set; }
+        public int id { get; set; }
+        public string profile_path { get; set; }
     }
 
     public class TmdbCredits

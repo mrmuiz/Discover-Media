@@ -5,7 +5,7 @@
     <title>Discover</title>
 </head>
 <body>
-<div data-role="page" class="page type-interior pluginConfigurationPage discoverConfigPage" data-require="emby-input,emby-button,emby-select,emby-checkbox" data-controller="__plugin/discoverconfigjs1360">
+<div data-role="page" class="page type-interior pluginConfigurationPage discoverConfigPage" data-require="emby-input,emby-button,emby-select,emby-checkbox" data-controller="__plugin/discoverconfigjs1361">
     <style>
         .discoverConfigPage .keyWrap { position: relative; }
         .discoverConfigPage .keyWrap input { padding-right: 2.8em; }
@@ -75,6 +75,34 @@
                             <span class="emby-checkbox-off"></span>
                         </span>
                     </label>
+                </div>
+                <h3 id="hdgCast">Cast</h3>
+                <div class="checkboxContainer">
+                    <label class="emby-checkbox-label">
+                        <input is="emby-checkbox" type="checkbox" id="chkChannelCastFolder" />
+                        <span class="checkboxLabel" id="lbl_chkChannelCastFolder">Map "Cast" in het kanaal naast Request en Trailer (ook in de tv- en mobiele apps)</span>
+                        <span class="emby-checkbox-outline">
+                            <span class="emby-checkbox-on"><i class="md-icon">check</i></span>
+                            <span class="emby-checkbox-off"></span>
+                        </span>
+                    </label>
+                </div>
+                <div class="fieldDescription" id="desc_chkChannelCastFolder">Met acteurs als tegels; kies iemand om zijn of haar films en series te zien. Na aan- of uitzetten is één kanaalverversing nodig.</div>
+                <div class="checkboxContainer">
+                    <label class="emby-checkbox-label">
+                        <input is="emby-checkbox" type="checkbox" id="chkCastIncludeCrew" />
+                        <span class="checkboxLabel" id="lbl_chkCastIncludeCrew">Regisseur (film) of makers (serie) bij de cast tonen</span>
+                        <span class="emby-checkbox-outline">
+                            <span class="emby-checkbox-on"><i class="md-icon">check</i></span>
+                            <span class="emby-checkbox-off"></span>
+                        </span>
+                    </label>
+                </div>
+                <div class="selectContainer">
+                    <select is="emby-select" id="selCastClick" label="Klik op een acteur (browser)">
+                        <option value="popup">Popup op de pagina waar je bent</option>
+                        <option value="page">Naar de Discover-pagina</option>
+                    </select>
                 </div>
                 </div>
 

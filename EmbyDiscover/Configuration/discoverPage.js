@@ -38,8 +38,8 @@ define([], function () {
             return;
         }
         var urls = [
-            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1390' }),
-            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1390' }),
+            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1391' }),
+            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1391' }),
             ApiClient.getUrl('Plugins/Discover/Script')
         ];
         var n = 0;
@@ -70,7 +70,7 @@ define([], function () {
         })();
     }
 
-    var UI_PAGE = 'discoverui1090';
+    var UI_PAGE = 'discoverui1091';
 
     return function (view, params) {
         // embedded: alleen de popup, over een andere Emby-pagina heen (film-, serie- of acteurspagina).
@@ -81,10 +81,12 @@ define([], function () {
         }
         diagEl = view.querySelector('.dcDiag');
         diagEl.style.display = 'none';
+        var castClick = 'popup';
         loadButtonScript();
         api('GET', 'Discover/Status').then(function (r) {
             diagEl.style.display = r.ShowDiagnostics ? '' : 'none';
             showTrailer = r.ShowTrailerTile !== false;
+            castClick = r.CastClick === 'page' ? 'page' : 'popup';
             fourK = { movie: !!r.Seerr4kMovie, tv: !!r.Seerr4kTv };
             window.__discoverRequestService = r.RequestService || '';
             diag.status = 'v' + (r.PluginVersion || '?') + ' | ' + text('pluginresource: ', 'plugin resource: ', 'Pluginressource: ') + (r.ButtonScript || text('onbekend', 'unknown', 'unbekannt'));
@@ -1372,7 +1374,11 @@ define([], function () {
                 openBrowse(tile.getAttribute('data-kind'), parseInt(tile.getAttribute('data-id'), 10), tile.getAttribute('data-name'));
                 return;
             }
-            if (t.closest && t.closest('.dcBack')) { loadHome(); return; }
+            if (t.closest && t.closest('.dcBack')) {
+                // Persoonspagina als popup boven een Emby-pagina: terug = sluiten.
+                if (embedded) { closePersonPopup(); return; }
+                loadHome(); return;
+            }
             if (t.closest && t.closest('.dcMoreBtn')) { loadBrowse(); }
         });
 
@@ -1424,6 +1430,7 @@ define([], function () {
             findEmbyPerson(pid, name).then(function (p) {
                 closeModal();
                 if (p) { goToEmbyItem(p.Id); return; }
+                if (castClick !== 'page') { view.classList.add('dcPersonMode'); openPerson(pid, name); return; }
                 try { sessionStorage.setItem('dcOpenNext', JSON.stringify({ kind: 'person', id: pid, name: name || '', at: Date.now() })); } catch (e) { }
                 window.location.hash = '#!/configurationpage?name=' + UI_PAGE;
             });
@@ -1785,17 +1792,29 @@ define([], function () {
                 showToast(text('Titel laden mislukt.', 'Loading title failed.', 'Titel konnte nicht geladen werden.'), true);
             });
         }
+        function closePersonPopup() {
+            view.classList.remove('dcPersonMode');
+            setPageBackdrop(null);
+            content.innerHTML = '';
+        }
         if (embedded) {
             view.__dcOpen = openByIds;
+            // Persoonspagina als popup over de huidige Emby-pagina (instelling "Klik op een acteur": popup).
+            view.__dcOpenPerson = function (pid, name) {
+                view.classList.add('dcPersonMode');
+                openPerson(pid, name);
+            };
             view.__dcClose = function () { if (trailerOverlay.classList.contains('open')) { closeTrailer(); } closeModal(); };
-            view.__dcIsOpen = function () { return overlay.classList.contains('open') || trailerOverlay.classList.contains('open'); };
+            view.__dcIsOpen = function () { return overlay.classList.contains('open') || trailerOverlay.classList.contains('open') || view.classList.contains('dcPersonMode'); };
             // TV-afstandsbediening: alleen zolang de popup open is; anders doet Emby alles zelf.
             document.addEventListener('command', function (e) {
                 if (!document.body.contains(view) || !view.__dcIsOpen()) { return; }
                 var cmd = e.detail && e.detail.command;
                 if (cmd === 'back') {
                     e.preventDefault();
-                    if (trailerOverlay.classList.contains('open')) { closeTrailer(); } else { closeModal(); }
+                    if (trailerOverlay.classList.contains('open')) { closeTrailer(); }
+                    else if (overlay.classList.contains('open')) { closeModal(); }
+                    else { closePersonPopup(); }
                     return;
                 }
                 if (cmd === 'up' || cmd === 'down' || cmd === 'left' || cmd === 'right') { e.preventDefault(); navModal(cmd, document.activeElement); }
@@ -1805,10 +1824,12 @@ define([], function () {
                 if (c !== 27 && c !== 461 && c !== 10009) { return; }
                 if (!document.body.contains(view) || !view.__dcIsOpen()) { return; }
                 e.preventDefault(); e.stopPropagation();
-                if (trailerOverlay.classList.contains('open')) { closeTrailer(); } else { closeModal(); }
+                if (trailerOverlay.classList.contains('open')) { closeTrailer(); }
+                else if (overlay.classList.contains('open')) { closeModal(); }
+                else { closePersonPopup(); }
             }, true);
             // Weg van deze pagina (Emby navigeert): popup dicht.
-            window.addEventListener('hashchange', function () { if (view.__dcIsOpen()) { view.__dcClose(); } });
+            window.addEventListener('hashchange', function () { if (view.__dcIsOpen()) { view.__dcClose(); closePersonPopup(); } });
             return;
         }
 
