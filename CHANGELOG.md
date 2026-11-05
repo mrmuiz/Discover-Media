@@ -31,8 +31,9 @@
 - Fix: Emby 4.11 often shows channel folders from its own database without asking the plugin, so the "Request"/"Trailer" text tiles were never made "on open". Missing tiles are now made in the background (one at a time) during a channel refresh; when that queue is done the plugin starts "Refresh Internet Channels" itself (at most once every 3 hours, not while it is already running), so the tiles with text appear without doing anything. Channel DataVersion 75.
 - Fix: the "All seasons" tile failed for series whose TMDB logo is an SVG (ffmpeg cannot read SVG). PNG logos are preferred, an SVG logo is fetched as PNG, and if the logo still cannot be used the series name is drawn as text.
 - Fix: Emby only sets the image of a channel item when it creates the item, so a text tile made later never showed up. Once the "Request"/"Trailer" tile (or the new "All seasons" tile) is ready, the item now gets a slightly different id (suffix `:x`), so Emby creates it again with the tile. The suffix is stripped wherever the plugin reads these ids (play, request on play, item lookups).
+- Fix: **Emby 4.11 no longer returns `ChannelId`** for channel items, so the web script did not recognise Discover folders and tiles (no info block, cast, hidden Play/Shuffle or tile buttons). New `GET /Discover/IsDiscoverItem?Id=` / `?Ids=a,b,c` answers from the item's ExternalId; the script uses it wherever it used `ChannelId`.
 - Note: backdrops for channel items in the native TV/mobile apps are not possible (Emby has no backdrop field for channel items); they work in the web client.
-- Change: page names bumped (`discoverui1086`, `discoveruijs1382`, `discoverbuttonjs1381`, `discoverconfigjs1360`, `discoverstatusjs1103`).
+- Change: page names bumped (`discoverui1086`, `discoveruijs1382`, `discoverbuttonjs1382`, `discoverconfigjs1360`, `discoverstatusjs1103`).
 
 ## Version 1.3.5.6
 

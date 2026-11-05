@@ -83,6 +83,22 @@ namespace Emby.Plugins.Discover
         public string Name { get; set; }
     }
 
+    [Route("/Discover/IsDiscoverItem", "GET", Summary = "Hoort dit Emby-item bij het Discover-kanaal? (Emby 4.11 geeft ChannelId niet altijd mee)")]
+    [Authenticated]
+    public class DiscoverIsItemRequest : IReturn<DiscoverIsItemResult>
+    {
+        public string Id { get; set; }
+        /// <summary>Optioneel: meerdere id's, komma-gescheiden; het antwoord noemt er dan in Ids welke van Discover zijn.</summary>
+        public string Ids { get; set; }
+    }
+
+    public class DiscoverIsItemResult
+    {
+        public bool Ours { get; set; }
+        public bool Folder { get; set; }
+        public List<string> OurIds { get; set; } = new List<string>();
+    }
+
     [Route("/Discover/ItemCast", "GET", Summary = "Cast (met foto) bij een titel in het Discover-kanaal")]
     [Authenticated]
     public class DiscoverItemCastRequest : IReturn<DiscoverItemCastResult>
@@ -251,6 +267,48 @@ namespace Emby.Plugins.Discover
             }
             catch (Exception ex) { DiscoverDiagnostics.Add("kanaal opzoeken mislukt: " + ex.Message); }
             lock (ChannelGate) { if (res.Id != null) { _channel = res; _channelAt = DateTime.UtcNow; } }
+            return res;
+        }
+
+        public object Get(DiscoverIsItemRequest request)
+        {
+            var res = new DiscoverIsItemResult();
+            if (!string.IsNullOrWhiteSpace(request.Ids))
+            {
+                var chInfo = Get(new DiscoverChannelInfoRequest()) as DiscoverChannelInfoResult;
+                foreach (var one in request.Ids.Split(',').Select(x => x.Trim()).Where(x => x.Length > 0).Distinct().Take(400))
+                {
+                    try
+                    {
+                        MediaBrowser.Controller.Entities.BaseItem it = null;
+                        long iid; Guid g;
+                        if (long.TryParse(one, out iid)) it = _library.GetItemById(iid);
+                        else if (Guid.TryParse(one, out g)) it = _library.GetItemById(g);
+                        if (it == null) continue;
+                        if (OurExternalId(it.ExternalId) || (chInfo != null && chInfo.Id == it.InternalId.ToString(System.Globalization.CultureInfo.InvariantCulture)))
+                            res.OurIds.Add(one);
+                    }
+                    catch { }
+                }
+                return res;
+            }
+            try
+            {
+                var raw = (request.Id ?? "").Trim();
+                MediaBrowser.Controller.Entities.BaseItem item = null;
+                long internalId; Guid guid;
+                if (long.TryParse(raw, out internalId)) item = _library.GetItemById(internalId);
+                else if (Guid.TryParse(raw, out guid)) item = _library.GetItemById(guid);
+                if (item == null) return res;
+                res.Folder = item.IsFolder;
+                res.Ours = OurExternalId(item.ExternalId);
+                if (!res.Ours)
+                {
+                    var ch = Get(new DiscoverChannelInfoRequest()) as DiscoverChannelInfoResult;
+                    res.Ours = ch != null && ch.Id == item.InternalId.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                }
+            }
+            catch (Exception ex) { DiscoverDiagnostics.Add("item controleren mislukt: " + ex.Message); }
             return res;
         }
 

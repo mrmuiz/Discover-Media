@@ -8,7 +8,7 @@
         console.warn('[Discover] oudere knopcode is nog actief; vernieuw de webclient om dubbele handlers te voorkomen.');
         return;
     }
-    var DC_BUILD = 'big-r12 2026-11-05';
+    var DC_BUILD = 'big-r13 2026-11-05';
     window.__discoverRequestButton = true;
     window.__discoverRequestButtonVersion = '1.4.0.0';
     window.__discoverRequestButtonBuild = DC_BUILD;
@@ -1392,6 +1392,17 @@
         return chPromise;
     }
 
+    // Welke van deze Emby-id's horen bij Discover? Emby 4.11 geeft ChannelId niet meer mee, dus vraag het de server.
+    function discoverIdsOf(ids) {
+        var c = api();
+        if (!c || !ids.length) { return Promise.resolve({}); }
+        return Promise.resolve(c.getJSON(c.getUrl('Discover/IsDiscoverItem', { Ids: ids.join(',') }))).then(function (r) {
+            var m = {};
+            ((r && r.OurIds) || []).forEach(function (x) { m[x] = true; });
+            return m;
+        }, function () { return {}; });
+    }
+
     function markFolderCards() {
         var c = api();
         if (!c) { return; }
@@ -1406,9 +1417,13 @@
         if (!ids.length) { return; }
         discoverChannelId().then(function (chId) {
             if (!chId) { ids.forEach(function (x) { delete cardSeen[x]; }); return null; }
-            return Promise.resolve(c.getJSON(c.getUrl('Users/' + c.getCurrentUserId() + '/Items', { Ids: ids.join(','), Fields: 'ChannelInfo' }))).then(function (r) {
+            return Promise.all([
+                Promise.resolve(c.getJSON(c.getUrl('Users/' + c.getCurrentUserId() + '/Items', { Ids: ids.join(','), Fields: 'ChannelInfo' }))),
+                discoverIdsOf(ids)
+            ]).then(function (res) {
+                var r = res[0], ours = res[1];
                 var mine = {};
-                ((r && r.Items) || []).forEach(function (it) { if (it.ChannelId === chId) { mine[it.Id] = true; } });
+                ((r && r.Items) || []).forEach(function (it) { if (it.ChannelId === chId || ours[it.Id]) { mine[it.Id] = true; } });
                 ids.forEach(function (x) { cardSeen[x] = !!mine[x]; });
                 schedule();
             });
@@ -1660,12 +1675,13 @@
                 });
                 return null;
             }
-            return Promise.resolve(c.getJSON(c.getUrl('Users/' + c.getCurrentUserId() + '/Items', {
+            return Promise.all([Promise.resolve(c.getJSON(c.getUrl('Users/' + c.getCurrentUserId() + '/Items', {
                 Ids: ids.join(','), Fields: 'ChannelInfo,ParentId,ProviderIds'
-            }))).then(function (r) {
+            }))), discoverIdsOf(ids)]).then(function (res2) {
+                var r = res2[0], ours = res2[1];
                 var found = {};
                 ((r && r.Items) || []).forEach(function (item) {
-                    if (item.ChannelId === chId) {
+                    if (item.ChannelId === chId || ours[item.Id]) {
                         var providerIds = item.ProviderIds || {};
                         found[item.Id] = {
                             name: item.Name || '',
@@ -1698,8 +1714,10 @@
         discoverChannelId().then(function (chId) {
             if (!chId) { delete folderPage[id]; return null; }
             if (id === chId) { folderPage[id] = true; schedule(); return null; }
-            return Promise.resolve(c.getJSON(c.getUrl('Users/' + c.getCurrentUserId() + '/Items/' + id, { Fields: 'ChannelInfo' }))).then(function (it) {
-                if (it && it.ChannelId === chId && it.IsFolder) { folderPage[id] = true; schedule(); }
+            return Promise.all([Promise.resolve(c.getJSON(c.getUrl('Users/' + c.getCurrentUserId() + '/Items/' + id, { Fields: 'ChannelInfo' }))), discoverIdsOf([id])]).then(function (res) {
+                var it = res[0], ours = res[1];
+                // Emby 4.11 geeft ChannelId niet mee bij kanaalitems: dan geldt het antwoord van de server.
+                if (it && it.IsFolder && (it.ChannelId === chId || ours[id])) { folderPage[id] = true; schedule(); }
             });
         }).then(null, function () { delete folderPage[id]; });
     }
