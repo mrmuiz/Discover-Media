@@ -60,6 +60,20 @@ namespace Emby.Plugins.Discover
         public List<TmdbNamed> production_companies { get; set; }
         public List<TmdbNamed> networks { get; set; }
         public TmdbEpisodeBrief next_episode_to_air { get; set; }
+        public TmdbEpisodeBrief last_episode_to_air { get; set; }
+        public string name { get; set; }
+        public string overview { get; set; }
+        public string poster_path { get; set; }
+        public string backdrop_path { get; set; }
+        public string original_language { get; set; }
+        public string title { get; set; }
+    }
+
+    public class TmdbListPage
+    {
+        public string name { get; set; }
+        public List<TmdbItem> items { get; set; }
+        public int total_pages { get; set; }
     }
 
     public class TmdbEpisodeBrief
@@ -82,8 +96,12 @@ namespace Emby.Plugins.Discover
 
     public class TmdbPerson
     {
+        public int id { get; set; }
         public string name { get; set; }
         public string job { get; set; }
+        public string character { get; set; }
+        public string profile_path { get; set; }
+        public int order { get; set; }
     }
 
     public class TmdbExternalIds
@@ -120,6 +138,7 @@ namespace Emby.Plugins.Discover
     public class TmdbImagesPage
     {
         public List<TmdbImage> posters { get; set; }
+        public List<TmdbImage> logos { get; set; }
     }
 
     public class TmdbSeasonBrief
@@ -130,6 +149,9 @@ namespace Emby.Plugins.Discover
         public string air_date { get; set; }
         public string overview { get; set; }
         public string poster_path { get; set; }
+        /// <summary>Alleen bij /tv/{id}/season/{n}.</summary>
+        public List<TmdbEpisodeBrief> episodes { get; set; }
+        public double vote_average { get; set; }
     }
 
     public class TmdbTvDetail : TmdbItem
@@ -462,6 +484,36 @@ namespace Emby.Plugins.Discover
             return r?.genres ?? new List<TmdbGenre>();
         }
 
+        /// <summary>
+        /// Logo (titel als plaatje) van een serie of film: eerst in de taal van de plugin, dan Engels, dan zonder taal.
+        /// Bewaard in het geheugen; null als TMDB er geen heeft.
+        /// </summary>
+        public async Task<string> GetTitleLogo(bool tv, int id, CancellationToken ct)
+        {
+            var key = (tv ? "tl-t" : "tl-m") + id;
+            lock (LogoCache) { string c; if (LogoCache.TryGetValue(key, out c)) return c; }
+            string logo = null;
+            try
+            {
+                var lang = (Language() ?? "en").Split('-')[0].ToLowerInvariant();
+                var r = await Get<TmdbImagesPage>((tv ? "/tv/" : "/movie/") + id + "/images", "&include_image_language=" + lang + ",en,null", FallbackLanguage, ct).ConfigureAwait(false);
+                var list = (r?.logos ?? new List<TmdbImage>()).Where(l => l != null && !string.IsNullOrEmpty(l.file_path)).ToList();
+                // ffmpeg leest geen SVG: PNG-logo's eerst; is er alleen een SVG, dan de PNG-versie die TMDB daarvan maakt.
+                Func<TmdbImage, bool> isSvg = l => l.file_path.EndsWith(".svg", StringComparison.OrdinalIgnoreCase);
+                Func<string, TmdbImage> pick = code => list.Where(l => string.Equals(l.iso_639_1 ?? "", code, StringComparison.OrdinalIgnoreCase))
+                    .OrderBy(l => isSvg(l) ? 1 : 0).ThenByDescending(l => l.vote_average).FirstOrDefault();
+                var best = pick(lang) ?? pick("en") ?? pick("") ?? list.FirstOrDefault();
+                if (best != null) logo = isSvg(best) ? best.file_path.Substring(0, best.file_path.Length - 4) + ".png" : best.file_path;
+            }
+            catch (Exception ex)
+            {
+                if (ex is OperationCanceledException) throw;
+                DiscoverDiagnostics.Add("TMDB titellogo " + key + " mislukt: " + ex.Message);
+            }
+            lock (LogoCache) { LogoCache[key] = logo; }
+            return logo;
+        }
+
         /// <summary>Logo-pad van een studio (company) of netwerk; blijft in het geheugen bewaard.</summary>
         public async Task<string> GetLogo(bool network, int id, CancellationToken ct)
         {
@@ -549,6 +601,21 @@ namespace Emby.Plugins.Discover
                 DiscoverDiagnostics.Add("TMDB extra's " + (tv ? "tv/" : "film/") + id + " mislukt: " + ex.Message);
                 return null;
             }
+        }
+
+        /// <summary>Openbare TMDB-lijst (v3 /list/{id}), max. 5 pagina's.</summary>
+        public async Task<TmdbListPage> GetList(string listId, CancellationToken ct)
+        {
+            var first = await Get<TmdbListPage>("/list/" + Uri.EscapeDataString(listId), "&page=1", Language(), ct).ConfigureAwait(false);
+            if (first == null) return null;
+            if (first.items == null) first.items = new List<TmdbItem>();
+            for (int p = 2; p <= Math.Min(5, first.total_pages); p++)
+            {
+                var more = await Get<TmdbListPage>("/list/" + Uri.EscapeDataString(listId), "&page=" + p, Language(), ct).ConfigureAwait(false);
+                if (more == null || more.items == null || more.items.Count == 0) break;
+                first.items.AddRange(more.items);
+            }
+            return first;
         }
 
         public Task<TmdbItem> GetMovie(int id, CancellationToken ct) => GetDetail("/movie/" + id, ct);

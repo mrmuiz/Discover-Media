@@ -111,6 +111,15 @@ namespace Emby.Plugins.Discover
                     return result;
                 }
 
+                if (string.Equals(request.Type, "Seerr", StringComparison.OrdinalIgnoreCase))
+                {
+                    // Version = "versie|aantal Radarr-servers|aantal Sonarr-servers" (aantallen alleen als Seerr ze geeft)
+                    result.Version = await SeerrClient.Test(_json, request.Url, request.ApiKey, System.Threading.CancellationToken.None).ConfigureAwait(false);
+                    result.AppName = "Seerr";
+                    result.Success = true;
+                    return result;
+                }
+
                 if (string.IsNullOrWhiteSpace(request.Url))
                     throw new InvalidOperationException("Vul eerst een URL in.");
                 if (string.IsNullOrWhiteSpace(request.ApiKey))

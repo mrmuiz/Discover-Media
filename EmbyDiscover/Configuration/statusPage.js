@@ -140,7 +140,10 @@ define(['emby-button'], function () {
         });
     }
 
+    var discoverChannelIdFromServer = null;
+    var discoverChannelName = null;   // gevuld via Discover/ChannelInfo (werkt ook bij een hernoemd kanaal)
     function isDiscoverChannel(channel) {
+        if (channel && discoverChannelIdFromServer && String(channel.Id) === String(discoverChannelIdFromServer)) { return true; }
         var name = String(channel && channel.Name || '').trim();
         return /discover/i.test(name) || /^films\s*&\s*series\s+aanvragen$/i.test(name);
     }
@@ -213,8 +216,13 @@ define(['emby-button'], function () {
                     (r.TmdbKeySet ? ok : bad)(lines, 'TMDB ' + text('key ingesteld: ', 'key configured: ', 'Schlüssel eingerichtet: ') + (r.TmdbKeySet ? text('ja', 'yes', 'ja') : text('NEE', 'NO', 'NEIN')));
                     info(lines, text('Plugin-/Emby-taal: ', 'Plugin/Emby language: ', 'Plugin-/Emby-Sprache: ') + r.PluginLanguage + '; ' + text('TMDB-taal: ', 'TMDB language: ', 'TMDB-Sprache: ') + r.TmdbLanguage);
                     info(lines, text('Debuginformatie op Discover-/detailpagina\'s: ', 'Diagnostics on Discover/item pages: ', 'Diagnoseinformationen auf Discover-/Detailseiten: ') + (r.ShowDiagnostics ? text('aan', 'on', 'ein') : text('uit', 'off', 'aus')));
-                    (r.RadarrSet ? ok : bad)(lines, 'Radarr ' + text('ingesteld: ', 'configured: ', 'eingerichtet: ') + (r.RadarrSet ? text('ja', 'yes', 'ja') : text('NEE', 'NO', 'NEIN')));
-                    (r.SonarrSet ? ok : bad)(lines, 'Sonarr ' + text('ingesteld: ', 'configured: ', 'eingerichtet: ') + (r.SonarrSet ? text('ja', 'yes', 'ja') : text('NEE', 'NO', 'NEIN')));
+                    if (r.RequestService === 'Seerr') {
+                        info(lines, text('Aanvragen gaan via: Seerr', 'Requests go through: Seerr', 'Anfragen laufen über: Seerr'));
+                        (r.RadarrSet ? ok : bad)(lines, 'Seerr ' + text('ingesteld: ', 'configured: ', 'eingerichtet: ') + (r.RadarrSet ? text('ja', 'yes', 'ja') : text('NEE', 'NO', 'NEIN')));
+                    } else {
+                        (r.RadarrSet ? ok : bad)(lines, 'Radarr ' + text('ingesteld: ', 'configured: ', 'eingerichtet: ') + (r.RadarrSet ? text('ja', 'yes', 'ja') : text('NEE', 'NO', 'NEIN')));
+                        (r.SonarrSet ? ok : bad)(lines, 'Sonarr ' + text('ingesteld: ', 'configured: ', 'eingerichtet: ') + (r.SonarrSet ? text('ja', 'yes', 'ja') : text('NEE', 'NO', 'NEIN')));
+                    }
                     if (r.ClipError) { bad(lines, text('Bevestigingsclip kan niet worden weggeschreven: ', 'Confirmation clip could not be written: ', 'Bestätigungsclip konnte nicht geschrieben werden: ') + r.ClipError); }
                     else { ok(lines, text('Bevestigingsclip staat klaar: ', 'Confirmation clip is ready: ', 'Bestätigungsclip ist bereit: ') + r.ClipPath); }
                     if (r.ButtonScript && /^OK/.test(r.ButtonScript)) { ok(lines, text('Aanvragen-knop in de webclient: ', 'Request button in web client: ', 'Anfragen-Schaltfläche im Webclient: ') + translateButtonScript(r.ButtonScript)); }
@@ -248,7 +256,16 @@ define(['emby-button'], function () {
                     if (r && r.Success) { ok(lines, text('TMDB werkt', 'TMDB is working', 'TMDB funktioniert')); } else { bad(lines, 'TMDB: ' + ((r && r.Error) || text('onbekende fout', 'unknown error', 'unbekannter Fehler'))); }
                 });
             }));
-            ['Radarr', 'Sonarr'].forEach(function (kind) {
+            if (cfg.RequestService === 'seerr') {
+                tests.push(step(lines, text('Seerr testen', 'Test Seerr', 'Seerr testen'), function () {
+                    if (!cfg.SeerrUrl || !cfg.SeerrApiKey) { bad(lines, 'Seerr: ' + text('URL of key ontbreekt', 'URL or key missing', 'URL oder Schlüssel fehlt')); return; }
+                    return postJson('Discover/TestConnection', { Type: 'Seerr', Url: cfg.SeerrUrl, ApiKey: cfg.SeerrApiKey }).then(function (r) {
+                        if (r && r.Success) { ok(lines, 'Seerr ' + String(r.Version || '').split('|')[0] + ' ' + text('bereikbaar op ', 'reachable at ', 'erreichbar unter ') + cfg.SeerrUrl); }
+                        else { bad(lines, 'Seerr ' + text('op ', 'at ', 'unter ') + cfg.SeerrUrl + ': ' + ((r && r.Error) || text('onbekende fout', 'unknown error', 'unbekannter Fehler'))); }
+                    });
+                }));
+            }
+            (cfg.RequestService === 'seerr' ? [] : ['Radarr', 'Sonarr']).forEach(function (kind) {
                 tests.push(step(lines, text(kind + ' testen', 'Test ' + kind, kind + ' testen'), function () {
                     var url = cfg[kind + 'Url'], key = cfg[kind + 'ApiKey'];
                     if (!url || !key) { bad(lines, kind + ': ' + text('URL of key ontbreekt', 'URL or key missing', 'URL oder Schlüssel fehlt')); return; }
@@ -270,7 +287,8 @@ define(['emby-button'], function () {
             lines.push('');
             lines.push('== ' + text('Kanaal', 'Channel', 'Kanal') + ' ==');
             return step(lines, text('Kanalen ophalen', 'Get channels', 'Kanäle abrufen'), function () {
-                return getJson('Channels', { UserId: adminId }).then(function (r) {
+                return getJson('Discover/ChannelInfo').then(function (ci) { discoverChannelIdFromServer = ci && ci.Id; discoverChannelName = ci && ci.Name; }, function () { })
+                    .then(function () { return getJson('Channels', { UserId: adminId }); }).then(function (r) {
                     var names = (r.Items || []).map(function (c) { return c.Name; });
                     var found = (r.Items || []).filter(isDiscoverChannel)[0];
                     if (found) { ok(lines, text('Kanaal "', 'Channel "', 'Kanal "') + found.Name + text('" is bekend bij Emby en zichtbaar voor jou.', '" is listed by Emby and visible to you.', '" ist bei Emby bekannt und für dich sichtbar.')); }
@@ -297,7 +315,8 @@ define(['emby-button'], function () {
                 ok(lines, withCount + text(' van ', ' of ', ' von ') + res.length + text(' gebruikers zien het kanaal.', ' users can see the channel.', ' Benutzern kann den Kanal sehen.'));
                 if (without.length) {
                     bad(lines, text('Geen toegang tot het kanaal: ', 'No channel access: ', 'Kein Zugriff auf den Kanal: ') + without.join(', '));
-                    info(lines, text('Oplossen: Gebruiker > Toegang > Kanalen: "Alle kanalen" aanzetten of Discover Media / Films & Series Aanvragen toevoegen.', 'Fix: User > Access > Channels: enable "All channels" or add Discover Media / Films & Series Aanvragen.', 'Lösung: Benutzer > Zugriff > Kanäle: "Alle Kanäle" aktivieren oder Discover Media / Films & Series Aanvragen hinzufügen.'));
+                    var chn = discoverChannelName || 'Discover Media';
+                    info(lines, text('Oplossen: Gebruiker > Toegang > Kanalen: "Alle kanalen" aanzetten of "' + chn + '" toevoegen.', 'Fix: User > Access > Channels: enable "All channels" or add "' + chn + '".', 'Lösung: Benutzer > Zugriff > Kanäle: "Alle Kanäle" aktivieren oder "' + chn + '" hinzufügen.'));
                 }
                 if (unknown.length) { info(lines, text('Niet te controleren: ', 'Could not check: ', 'Nicht überprüfbar: ') + unknown.join(', ')); }
             });

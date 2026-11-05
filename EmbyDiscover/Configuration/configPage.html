@@ -5,25 +5,46 @@
     <title>Discover</title>
 </head>
 <body>
-<div data-role="page" class="page type-interior pluginConfigurationPage discoverConfigPage" data-require="emby-input,emby-button,emby-select,emby-checkbox" data-controller="__plugin/discoverconfigjs1301">
-        <style>
+<div data-role="page" class="page type-interior pluginConfigurationPage discoverConfigPage" data-require="emby-input,emby-button,emby-select,emby-checkbox" data-controller="__plugin/discoverconfigjs1363">
+    <style>
         .discoverConfigPage .keyWrap { position: relative; }
         .discoverConfigPage .keyWrap input { padding-right: 2.8em; }
         .discoverConfigPage .keyWrap .btnToggleKey { position: absolute; right: .2em; bottom: .15em; margin: 0; }
         .discoverConfigPage .checkboxContainer .emby-checkbox-label { display: block; width: 100%; max-width: none; }
         .discoverConfigPage .checkboxContainer .checkboxLabel { white-space: normal; }
+        .discoverConfigPage .dcTabs { display: flex; flex-wrap: wrap; gap: .2em; margin: 0 0 1.4em; border-bottom: 1px solid rgba(128,128,128,.4); }
+        .discoverConfigPage .dcTab { background: none; border: 0; border-bottom: 3px solid transparent; color: inherit; font: inherit; padding: .75em 1.1em; cursor: pointer; opacity: .65; margin-bottom: -1px; }
+        .discoverConfigPage .dcTab:hover, .discoverConfigPage .dcTab:focus { opacity: 1; outline: none; }
+        .discoverConfigPage .dcTab.active { opacity: 1; font-weight: 600; border-bottom-color: #52b54b; }
+        .discoverConfigPage .dcPanel { display: none; }
+        .discoverConfigPage .dcPanel.active { display: block; }
+        .discoverConfigPage .dcPanel h3:first-child { margin-top: 0; }
+        .discoverConfigPage .dcUserRow { display: flex; align-items: center; justify-content: space-between; gap: 1em; }
+        .discoverConfigPage .dcReqTable { width: 100%; border-collapse: collapse; font-size: .9em; margin-top: .5em; }
+        .discoverConfigPage .dcReqTable th, .discoverConfigPage .dcReqTable td { text-align: left; padding: .35em .5em; border-bottom: 1px solid rgba(128,128,128,.2); vertical-align: middle; }
+        .discoverConfigPage .dcReqTable th { opacity: .7; font-weight: 500; }
+        .discoverConfigPage .dcReqTable img { width: 32px; height: 48px; object-fit: cover; border-radius: 3px; display: block; }
+        .discoverConfigPage .dcReqSt0 { opacity: .55; } .discoverConfigPage .dcReqSt1 { color: #fb8c00; } .discoverConfigPage .dcReqSt2 { color: #43a047; }
+        .discoverConfigPage .dcReqSum { margin: .5em 0; opacity: .8; }
+        .discoverConfigPage .dcUserRow .dcUserTag { opacity: .6; font-size: .85em; white-space: nowrap; }
+        .discoverConfigPage .dcButtons button { margin: 0 .6em .6em 0; }
     </style>
     <div data-role="content">
         <div class="content-primary">
             <form class="discoverForm">
                 <h2>Discover</h2>
 
-                <h3>TMDB</h3>
-                <div class="inputContainer keyWrap">
-                    <label class="inputLabel inputLabelUnfocused" for="txtTmdbKey">API key</label>
-                    <input is="emby-input" type="password" id="txtTmdbKey" autocomplete="new-password" spellcheck="false" />
-                    <button is="emby-button" type="button" class="paper-icon-button-light btnToggleKey" data-target="txtTmdbKey" title="Tonen" aria-label="Tonen"><i class="md-icon">visibility</i></button>
+                <div class="dcTabs" role="tablist">
+                    <button type="button" class="dcTab active" role="tab" data-tab="general" id="tab_general">Algemeen</button>
+                    <button type="button" class="dcTab" role="tab" data-tab="tmdb" id="tab_tmdb">TMDB</button>
+                    <button type="button" class="dcTab" role="tab" data-tab="arr" id="tab_arr">Aanvragen</button>
+                    <button type="button" class="dcTab" role="tab" data-tab="users" id="tab_users">Gebruikers</button>
+                    <button type="button" class="dcTab" role="tab" data-tab="storage" id="tab_storage">Opslag</button>
+                    <button type="button" class="dcTab" role="tab" data-tab="diag" id="tab_diag">Diagnose</button>
                 </div>
+
+                <!-- Algemeen -->
+                <div class="dcPanel active" data-panel="general">
                 <div class="selectContainer">
                     <label class="selectLabel" for="selPluginLanguage">Plugin-taal</label>
                     <select is="emby-select" id="selPluginLanguage">
@@ -33,6 +54,36 @@
                         <option value="de-DE">Deutsch</option>
                         <option value="nb-NO">Norsk</option>
                     </select>
+                </div>
+                <div class="checkboxContainer">
+                    <label class="emby-checkbox-label">
+                        <input is="emby-checkbox" type="checkbox" id="chkInjectWebClientLoader" />
+                        <span class="checkboxLabel" id="lbl_chkInjectWebClientLoader">Tegel opent Discover-pagina</span>
+                        <span class="emby-checkbox-outline">
+                            <span class="emby-checkbox-on"><i class="md-icon">check</i></span>
+                            <span class="emby-checkbox-off"></span>
+                        </span>
+                    </label>
+                    <div class="fieldDescription" id="desc_chkInjectWebClientLoader">Alleen in de webclient (browser): de tegel "Discover Media" opent direct de Discover-pagina. Dit voegt een klein lader-script toe aan de index.html van de webclient. Na opslaan werkt het direct, zonder herstart. Uitgeschakeld opent de tegel gewoon de kanaaltegels (het script blijft staan maar doet dan niets). De Emby-apps (tv, mobiel) merken hier niets van; daar werkt Discover via het kanaal.</div>
+                </div>
+                <div class="checkboxContainer">
+                    <label class="emby-checkbox-label">
+                        <input is="emby-checkbox" type="checkbox" id="chkShowTrailerTile" />
+                        <span class="checkboxLabel" id="lbl_chkShowTrailerTile">Toon de tegel Trailer naast Aanvragen (kanaal en Discover-pagina)</span>
+                        <span class="emby-checkbox-outline">
+                            <span class="emby-checkbox-on"><i class="md-icon">check</i></span>
+                            <span class="emby-checkbox-off"></span>
+                        </span>
+                    </label>
+                </div>
+                </div>
+
+                <!-- TMDB -->
+                <div class="dcPanel" data-panel="tmdb">
+                <div class="inputContainer keyWrap">
+                    <label class="inputLabel inputLabelUnfocused" for="txtTmdbKey">API key</label>
+                    <input is="emby-input" type="password" id="txtTmdbKey" autocomplete="new-password" spellcheck="false" />
+                    <button is="emby-button" type="button" class="paper-icon-button-light btnToggleKey" data-target="txtTmdbKey" title="Tonen" aria-label="Tonen"><i class="md-icon">visibility</i></button>
                 </div>
                 <div class="selectContainer">
                     <label class="selectLabel" for="selTmdbLang">TMDB-taal</label>
@@ -46,44 +97,82 @@
                     <input is="emby-input" type="text" id="txtExcludedLangs" spellcheck="false" placeholder="ja, ko, hi" />
                     <div class="fieldDescription" id="desc_txtExcludedLangs">Titels met deze oorspronkelijke taal verschijnen niet in de rijen en mappen. Gebruik taalcodes, gescheiden door komma's, bijv. ja (Japans), ko (Koreaans), zh (Chinees), hi (Hindi), ta (Tamil), te (Telugu), th (Thai), tr (Turks). Zoeken toont ze nog wel.</div>
                 </div>
-                <div class="checkboxContainer">
-                    <label class="emby-checkbox-label">
-                        <input is="emby-checkbox" type="checkbox" id="chkShowDiagnostics" />
-                        <span class="checkboxLabel">Toon het gele debugbericht en media-informatie op itempagina's</span>
-                        <span class="emby-checkbox-outline">
-                            <span class="emby-checkbox-on"><i class="md-icon">check</i></span>
-                            <span class="emby-checkbox-off"></span>
-                        </span>
-                    </label>
-                </div>
-                <div class="checkboxContainer">
-                    <label class="emby-checkbox-label">
-                        <input is="emby-checkbox" type="checkbox" id="chkShowTrailerTile" />
-                        <span class="checkboxLabel" id="lbl_chkShowTrailerTile">Toon de tegel Trailer naast Aanvragen (kanaal en Discover-pagina)</span>
-                        <span class="emby-checkbox-outline">
-                            <span class="emby-checkbox-on"><i class="md-icon">check</i></span>
-                            <span class="emby-checkbox-off"></span>
-                        </span>
-                    </label>
-                </div>
-                <div class="checkboxContainer">
-                    <label class="emby-checkbox-label">
-                        <input is="emby-checkbox" type="checkbox" id="chkInjectWebClientLoader" />
-                        <span class="checkboxLabel" id="lbl_chkInjectWebClientLoader">Tegel opent Discover-pagina</span>
-                        <span class="emby-checkbox-outline">
-                            <span class="emby-checkbox-on"><i class="md-icon">check</i></span>
-                            <span class="emby-checkbox-off"></span>
-                        </span>
-                    </label>
-                    <div class="fieldDescription" id="desc_chkInjectWebClientLoader">Alleen in de webclient (browser): de tegel "Discover Media" opent direct de Discover-pagina. Dit voegt een klein lader-script toe aan de index.html van de webclient. Na opslaan werkt het direct, zonder herstart. Uitgeschakeld opent de tegel gewoon de kanaaltegels (het script blijft staan maar doet dan niets). De Emby-apps (tv, mobiel) merken hier niets van; daar werkt Discover via het kanaal.</div>
-                </div>
-
                 <div>
                     <button is="emby-button" type="button" class="raised btnTestTmdb"><span>Test TMDB-key</span></button>
                     <div class="fieldDescription testStatus" id="statusTmdb" style="margin-top:.5em;"></div>
                 </div>
 
-                <h3>Radarr (films)</h3>
+                <h3 id="hdgExtraRows">Extra rijen op de Discover-pagina</h3>
+                <div class="checkboxContainer">
+                    <label class="emby-checkbox-label">
+                        <input is="emby-checkbox" type="checkbox" id="chkShowNewSeasons" />
+                        <span class="checkboxLabel" id="lbl_chkShowNewSeasons">Rij "Nieuwe seizoenen": series uit je bibliotheek met een nieuwer seizoen</span>
+                        <span class="emby-checkbox-outline">
+                            <span class="emby-checkbox-on"><i class="md-icon">check</i></span>
+                            <span class="emby-checkbox-off"></span>
+                        </span>
+                    </label>
+                </div>
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused" for="txtTmdbList" id="lbl_txtTmdbList">TMDB-lijst (id of link, optioneel)</label>
+                    <input is="emby-input" type="text" id="txtTmdbList" spellcheck="false" placeholder="https://www.themoviedb.org/list/123456" />
+                    <div class="fieldDescription" id="desc_txtTmdbList">Een openbare lijst op TMDB, bijvoorbeeld je eigen watchlist-lijst. Leeg = geen rij.</div>
+                </div>
+                <div>
+                    <button is="emby-button" type="button" class="raised btnTestTmdbList"><span id="btnTestTmdbListText">Test lijst</span></button>
+                    <div class="fieldDescription testStatus" id="statusTmdbList" style="margin-top:.5em;"></div>
+                </div>
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused" for="txtTraktUser" id="lbl_txtTraktUser">Trakt-gebruikersnaam (optioneel)</label>
+                    <input is="emby-input" type="text" id="txtTraktUser" spellcheck="false" />
+                </div>
+                <div class="inputContainer keyWrap">
+                    <label class="inputLabel inputLabelUnfocused" for="txtTraktClient" id="lbl_txtTraktClient">Trakt Client ID</label>
+                    <input is="emby-input" type="password" id="txtTraktClient" autocomplete="new-password" spellcheck="false" />
+                    <button is="emby-button" type="button" class="paper-icon-button-light btnToggleKey" data-target="txtTraktClient" title="Tonen" aria-label="Tonen"><i class="md-icon">visibility</i></button>
+                </div>
+                <div class="fieldDescription" id="desc_trakt">Maak op trakt.tv onder Settings &gt; Your API Apps een app aan (redirect: urn:ietf:wg:oauth:2.0:oob) en plak de Client ID hier. Je watchlist moet openbaar zijn. Leeg = geen rij.</div>
+                <div>
+                    <button is="emby-button" type="button" class="raised btnTestTrakt"><span id="btnTestTraktText">Test Trakt</span></button>
+                    <div class="fieldDescription testStatus" id="statusTrakt" style="margin-top:.5em;"></div>
+                </div>
+
+                </div>
+
+                <!-- Radarr & Sonarr -->
+                <div class="dcPanel" data-panel="arr">
+                <div class="selectContainer">
+                    <label class="selectLabel" for="selRequestService">Aanvragen via</label>
+                    <select is="emby-select" id="selRequestService">
+                        <option value="arr">Radarr &amp; Sonarr (rechtstreeks)</option>
+                        <option value="seerr">Seerr</option>
+                    </select>
+                    <div class="fieldDescription" id="desc_requestService">Met Seerr gaan aanvragen naar Seerr, en Seerr stuurt ze door naar zijn eigen Radarr en Sonarr. Radarr en Sonarr hoef je hier dan niet in te stellen.</div>
+                </div>
+
+                <!-- Seerr -->
+                <div id="seerrFields">
+                <h3 id="hdgSeerr">Seerr</h3>
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused" for="txtSeerrUrl">URL (bijv. http://192.168.1.10:5055)</label>
+                    <input is="emby-input" type="text" id="txtSeerrUrl" />
+                </div>
+                <div class="inputContainer keyWrap">
+                    <label class="inputLabel inputLabelUnfocused" for="txtSeerrKey">API key</label>
+                    <input is="emby-input" type="password" id="txtSeerrKey" autocomplete="new-password" spellcheck="false" />
+                    <button is="emby-button" type="button" class="paper-icon-button-light btnToggleKey" data-target="txtSeerrKey" title="Tonen" aria-label="Tonen"><i class="md-icon">visibility</i></button>
+                </div>
+                <div class="fieldDescription" id="desc_seerrKey" style="margin:-1em 0 1.5em;">Te vinden in Seerr onder Instellingen &gt; Algemeen.</div>
+                <div>
+                    <button is="emby-button" type="button" class="raised btnTestSeerr"><span>Test verbinding</span></button>
+                    <div class="fieldDescription testStatus" id="statusSeerr" style="margin-top:.5em;"></div>
+                </div>
+                <div class="fieldDescription" id="desc_seerrAsUser" style="margin-top:1em;">Wie in Emby is aangemeld en ook in Seerr bestaat, vraagt aan op zijn eigen Seerr-account (met de rechten, limieten en goedkeuring uit Seerr). Staat iemand niet in Seerr, dan gaat de aanvraag op naam van de eigenaar van de API key.</div>
+                </div>
+
+                <!-- Radarr & Sonarr -->
+                <div id="arrFields">
+                <h3 id="hdgRadarr">Radarr (films)</h3>
                 <div class="inputContainer">
                     <label class="inputLabel inputLabelUnfocused" for="txtRadarrUrl">URL (bijv. http://192.168.1.10:7878)</label>
                     <input is="emby-input" type="text" id="txtRadarrUrl" />
@@ -106,7 +195,7 @@
                     <select is="emby-select" id="selRadarrRoot"></select>
                 </div>
 
-                <h3>Sonarr (series)</h3>
+                <h3 id="hdgSonarr">Sonarr (series)</h3>
                 <div class="inputContainer">
                     <label class="inputLabel inputLabelUnfocused" for="txtSonarrUrl">URL (bijv. http://192.168.1.10:8989)</label>
                     <input is="emby-input" type="text" id="txtSonarrUrl" />
@@ -128,14 +217,94 @@
                     <label class="selectLabel" for="selSonarrRoot">Root folder</label>
                     <select is="emby-select" id="selSonarrRoot"></select>
                 </div>
+                </div>
 
-                <div>
+                </div>
+
+                <!-- Gebruikers -->
+                <div class="dcPanel" data-panel="users">
+                    <div class="fieldDescription" id="desc_users" style="margin-bottom:1em;">Vink aan wie mag aanvragen. Een gebruiker zonder vinkje kan wel bladeren en trailers bekijken, maar een aanvraag wordt niet doorgestuurd naar Radarr of Sonarr en de gebruiker krijgt een melding. Nieuwe gebruikers mogen standaard wel aanvragen.</div>
+                    <div class="dcButtons">
+                        <button is="emby-button" type="button" class="raised btnAllowAll"><span id="btnAllowAllText">Iedereen toestaan</span></button>
+                        <button is="emby-button" type="button" class="raised btnAllowNone"><span id="btnAllowNoneText">Niemand toestaan</span></button>
+                    </div>
+                    <div id="userList"></div>
+                    <div class="fieldDescription" id="statusUsers" style="margin-top:.5em;"></div>
+
+                    <h3 id="hdgLimit">Limiet per gebruiker</h3>
+                    <div class="inputContainer">
+                        <label class="inputLabel inputLabelUnfocused" for="numRequestLimit" id="lbl_numRequestLimit">Maximaal aantal aanvragen (0 = geen limiet)</label>
+                        <input is="emby-input" type="number" min="0" step="1" id="numRequestLimit" />
+                    </div>
+                    <div class="inputContainer">
+                        <label class="inputLabel inputLabelUnfocused" for="numRequestLimitDays" id="lbl_numRequestLimitDays">Per aantal dagen</label>
+                        <input is="emby-input" type="number" min="1" step="1" id="numRequestLimitDays" />
+                    </div>
+                    <div class="fieldDescription" id="desc_limit">Geldt voor aanvragen via Discover naar Radarr en Sonarr. Beheerders hebben geen limiet. Met Seerr gelden de limieten die je in Seerr per gebruiker instelt.</div>
+
+                    <h3 id="hdgAllRequests">Alle aanvragen</h3>
+                    <div class="dcButtons">
+                        <button is="emby-button" type="button" class="raised btnLoadRequests"><span id="btnLoadRequestsText">Overzicht laden</span></button>
+                    </div>
+                    <div id="allRequests"></div>
+                    <div class="fieldDescription" id="statusAllRequests" style="margin-top:.5em;"></div>
+                </div>
+
+                <!-- Opslag -->
+                <div class="dcPanel" data-panel="storage">
+                <div class="checkboxContainer">
+                    <label class="emby-checkbox-label">
+                        <input is="emby-checkbox" type="checkbox" id="chkPrecreateCards" />
+                        <span class="checkboxLabel" id="lbl_chkPrecreateCards">Kaarten en tegels per titel vooraf maken</span>
+                        <span class="emby-checkbox-outline">
+                            <span class="emby-checkbox-on"><i class="md-icon">check</i></span>
+                            <span class="emby-checkbox-off"></span>
+                        </span>
+                    </label>
+                    <div class="fieldDescription" id="desc_chkPrecreateCards">Uit (aanbevolen): een bevestigingskaart wordt pas gemaakt als iemand op Afspelen drukt. Aan: bij elke kanaalverversing wordt voor elke titel op de achtergrond een kaart en tegel gemaakt. Dat kost uren ffmpeg-werk en tientallen GB schijfruimte.</div>
+                </div>
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused" for="numCardDays" id="lbl_numCardDays">Kaartclips bewaren (dagen, 0 = onbeperkt)</label>
+                    <input is="emby-input" type="number" min="0" step="1" id="numCardDays" />
+                </div>
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused" for="numTileDays" id="lbl_numTileDays">Tegelplaatjes bewaren (dagen, 0 = onbeperkt)</label>
+                    <input is="emby-input" type="number" min="0" step="1" id="numTileDays" />
+                </div>
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused" for="numMaxCacheMb" id="lbl_numMaxCacheMb">Maximale grootte kaarten en tegels samen (MB, 0 = geen limiet)</label>
+                    <input is="emby-input" type="number" min="0" step="1" id="numMaxCacheMb" />
+                </div>
+                    <div class="fieldDescription" id="desc_storage">De opruiming draait 2 minuten na het opstarten en daarna elke 24 uur. Is de map te groot, dan gaan de oudste bestanden eerst weg. Verwijderde bestanden worden bij gebruik vanzelf opnieuw gemaakt. Sla de instellingen eerst op voordat je opruimt.</div>
+                    <div class="fieldDescription" id="statusCache" style="margin:1em 0 .6em;font-weight:600;"></div>
+                    <div class="dcButtons">
+                        <button is="emby-button" type="button" class="raised btnCleanNow"><span id="btnCleanNowText">Nu opruimen</span></button>
+                        <button is="emby-button" type="button" class="raised btnClearAll"><span id="btnClearAllText">Alles verwijderen</span></button>
+                    </div>
+                    <div class="fieldDescription" id="statusClean" role="status" aria-live="polite"></div>
+                </div>
+
+                <!-- Diagnose -->
+                <div class="dcPanel" data-panel="diag">
+                <div class="checkboxContainer">
+                    <label class="emby-checkbox-label">
+                        <input is="emby-checkbox" type="checkbox" id="chkShowDiagnostics" />
+                        <span class="checkboxLabel" id="lbl_chkShowDiagnostics">Toon het gele debugbericht en media-informatie op itempagina's</span>
+                        <span class="emby-checkbox-outline">
+                            <span class="emby-checkbox-on"><i class="md-icon">check</i></span>
+                            <span class="emby-checkbox-off"></span>
+                        </span>
+                    </label>
+                </div>
+                    <div style="margin-top:1em;">
+                        <button is="emby-button" type="button" class="raised btnStatus"><span>Status en diagnose</span></button>
+                        <div class="fieldDescription" style="margin-top:.5em;">Controleert plugin, kanaal, TMDB, Radarr, Sonarr en gebruikerstoegang. Handig om twee servers te vergelijken.</div>
+                    </div>
+                </div>
+
+                <div style="margin-top:1.5em;">
                     <button is="emby-button" type="submit" class="raised button-submit block"><span>Opslaan</span></button>
                     <div class="fieldDescription" id="statusSave" role="status" aria-live="polite"></div>
-                </div>
-                <div style="margin-top:1em;">
-                    <button is="emby-button" type="button" class="raised btnStatus"><span>Status en diagnose</span></button>
-                    <div class="fieldDescription" style="margin-top:.5em;">Controleert plugin, kanaal, TMDB, Radarr, Sonarr en gebruikerstoegang. Handig om twee servers te vergelijken.</div>
                 </div>
             </form>
         </div>

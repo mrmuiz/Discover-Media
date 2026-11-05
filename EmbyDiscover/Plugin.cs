@@ -28,7 +28,7 @@ namespace Emby.Plugins.Discover
             get
             {
                 try { return typeof(Plugin).Assembly.GetName().Version.ToString(); }
-                catch { return "1.3.4.6"; }
+                catch { return "1.4.0.0"; }
             }
         }
 
@@ -45,6 +45,9 @@ namespace Emby.Plugins.Discover
         }
 
         public string ServerUiCulture => _serverConfigurationManager.Configuration.UICulture;
+
+        /// <summary>Emby's datamap (blijft bewaard bij updates en in Docker), voor de lijst met aanvragen per gebruiker.</summary>
+        public string DataPath => _paths.DataPath;
 
         public static PluginConfiguration GetCurrentConfiguration()
         {
@@ -100,7 +103,7 @@ namespace Emby.Plugins.Discover
         public override string Name => "Discover";
 
         public override string Description =>
-            "Discover movies and series (TMDB) in Emby and request them through Radarr and Sonarr.";
+            "Discover movies and series (TMDB) in Emby and request them through Radarr and Sonarr, or through Seerr.";
 
         // Emby stores plugin settings by this ID. Never change it between DLL versions.
         public override Guid Id => new Guid("7b0f3a52-4c1e-4a7b-9d2e-5f6c8a1b3d90");
@@ -120,14 +123,14 @@ namespace Emby.Plugins.Discover
             {
                 new PluginPageInfo
                 {
-                    Name = "discoverconfig1080",
+                    Name = "discoverconfig1083",
                     EmbeddedResourcePath = GetType().Namespace + ".Configuration.configPage.html",
                     EnableInMainMenu = true,
                     IsMainConfigPage = true
                 },
                 new PluginPageInfo
                 {
-                    Name = "discoverui1078",
+                    Name = "discoverui1092",
                     DisplayName = "Discover",
                     EmbeddedResourcePath = GetType().Namespace + ".Configuration.discoverPage.html",
                     EnableInMainMenu = true,
@@ -136,12 +139,12 @@ namespace Emby.Plugins.Discover
                 },
                 new PluginPageInfo
                 {
-                    Name = "discoveruijs1371",
+                    Name = "discoveruijs1389",
                     EmbeddedResourcePath = GetType().Namespace + ".Configuration.discoverPage.js"
                 },
                 new PluginPageInfo
                 {
-                    Name = "discoverbuttonjs1371",
+                    Name = "discoverbuttonjs1393",
                     EmbeddedResourcePath = GetType().Namespace + ".Resources.discover-request-button.js"
                 },
                 new PluginPageInfo
@@ -151,12 +154,12 @@ namespace Emby.Plugins.Discover
                 },
                 new PluginPageInfo
                 {
-                    Name = "discoverstatusjs1100",
+                    Name = "discoverstatusjs1103",
                     EmbeddedResourcePath = GetType().Namespace + ".Configuration.statusPage.js"
                 },
                 new PluginPageInfo
                 {
-                    Name = "discoverconfigjs1350",
+                    Name = "discoverconfigjs1363",
                     EmbeddedResourcePath = GetType().Namespace + ".Configuration.configPage.js"
                 }
             };

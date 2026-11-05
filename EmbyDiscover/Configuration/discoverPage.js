@@ -32,14 +32,14 @@ define([], function () {
 
     // Load as an external script so Emby's Content-Security-Policy does not block inline execution.
     function loadButtonScript() {
-        if (window.__discoverRequestButtonVersion === '1.3.4.6') {
-            diag.load = text('script is al actief v1.3.4.6', 'script already active v1.3.4.6', 'Skript bereits aktiv v1.3.4.6');
+        if (window.__discoverRequestButtonVersion === '1.4.0.0') {
+            diag.load = text('script is al actief v1.4.0.0', 'script already active v1.4.0.0', 'Skript bereits aktiv v1.4.0.0');
             showDiag();
             return;
         }
         var urls = [
-            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1371' }),
-            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1371' }),
+            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1393' }),
+            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1393' }),
             ApiClient.getUrl('Plugins/Discover/Script')
         ];
         var n = 0;
@@ -51,7 +51,7 @@ define([], function () {
             script.src = u + (u.indexOf('?') === -1 ? '?' : '&') + '_=' + Date.now();
             script.async = true;
             script.onload = function () {
-                if (window.__discoverRequestButtonVersion === '1.3.4.6') {
+                if (window.__discoverRequestButtonVersion === '1.4.0.0') {
                     diag.load = text('OK via extern script ', 'OK via external script ', 'OK über externes Skript ') + u;
                     showDiag();
                 } else {
@@ -70,13 +70,23 @@ define([], function () {
         })();
     }
 
+    var UI_PAGE = 'discoverui1092';
+
     return function (view, params) {
+        // embedded: alleen de popup, over een andere Emby-pagina heen (film-, serie- of acteurspagina).
+        var embedded = !!(params && params.embedded);
+        if (embedded) {
+            var lc = String(document.documentElement.lang || '').toLowerCase();
+            uiLanguage = lc.indexOf('nl') === 0 ? 'nl' : lc.indexOf('de') === 0 ? 'de' : (lc.indexOf('nb') === 0 || lc.indexOf('nn') === 0 || lc.indexOf('no') === 0) ? 'no' : 'en';
+        }
         diagEl = view.querySelector('.dcDiag');
         diagEl.style.display = 'none';
         loadButtonScript();
         api('GET', 'Discover/Status').then(function (r) {
             diagEl.style.display = r.ShowDiagnostics ? '' : 'none';
             showTrailer = r.ShowTrailerTile !== false;
+            fourK = { movie: !!r.Seerr4kMovie, tv: !!r.Seerr4kTv };
+            window.__discoverRequestService = r.RequestService || '';
             diag.status = 'v' + (r.PluginVersion || '?') + ' | ' + text('pluginresource: ', 'plugin resource: ', 'Pluginressource: ') + (r.ButtonScript || text('onbekend', 'unknown', 'unbekannt'));
             showDiag();
         }, function () { diag.status = text('status ophalen mislukt', 'could not fetch status', 'Status konnte nicht abgerufen werden'); showDiag(); });
@@ -84,19 +94,6 @@ define([], function () {
         var content = view.querySelector('.dcContent');
         var input = view.querySelector('.dcSearchInput');
         input.placeholder = text('Films en series zoeken', 'Search movies and series', 'Filme und Serien suchen', 'Søk filmer og serier');
-        var channelBtn = view.querySelector('.dcChannelBtn');
-        if (channelBtn) {
-            channelBtn.textContent = text('Kanaaltegels', 'Channel tiles', 'Kanalkacheln', 'Kanalfliser');
-            channelBtn.addEventListener('click', function () {
-                var uid = ApiClient.getCurrentUserId();
-                ApiClient.getJSON(ApiClient.getUrl('Channels', { UserId: uid })).then(function (r) {
-                    var ch = ((r && r.Items) || []).filter(function (c) { return /discover/i.test(c.Name || ''); })[0];
-                    if (!ch) { return; }
-                    window.__discoverStay = true;
-                    window.location.hash = '#!/list?parentid=' + encodeURIComponent(ch.Id) + '&serverId=' + encodeURIComponent(ApiClient.serverId());
-                });
-            });
-        }
         var overlay = view.querySelector('.dcOverlay');
         var toast = view.querySelector('.dcToast');
         var items = {};      // sleutel -> item (gedeeld door alle kaarten)
@@ -105,6 +102,7 @@ define([], function () {
         var loaded = false;
         var isAdmin = false;
         var showTrailer = true;
+        var fourK = { movie: false, tv: false };   // Seerr met 4K-server: knop "4K aanvragen"
         try {
             ApiClient.getCurrentUser().then(function (u) {
                 isAdmin = !!(u && u.Policy && (u.Policy.IsAdministrator || u.Policy.EnableContentDeletion)); // mag verwijderen/annuleren
@@ -116,7 +114,271 @@ define([], function () {
 
         function statusIcon(st) { return st === 2 ? '&#10003;' : (st === 1 ? '&#9203;' : ''); }
 
-        function cardHtml(i) {
+        // ---- Downloadvoortgang (Radarr/Sonarr-wachtrij) ----
+        var queue = {};          // sleutel -> wachtrij-item van /Discover/Queue
+        var queueTimer = null, queueBusy = false, pollUntil = 0;
+        var QUEUE_POLL = 15000;
+
+        function stateLabel(st) {
+            return st === 'downloading' ? text('Downloaden', 'Downloading', 'Lädt herunter', 'Laster ned') :
+                st === 'paused' ? text('Gepauzeerd', 'Paused', 'Pausiert', 'Pauset') :
+                st === 'importing' ? text('Wordt toegevoegd', 'Importing', 'Wird importiert', 'Importeres') :
+                st === 'stalled' ? text('Wacht op download', 'Waiting for download', 'Wartet auf Download', 'Venter') :
+                text('In wachtrij', 'Queued', 'In Warteschlange', 'I kø');
+        }
+        function timeLeft(sec) {
+            if (typeof sec !== 'number' || sec < 0) { return ''; }
+            if (sec < 60) { return '<1 min'; }
+            var h = Math.floor(sec / 3600), m = Math.round((sec % 3600) / 60);
+            if (m === 60) { h++; m = 0; }
+            // Lange downloads: dagen en uren in plaats van "243u 21m".
+            if (h >= 24) { var d = Math.floor(h / 24); h = h % 24; return d + 'd' + (h ? ' ' + h + text('u', 'h', 'h', 't') : ''); }
+            return h > 0 ? h + text('u ', 'h ', 'h ', 't ') + m + 'm' : m + ' min';
+        }
+        // Korte statusregel: "↓ 45% · 12 min", "⏸ Gepauzeerd · 32%", "5 afl. · ↓ 32% · 18 min".
+        function queueLine(e) {
+            var parts = [];
+            if (e.Type === 'tv' && e.Count > 1) { parts.push(e.Count + ' ' + text('afl.', 'eps.', 'Folgen', 'ep.')); }
+            if (e.State === 'downloading') {
+                parts.push('\u2193 ' + e.Progress + '%');
+                var t = timeLeft(e.TimeLeft); if (t) { parts.push(t); }
+            } else if (e.State === 'paused') {
+                parts.push(stateLabel(e.State)); parts.push(e.Progress + '%');
+            } else {
+                parts.push(stateLabel(e.State));
+                if (e.Progress > 0 && e.State !== 'importing') { parts.push(e.Progress + '%'); }
+            }
+            return parts.join(' \u00B7 ');
+        }
+        function queueHtml(i) {
+            var e = queue[key(i)];
+            if (!e) { return ''; }
+            return '<div class="dcProg ' + esc(e.State) + '"><i style="width:' + e.Progress + '%"></i></div>';
+        }
+        function capQueueHtml(i, mine) {
+            var e = queue[key(i)];
+            if (e) { return '<div class="dcCapQ ' + esc(e.State) + '">' + esc(queueLine(e)) + '</div>'; }
+            if (!mine) { return ''; }
+            return i.Status === 2
+                ? '<div class="dcCapQ avail">\u2713 ' + text('Beschikbaar', 'Available', 'Verfügbar', 'Tilgjengelig') + '</div>'
+                : '<div class="dcCapQ req">' + text('Aangevraagd', 'Requested', 'Angefordert', 'Forespurt') + '</div>';
+        }
+        // Bestaande kaarten bijwerken na een nieuwe wachtrij (zonder de rij opnieuw op te bouwen).
+        function applyQueueToCards() {
+            var cards = view.querySelectorAll('.dcCard[data-key]');
+            for (var c = 0; c < cards.length; c++) {
+                var card = cards[c], i = items[card.getAttribute('data-key')];
+                if (!i) { continue; }
+                var poster = card.querySelector('.dcPoster'), cap = card.querySelector('.dcCap');
+                var oldP = poster && poster.querySelector('.dcProg'); if (oldP) { poster.removeChild(oldP); }
+                var oldQ = cap && cap.querySelector('.dcCapQ'); if (oldQ) { cap.removeChild(oldQ); }
+                if (poster) { poster.insertAdjacentHTML('beforeend', queueHtml(i)); }
+                if (cap) { cap.insertAdjacentHTML('beforeend', capQueueHtml(i, card.hasAttribute('data-mine'))); }
+            }
+        }
+        // Boven een Emby-pagina (embedded) alleen zolang de popup open is: dan ververst de voortgang daarin ook.
+        function pageActive() {
+            if (embedded) { return document.body.contains(view) && overlay.classList.contains('open'); }
+            return onDiscoverRoute() && document.body.contains(view);
+        }
+        function scheduleQueue(ms) {
+            clearTimeout(queueTimer);
+            queueTimer = setTimeout(loadQueue, ms);
+        }
+        // Alleen verversen zolang er iets downloadt (of net iets is aangevraagd) en de pagina open is.
+        function loadQueue() {
+            queueTimer = null;
+            if (queueBusy || !pageActive()) { return; }
+            if (document.hidden) { scheduleQueue(QUEUE_POLL); return; }
+            queueBusy = true;
+            api('GET', 'Discover/Queue').then(function (r) {
+                queueBusy = false;
+                var next = {}, gone = false;
+                ((r && r.Items) || []).forEach(function (e) { next[e.Type + ':' + e.TmdbId] = e; });
+                for (var k in queue) { if (queue.hasOwnProperty(k) && !next[k]) { gone = true; } }
+                queue = next;
+                applyQueueToCards();
+                if (current) { renderQueueInfo(current); if (!delArmed) { updateButton(); } }
+                if (gone) { loadMyRequests(); }   // klaar met downloaden: status in "Mijn aanvragen" bijwerken
+                if (Object.keys(queue).length || Date.now() < pollUntil) { scheduleQueue(QUEUE_POLL); }
+            }, function () {
+                queueBusy = false;
+                if (Date.now() < pollUntil) { scheduleQueue(QUEUE_POLL * 2); }
+            });
+        }
+        // Na een aanvraag een paar minuten blijven kijken: Radarr/Sonarr hebben even nodig voor de download start.
+        function afterRequest() {
+            pollUntil = Date.now() + 5 * 60 * 1000;
+            scheduleQueue(5000);
+            loadMyRequests();
+        }
+
+        // Voortgang per aflevering in de popup.
+        function renderQueueInfo(i) {
+            var box = overlay.querySelector('.dcQueue');
+            if (!box) { return; }
+            var e = queue[key(i)];
+            if (!e) { box.classList.remove('show'); box.innerHTML = ''; return; }
+            var max = isTvClient ? 3 : 8;
+            var html = '<div class="dcQHead">' + esc(stateLabel(e.State)) + (e.Count > 1 ? ' \u00B7 ' + e.Count + ' ' + text('downloads', 'downloads', 'Downloads', 'nedlastinger') : '') + '</div>';
+            e.Parts.slice(0, max).forEach(function (p) {
+                var name = p.Label ? p.Label + (p.Name ? ' \u00B7 ' + p.Name : '') : i.Title;
+                var right = p.State === 'downloading' ? p.Progress + '%' + (timeLeft(p.TimeLeft) ? ' \u00B7 ' + timeLeft(p.TimeLeft) : '')
+                    : stateLabel(p.State) + (p.Progress > 0 && p.State !== 'importing' ? ' \u00B7 ' + p.Progress + '%' : '');
+                html += '<div class="dcQRow"><span class="dcQName">' + esc(name) + '</span>' +
+                    '<span class="dcQBar ' + esc(p.State) + '"><i style="width:' + p.Progress + '%"></i></span>' +
+                    '<span class="dcQPct">' + esc(right) + '</span></div>';
+                if (p.Release || p.Detail) {
+                    html += '<div class="dcQRel">' + esc(p.Release || '') + (p.Release && p.Detail ? ' \u00B7 ' : '') + esc(p.Detail || '') + '</div>';
+                }
+            });
+            if (e.Parts.length > max) {
+                html += '<div class="dcQMore">' + text('en nog ', 'and ', 'und ', 'og ') + (e.Parts.length - max) + text(' meer', ' more', ' weitere', ' til') + '</div>';
+            }
+            box.innerHTML = html;
+            box.classList.add('show');
+        }
+
+        // ---- Rij "Mijn aanvragen" bovenaan de startpagina ----
+        var mineRow = null, homeShown = false;
+        function loadMyRequests() {
+            api('GET', 'Discover/MyRequests').then(function (r) {
+                mineRow = r || null;
+                renderMine();
+            }, function () { });
+        }
+        function renderMine() {
+            var top = content.querySelector('.dcTop');
+            if (!homeShown || !top) { return; }
+            var old = top.querySelector('.dcMine');
+            var list = (mineRow && mineRow.Items) || [];
+            if (!list.length) { if (old) { old.parentNode.removeChild(old); } return; }
+            var scroll = old ? old.querySelector('.dcRow').scrollLeft : 0;
+            var html = '<div class="dcMine"><div class="dcRowTitle">' + esc(text('Mijn aanvragen', 'My requests', 'Meine Anfragen', 'Mine forespørsler')) + '</div>' +
+                rowWrapHtml('<div class="dcRow" data-row="my_requests">' + list.map(function (i) { return cardHtml(i, true); }).join('') + '</div>') + '</div>';
+            var hadFocus = old && old.contains(document.activeElement) ? document.activeElement.getAttribute('data-key') : null;
+            if (old) { old.insertAdjacentHTML('afterend', html); old.parentNode.removeChild(old); }
+            else { top.insertAdjacentHTML('afterbegin', html); }
+            var box = top.querySelector('.dcMine');
+            var row = box.querySelector('.dcRow');
+            row.scrollLeft = scroll;
+            if (hadFocus) { var f = row.querySelector('.dcCard[data-key="' + hadFocus + '"]'); if (f) { focusEl(f); } }
+            updateArrows(box.querySelector('.dcRowWrap'));
+        }
+
+        // ---- Extra rijen onder "Mijn aanvragen": Nieuwe seizoenen, Trakt-watchlist, TMDB-lijst ----
+        var extraRows = { cont: null, watch: [] };
+        function loadExtras() {
+            api('GET', 'Discover/ContinueSeries').then(function (r) { extraRows.cont = r || null; renderExtras(); }, function () { });
+            api('GET', 'Discover/Watchlist').then(function (r) { extraRows.watch = (r && r.Rows) || []; renderExtras(); }, function () { });
+        }
+        function extraTitle(r) {
+            if (r.Key === 'continue_series') { return text('Nieuwe seizoenen', 'New seasons', 'Neue Staffeln', 'Nye sesonger'); }
+            if (r.Key === 'watch_trakt') { return text('Trakt-watchlist', 'Trakt watchlist', 'Trakt-Merkliste', 'Trakt-ønskeliste'); }
+            return r.Title;
+        }
+        function renderExtras() {
+            var top = content.querySelector('.dcTop');
+            if (!homeShown || !top) { return; }
+            var olds = top.querySelectorAll('.dcExtra');
+            var rows = [];
+            if (extraRows.cont && extraRows.cont.Items && extraRows.cont.Items.length) { rows.push(extraRows.cont); }
+            extraRows.watch.forEach(function (r) { if (r.Items && r.Items.length) { rows.push(r); } });
+            var scrolls = {};
+            Array.prototype.forEach.call(olds, function (o) {
+                Array.prototype.forEach.call(o.querySelectorAll('.dcRow'), function (rw) { scrolls[rw.getAttribute('data-row')] = rw.scrollLeft; });
+                o.parentNode.removeChild(o);
+            });
+            if (!rows.length) { return; }
+            // Elke rij een eigen blok in .dcTop: korte rijen staan zo naast elkaar, lange krijgen de hele breedte.
+            var html = '';
+            rows.forEach(function (r) {
+                var open = r.Items.filter(function (i) { return i.Status === 0; }).length;
+                var all = (r.Key.indexOf('watch_') === 0 && open > 0)
+                    ? ' <button type="button" class="dcReqAll focusable" data-row="' + esc(r.Key) + '">' + esc(text('Alles aanvragen', 'Request all', 'Alle anfragen', 'Be om alle')) + ' (' + open + ')</button>'
+                    : '';
+                html += '<div class="dcExtra"><div class="dcRowTitle">' + esc(extraTitle(r)) + all + '</div>' +
+                    rowWrapHtml('<div class="dcRow" data-row="' + esc(r.Key) + '">' + r.Items.map(function (i) { return cardHtml(i); }).join('') + '</div>') + '</div>';
+            });
+            top.insertAdjacentHTML('beforeend', html);
+            Array.prototype.forEach.call(top.querySelectorAll('.dcExtra .dcRow'), function (rw) {
+                rw.scrollLeft = scrolls[rw.getAttribute('data-row')] || 0;
+                updateArrows(rw.parentNode);
+            });
+        }
+        function requestAll(rowKey, btn) {
+            var row = null;
+            extraRows.watch.forEach(function (r) { if (r.Key === rowKey) { row = r; } });
+            if (!row) { return; }
+            var todo = row.Items.filter(function (i) { return i.Status === 0; });
+            if (!todo.length) { return; }
+            if (!window.confirm(text(todo.length + ' titels aanvragen?', 'Request ' + todo.length + ' titles?', todo.length + ' Titel anfragen?', 'Be om ' + todo.length + ' titler?'))) { return; }
+            btn.disabled = true;
+            var ok = 0, fail = 0, lastErr = '';
+            (function next(n) {
+                if (n >= todo.length) {
+                    showToast(text(ok + ' aangevraagd', ok + ' requested', ok + ' angefragt', ok + ' forespurt') + (fail ? ' \u00B7 ' + text(fail + ' mislukt: ', fail + ' failed: ', fail + ' fehlgeschlagen: ', fail + ' mislyktes: ') + lastErr : ''), fail > 0);
+                    afterRequest();
+                    renderExtras();
+                    return;
+                }
+                var i = todo[n];
+                btn.textContent = text('Aanvragen... ', 'Requesting... ', 'Wird angefragt... ', 'Ber om... ') + (n + 1) + '/' + todo.length;
+                api('POST', 'Discover/RequestItem', null, { Type: i.Type, TmdbId: i.TmdbId }).then(function (r) {
+                    if (r && r.Success) { ok++; i.Status = 1; refreshCards(i); }
+                    else {
+                        fail++; lastErr = (r && r.Message) || '?';
+                        // Limiet bereikt of geen toegang: de rest heeft geen zin.
+                        if (r && /limiet|limit|toegang|access|Zugriff/i.test(lastErr)) { fail += todo.length - n - 1; n = todo.length; }
+                    }
+                    next(n + 1);
+                }, function () { fail++; lastErr = text('netwerkfout', 'network error', 'Netzwerkfehler', 'nettverksfeil'); next(n + 1); });
+            })(0);
+        }
+
+        var CHEV_L = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.7 6.3a1 1 0 0 1 0 1.4L10.4 12l4.3 4.3a1 1 0 0 1-1.4 1.4l-5-5a1 1 0 0 1 0-1.4l5-5a1 1 0 0 1 1.4 0z"/></svg>';
+        var CHEV_R = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.3 6.3a1 1 0 0 0 0 1.4l4.3 4.3-4.3 4.3a1 1 0 1 0 1.4 1.4l5-5a1 1 0 0 0 0-1.4l-5-5a1 1 0 0 0-1.4 0z"/></svg>';
+        // Rijtitels in de taal van deze Emby-app (bij plugintaal Automatisch).
+        function rowTitle(k) {
+            switch (k) {
+                case 'recent_added': return text('Onlangs toegevoegd', 'Recently added', 'Kürzlich hinzugefügt', 'Nylig lagt til');
+                case 'recent_requests': return text('Recente aanvragen', 'Recent requests', 'Kürzlich angefragt', 'Nylige forespørsler');
+                case 'trending': return 'Trending';
+                case 'popular_movie': return text('Populaire films', 'Popular Movies', 'Beliebte Filme', 'Populære filmer');
+                case 'genres_movie': return text('Filmgenres', 'Movie Genres', 'Filmgenres', 'Filmsjangre');
+                case 'upcoming_movie': return text('Aankomende films', 'Upcoming Movies', 'Kommende Filme', 'Kommende filmer');
+                case 'studios': return text("Studio's", 'Studios', 'Studios', 'Studioer');
+                case 'popular_tv': return text('Populaire series', 'Popular Series', 'Beliebte Serien', 'Populære serier');
+                case 'genres_tv': return text('Seriegenres', 'Series Genres', 'Seriengenres', 'Seriesjangre');
+                case 'upcoming_tv': return text('Aankomende series', 'Upcoming Series', 'Kommende Serien', 'Kommende serier');
+                case 'networks': return text('Netwerken', 'Networks', 'Sender', 'Nettverk');
+                case 'my_requests': return text('Mijn aanvragen', 'My requests', 'Meine Anfragen', 'Mine forespørsler');
+            }
+            return null;
+        }
+        function rowWrapHtml(inner) {
+            return '<div class="dcRowWrap">' +
+                '<button type="button" class="dcArrow left dcHide" data-dir="-1" tabindex="-1" aria-label="' + esc(text('Vorige', 'Previous', 'Zurück', 'Forrige')) + '">' + CHEV_L + '</button>' +
+                inner +
+                '<button type="button" class="dcArrow right" data-dir="1" tabindex="-1" aria-label="' + esc(text('Volgende', 'Next', 'Weiter', 'Neste')) + '">' + CHEV_R + '</button>' +
+                '</div>';
+        }
+        // Pijl links weg aan het begin, rechts weg aan het eind; geen pijlen als alles al in beeld past.
+        function updateArrows(wrap) {
+            if (!wrap) { return; }
+            var row = wrap.querySelector('.dcRow');
+            var l = wrap.querySelector('.dcArrow.left'), r = wrap.querySelector('.dcArrow.right');
+            if (!row || !l || !r) { return; }
+            var max = row.scrollWidth - row.clientWidth;
+            l.classList.toggle('dcHide', row.scrollLeft <= 12);
+            r.classList.toggle('dcHide', row.scrollLeft >= max - 12);
+        }
+        function updateAllArrows() {
+            var wraps = content.querySelectorAll('.dcRowWrap');
+            for (var w = 0; w < wraps.length; w++) { updateArrows(wraps[w]); }
+        }
+
+        function cardHtml(i, mine, embyId) {
             items[key(i)] = i;
             var poster = i.Poster
                 ? '<img loading="lazy" src="' + esc(i.Poster) + '" alt="" />'
@@ -124,12 +386,17 @@ define([], function () {
             var sub = [];
             if (typeof i.Rating === 'number' && i.Rating > 0) { sub.push('<span class="dcStar">&#9733; ' + i.Rating.toFixed(1) + '</span>'); }
             if (i.Year) { sub.push('<span>' + i.Year + '</span>'); }
-            return '<div class="dcCard focusable" tabindex="0" role="button" data-key="' + key(i) + '">' +
+            // Persoonspagina: welke rol (personage of regie), op een eigen regel.
+            var role = i.Role ? (i.Role === 'Director' ? text('Regie', 'Director', 'Regie', 'Regi') : i.Role) : '';
+            return '<div class="dcCard focusable" tabindex="0" role="button" data-key="' + key(i) + '"' + (mine === true ? ' data-mine="1"' : '') +
+                (embyId ? ' data-emby="' + esc(embyId) + '"' : '') + '>' +
                 '<div class="dcPoster">' + poster +
                 '<span class="dcBadge ' + i.Type + '">' + (i.Type === 'tv' ? text('SERIE', 'SERIES', 'SERIE') : text('FILM', 'MOVIE', 'FILM')) + '</span>' +
-                '<span class="dcStatus s' + i.Status + '">' + statusIcon(i.Status) + '</span></div>' +
+                '<span class="dcStatus s' + i.Status + '">' + statusIcon(i.Status) + '</span>' + queueHtml(i) + '</div>' +
                 '<div class="dcCap"><div class="dcCapT">' + esc(i.Title) + '</div>' +
                 (sub.length ? '<div class="dcCapSub">' + sub.join('') + '</div>' : '') +
+                (role ? '<div class="dcRole" title="' + esc(role) + '">' + esc(role) + '</div>' : '') +
+                capQueueHtml(i, mine === true) +
                 '</div></div>';
         }
 
@@ -149,17 +416,266 @@ define([], function () {
             var inner = t.Image
                 ? '<img class="dcTileLogo" loading="lazy" src="' + esc(t.Image) + '" alt="' + esc(t.Name) + '" />'
                 : '<span>' + esc(t.Name) + '</span>';
-            return '<div class="dcTile focusable' + (t.Image ? ' logo' : '') + '" tabindex="0" role="button" data-kind="' + esc(r.TileKind) + '" data-id="' + esc(t.Id) +
-                '" data-name="' + esc(t.Name) + '" title="' + esc(t.Name) + '" style="background:' + esc(t.Color || '#1c2640') + '">' + inner + '</div>';
+            // Genres: foto in de genrekleur (zoals Seerr) met de naam erop; anders de effen kleur.
+            var bg = t.Backdrop
+                ? 'background:' + esc(t.Color || '#1c2640') + ' url(&quot;' + esc(t.Backdrop) + '&quot;) center/cover no-repeat'
+                : 'background:' + esc(t.Color || '#1c2640');
+            return '<div class="dcTile focusable' + (t.Image ? ' logo' : '') + (t.Backdrop ? ' photo' : '') + '" tabindex="0" role="button" data-kind="' + esc(r.TileKind) + '" data-id="' + esc(t.Id) +
+                (t.Backdrop ? '" data-bd="' + esc(t.Backdrop) : '') +
+                '" data-name="' + esc(t.Name) + '" title="' + esc(t.Name) + '" style="' + bg + '">' + inner + '</div>';
         }
 
-        // ---- genre / studio / netwerk: alles in een raster met "Meer laden" ----
+        // Rijen die per TMDB-pagina verder kunnen: de titel opent alles in een raster (zoals Seerr).
+        var GRID_ROWS = { trending: 1, popular_movie: 1, upcoming_movie: 1, popular_tv: 1, upcoming_tv: 1 };
+        var CIRCLE_ARROW = '<svg class="dcRowGo" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><path d="M10.3 7.3a1 1 0 0 0 0 1.4l3.3 3.3-3.3 3.3a1 1 0 1 0 1.4 1.4l4-4a1 1 0 0 0 0-1.4l-4-4a1 1 0 0 0-1.4 0z" fill="currentColor"/></svg>';
+        function rowTitleHtml(rowKey, title) {
+            if (!GRID_ROWS[rowKey]) { return '<div class="dcRowTitle">' + esc(title) + '</div>'; }
+            return '<div class="dcRowTitle dcRowLink focusable" tabindex="0" role="button" data-rowkey="' + esc(rowKey) + '" data-title="' + esc(title) + '">' +
+                '<span>' + esc(title) + '</span>' + CIRCLE_ARROW + '</div>';
+        }
+
+        // ---- genre / studio / netwerk en hele rijen: alles in een raster met "Meer laden" ----
         var browse = null;
 
-        function openBrowse(kind, id, name) {
-            browse = { kind: kind, id: id, next: 1, loading: false, done: false, seen: {} };
+        // ---- filters in het raster (op wat al geladen is; te weinig over: automatisch meer laden) ----
+        function langName(code) {
+            try {
+                if (window.Intl && Intl.DisplayNames) {
+                    var dn = new Intl.DisplayNames([uiLanguage === 'nl' ? 'nl' : uiLanguage === 'de' ? 'de' : uiLanguage === 'no' ? 'nb' : 'en'], { type: 'language' });
+                    return dn.of(code) || code;
+                }
+            } catch (e) { }
+            return code;
+        }
+        function updateLangOptions(b) {
+            var sel = content.querySelector('.dcFLang');
+            if (!sel || browse !== b) { return; }
+            var have = {};
+            Array.prototype.forEach.call(sel.options, function (o) { have[o.value] = true; });
+            Object.keys(b.langs).sort(function (x, y) { return b.langs[y] - b.langs[x]; }).forEach(function (code) {
+                if (have[code]) { return; }
+                var o = document.createElement('option');
+                o.value = code;
+                o.textContent = langName(code);
+                sel.appendChild(o);
+            });
+        }
+        function passes(i, f) {
+            if (f.year && (!i.Year || i.Year < f.year)) { return false; }
+            if (f.score && (!i.Rating || i.Rating < f.score)) { return false; }
+            if (f.lang && i.Lang !== f.lang) { return false; }
+            if (f.hideOwned && i.Status === 2) { return false; }
+            return true;
+        }
+        function applyFilters(b) {
+            if (!b || browse !== b) { return; }
+            var grid = content.querySelector('.dcBrowseGrid');
+            if (!grid) { return; }
+            var shown = 0, total = 0;
+            Array.prototype.forEach.call(grid.querySelectorAll('.dcCard'), function (card) {
+                var i = items[card.getAttribute('data-key')];
+                var ok = !i || passes(i, b.filter);
+                card.style.display = ok ? '' : 'none';
+                total++;
+                if (ok) { shown++; }
+            });
+            var f = b.filter, active = f.year || f.score || f.lang || f.hideOwned;
+            var cnt = content.querySelector('.dcFCount');
+            if (cnt) { cnt.textContent = active ? shown + ' / ' + total : ''; }
+            // Filter laat bijna niets over: nog een paar pagina's bijladen.
+            if (active && shown < 12 && !b.done && !b.loading && b.auto < 6) { b.auto++; loadBrowse(); }
+        }
+        content.addEventListener('change', function (e) {
+            var b = browse;
+            if (!b || !e.target || !e.target.closest || !e.target.closest('.dcFilters')) { return; }
+            var bar = content.querySelector('.dcFilters');
+            b.filter = {
+                year: parseInt(bar.querySelector('.dcFYear').value, 10) || 0,
+                score: parseFloat(bar.querySelector('.dcFScore').value) || 0,
+                lang: bar.querySelector('.dcFLang').value || '',
+                hideOwned: !!bar.querySelector('.dcFOwned').checked
+            };
+            b.auto = 0;
+            applyFilters(b);
+        });
+
+        // ---- personen: zoekresultaat en "Bekend van" ----
+        function personHtml(p) {
+            var dep = p.Department === 'Directing' ? text('Regisseur', 'Director', 'Regie') : p.Department === 'Acting' ? text('Acteur', 'Actor', 'Schauspiel') : (p.Department || '');
+            return '<div class="dcPerson focusable" tabindex="0" role="button" data-pid="' + p.Id + '" data-name="' + esc(p.Name) + '">' +
+                '<div class="dcPersonPhoto"' + (p.Photo ? ' style="background-image:url(&quot;' + esc(p.Photo) + '&quot;)"' : '') + '></div>' +
+                '<div class="dcPersonName">' + esc(p.Name) + '</div>' +
+                (dep ? '<div class="dcPersonDep">' + esc(dep) + '</div>' : '') + '</div>';
+        }
+        // ---- Persoonspagina in Discover: foto, gegevens, biografie en rijen (in je bibliotheek / films / series) ----
+        // Zoekt de persoon ook in Emby op (op TMDB-id, anders op naam): wat je al hebt komt in "In je bibliotheek"
+        // en opent in Emby; de rest staat per soort in "niet in je bibliotheek" en opent de popup.
+        function findEmbyPerson(pid, name) {
+            var uid = ApiClient.getCurrentUserId();
+            return Promise.resolve(ApiClient.getJSON(ApiClient.getUrl('Persons', { SearchTerm: name || '', UserId: uid, Fields: 'ProviderIds', Limit: 30 })))
+                .then(function (r) {
+                    var list = (r && r.Items) || [];
+                    var exact = null;
+                    for (var k = 0; k < list.length; k++) {
+                        var t = list[k].ProviderIds && (list[k].ProviderIds.Tmdb || list[k].ProviderIds.tmdb);
+                        if (t && String(t) === String(pid)) { return list[k]; }
+                        if (!exact && String(list[k].Name || '').toLowerCase() === String(name || '').toLowerCase()) { exact = list[k]; }
+                    }
+                    return exact;
+                }, function () { return null; });
+        }
+        function ownedByPerson(person) {
+            if (!person) { return Promise.resolve([]); }
+            var uid = ApiClient.getCurrentUserId();
+            return Promise.resolve(ApiClient.getJSON(ApiClient.getUrl('Users/' + uid + '/Items', {
+                PersonIds: person.Id, Recursive: true, IncludeItemTypes: 'Movie,Series',
+                Fields: 'ProviderIds,ProductionYear,CommunityRating', SortBy: 'PremiereDate,SortName', SortOrder: 'Descending', Limit: 200
+            }))).then(function (r) { return (r && r.Items) || []; }, function () { return []; });
+        }
+        function fmtDay(d) {
+            if (!d) { return ''; }
+            var dt = new Date(d + 'T12:00:00');
+            if (isNaN(dt.getTime())) { return d; }
+            try { return dt.toLocaleDateString(uiLanguage === 'nl' ? 'nl-NL' : uiLanguage === 'de' ? 'de-DE' : uiLanguage === 'no' ? 'nb-NO' : 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' }); }
+            catch (e) { return d; }
+        }
+        function ageOn(birth, end) {
+            var b = new Date(birth + 'T12:00:00'), e2 = end ? new Date(end + 'T12:00:00') : new Date();
+            if (isNaN(b.getTime()) || isNaN(e2.getTime())) { return null; }
+            var a = e2.getFullYear() - b.getFullYear();
+            if (e2.getMonth() < b.getMonth() || (e2.getMonth() === b.getMonth() && e2.getDate() < b.getDate())) { a--; }
+            return a;
+        }
+        function personRow(title, keyName, list, embyIds) {
+            if (!list.length) { return ''; }
+            return '<div class="dcRowTitle">' + esc(title) + ' <span class="dcRowCount">' + list.length + '</span></div>' +
+                rowWrapHtml('<div class="dcRow" data-row="' + esc(keyName) + '">' + list.map(function (i) {
+                    return cardHtml(i, false, embyIds ? embyIds[key(i)] : null);
+                }).join('') + '</div>');
+        }
+        // "Meer" alleen tonen als de biografie echt is afgekapt (ook na draaien of een ander venster).
+        function updateBioMore() {
+            var bio = content.querySelector('.dcPersonBio');
+            if (!bio) { return; }
+            var bt = bio.querySelector('.dcBioText'), more = bio.querySelector('.dcBioMore');
+            if (!bt || !more) { return; }
+            more.style.display = bio.classList.contains('open') || bt.scrollHeight > bt.clientHeight + 2 ? '' : 'none';
+        }
+        // Persoon geopend via een klik buiten Discover (film-/kanaalpagina): Terug gaat dan terug naar die pagina.
+        var personFromLink = false;
+        // Wat er vóór de persoon in beeld was (zoekresultaten, lijst, startpagina): Terug zet dat ongewijzigd terug.
+        var personPrev = null;
+        function scrollBox() { return view.querySelector('.scrollY') || document.scrollingElement || document.documentElement; }
+        function openPerson(pid, name, fromLink) {
+            personFromLink = !!fromLink;
+            personPrev = null;
+            if (!fromLink && content.firstChild) {
+                var frag = document.createDocumentFragment();
+                while (content.firstChild) { frag.appendChild(content.firstChild); }
+                personPrev = { frag: frag, browse: browse, homeShown: homeShown, top: scrollBox().scrollTop };
+            }
+            browse = null;
+            homeShown = false;
+            content.innerHTML = '<div class="dcBrowseHead"><button type="button" class="dcBack">&#10094; ' + text('Terug', 'Back', 'Zurück', 'Tilbake') + '</button></div>' +
+                '<div class="dcPersonHead"><div class="dcPersonBig"></div><div class="dcPersonText"><h2 class="dcPersonTitle">' + esc(name || '') + '</h2>' +
+                '<div class="dcPersonMeta"></div><div class="dcPersonBio"></div></div></div>' +
+                '<div class="dcPersonRows">' + skeletonHtml(2) + '</div>';
+            var root = view.querySelector('.dcRoot');
+            if (root) { root.scrollTop = 0; }
+            try { window.scrollTo(0, 0); } catch (e) { }
+
+            var personInfo = api('GET', 'Discover/Person', { Id: pid });
+            personInfo.then(function (p) {
+                if (!p || !p.Found || !content.querySelector('.dcPersonHead')) { return; }
+                content.querySelector('.dcPersonTitle').textContent = p.Name || name || '';
+                if (p.Photo) { content.querySelector('.dcPersonBig').style.backgroundImage = 'url("' + p.Photo + '")'; }
+                var meta = [];
+                if (p.Birthday) {
+                    var age = ageOn(p.Birthday, p.Deathday);
+                    meta.push(text('Geboren: ', 'Born: ', 'Geboren: ', 'Født: ') + fmtDay(p.Birthday) + (age != null && !p.Deathday ? ' (' + text('leeftijd ', 'age ', 'Alter ', 'alder ') + age + ')' : ''));
+                }
+                if (p.Deathday) { meta.push(text('Overleden: ', 'Died: ', 'Gestorben: ', 'Død: ') + fmtDay(p.Deathday) + (ageOn(p.Birthday, p.Deathday) != null ? ' (' + ageOn(p.Birthday, p.Deathday) + ')' : '')); }
+                if (p.PlaceOfBirth) { meta.push(p.PlaceOfBirth); }
+                content.querySelector('.dcPersonMeta').innerHTML = meta.map(function (m) { return '<div>' + esc(m) + '</div>'; }).join('');
+                var bio = content.querySelector('.dcPersonBio');
+                if (p.Biography) {
+                    bio.innerHTML = '<div class="dcBioText">' + esc(p.Biography) + '</div><button type="button" class="dcBioMore">' + text('Meer', 'More', 'Mehr', 'Mer') + '</button>';
+                    var more = bio.querySelector('.dcBioMore');
+                    setTimeout(updateBioMore, 0);
+                    more.addEventListener('click', function () {
+                        var open = bio.classList.toggle('open');
+                        more.textContent = open ? text('Minder', 'Less', 'Weniger', 'Mindre') : text('Meer', 'More', 'Mehr', 'Mer');
+                    });
+                }
+            }, function () { });
+
+            var creditsP = api('GET', 'Discover/PersonCredits', { TmdbPersonId: pid, Name: name });
+            var ownedP = findEmbyPerson(pid, name).then(ownedByPerson);
+            Promise.all([creditsP, ownedP, personInfo.then(null, function () { return null; })]).then(function (res) {
+                var who = res[2] || {};
+                var box = content.querySelector('.dcPersonRows');
+                if (!box) { return; }
+                var list = (res[0] && res[0].Items) || [];
+                var owned = res[1] || [];
+                // Wat je hebt: koppelen aan de TMDB-titels (zelfde poster en info), Emby-id voor de klik.
+                var ownedByTmdb = {}, embyIds = {}, mine = [];
+                owned.forEach(function (o) {
+                    var t = o.ProviderIds && (o.ProviderIds.Tmdb || o.ProviderIds.tmdb);
+                    if (t) { ownedByTmdb[(o.Type === 'Series' ? 'tv:' : 'movie:') + t] = o; }
+                });
+                var films = [], series = [];
+                list.forEach(function (i) {
+                    var o = ownedByTmdb[key(i)];
+                    if (o) { i.Status = 2; embyIds[key(i)] = o.Id; mine.push(i); delete ownedByTmdb[key(i)]; return; }
+                    (i.Type === 'tv' ? series : films).push(i);
+                });
+                // Emby-titels zonder TMDB-match toch tonen (poster uit Emby).
+                Object.keys(ownedByTmdb).forEach(function (k) {
+                    var o = ownedByTmdb[k];
+                    var tag = o.ImageTags && o.ImageTags.Primary;
+                    var it = { TmdbId: parseInt(k.split(':')[1], 10), Type: o.Type === 'Series' ? 'tv' : 'movie', Title: o.Name, Year: o.ProductionYear || 0,
+                        Poster: tag ? ApiClient.getScaledImageUrl(o.Id, { type: 'Primary', maxHeight: 360, tag: tag }) : null, Rating: o.CommunityRating || 0, Status: 2 };
+                    embyIds[key(it)] = o.Id; mine.push(it);
+                });
+                function newest(a, b) { return (b.Year || 0) - (a.Year || 0); }
+                films.sort(newest); series.sort(newest); mine.sort(newest);
+                // "Meer films met <naam>" (regisseur: "van <naam>"): altijd de naam, dus geen gok naar man of vrouw.
+                var nm = who.Name || name || '';
+                var dir = who.Department === 'Directing';
+                var withNl = dir ? ' van ' : ' met ', withEn = dir ? ' by ' : ' with ', withDe = dir ? ' von ' : ' mit ', withNo = dir ? ' av ' : ' med ';
+                var html = personRow(text('In je bibliotheek', 'In your library', 'In deiner Bibliothek', 'I biblioteket ditt'), 'person_lib', mine, embyIds) +
+                    personRow(text('Meer films' + withNl + nm, 'More movies' + withEn + nm, 'Weitere Filme' + withDe + nm, 'Flere filmer' + withNo + nm), 'person_movie', films) +
+                    personRow(text('Meer series' + withNl + nm, 'More series' + withEn + nm, 'Weitere Serien' + withDe + nm, 'Flere serier' + withNo + nm), 'person_tv', series);
+                box.innerHTML = html || '<div class="dcMsg">' + text('Geen titels gevonden.', 'No titles found.', 'Keine Titel gefunden.') + '</div>';
+                setTimeout(updateAllArrows, 0);
+                // Achtergrond: de bekendste titel (hoogste score met achtergrond).
+                var withBd = list.filter(function (i) { return i.Backdrop; }).sort(function (a, b) { return (b.Rating || 0) - (a.Rating || 0); });
+                if (withBd.length) { setPageBackdrop(withBd[0].Backdrop); }
+                if (isTvClient) { var f = box.querySelector('.dcCard'); if (f) { focusEl(f); } }
+            }, function () {
+                var box = content.querySelector('.dcPersonRows');
+                if (box) { box.innerHTML = '<div class="dcMsg">' + text('Laden mislukt.', 'Loading failed.', 'Laden fehlgeschlagen.') + '</div>'; }
+            });
+        }
+
+        function openRowGrid(rowKey, title) {
+            openBrowse(null, null, title, rowKey);
+        }
+
+        function openBrowse(kind, id, name, rowKey) {
+            homeShown = false;
+            browse = { kind: kind, id: id, row: rowKey || null, next: 1, loading: false, done: false, seen: {}, langs: {}, auto: 0,
+                filter: { year: 0, score: 0, lang: '', hideOwned: false } };
+            var years = [0, 2025, 2020, 2015, 2010, 2000, 1990];
             content.innerHTML = '<div class="dcBrowseHead"><button type="button" class="dcBack">&#10094; ' + text('Terug', 'Back', 'Zurück') + '</button>' +
                 '<span class="dcBrowseTitle">' + esc(name) + '</span></div>' +
+                '<div class="dcFilters">' +
+                '<label>' + text('Jaar', 'Year', 'Jahr') + ' <select class="dcFYear">' + years.map(function (y) { return '<option value="' + y + '">' + (y ? y + '+' : text('alle', 'all', 'alle')) + '</option>'; }).join('') + '</select></label>' +
+                '<label>' + text('Score', 'Score', 'Bewertung') + ' <select class="dcFScore"><option value="0">' + text('alle', 'all', 'alle') + '</option><option value="6">6+</option><option value="7">7+</option><option value="8">8+</option></select></label>' +
+                '<label>' + text('Taal', 'Language', 'Sprache') + ' <select class="dcFLang"><option value="">' + text('alle', 'all', 'alle') + '</option></select></label>' +
+                '<label class="dcFCheck"><input type="checkbox" class="dcFOwned" /> ' + text('Niet in mijn bibliotheek', 'Not in my library', 'Nicht in meiner Bibliothek') + '</label>' +
+                '<span class="dcFCount"></span>' +
+                '</div>' +
                 '<div class="dcGrid dcBrowseGrid"></div>' +
                 '<div class="dcMore"><button type="button" class="dcBtn dcMoreBtn">' + text('Meer laden', 'Load more', 'Mehr laden') + '</button></div>';
             var root = view.querySelector('.dcRoot');
@@ -173,7 +689,10 @@ define([], function () {
             b.loading = true;
             var btn = content.querySelector('.dcMoreBtn');
             if (btn) { btn.disabled = true; btn.textContent = text('Laden...', 'Loading...', 'Wird geladen...'); }
-            api('GET', 'Discover/Browse', { Kind: b.kind, Id: b.id, Page: b.next }).then(function (r) {
+            var call = b.row
+                ? api('GET', 'Discover/List', { Key: b.row, Page: b.next })
+                : api('GET', 'Discover/Browse', { Kind: b.kind, Id: b.id, Page: b.next });
+            call.then(function (r) {
                 if (browse !== b) { return; }
                 var list = (r && r.Items) || [];
                 var fresh = list.filter(function (i) {
@@ -183,14 +702,17 @@ define([], function () {
                 });
                 var grid = content.querySelector('.dcBrowseGrid');
                 var firstPage = grid && !grid.children.length;
-                if (grid && fresh.length) { grid.insertAdjacentHTML('beforeend', fresh.map(cardHtml).join('')); }
+                if (grid && fresh.length) { grid.insertAdjacentHTML('beforeend', fresh.map(function (i) { return cardHtml(i); }).join('')); }
+                fresh.forEach(function (i) { if (i.Lang) { b.langs[i.Lang] = (b.langs[i.Lang] || 0) + 1; } });
                 if (isTvClient && firstPage && grid.firstElementChild && !overlay.classList.contains('open')) { focusEl(grid.firstElementChild); }
-                b.next = (r && r.NextPage) || (b.next + 2);
+                b.next = (r && r.NextPage) || (b.next + (b.row ? 1 : 2));
                 b.loading = false;
                 if (!list.length) { b.done = true; }
                 var more = content.querySelector('.dcMore');
                 if (more) { more.style.display = b.done ? 'none' : 'block'; }
                 if (btn) { btn.disabled = false; btn.textContent = text('Meer laden', 'Load more', 'Mehr laden'); }
+                updateLangOptions(b);
+                applyFilters(b);
                 if (b.done && !b.seenAny && !fresh.length && grid && !grid.children.length) {
                     grid.innerHTML = '<div class="dcMsg">' + text('Geen resultaten.', 'No results.', 'Keine Ergebnisse.') + '</div>';
                 }
@@ -209,25 +731,21 @@ define([], function () {
                 if (r.Kind === 'tiles') {
                     if (!r.Tiles || !r.Tiles.length) { return; }
                     html += '<div class="dcRowTitle">' + esc(r.Title) + '</div>' +
-                        '<div class="dcRowWrap">' +
-                        '<button type="button" class="dcArrow left" data-dir="-1">&#10094;</button>' +
-                        '<div class="dcRow dcTileRow">' + r.Tiles.map(function (t) { return tileHtml(r, t); }).join('') + '</div>' +
-                        '<button type="button" class="dcArrow right" data-dir="1">&#10095;</button>' +
-                        '</div>';
+                        rowWrapHtml('<div class="dcRow dcTileRow">' + r.Tiles.map(function (t) { return tileHtml(r, t); }).join('') + '</div>');
                     return;
                 }
                 if (!r.Items || !r.Items.length) { return; }
                 var seen = {};
                 r.Items.forEach(function (i) { seen[key(i)] = true; });
                 rowState[r.Key] = { nextPage: r.NextPage || 4, loading: false, done: false, seen: seen };
-                html += '<div class="dcRowTitle">' + esc(r.Title) + '</div>' +
-                    '<div class="dcRowWrap">' +
-                    '<button type="button" class="dcArrow left" data-dir="-1">&#10094;</button>' +
-                    '<div class="dcRow" data-row="' + esc(r.Key) + '">' + r.Items.map(cardHtml).join('') + '</div>' +
-                    '<button type="button" class="dcArrow right" data-dir="1">&#10095;</button>' +
-                    '</div>';
+                html += rowTitleHtml(r.Key, r.Title) +
+                    rowWrapHtml('<div class="dcRow" data-row="' + esc(r.Key) + '">' + r.Items.map(function (i) { return cardHtml(i); }).join('') + '</div>');
             });
-            content.innerHTML = html || '<div class="dcMsg">' + text('Geen resultaten.', 'No results.', 'Keine Ergebnisse.') + '</div>';
+            content.innerHTML = '<div class="dcTop"></div>' + (html || '<div class="dcMsg">' + text('Geen resultaten.', 'No results.', 'Keine Ergebnisse.') + '</div>');
+            homeShown = true;
+            renderMine();
+            renderExtras();
+            setTimeout(updateAllArrows, 0);
         }
 
         // Laadt de volgende TMDB-pagina als je bijna aan het eind van een rij bent.
@@ -246,7 +764,8 @@ define([], function () {
                     st.seen[key(i)] = true;
                     return true;
                 });
-                if (fresh.length) { el.insertAdjacentHTML('beforeend', fresh.map(cardHtml).join('')); }
+                if (fresh.length) { el.insertAdjacentHTML('beforeend', fresh.map(function (i) { return cardHtml(i); }).join('')); }
+                updateArrows(el.parentNode);
                 st.loading = false;
                 maybeLoadMore(el); // nog steeds aan het eind (bijv. alles dubbel)? meteen verder
             }, function () { st.loading = false; st.done = true; });
@@ -254,14 +773,22 @@ define([], function () {
 
         function loadHome() {
             browse = null;
+            homeShown = false;
             content.innerHTML = skeletonHtml(3);
+            loadMyRequests();
+            loadExtras();
+            scheduleQueue(0);
             api('GET', 'Discover/Home').then(function (r) {
-                var culture = String(r.Language || '').toLowerCase();
+                var culture = String((r.LanguageAuto && document.documentElement.lang) || r.Language || '').toLowerCase();
                 uiLanguage = culture.indexOf('nl') === 0 ? 'nl' : culture.indexOf('de') === 0 ? 'de' : (culture.indexOf('nb') === 0 || culture.indexOf('nn') === 0 || culture.indexOf('no') === 0) ? 'no' : 'en';
                 input.placeholder = text('Films en series zoeken', 'Search movies and series', 'Filme und Serien suchen', 'Søk filmer og serier');
                 if (r.Message) { content.innerHTML = '<div class="dcMsg">' + esc(r.Message) + '</div>'; return; }
+                if (r.LanguageAuto) { (r.Rows || []).forEach(function (row) { row.Title = rowTitle(row.Key) || row.Title; }); }
+                // Intussen een persoonspagina of overzicht geopend (directe link): die niet overschrijven.
+                if (browse || content.querySelector('.dcPersonHead')) { loaded = true; return; }
                 renderRows(r.Rows || []);
                 loaded = true;
+                randomPageBackdrop();
                 // TV: meteen op de eerste kaart, behalve als je net in de zoekbalk aan het typen bent.
                 if (isTvClient && document.activeElement !== input && !overlay.classList.contains('open')) { focusFirstItem(); }
             }, function () {
@@ -274,12 +801,21 @@ define([], function () {
 
         function doSearch(q) {
             browse = null;
+            homeShown = false;
             content.innerHTML = '<div class="dcRowTitle">' + text('Zoeken...', 'Searching...', 'Suchen...') + '</div><div class="dcSkelRow">' + skelCards(8) + '</div>';
             api('GET', 'Discover/Search', { Query: q }).then(function (r) {
                 var list = r.Items || [];
-                content.innerHTML = list.length
-                    ? '<div class="dcRowTitle">' + text('Zoekresultaten', 'Search results', 'Suchergebnisse') + '</div><div class="dcGrid">' + list.map(cardHtml).join('') + '</div>'
-                    : '<div class="dcMsg">' + text('Niets gevonden voor "', 'Nothing found for "', 'Keine Ergebnisse für "') + esc(q) + '".</div>';
+                var people = r.People || [];
+                var html = '';
+                if (people.length) {
+                    html += '<div class="dcRowTitle">' + text('Personen', 'People', 'Personen') + '</div>' +
+                        rowWrapHtml('<div class="dcRow dcPeopleRow">' + people.map(personHtml).join('') + '</div>');
+                }
+                if (list.length) {
+                    html += '<div class="dcRowTitle">' + text('Zoekresultaten', 'Search results', 'Suchergebnisse') + '</div><div class="dcGrid">' + list.map(function (i) { return cardHtml(i); }).join('') + '</div>';
+                }
+                content.innerHTML = html || '<div class="dcMsg">' + text('Niets gevonden voor "', 'Nothing found for "', 'Keine Ergebnisse für "') + esc(q) + '".</div>';
+                setTimeout(updateAllArrows, 0);
             });
         }
 
@@ -295,6 +831,12 @@ define([], function () {
             var b = overlay.querySelector('.dcBtn');
             var d = overlay.querySelector('.dcBtnDel');
             if (!current) { return; }
+            var k4 = overlay.querySelector('.dcBtn4k');
+            if (k4) {
+                k4.textContent = current.Type === 'tv' ? text('Alle seizoenen in 4K', 'All seasons in 4K', 'Alle Staffeln in 4K') : text('4K aanvragen', 'Request in 4K', 'In 4K anfordern');
+                k4.classList.toggle('show', !!fourK[current.Type === 'tv' ? 'tv' : 'movie']);
+                k4.disabled = false;
+            }
             var tb = overlay.querySelector('.dcBtnTrailer');
             tb.textContent = text('Trailer', 'Trailer', 'Trailer', 'Trailer');
             if (showTrailer) { tb.classList.add('show'); } else { tb.classList.remove('show'); }
@@ -304,6 +846,7 @@ define([], function () {
             else if (isAdmin && current.Status === 2) { d.textContent = text('Verwijderen', 'Delete', 'Löschen'); d.classList.add('show'); }
             else { d.classList.remove('show'); }
             if (current.Status === 2) { b.textContent = text('Beschikbaar', 'Available', 'Verfügbar'); b.disabled = true; }
+            else if (current.Status === 1 && queue[key(current)]) { b.textContent = queueLine(queue[key(current)]); b.disabled = true; }
             else if (current.Status === 1) { b.textContent = text('Aangevraagd', 'Requested', 'Angefordert'); b.disabled = true; }
             else { b.textContent = text('Aanvragen', 'Request', 'Anfragen', 'Forespør'); b.disabled = false; }
         }
@@ -329,6 +872,7 @@ define([], function () {
                     i.Status = 1;
                     refreshCards(i);
                     showToast(i.Title + ': ' + r.Message, false);
+                    afterRequest();
                 } else {
                     showToast(text('Mislukt: ', 'Failed: ', 'Fehlgeschlagen: ') + ((r && r.Message) || text('onbekende fout', 'unknown error', 'unbekannter Fehler')), true);
                 }
@@ -340,8 +884,24 @@ define([], function () {
             });
         }
 
+        // Trailer-knop: bij een serie in de rij met seizoenen, anders (en op telefoons) in de gewone knoppenrij.
+        function placeTrailer(inSeasons) {
+            var tb = overlay.querySelector('.dcBtnTrailer');
+            var row = overlay.querySelector('.dcBtnRow');
+            var box = overlay.querySelector('.dcSeasons');
+            if (!tb || !row || !box) { return; }
+            var phone = window.matchMedia && window.matchMedia('(max-width: 600px)').matches && !overlay.classList.contains('dcTv');
+            if (inSeasons && !phone) {
+                if (tb.parentNode !== box) { box.appendChild(tb); }
+            } else if (tb.parentNode !== row) {
+                var main = row.querySelector('.dcBtn');
+                row.insertBefore(tb, main ? main.nextSibling : row.firstChild);
+            }
+        }
+
         function renderSeasonButtons(i, seasons) {
             var box = overlay.querySelector('.dcSeasons');
+            placeTrailer(false);
             box.textContent = '';
             var list = (seasons || []).filter(function (s) { return s.Number > 0; });
             if (i.Type !== 'tv' || list.length === 0) { box.classList.remove('show'); return; }
@@ -362,10 +922,17 @@ define([], function () {
                 b.setAttribute('data-season', s.Number);
                 b.textContent = text('Seizoen ', 'Season ', 'Staffel ') + s.Number;
                 b.title = s.EpisodeCount ? s.EpisodeCount + ' ' + text('afl.', 'eps.', 'Folgen') : '';
+                // Aangekondigd seizoen: klein label "binnenkort"; aanvragen kan al (Sonarr pakt het op zodra het uitkomt).
+                if (s.Upcoming) {
+                    b.classList.add('dcSoon');
+                    b.insertAdjacentHTML('beforeend', '<span class="dcSoonTag">' + esc(text('binnenkort', 'coming soon', 'demnächst', 'snart')) + '</span>');
+                    b.title = s.AirDate ? text('Start ', 'Starts ', 'Start ', 'Start ') + s.AirDate : text('Aangekondigd', 'Announced', 'Angekündigt', 'Annonsert');
+                }
                 b.addEventListener('click', function () { requestSeasons(current, [s.Number], b); });
                 box.appendChild(b);
             });
             box.classList.add('show');
+            placeTrailer(true);
             applySeasonStates(i);
             // De losse Aanvragen-knop is voor series overbodig: "Alle seizoenen" doet hetzelfde.
             overlay.querySelector('.dcBtn').style.display = 'none';
@@ -386,6 +953,9 @@ define([], function () {
                     btns[k].title = text('Al in je bibliotheek', 'Already in your library', 'Bereits in deiner Bibliothek');
                 } else {
                     btns[k].textContent = base;
+                    if (btns[k].classList.contains('dcSoon')) {
+                        btns[k].insertAdjacentHTML('beforeend', '<span class="dcSoonTag">' + esc(text('binnenkort', 'coming soon', 'demnächst', 'snart')) + '</span>');
+                    }
                     btns[k].disabled = false;
                 }
             }
@@ -414,6 +984,7 @@ define([], function () {
 
         function loadSeasonButtons(i) {
             var box = overlay.querySelector('.dcSeasons');
+            placeTrailer(false);   // eerst terug naar de knoppenrij, anders verdwijnt hij mee met de seizoenen
             box.textContent = '';
             box.classList.remove('show');
             overlay.querySelector('.dcBtn').style.display = '';
@@ -445,13 +1016,24 @@ define([], function () {
             setTimeout(function () { updateOverviewHint(ovEl); }, 0);
             var infoEl = overlay.querySelector('.dcInfo');
             infoEl.textContent = '';
+            var castEl = overlay.querySelector('.dcCast');
+            castEl.innerHTML = '';
             api('GET', 'Discover/Info', { Type: i.Type, TmdbId: i.TmdbId }).then(function (r) {
-                if (current === i && r && r.Lines && r.Lines.length) { infoEl.textContent = r.Lines.join('\n'); }
+                if (current !== i || !r) { return; }
+                if (r.Lines && r.Lines.length) { infoEl.textContent = r.Lines.join('\n'); }
+                castEl.innerHTML = (r.Cast || []).map(function (p) {
+                    var initials = String(p.Name || '?').split(/\s+/).map(function (w) { return w.charAt(0); }).slice(0, 2).join('');
+                    return '<button type="button" class="dcCastP" data-pid="' + p.Id + '" data-name="' + esc(p.Name) + '" title="' + esc(p.Name) + '">' +
+                        '<div class="dcCastPh"' + (p.Photo ? ' style="background-image:url(&quot;' + esc(p.Photo) + '&quot;)">' : '>' + esc(initials)) + '</div>' +
+                        '<div class="dcCastN">' + esc(p.Name) + '</div>' + (p.Character ? '<div class="dcCastR">' + esc(p.Character) + '</div>' : '') + '</button>';
+                }).join('');
+                castEl.scrollLeft = 0;
             }, function () { });
             var ob = overlay.querySelector('.dcBtnOpen');
             ob.classList.remove('show'); ob.removeAttribute('data-id');
             ob.textContent = text('Openen in Emby', 'Open in Emby', 'In Emby öffnen');
             loadSeasonButtons(i);
+            renderQueueInfo(i);
             updateButton();
             lastFocus = document.activeElement;
             overlay.classList.add('open');
@@ -672,20 +1254,149 @@ define([], function () {
             });
         }
 
+        // ---- achtergrond van de titel onder de muis / met focus (zoals Emby's achtergronden) ----
+        var pageBd = { layers: view.querySelectorAll('.dcPageBdImg'), idx: 0, cur: '', timer: null, seq: 0 };
+        function pageBdAllowed() {
+            try {
+                for (var i = 0; i < localStorage.length; i++) {
+                    var k = localStorage.key(i);
+                    if (k && /enablebackdrops/i.test(k) && String(localStorage.getItem(k)) === 'false') { return false; }
+                }
+            } catch (e) { }
+            return true;
+        }
+        function setPageBackdrop(url) {
+            if (url) { url = String(url).replace('/t/p/w780/', '/t/p/w1280/'); }
+            if (!url || url === pageBd.cur || !pageBd.layers.length || !pageBdAllowed()) { return; }
+            var token = ++pageBd.seq;
+            var img = new Image();
+            img.onload = function () {
+                if (token !== pageBd.seq) { return; }
+                pageBd.cur = url;
+                var next = pageBd.layers[pageBd.idx = 1 - pageBd.idx];
+                var prev = pageBd.layers[1 - pageBd.idx];
+                next.style.backgroundImage = 'url("' + url.replace(/"/g, '%22') + '")';
+                next.classList.add('on');
+                prev.classList.remove('on');
+            };
+            img.src = url;
+        }
+        function backdropOf(el) {
+            if (!el || !el.closest) { return null; }
+            var card = el.closest('.dcCard');
+            if (card) { var it = items[card.getAttribute('data-key')]; return it && it.Backdrop; }
+            var tile = el.closest('.dcTile');
+            return tile ? tile.getAttribute('data-bd') : null;
+        }
+        function onBackdropHover(e) {
+            var url = backdropOf(e.target);
+            if (!url) { return; }
+            clearTimeout(pageBd.timer);
+            pageBd.timer = setTimeout(function () { setPageBackdrop(url); }, 120);
+        }
+        content.addEventListener('mouseover', onBackdropHover);
+        content.addEventListener('focusin', onBackdropHover);
+        // Na het laden van de startpagina: een willekeurige achtergrond uit wat er te zien is.
+        function randomPageBackdrop() {
+            var all = Object.keys(items).map(function (k) { return items[k] && items[k].Backdrop; }).filter(Boolean);
+            if (all.length) { setPageBackdrop(all[Math.floor(Math.random() * all.length)]); }
+        }
+
+        // ---- snelmenu: rechtsklik of lang indrukken op een poster ----
+        var quick = document.createElement('div');
+        quick.className = 'dcQuick';
+        view.appendChild(quick);
+        var quickJustOpened = 0;
+        function closeQuick() { quick.classList.remove('open'); }
+        function openQuick(i, x, y) {
+            var canRequest = i.Status === 0 || (i.Type === 'tv' && i.Status !== 1);
+            quick.innerHTML = '<div class="dcQuickTitle">' + esc(i.Title) + (i.Year ? ' (' + i.Year + ')' : '') + '</div>' +
+                '<button type="button" class="req"' + (canRequest ? '' : ' disabled') + '>' +
+                (i.Type === 'tv' ? text('Alle seizoenen aanvragen', 'Request all seasons', 'Alle Staffeln anfordern') : text('Aanvragen', 'Request', 'Anfordern')) +
+                (i.Status === 2 && i.Type !== 'tv' ? ' \u2713' : i.Status === 1 ? ' \u23F3' : '') + '</button>' +
+                '<button type="button" class="det">' + text('Details en trailer', 'Details and trailer', 'Details und Trailer') + '</button>';
+            quick.querySelector('.req').addEventListener('click', function () {
+                closeQuick();
+                requestSeasons(i, null, { disabled: false });
+            });
+            quick.querySelector('.det').addEventListener('click', function () { closeQuick(); openItem(i); });
+            quick.classList.add('open');
+            var w = quick.offsetWidth || 220, h = quick.offsetHeight || 120;
+            quick.style.left = Math.max(8, Math.min(x, window.innerWidth - w - 8)) + 'px';
+            quick.style.top = Math.max(8, Math.min(y, window.innerHeight - h - 8)) + 'px';
+            quickJustOpened = Date.now();
+            var first = quick.querySelector('button:not([disabled])');
+            if (first && isTvClient) { first.focus(); }
+        }
+        content.addEventListener('contextmenu', function (e) {
+            var card = e.target.closest ? e.target.closest('.dcCard') : null;
+            var i = card && items[card.getAttribute('data-key')];
+            if (!i) { return; }
+            e.preventDefault();
+            openQuick(i, e.clientX, e.clientY);
+        });
+        var pressTimer = null, pressStart = null;
+        content.addEventListener('touchstart', function (e) {
+            var card = e.target.closest ? e.target.closest('.dcCard') : null;
+            var i = card && items[card.getAttribute('data-key')];
+            if (!i || !e.touches || e.touches.length !== 1) { return; }
+            pressStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            clearTimeout(pressTimer);
+            pressTimer = setTimeout(function () { pressTimer = null; openQuick(i, pressStart.x, pressStart.y); }, 550);
+        }, { passive: true });
+        content.addEventListener('touchmove', function (e) {
+            if (!pressTimer || !pressStart || !e.touches || !e.touches.length) { return; }
+            if (Math.abs(e.touches[0].clientX - pressStart.x) > 10 || Math.abs(e.touches[0].clientY - pressStart.y) > 10) { clearTimeout(pressTimer); pressTimer = null; }
+        }, { passive: true });
+        content.addEventListener('touchend', function () { clearTimeout(pressTimer); pressTimer = null; });
+        document.addEventListener('click', function (e) {
+            if (!quick.classList.contains('open')) { return; }
+            if (quick.contains(e.target)) { return; }
+            closeQuick();
+        }, true);
+        document.addEventListener('keydown', function (e) { if ((e.key === 'Escape' || e.keyCode === 27) && quick.classList.contains('open')) { closeQuick(); } });
+        window.addEventListener('scroll', closeQuick, true);
+
         // ---- events ----
         content.addEventListener('click', function (e) {
+            if (Date.now() - quickJustOpened < 700) { return; }   // de klik na lang indrukken opent geen popup
             var card = e.target.closest ? e.target.closest('.dcCard') : null;
+            if (card && card.getAttribute('data-emby')) { goToEmbyItem(card.getAttribute('data-emby')); return; }   // al in je bibliotheek
             if (card && items[card.getAttribute('data-key')]) { openItem(items[card.getAttribute('data-key')]); }
         });
 
         content.addEventListener('click', function (e) {
             var t = e.target;
+            var person = t.closest ? t.closest('.dcPerson') : null;
+            if (person) {
+                openPerson(parseInt(person.getAttribute('data-pid'), 10), person.getAttribute('data-name'));
+                return;
+            }
+            var reqAll = t.closest ? t.closest('.dcReqAll') : null;
+            if (reqAll) { requestAll(reqAll.getAttribute('data-row'), reqAll); return; }
+            var rowLink = t.closest ? t.closest('.dcRowLink') : null;
+            if (rowLink) {
+                openRowGrid(rowLink.getAttribute('data-rowkey'), rowLink.getAttribute('data-title'));
+                return;
+            }
             var tile = t.closest ? t.closest('.dcTile') : null;
             if (tile) {
                 openBrowse(tile.getAttribute('data-kind'), parseInt(tile.getAttribute('data-id'), 10), tile.getAttribute('data-name'));
                 return;
             }
-            if (t.closest && t.closest('.dcBack')) { loadHome(); return; }
+            if (t.closest && t.closest('.dcBack')) {
+                if (personFromLink && content.querySelector('.dcPersonHead') && window.history.length > 1) { personFromLink = false; window.history.back(); return; }
+                personFromLink = false;
+                if (personPrev && content.querySelector('.dcPersonHead')) {
+                    var prev = personPrev; personPrev = null;
+                    content.innerHTML = '';
+                    content.appendChild(prev.frag);
+                    browse = prev.browse; homeShown = prev.homeShown;
+                    try { scrollBox().scrollTop = prev.top; } catch (ignored) { }
+                    return;
+                }
+                personPrev = null; loadHome(); return;
+            }
             if (t.closest && t.closest('.dcMoreBtn')) { loadBrowse(); }
         });
 
@@ -695,14 +1406,14 @@ define([], function () {
             var k = e.key || '';
             if (k !== 'Enter' && k !== ' ' && e.keyCode !== 13 && e.keyCode !== 32) { return; }
             var el = e.target;
-            if (el && el.classList && (el.classList.contains('dcCard') || el.classList.contains('dcTile'))) {
+            if (el && el.classList && (el.classList.contains('dcCard') || el.classList.contains('dcTile') || el.classList.contains('dcRowLink') || el.classList.contains('dcPerson'))) {
                 e.preventDefault();
                 el.click();
             }
         });
         content.addEventListener('focusin', function (e) {
             var el = e.target;
-            if (el && el.classList && (el.classList.contains('dcCard') || el.classList.contains('dcTile')) && el.scrollIntoView) {
+            if (el && el.classList && (el.classList.contains('dcCard') || el.classList.contains('dcTile') || el.classList.contains('dcPerson')) && el.scrollIntoView) {
                 try { el.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch (x) { el.scrollIntoView(); }
             }
         });
@@ -710,8 +1421,9 @@ define([], function () {
         // scroll-events borrelen niet op, dus in de capture-fase luisteren
         content.addEventListener('scroll', function (e) {
             var el = e.target;
-            if (el && el.classList && el.classList.contains('dcRow')) { maybeLoadMore(el); }
+            if (el && el.classList && el.classList.contains('dcRow')) { maybeLoadMore(el); updateArrows(el.parentNode); }
         }, true);
+        window.addEventListener('resize', function () { if (pageActive()) { updateAllArrows(); updateBioMore(); } });
 
         content.addEventListener('click', function (e) {
             var btn = e.target.closest ? e.target.closest('.dcArrow') : null;
@@ -726,7 +1438,31 @@ define([], function () {
         });
 
         overlay.querySelector('.dcClose').addEventListener('click', closeModal);
+        // Klik op een acteur in de popup: op de Discover-pagina de persoonspagina hier; boven een Emby-pagina
+        // naar Emby's eigen acteurspagina als die persoon in je bibliotheek staat, anders naar die van Discover.
+        overlay.querySelector('.dcCast').addEventListener('click', function (e) {
+            var b = e.target.closest ? e.target.closest('.dcCastP') : null;
+            if (!b) { return; }
+            var pid = parseInt(b.getAttribute('data-pid'), 10), name = b.getAttribute('data-name');
+            if (!embedded) { closeModal(); openPerson(pid, name); return; }
+            findEmbyPerson(pid, name).then(function (p) {
+                closeModal();
+                if (p) { goToEmbyItem(p.Id); return; }
+                try { sessionStorage.setItem('dcOpenNext', JSON.stringify({ kind: 'person', id: pid, name: name || '', at: Date.now() })); } catch (e) { }
+                window.location.hash = '#!/configurationpage?name=' + UI_PAGE;
+            });
+        });
         overlay.addEventListener('click', function (e) { if (e.target === overlay) { closeModal(); } });
+
+        overlay.querySelector('.dcBtn4k').addEventListener('click', function () {
+            var i = current, b = this;
+            if (!i || b.disabled) { return; }
+            b.disabled = true;
+            api('POST', 'Discover/RequestItem', null, { Type: i.Type, TmdbId: i.TmdbId, Is4k: true }).then(function (r) {
+                showToast(r && r.Success ? i.Title + ': ' + r.Message : text('Mislukt: ', 'Failed: ', 'Fehlgeschlagen: ') + ((r && r.Message) || '?'), !(r && r.Success));
+                b.disabled = false;
+            }, function () { showToast(text('Aanvraag mislukt.', 'Request failed.', 'Anfrage fehlgeschlagen.'), true); b.disabled = false; });
+        });
 
         overlay.querySelector('.dcBtn').addEventListener('click', function () {
             var i = current;
@@ -739,6 +1475,7 @@ define([], function () {
                     i.Status = 1;
                     refreshCards(i);
                     showToast(i.Title + ': ' + r.Message, false);
+                    afterRequest();
                 } else {
                     showToast(text('Mislukt: ', 'Failed: ', 'Fehlgeschlagen: ') + ((r && r.Message) || text('onbekende fout', 'unknown error', 'unbekannter Fehler')), true);
                 }
@@ -752,7 +1489,7 @@ define([], function () {
         overlay.querySelector('.dcBtnDel').addEventListener('click', function () {
             var i = current;
             if (!i || i.Status === 0) { return; }
-            var arr = i.Type === 'tv' ? 'Sonarr' : 'Radarr';
+            var arr = window.__discoverRequestService || (i.Type === 'tv' ? 'Sonarr' : 'Radarr');
             var withFiles = i.Status === 2;
             var q = withFiles
                 ? text('"' + i.Title + '" verwijderen uit ' + arr + ' EN de bestanden van schijf verwijderen?',
@@ -779,6 +1516,9 @@ define([], function () {
                 if (r && r.Success) {
                     i.Status = 0;
                     refreshCards(i);
+                    delete queue[key(i)];
+                    applyQueueToCards();
+                    loadMyRequests();
                     showToast(i.Title + ': ' + r.Message, false);
                 } else {
                     showToast(text('Mislukt: ', 'Failed: ', 'Fehlgeschlagen: ') + ((r && r.Message) || text('onbekende fout', 'unknown error', 'unbekannter Fehler')), true);
@@ -894,7 +1634,7 @@ define([], function () {
                     return;
                 }
                 var kids = Array.prototype.filter.call(p.children, function (c) {
-                    return c.classList && (c.classList.contains('dcCard') || c.classList.contains('dcTile'));
+                    return c.classList && (c.classList.contains('dcCard') || c.classList.contains('dcTile') || c.classList.contains('dcPerson'));
                 });
                 if (!kids.length) { return; }
                 if (p.classList.contains('dcRow')) { lines.push(kids); return; }
@@ -1057,6 +1797,45 @@ define([], function () {
             var on = onDiscoverRoute() && document.body.contains(view);
             document.body.classList.toggle('dcDiscoverActive', !!on);
         }
+        // ---- Popup boven een andere Emby-pagina (aangeroepen vanuit het knop-script) ----
+        function openByIds(type, tmdbId) {
+            api('GET', 'Discover/Title', { Type: type, TmdbId: tmdbId }).then(function (r) {
+                if (!r || !r.Found || !r.Item) { showToast(text('Titel niet gevonden.', 'Title not found.', 'Titel nicht gefunden.'), true); return; }
+                items[key(r.Item)] = r.Item;
+                openItem(r.Item);
+                // Downloadvoortgang meteen ophalen en blijven verversen zolang de popup open is.
+                setTimeout(function () { scheduleQueue(0); }, 300);
+            }, function () {
+                showToast(text('Titel laden mislukt.', 'Loading title failed.', 'Titel konnte nicht geladen werden.'), true);
+            });
+        }
+        if (embedded) {
+            view.__dcOpen = openByIds;
+            view.__dcClose = function () { if (trailerOverlay.classList.contains('open')) { closeTrailer(); } closeModal(); };
+            view.__dcIsOpen = function () { return overlay.classList.contains('open') || trailerOverlay.classList.contains('open'); };
+            // TV-afstandsbediening: alleen zolang de popup open is; anders doet Emby alles zelf.
+            document.addEventListener('command', function (e) {
+                if (!document.body.contains(view) || !view.__dcIsOpen()) { return; }
+                var cmd = e.detail && e.detail.command;
+                if (cmd === 'back') {
+                    e.preventDefault();
+                    if (trailerOverlay.classList.contains('open')) { closeTrailer(); } else { closeModal(); }
+                    return;
+                }
+                if (cmd === 'up' || cmd === 'down' || cmd === 'left' || cmd === 'right') { e.preventDefault(); navModal(cmd, document.activeElement); }
+            }, true);
+            document.addEventListener('keydown', function (e) {
+                var c = e.keyCode;
+                if (c !== 27 && c !== 461 && c !== 10009) { return; }
+                if (!document.body.contains(view) || !view.__dcIsOpen()) { return; }
+                e.preventDefault(); e.stopPropagation();
+                if (trailerOverlay.classList.contains('open')) { closeTrailer(); } else { closeModal(); }
+            }, true);
+            // Weg van deze pagina (Emby navigeert): popup dicht.
+            window.addEventListener('hashchange', function () { if (view.__dcIsOpen()) { view.__dcClose(); } });
+            return;
+        }
+
         if (window.__dcHeaderSync) { window.removeEventListener('hashchange', window.__dcHeaderSync); }
         window.__dcHeaderSync = syncHeader;
         window.addEventListener('hashchange', syncHeader);
@@ -1065,7 +1844,47 @@ define([], function () {
         view.addEventListener('viewhide', function () { document.body.classList.remove('dcDiscoverActive'); document.removeEventListener('command', onCommand, true); });
 
         // ---- Directe link vanaf een film-/seriepagina: #!/configurationpage?name=...&openType=movie&openId=123 ----
+        // Wat er geopend moet worden kan ook via sessionStorage komen: Emby laat soms de extra parameters in het adres
+        // weg, of hergebruikt de al geopende Discover-pagina zonder opnieuw "viewshow" te sturen.
+        // Emby 4.11 toont bij een bezoek eerst een oude kopie van deze pagina en vervangt die daarna door een nieuwe.
+        // Daarom wordt de opdracht niet meteen weggegooid: elke Discover-pagina die binnen 30 seconden in beeld komt
+        // (de eerste keer laden na een herstart kan langer dan 10 s duren)
+        // pakt hem op (één keer per pagina); daarna vervalt hij vanzelf.
+        function takePending() {
+            try {
+                var raw = sessionStorage.getItem('dcOpenNext');
+                if (!raw) { return null; }
+                var p = JSON.parse(raw);
+                if (!p || Date.now() - (p.at || 0) > 30000) { sessionStorage.removeItem('dcOpenNext'); return null; }
+                if (view.__dcTook === p.at) { return null; }
+                view.__dcTook = p.at;
+                setTimeout(function () {
+                    try { var cur = sessionStorage.getItem('dcOpenNext'); if (cur === raw) { sessionStorage.removeItem('dcOpenNext'); } } catch (e) { }
+                }, 10000);
+                return p;
+            } catch (e) { return null; }
+        }
         function openFromLink() {
+            var pend = takePending();
+            if (pend && pend.kind === 'person' && pend.id) {
+                try { history.replaceState(null, '', window.location.href.replace(/&openPerson=\d+(&openName=[^&]*)?/, '')); } catch (e) { }
+                openPerson(parseInt(pend.id, 10), pend.name || '', true);
+                return;
+            }
+            if (pend && pend.kind === 'title' && pend.id) {
+                api('GET', 'Discover/Title', { Type: pend.type, TmdbId: parseInt(pend.id, 10) }).then(function (r) {
+                    if (r && r.Found && r.Item) { items[key(r.Item)] = r.Item; openItem(r.Item); }
+                }, function () { });
+                try { history.replaceState(null, '', window.location.href.replace(/&openType=[^&]*&openId=\d+/, '').replace(/&openPerson=\d+(&openName=[^&]*)?/, '')); } catch (e) { }
+                return;
+            }
+            var pm = /[?&]openPerson=(\d+)(?:&openName=([^&]*))?/.exec(window.location.hash || '');
+            if (pm) {
+                try { history.replaceState(null, '', window.location.href.replace(/&openPerson=\d+(&openName=[^&]*)?/, '')); } catch (e) { }
+                var nm = ''; try { nm = decodeURIComponent(pm[2] || ''); } catch (e) { }
+                openPerson(parseInt(pm[1], 10), nm, true);
+                return;
+            }
             var m = /[?&]openType=(movie|tv)&openId=(\d+)/.exec(window.location.hash || '');
             if (!m) { return; }
             // Parameters weghalen, anders brengt de terugknop je weer naar dezelfde titel.
@@ -1081,7 +1900,11 @@ define([], function () {
 
         view.addEventListener('viewshow', function () {
             if (!loaded) { loadHome(); }
+            else { scheduleQueue(0); loadMyRequests(); }
             openFromLink();
         });
+        // Geen hashchange-luisteraar: Emby 4.11 maakt bij elke navigatie een nieuwe Discover-pagina (met eigen viewshow);
+        // een oude, verborgen kopie zou de opdracht anders "opeten" en de persoon tonen waar je hem niet ziet.
+        view.addEventListener('viewhide', function () { clearTimeout(queueTimer); queueTimer = null; });
     };
 });

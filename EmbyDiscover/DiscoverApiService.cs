@@ -39,6 +39,8 @@ namespace Emby.Plugins.Discover
         public int TmdbId { get; set; }
         /// <summary>Optioneel: seizoensnummers om te monitoren (alleen series). Leeg/null = alle seizoenen.</summary>
         public int[] Seasons { get; set; }
+        /// <summary>Alleen in de Seerr-modus met een 4K-server: aanvraag voor de 4K-versie.</summary>
+        public bool Is4k { get; set; }
     }
 
     [Route("/Discover/RemoveItem", "POST", Summary = "Verwijder een film of serie uit Radarr/Sonarr (beheerders en gebruikers met Emby-verwijderrechten)")]
@@ -75,6 +77,8 @@ namespace Emby.Plugins.Discover
     public class DiscoverInfoResult
     {
         public List<string> Lines { get; set; } = new List<string>();
+        /// <summary>Belangrijkste cast (max. 15) met foto, voor de ronde fotootjes in de popup.</summary>
+        public List<DiscoverPersonDto> Cast { get; set; } = new List<DiscoverPersonDto>();
     }
 
     [Route("/Discover/TrailerKey", "GET", Summary = "YouTube-sleutel van de trailer van een film of serie")]
@@ -111,6 +115,8 @@ namespace Emby.Plugins.Discover
     public class DiscoverSeriesCardRequest : IReturn<DiscoverSeriesCardResult>
     {
         public int TmdbId { get; set; }
+        /// <summary>Optioneel: seizoensnummer voor de seizoensgegevens.</summary>
+        public int Season { get; set; }
     }
 
     public class DiscoverSeriesCardResult
@@ -122,6 +128,12 @@ namespace Emby.Plugins.Discover
         public string Network { get; set; }
         public int TmdbRating { get; set; }
         public List<string> StreamingOn { get; set; } = new List<string>();
+        public string SeasonName { get; set; }
+        public string SeasonAirDate { get; set; }
+        public string SeasonLastAirDate { get; set; }
+        public int SeasonEpisodes { get; set; }
+        public string SeasonOverview { get; set; }
+        public int SeasonRating { get; set; }
     }
 
     public class DiscoverSeasonInfo
@@ -129,6 +141,10 @@ namespace Emby.Plugins.Discover
         public int Number { get; set; }
         public string Name { get; set; }
         public int EpisodeCount { get; set; }
+        /// <summary>Aangekondigd, nog niet begonnen (of nog zonder datum).</summary>
+        public bool Upcoming { get; set; }
+        /// <summary>Startdatum (yyyy-MM-dd) als TMDB die heeft.</summary>
+        public string AirDate { get; set; }
     }
 
     public class DiscoverResolveResult
@@ -153,6 +169,7 @@ namespace Emby.Plugins.Discover
     public class DiscoverStatusResponse
     {
         public string PluginVersion { get; set; }
+        public bool PluginLanguageAuto { get; set; }
         public bool TmdbKeySet { get; set; }
         public bool ShowDiagnostics { get; set; }
         public bool ShowTrailerTile { get; set; }
@@ -160,6 +177,11 @@ namespace Emby.Plugins.Discover
         public string TmdbLanguage { get; set; }
         public bool RadarrSet { get; set; }
         public bool SonarrSet { get; set; }
+        /// <summary>"Seerr" in de Seerr-modus, anders leeg (rechtstreeks naar Radarr/Sonarr).</summary>
+        public string RequestService { get; set; }
+        /// <summary>Seerr heeft een 4K-server voor films / series: dan toont de popup "4K aanvragen".</summary>
+        public bool Seerr4kMovie { get; set; }
+        public bool Seerr4kTv { get; set; }
         public string LoadedAt { get; set; }
         public int ChannelCalls { get; set; }
         public int Requests { get; set; }
@@ -182,6 +204,8 @@ namespace Emby.Plugins.Discover
         public string Poster { get; set; }
         public string Backdrop { get; set; }
         public double Rating { get; set; }
+        /// <summary>Oorspronkelijke taal (ISO 639-1), voor het taalfilter.</summary>
+        public string Lang { get; set; }
         public string Overview { get; set; }
         /// <summary>0 = niet aangevraagd, 1 = aangevraagd, 2 = beschikbaar</summary>
         public int Status { get; set; }
@@ -194,6 +218,8 @@ namespace Emby.Plugins.Discover
         /// <summary>Logo-URL (studio/netwerk), anders leeg.</summary>
         public string Image { get; set; }
         public string Color { get; set; }
+        /// <summary>Genre: achtergrondfoto in de genrekleur (duotone, zoals Seerr), anders leeg.</summary>
+        public string Backdrop { get; set; }
     }
 
     [Route("/Discover/Browse", "GET", Summary = "Films/series per genre, studio of netwerk")]
@@ -217,11 +243,25 @@ namespace Emby.Plugins.Discover
         /// <summary>Eerstvolgende TMDB-pagina die /Discover/List kan ophalen.</summary>
         public int NextPage { get; set; }
         public List<DiscoverItemDto> Items { get; set; } = new List<DiscoverItemDto>();
+        /// <summary>Alleen bij zoeken: acteurs en regisseurs.</summary>
+        public List<DiscoverPersonDto> People { get; set; } = new List<DiscoverPersonDto>();
+    }
+
+    public class DiscoverPersonDto
+    {
+        public int Id { get; set; }
+        public string Name { get; set; }
+        public string Photo { get; set; }
+        /// <summary>"Acting", "Directing", ...</summary>
+        public string Department { get; set; }
+        /// <summary>Rol (personage), alleen bij de cast in de popup.</summary>
+        public string Character { get; set; }
     }
 
     public class DiscoverHomeResponse
     {
         public string Language { get; set; }
+        public bool LanguageAuto { get; set; }
         public string Message { get; set; }
         public List<DiscoverRow> Rows { get; set; } = new List<DiscoverRow>();
     }
@@ -333,6 +373,7 @@ namespace Emby.Plugins.Discover
         private readonly ILogger _logger;
 
         private readonly IAuthorizationContext _auth;
+        private readonly IJsonSerializer _json;
 
         /// <summary>Wordt door Emby ingevuld (IRequiresRequest); nodig om te weten wie de aanvraag doet.</summary>
         public IRequest Request { get; set; }
@@ -340,6 +381,7 @@ namespace Emby.Plugins.Discover
         public DiscoverApiService(ILogManager logManager, IJsonSerializer json, IAuthorizationContext auth)
         {
             _auth = auth;
+            _json = json;
             _logger = logManager.GetLogger("Discover");
             _tmdb = new TmdbClient(json);
             _arr = new ArrClient(json);
@@ -378,9 +420,13 @@ namespace Emby.Plugins.Discover
                 ShowDiagnostics = cfg.ShowDiagnostics,
                 ShowTrailerTile = cfg.ShowTrailerTile,
                 PluginLanguage = DiscoverLanguage.PluginLanguage,
+                PluginLanguageAuto = DiscoverLanguage.IsAuto,
                 TmdbLanguage = TmdbClient.Language(),
                 RadarrSet = ArrClient.RadarrConfigured,
                 SonarrSet = ArrClient.SonarrConfigured,
+                RequestService = SeerrClient.Enabled ? "Seerr" : "",
+                Seerr4kMovie = SeerrClient.Has4k(_json, false),
+                Seerr4kTv = SeerrClient.Has4k(_json, true),
                 LoadedAt = DiscoverDiagnostics.LoadedUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss"),
                 ChannelCalls = DiscoverDiagnostics.ChannelCalls,
                 Requests = DiscoverDiagnostics.Requests,
@@ -399,7 +445,7 @@ namespace Emby.Plugins.Discover
 
         public async Task<object> Get(DiscoverHomeRequest request)
         {
-            var resp = new DiscoverHomeResponse { Language = DiscoverLanguage.PluginLanguage };
+            var resp = new DiscoverHomeResponse { Language = DiscoverLanguage.PluginLanguage, LanguageAuto = DiscoverLanguage.IsAuto };
             if (string.IsNullOrWhiteSpace(Plugin.GetCurrentConfiguration().TmdbApiKey))
             {
                 resp.Message = DiscoverLanguage.Text(
@@ -546,15 +592,28 @@ namespace Emby.Plugins.Discover
             var tiles = new List<DiscoverTileDto>();
             if (kind == "genre_movie" || kind == "genre_tv")
             {
-                var genres = await _tmdb.GetGenres(kind == "genre_tv", CancellationToken.None).ConfigureAwait(false);
-                foreach (var g in genres)
+                bool tvGenres = kind == "genre_tv";
+                var genres = await _tmdb.GetGenres(tvGenres, CancellationToken.None).ConfigureAwait(false);
+                // Foto per genre (zelfde bron en cache als de kanaaltegels); lukt het niet, dan blijft de effen kleur.
+                string[] backs;
+                try
                 {
-                    bool tv = kind == "genre_tv";
+                    backs = await Task.WhenAll(genres.Select(g => DiscoverMediaChannel.GenreBackdropFor(_tmdb, tvGenres, g.id, CancellationToken.None))).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    DiscoverDiagnostics.Add("genrefoto's ophalen mislukt: " + ex.Message);
+                    backs = new string[genres.Count];
+                }
+                for (int gi = 0; gi < genres.Count; gi++)
+                {
+                    var g = genres[gi];
                     tiles.Add(new DiscoverTileDto
                     {
                         Id = g.id.ToString(),
-                        Name = DiscoverMediaChannel.LocalizedGenreName(g.id, tv, g.name),
-                        Color = Palette[Math.Abs(g.id) % Palette.Length]
+                        Name = DiscoverMediaChannel.LocalizedGenreName(g.id, tvGenres, g.name),
+                        Color = Palette[Math.Abs(g.id) % Palette.Length],
+                        Backdrop = DiscoverMediaChannel.GenreImageUrl(g.id, backs[gi])
                     });
                 }
                 return tiles;
@@ -648,6 +707,16 @@ namespace Emby.Plugins.Discover
             return res;
         }
 
+        private async Task<List<TmdbPersonHit>> SafePeople(string q)
+        {
+            try { return await _tmdb.SearchPeople(q, CancellationToken.None).ConfigureAwait(false); }
+            catch (Exception ex)
+            {
+                DiscoverDiagnostics.Add("personen zoeken mislukt: " + ex.Message);
+                return new List<TmdbPersonHit>();
+            }
+        }
+
         public async Task<object> Get(DiscoverSearchRequest request)
         {
             var row = new DiscoverRow { Key = "search", Title = "Zoekresultaten" };
@@ -660,7 +729,16 @@ namespace Emby.Plugins.Discover
                 var tvStatesTask = SafeStates(true);
                 var movieTask = _tmdb.SearchTyped(q, false, 2, CancellationToken.None);
                 var tvTask = _tmdb.SearchTyped(q, true, 2, CancellationToken.None);
-                await Task.WhenAll(movieStatesTask, tvStatesTask, movieTask, tvTask).ConfigureAwait(false);
+                var peopleTask = SafePeople(q);
+                await Task.WhenAll(movieStatesTask, tvStatesTask, movieTask, tvTask, peopleTask).ConfigureAwait(false);
+                foreach (var p in peopleTask.Result.Where(p => !string.IsNullOrEmpty(p.profile_path) && p.popularity >= 1).Take(12))
+                    row.People.Add(new DiscoverPersonDto
+                    {
+                        Id = p.id,
+                        Name = p.name,
+                        Photo = "https://image.tmdb.org/t/p/w185" + p.profile_path,
+                        Department = p.known_for_department
+                    });
 
                 var combined = movieTask.Result.Select(i => new { Item = i, Tv = false })
                     .Concat(tvTask.Result.Select(i => new { Item = i, Tv = true }))
@@ -739,6 +817,21 @@ namespace Emby.Plugins.Discover
                         "\u2713 Partially available",
                         "\u2713 Teilweise verfügbar"));
                 res.Lines.AddRange(InfoText.Lines(null, x, tv, true));
+                if (x.credits != null && x.credits.cast != null)
+                {
+                    res.Cast = x.credits.cast
+                        .Where(c => c != null && c.id > 0 && !string.IsNullOrWhiteSpace(c.name))
+                        .OrderBy(c => c.order)
+                        .Take(15)
+                        .Select(c => new DiscoverPersonDto
+                        {
+                            Id = c.id,
+                            Name = c.name.Trim(),
+                            Character = string.IsNullOrWhiteSpace(c.character) ? null : c.character.Trim(),
+                            Photo = string.IsNullOrEmpty(c.profile_path) ? null : "https://image.tmdb.org/t/p/w185" + c.profile_path,
+                            Department = "Acting"
+                        }).ToList();
+                }
             }
             catch (Exception ex)
             {
@@ -786,6 +879,23 @@ namespace Emby.Plugins.Discover
                         .Concat(providers.ads ?? new List<TmdbNamed>())
                         .Where(x => !string.IsNullOrWhiteSpace(x?.name))
                         .Select(x => x.name.Trim()).Distinct().Take(5).ToList();
+
+                if (request.Season > 0)
+                {
+                    var s = await _tmdb.GetTvSeasonDetail(request.TmdbId, request.Season, CancellationToken.None).ConfigureAwait(false);
+                    if (s != null)
+                    {
+                        result.SeasonName = s.name;
+                        result.SeasonOverview = s.overview;
+                        var eps = s.episodes ?? new List<TmdbEpisodeBrief>();
+                        result.SeasonEpisodes = eps.Count > 0 ? eps.Count : s.episode_count;
+                        DateTime d;
+                        if (InfoText.TryDate(s.air_date, out d)) result.SeasonAirDate = InfoText.LongDate(d);
+                        var last = eps.Where(e => !string.IsNullOrEmpty(e.air_date)).Select(e => e.air_date).OrderBy(x => x, StringComparer.Ordinal).LastOrDefault();
+                        if (last != null && InfoText.TryDate(last, out d) && last != s.air_date) result.SeasonLastAirDate = InfoText.LongDate(d);
+                        result.SeasonRating = (int)Math.Round(s.vote_average * 10);
+                    }
+                }
             }
             catch (Exception ex)
             {
@@ -876,7 +986,10 @@ namespace Emby.Plugins.Discover
                                 {
                                     Number = s.season_number,
                                     Name = string.IsNullOrWhiteSpace(s.name) ? "Seizoen " + s.season_number : s.name,
-                                    EpisodeCount = s.episode_count
+                                    EpisodeCount = s.episode_count,
+                                    AirDate = s.air_date,
+                                    Upcoming = s.season_number > 0 && (string.IsNullOrEmpty(s.air_date) ||
+                                        string.CompareOrdinal(s.air_date, DateTime.UtcNow.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)) > 0)
                                 })
                                 .ToList();
                         }
@@ -931,11 +1044,17 @@ namespace Emby.Plugins.Discover
             try
             {
                 object requesterId = null;
+                object requesterGuid = null;   // Emby-gebruikers-id zoals de Emby-API het toont (voor de koppeling met Seerr)
                 string requesterName = null;
                 try
                 {
                     var info = _auth.GetAuthorizationInfo(Request);
-                    if (info != null) { requesterId = info.UserId; requesterName = info.User != null ? info.User.Name : null; }
+                    if (info != null)
+                    {
+                        requesterId = info.UserId;
+                        requesterName = info.User != null ? info.User.Name : null;
+                        requesterGuid = info.User != null ? (object)info.User.Id : info.UserId;
+                    }
                 }
                 catch (Exception ex) { DiscoverDiagnostics.Add("gebruiker bij aanvraag niet te bepalen: " + ex.Message); }
                 if (!RequestAccess.IsAllowed(requesterId))
@@ -945,31 +1064,63 @@ namespace Emby.Plugins.Discover
                     res.Message = RequestAccess.DeniedMessage();
                     return res;
                 }
+                bool isAdminRequester = false;
+                try { var ai = _auth.GetAuthorizationInfo(Request); isAdminRequester = ai != null && ai.User != null && ai.User.Policy != null && ai.User.Policy.IsAdministrator; }
+                catch { }
+                var limitMsg = RequestAccess.LimitMessage(_json, requesterId, isAdminRequester);
+                if (limitMsg != null)
+                {
+                    DiscoverDiagnostics.Add("aanvraag (webpagina) boven de limiet voor " + (requesterName ?? "?") + ": " + request.Type + " " + request.TmdbId);
+                    res.Success = false;
+                    res.Message = limitMsg;
+                    return res;
+                }
                 bool tv = string.Equals(request.Type, "tv", StringComparison.OrdinalIgnoreCase);
                 bool added;
-                if (tv)
+                TmdbItem requested;
+                if (request.Is4k && SeerrClient.Enabled)
+                {
+                    requested = tv ? await _tmdb.GetTv(request.TmdbId, CancellationToken.None).ConfigureAwait(false)
+                                   : await _tmdb.GetMovie(request.TmdbId, CancellationToken.None).ConfigureAwait(false);
+                    int tvdb = 0;
+                    if (tv)
+                    {
+                        try { var ext4k = await _tmdb.GetTvExternalIds(request.TmdbId, CancellationToken.None).ConfigureAwait(false); tvdb = ext4k?.tvdb_id ?? 0; }
+                        catch { }
+                    }
+                    added = await SeerrClient.Request(_json, tv, request.TmdbId, tvdb, request.Seasons, requesterGuid, CancellationToken.None, true).ConfigureAwait(false);
+                }
+                else if (tv)
                 {
                     var t = await _tmdb.GetTv(request.TmdbId, CancellationToken.None).ConfigureAwait(false);
                     var ext = await _tmdb.GetTvExternalIds(request.TmdbId, CancellationToken.None).ConfigureAwait(false);
-                    if (ext?.tvdb_id == null)
+                    if (ext?.tvdb_id == null && !SeerrClient.Enabled)
                         throw new InvalidOperationException("Geen TVDB-id bij deze serie; Sonarr kan hem niet toevoegen.");
-                    added = await _arr.AddSeries(request.TmdbId, ext.tvdb_id.Value, t.name ?? t.title, request.Seasons, CancellationToken.None).ConfigureAwait(false);
+                    added = await _arr.AddSeries(request.TmdbId, ext?.tvdb_id ?? 0, t.name ?? t.title, request.Seasons, CancellationToken.None, requesterGuid).ConfigureAwait(false);
+                    requested = t;
                 }
                 else
                 {
                     var m = await _tmdb.GetMovie(request.TmdbId, CancellationToken.None).ConfigureAwait(false);
-                    added = await _arr.AddMovie(request.TmdbId, m.title ?? m.name, YearOf(m.release_date), CancellationToken.None).ConfigureAwait(false);
+                    added = await _arr.AddMovie(request.TmdbId, m.title ?? m.name, YearOf(m.release_date), CancellationToken.None, requesterGuid).ConfigureAwait(false);
+                    requested = m;
                 }
 
                 res.Success = true;
                 res.Status = 1;
+                RequestStore.Add(_json, requesterId, tv, requested, request.TmdbId);
+                DownloadQueue.Invalidate();
                 string seasonNote = "";
                 if (tv && request.Seasons != null && request.Seasons.Length > 0)
                     seasonNote = " (" + DiscoverLanguage.Text("seizoen ", "season ", "Staffel ") +
                         string.Join(", ", request.Seasons.OrderBy(x => x)) + ")";
+                if (request.Is4k && SeerrClient.Enabled) seasonNote += " (4K)";
                 res.Message = added
-                    ? DiscoverLanguage.Text("Aangevraagd", "Requested", "Angefordert") + seasonNote
-                    : DiscoverLanguage.Text("Stond al in ", "Already in ", "Bereits in ") + (tv ? "Sonarr" : "Radarr");
+                    ? DiscoverLanguage.Text("Aangevraagd", "Requested", "Angefordert") + seasonNote +
+                        (SeerrClient.WaitsForApproval(tv, request.TmdbId)
+                            ? DiscoverLanguage.Text(" (wacht op goedkeuring)", " (awaiting approval)", " (wartet auf Freigabe)")
+                            : "")
+                    : DiscoverLanguage.Text("Stond al in ", "Already in ", "Bereits in ") + ArrClient.ServiceName(tv);
                 _logger.Info("Discover: {0} {1} {2}", tv ? "serie" : "film", request.TmdbId, res.Message);
                 DiscoverDiagnostics.Add((tv ? "serie " : "film ") + request.TmdbId + ": " + res.Message);
                 DiscoverDiagnostics.CountRequest(true);
@@ -1032,8 +1183,8 @@ namespace Emby.Plugins.Discover
                 res.Success = true;
                 res.Status = 0;
                 res.Message = removed
-                    ? DiscoverLanguage.Text("Verwijderd uit ", "Removed from ", "Entfernt aus ") + (tv ? "Sonarr" : "Radarr")
-                    : DiscoverLanguage.Text("Stond niet meer in ", "Was no longer in ", "War nicht mehr in ") + (tv ? "Sonarr" : "Radarr");
+                    ? DiscoverLanguage.Text("Verwijderd uit ", "Removed from ", "Entfernt aus ") + ArrClient.ServiceName(tv)
+                    : DiscoverLanguage.Text("Stond niet meer in ", "Was no longer in ", "War nicht mehr in ") + ArrClient.ServiceName(tv);
                 _logger.Info("Discover: {0} {1} {2}", tv ? "serie" : "film", request.TmdbId, res.Message);
                 DiscoverDiagnostics.Add((tv ? "serie " : "film ") + request.TmdbId + ": " + res.Message);
             }
@@ -1065,7 +1216,7 @@ namespace Emby.Plugins.Discover
             catch (Exception ex)
             {
                 _logger.Error("Discover: status ophalen mislukt: {0}", ex.Message);
-                DiscoverDiagnostics.Add("FOUT status " + (tv ? "Sonarr" : "Radarr") + ": " + ex.Message);
+                DiscoverDiagnostics.Add("FOUT status " + ArrClient.ServiceName(tv) + ": " + ex.Message);
                 return new Dictionary<int, bool>();
             }
         }
@@ -1133,7 +1284,7 @@ namespace Emby.Plugins.Discover
             return names.Count == 0 ? null : string.Join(", ", names);
         }
 
-        private static DiscoverItemDto ToDto(TmdbItem i, bool tv, Dictionary<int, bool> states)
+        internal static DiscoverItemDto ToDto(TmdbItem i, bool tv, Dictionary<int, bool> states)
         {
             int status = 0;
             if (states != null && states.TryGetValue(i.id, out var hasFiles)) status = hasFiles ? 2 : 1;
@@ -1147,6 +1298,7 @@ namespace Emby.Plugins.Discover
                 Poster = string.IsNullOrEmpty(i.poster_path) ? null : "https://image.tmdb.org/t/p/w342" + i.poster_path,
                 Backdrop = string.IsNullOrEmpty(i.backdrop_path) ? null : "https://image.tmdb.org/t/p/w780" + i.backdrop_path,
                 Rating = i.vote_average,
+                Lang = i.original_language,
                 Overview = i.overview,
                 Status = status
             };

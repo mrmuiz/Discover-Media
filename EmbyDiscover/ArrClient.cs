@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
@@ -14,13 +15,13 @@ namespace Emby.Plugins.Discover
     public class RadarrMovieDto { public int id { get; set; } public int tmdbId { get; set; } public bool hasFile { get; set; } public string added { get; set; } }
     public class SonarrStatsDto { public int episodeFileCount { get; set; } public int episodeCount { get; set; } }
     public class SonarrSeasonDto { public int seasonNumber { get; set; } public bool monitored { get; set; } public SonarrStatsDto statistics { get; set; } }
-    public class SonarrSeriesDto { public int id { get; set; } public int tmdbId { get; set; } public int tvdbId { get; set; } public string added { get; set; } public SonarrStatsDto statistics { get; set; } public List<SonarrSeasonDto> seasons { get; set; } }
-    public class SonarrEpisodeDto { public int id { get; set; } public int seasonNumber { get; set; } public bool monitored { get; set; } public bool hasFile { get; set; } }
+    public class SonarrSeriesDto { public int id { get; set; } public int tmdbId { get; set; } public int tvdbId { get; set; } public bool monitored { get; set; } public string added { get; set; } public SonarrStatsDto statistics { get; set; } public List<SonarrSeasonDto> seasons { get; set; } }
+    public class SonarrEpisodeDto { public int id { get; set; } public int seasonNumber { get; set; } public bool monitored { get; set; } public bool hasFile { get; set; } public string airDateUtc { get; set; } }
     public class ArrQueueItemDto { public int id { get; set; } public int movieId { get; set; } public int seriesId { get; set; } }
     public class ArrQueueDto { public List<ArrQueueItemDto> records { get; set; } }
     public class RecentEntry { public int TmdbId { get; set; } public bool HasFile { get; set; } public string Added { get; set; } }
 
-    /// <summary>Praat met Radarr (films) en Sonarr v4 (series).</summary>
+    /// <summary>Praat met Radarr (films) en Sonarr v4 (series), of in de Seerr-modus via SeerrClient met Seerr.</summary>
     internal class ArrClient
     {
         private static readonly HttpClient Http = new HttpClient(new HttpClientHandler { AutomaticDecompression = System.Net.DecompressionMethods.GZip | System.Net.DecompressionMethods.Deflate }) { Timeout = TimeSpan.FromSeconds(30) };
@@ -47,13 +48,26 @@ namespace Emby.Plugins.Discover
 
         public ArrClient(IJsonSerializer json) { _json = json; }
 
-        public static bool RadarrConfigured =>
+        /// <summary>GET op Radarr (sonarr = false) of Sonarr (sonarr = true) met de ingestelde URL en API-sleutel.</summary>
+        internal static Task<string> GetRaw(bool sonarr, string path, CancellationToken ct)
+        {
+            var cfg = Plugin.GetCurrentConfiguration();
+            return sonarr
+                ? Send(HttpMethod.Get, cfg.SonarrUrl, cfg.SonarrApiKey, path, null, ct)
+                : Send(HttpMethod.Get, cfg.RadarrUrl, cfg.RadarrApiKey, path, null, ct);
+        }
+
+        /// <summary>In de Seerr-modus: true als Seerr is ingesteld (Seerr regelt dan zowel films als series).</summary>
+        public static bool RadarrConfigured => SeerrClient.Enabled ? SeerrClient.Configured :
             !string.IsNullOrWhiteSpace(Plugin.GetCurrentConfiguration().RadarrUrl) &&
             !string.IsNullOrWhiteSpace(Plugin.GetCurrentConfiguration().RadarrApiKey);
 
-        public static bool SonarrConfigured =>
+        public static bool SonarrConfigured => SeerrClient.Enabled ? SeerrClient.Configured :
             !string.IsNullOrWhiteSpace(Plugin.GetCurrentConfiguration().SonarrUrl) &&
             !string.IsNullOrWhiteSpace(Plugin.GetCurrentConfiguration().SonarrApiKey);
+
+        /// <summary>Naam van de dienst waar aanvragen heen gaan, voor meldingen: "Seerr", of "Sonarr"/"Radarr".</summary>
+        public static string ServiceName(bool tv) => SeerrClient.Enabled ? "Seerr" : (tv ? "Sonarr" : "Radarr");
 
         /// <summary>Spaties weg, geen slash aan het eind en http:// ervoor als het schema ontbreekt.</summary>
         private static string NormalizeBase(string baseUrl)
@@ -109,6 +123,7 @@ namespace Emby.Plugins.Discover
         public async Task<Dictionary<int, bool>> GetMovieStates(CancellationToken ct)
         {
             if (!RadarrConfigured) return new Dictionary<int, bool>();
+            if (SeerrClient.Enabled) return await SeerrClient.GetStates(_json, false, ct).ConfigureAwait(false);
             var cachedNow = _movieCache;
             if (cachedNow != null && DateTime.UtcNow - _movieCacheAt < CacheTtl) return cachedNow;
 
@@ -136,6 +151,13 @@ namespace Emby.Plugins.Discover
         public async Task<Dictionary<int, bool>> GetSeriesStates(CancellationToken ct)
         {
             if (!SonarrConfigured) return new Dictionary<int, bool>();
+            if (SeerrClient.Enabled)
+            {
+                var seerrStates = await SeerrClient.GetStates(_json, true, ct).ConfigureAwait(false);
+                var seerrPartial = await SeerrClient.GetPartial(_json, ct).ConfigureAwait(false);
+                lock (_seriesCacheLock) { _seriesPartial = seerrPartial; }
+                return seerrStates;
+            }
             var cachedNow = _seriesCache;
             if (cachedNow != null && DateTime.UtcNow - _seriesCacheAt < CacheTtl) return cachedNow;
 
@@ -189,6 +211,7 @@ namespace Emby.Plugins.Discover
         public async Task<Dictionary<int, SonarrSeasonDto>> GetSeasonStates(int tmdbId, CancellationToken ct)
         {
             if (!SonarrConfigured) return new Dictionary<int, SonarrSeasonDto>();
+            if (SeerrClient.Enabled) return await SeerrClient.GetSeasonStates(_json, tmdbId, ct).ConfigureAwait(false);
             await GetSeriesStates(ct).ConfigureAwait(false);
             lock (_seriesCacheLock)
             {
@@ -202,6 +225,7 @@ namespace Emby.Plugins.Discover
         /// <summary>Laatst toegevoegde titels in Radarr/Sonarr (nieuwste eerst).</summary>
         public async Task<List<RecentEntry>> GetRecent(bool tv, CancellationToken ct)
         {
+            if (SeerrClient.Enabled) return await SeerrClient.GetRecent(_json, tv, ct).ConfigureAwait(false);
             if (tv) await GetSeriesStates(ct).ConfigureAwait(false); else await GetMovieStates(ct).ConfigureAwait(false);
             return new List<RecentEntry>(tv ? _seriesRecent : _movieRecent);
         }
@@ -253,6 +277,7 @@ namespace Emby.Plugins.Discover
         {
             _movieCache = null;
             _seriesCache = null;
+            SeerrClient.Invalidate();
             lock (_seriesCacheLock) { _seriesSeasonCache = new Dictionary<int, Dictionary<int, SonarrSeasonDto>>(); }
         }
 
@@ -277,8 +302,9 @@ namespace Emby.Plugins.Discover
         }
 
         /// <returns>true = nieuw toegevoegd, false = stond al in Radarr.</returns>
-        public async Task<bool> AddMovie(int tmdbId, string title, int year, CancellationToken ct)
+        public async Task<bool> AddMovie(int tmdbId, string title, int year, CancellationToken ct, object embyUserId = null)
         {
+            if (SeerrClient.Enabled) return await SeerrClient.Request(_json, false, tmdbId, 0, null, embyUserId, ct).ConfigureAwait(false);
             if (!RadarrConfigured) throw new InvalidOperationException("Radarr is niet ingesteld.");
             var cfg = Plugin.GetCurrentConfiguration();
 
@@ -302,20 +328,27 @@ namespace Emby.Plugins.Discover
         /// Voegt een serie toe. seasons = null of leeg → alle seizoenen (monitor all).
         /// Anders alleen de opgegeven seizoensnummers (0 = specials).
         /// </summary>
-        /// <returns>true = nieuw toegevoegd, false = stond al in Sonarr.</returns>
-        public async Task<bool> AddSeries(int tmdbId, int tvdbId, string title, int[] seasons, CancellationToken ct)
+        /// <remarks>
+        /// Staat de serie al in Sonarr, dan wordt die niet opnieuw toegevoegd maar uitgebreid (zie ExtendExistingSeries):
+        /// de gevraagde seizoenen gaan erbij op gemonitord en wat ontbreekt wordt gezocht.
+        /// </remarks>
+        /// <returns>true = nieuw toegevoegd of bij een bestaande serie iets aangezet/gezocht, false = er was niets te doen.</returns>
+        public async Task<bool> AddSeries(int tmdbId, int tvdbId, string title, int[] seasons, CancellationToken ct, object embyUserId = null)
         {
+            if (SeerrClient.Enabled) return await SeerrClient.Request(_json, true, tmdbId, tvdbId, seasons, embyUserId, ct).ConfigureAwait(false);
             if (!SonarrConfigured) throw new InvalidOperationException("Sonarr is niet ingesteld.");
             var cfg = Plugin.GetCurrentConfiguration();
 
             var states = await GetSeriesStates(ct).ConfigureAwait(false);
-            if (states.ContainsKey(tmdbId) || _seriesTvdbIds.Contains(tvdbId)) return false;
+            if (states.ContainsKey(tmdbId) || _seriesTvdbIds.Contains(tvdbId))
+                return await ExtendExistingSeries(tmdbId, tvdbId, title, seasons, ct).ConfigureAwait(false);
 
             var profile = await ResolveProfile(cfg.SonarrUrl, cfg.SonarrApiKey, cfg.SonarrQualityProfileId, ct).ConfigureAwait(false);
             var root = await ResolveRoot(cfg.SonarrUrl, cfg.SonarrApiKey, cfg.SonarrRootFolder, ct).ConfigureAwait(false);
 
             string addOptions;
             string seasonsJson = null;
+            string monitorNew = "none";
             if (seasons == null || seasons.Length == 0)
             {
                 addOptions = "{\"monitor\":\"all\",\"searchForMissingEpisodes\":true}";
@@ -327,6 +360,7 @@ namespace Emby.Plugins.Discover
                 // Alle seizoenen van Sonarr worden meegestuurd (gekozen = true, rest = false), zodat de rest ook echt uit blijft.
                 var selected = new HashSet<int>(seasons);
                 var all = new SortedSet<int>(selected);
+                var sonarrKnows = new HashSet<int>();
                 try
                 {
                     var lookupText = await Send(HttpMethod.Get, cfg.SonarrUrl, cfg.SonarrApiKey,
@@ -334,7 +368,7 @@ namespace Emby.Plugins.Discover
                     var lookup = _json.DeserializeFromString<List<SonarrSeriesDto>>(lookupText);
                     var found = lookup == null ? null : lookup.FirstOrDefault(x => x.tvdbId == tvdbId) ?? lookup.FirstOrDefault();
                     if (found != null && found.seasons != null)
-                        foreach (var sn in found.seasons) all.Add(sn.seasonNumber);
+                        foreach (var sn in found.seasons) { all.Add(sn.seasonNumber); sonarrKnows.Add(sn.seasonNumber); }
                 }
                 catch (Exception ex)
                 {
@@ -346,12 +380,19 @@ namespace Emby.Plugins.Discover
                     parts.Add("{\"seasonNumber\":" + n + ",\"monitored\":" + (selected.Contains(n) ? "true" : "false") + "}");
                 seasonsJson = "[" + string.Join(",", parts) + "]";
                 addOptions = "{\"searchForMissingEpisodes\":true}";
+                // Aangekondigd seizoen dat Sonarr (TVDB) nog niet kent: nieuwe seizoenen laten monitoren,
+                // dan staat het meteen aan zodra het in Sonarr verschijnt.
+                if (sonarrKnows.Count > 0 && selected.Any(n => !sonarrKnows.Contains(n)))
+                {
+                    monitorNew = "all";
+                    DiscoverDiagnostics.Add("Sonarr kent seizoen " + string.Join(",", selected.Where(n => !sonarrKnows.Contains(n))) + " van " + title + " nog niet: nieuwe seizoenen worden gemonitord");
+                }
             }
 
             var body = "{\"title\":\"" + Esc(title) + "\",\"tvdbId\":" + tvdbId +
                        ",\"qualityProfileId\":" + profile + ",\"rootFolderPath\":\"" + Esc(root) + "\"" +
                        ",\"monitored\":true,\"seasonFolder\":true,\"seriesType\":\"standard\"" +
-                       (seasonsJson != null ? ",\"seasons\":" + seasonsJson + ",\"monitorNewItems\":\"none\"" : "") +
+                       (seasonsJson != null ? ",\"seasons\":" + seasonsJson + ",\"monitorNewItems\":\"" + monitorNew + "\"" : "") +
                        ",\"addOptions\":" + addOptions + "}";
 
             var created = await Send(HttpMethod.Post, cfg.SonarrUrl, cfg.SonarrApiKey, "/api/v3/series", body, ct).ConfigureAwait(false);
@@ -373,6 +414,157 @@ namespace Emby.Plugins.Discover
                 else DiscoverDiagnostics.Add("Sonarr gaf geen serie-id terug voor " + title + "; seizoenen niet extra gecontroleerd");
             }
             return true;
+        }
+
+        /// <summary>Zoekt een serie in Sonarr op TVDB-id (snel), met terugval op de hele lijst (TMDB- of TVDB-id).</summary>
+        private async Task<SonarrSeriesDto> FindSeries(int tmdbId, int tvdbId, CancellationToken ct)
+        {
+            var cfg = Plugin.GetCurrentConfiguration();
+            if (tvdbId > 0)
+            {
+                try
+                {
+                    var one = await Send(HttpMethod.Get, cfg.SonarrUrl, cfg.SonarrApiKey, "/api/v3/series?tvdbId=" + tvdbId, null, ct).ConfigureAwait(false);
+                    var found = (_json.DeserializeFromString<List<SonarrSeriesDto>>(one) ?? new List<SonarrSeriesDto>()).FirstOrDefault(x => x.id > 0);
+                    if (found != null) return found;
+                }
+                catch (Exception ex)
+                {
+                    if (ex is OperationCanceledException) throw;
+                }
+            }
+            var text = await Send(HttpMethod.Get, cfg.SonarrUrl, cfg.SonarrApiKey, "/api/v3/series", null, ct).ConfigureAwait(false);
+            var list = _json.DeserializeFromString<List<SonarrSeriesDto>>(text) ?? new List<SonarrSeriesDto>();
+            return list.FirstOrDefault(x => tmdbId > 0 && x.tmdbId == tmdbId) ?? list.FirstOrDefault(x => tvdbId > 0 && x.tvdbId == tvdbId);
+        }
+
+        private static bool HasAired(string airDateUtc, DateTime nowUtc)
+        {
+            DateTime d;
+            return !string.IsNullOrEmpty(airDateUtc) &&
+                DateTime.TryParse(airDateUtc, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out d) &&
+                d <= nowUtc;
+        }
+
+        /// <summary>
+        /// De serie staat al in Sonarr. Zet de gevraagde seizoenen erbij op gemonitord (seasons = null of leeg: alle seizoenen
+        /// behalve specials) en start een zoekopdracht voor de uitgezonden afleveringen die nog ontbreken. Seizoenen die al
+        /// gemonitord waren worden niet uitgezet. Anders dan bij een nieuwe serie hoeft er niet gewacht te worden: Sonarr kent de afleveringen al.
+        /// </summary>
+        /// <returns>true = er is iets aangezet of er is een zoekopdracht gestart, false = er was niets te doen (of de serie bleek er niet meer te staan).</returns>
+        private async Task<bool> ExtendExistingSeries(int tmdbId, int tvdbId, string title, int[] seasons, CancellationToken ct)
+        {
+            var existing = await FindSeries(tmdbId, tvdbId, ct).ConfigureAwait(false);
+            if (existing == null) { InvalidateCaches(); return false; }
+
+            bool all = seasons == null || seasons.Length == 0;
+            var target = new SortedSet<int>();
+            if (all)
+            {
+                if (existing.seasons != null)
+                    foreach (var s in existing.seasons)
+                        if (s != null && s.seasonNumber > 0) target.Add(s.seasonNumber);
+            }
+            else
+            {
+                foreach (var n in seasons) target.Add(n);
+            }
+            if (target.Count == 0) return false;
+
+            bool changed = false;
+
+            // De serie zelf moet gemonitord zijn, anders grijpt Sonarr geen enkele aflevering.
+            if (!existing.monitored)
+            {
+                try
+                {
+                    await SendApi(HttpMethod.Put, "/series/editor", "{\"seriesIds\":[" + existing.id + "],\"monitored\":true}").ConfigureAwait(false);
+                    changed = true;
+                }
+                catch (Exception ex) { DiscoverDiagnostics.Add("Sonarr serie monitoren (" + title + "): " + ex.Message); }
+            }
+
+            // Seizoensvlag (alleen Sonarr v5 heeft dit endpoint; bij een fout gaan we gewoon door met de afleveringen).
+            var known = new Dictionary<int, SonarrSeasonDto>();
+            if (existing.seasons != null)
+                foreach (var s in existing.seasons)
+                    if (s != null) known[s.seasonNumber] = s;
+            // Gevraagd seizoen dat Sonarr nog niet kent (aangekondigd, TVDB loopt achter): nieuwe seizoenen laten monitoren.
+            var unknown = target.Where(n => !known.ContainsKey(n)).ToList();
+            // "Alle seizoenen" belooft ook latere seizoenen: dan ook nieuwe seizoenen laten monitoren.
+            if (all || unknown.Count > 0)
+            {
+                try
+                {
+                    await SendApi(HttpMethod.Put, "/series/editor", "{\"seriesIds\":[" + existing.id + "],\"monitorNewItems\":\"all\"}").ConfigureAwait(false);
+                    if (unknown.Count > 0) changed = true;
+                    DiscoverDiagnostics.Add(all ? "Sonarr: nieuwe seizoenen van " + title + " worden gemonitord"
+                        : "Sonarr kent seizoen " + string.Join(",", unknown) + " van " + title + " nog niet: nieuwe seizoenen worden gemonitord");
+                }
+                catch (Exception ex) { DiscoverDiagnostics.Add("Sonarr nieuwe seizoenen monitoren (" + title + "): " + ex.Message); }
+            }
+            foreach (var n in target)
+            {
+                SonarrSeasonDto sd;
+                if (!known.ContainsKey(n)) continue;   // bestaat (nog) niet in Sonarr
+                if (known.TryGetValue(n, out sd) && sd.monitored) continue;
+                try
+                {
+                    await SendApi(HttpMethod.Put, "/series/" + existing.id + "/season", "{\"seasonNumber\":" + n + ",\"monitored\":true}").ConfigureAwait(false);
+                    changed = true;
+                }
+                catch (Exception ex) { DiscoverDiagnostics.Add("Sonarr seizoen " + n + " monitoren (" + title + "): " + ex.Message); }
+            }
+
+            List<SonarrEpisodeDto> eps = null;
+            try
+            {
+                var t = await SendApi(HttpMethod.Get, "/episode?seriesId=" + existing.id, null).ConfigureAwait(false);
+                eps = _json.DeserializeFromString<List<SonarrEpisodeDto>>(t);
+            }
+            catch (Exception ex) { DiscoverDiagnostics.Add("Sonarr afleveringen ophalen (" + title + "): " + ex.Message); }
+            if (eps == null || eps.Count == 0)
+            {
+                DiscoverDiagnostics.Add("Sonarr kent de afleveringen van " + title + " niet; alleen de seizoensvlaggen zijn bijgewerkt");
+                if (changed) InvalidateCaches();
+                return changed;
+            }
+
+            // Alleen aanzetten, nooit uitzetten: een seizoen dat al gemonitord was blijft zoals het was.
+            var on = eps.Where(e => target.Contains(e.seasonNumber) && !e.monitored).Select(e => e.id).ToList();
+            if (on.Count > 0)
+            {
+                try
+                {
+                    await SendApi(HttpMethod.Put, "/episode/monitor", "{\"episodeIds\":[" + string.Join(",", on) + "],\"monitored\":true}").ConfigureAwait(false);
+                    changed = true;
+                }
+                catch (Exception ex) { DiscoverDiagnostics.Add("Sonarr afleveringen monitoren (" + title + "): " + ex.Message); }
+            }
+
+            // Zoeken alleen als er uitgezonden afleveringen zonder bestand zijn; wat nog niet is uitgezonden pakt Sonarr zelf op.
+            var now = DateTime.UtcNow;
+            var missing = new SortedSet<int>(eps
+                .Where(e => target.Contains(e.seasonNumber) && !e.hasFile && HasAired(e.airDateUtc, now))
+                .Select(e => e.seasonNumber));
+            if (missing.Count > 0)
+            {
+                try
+                {
+                    if (all)
+                        await SendApi(HttpMethod.Post, "/command", "{\"name\":\"SeriesSearch\",\"seriesId\":" + existing.id + "}").ConfigureAwait(false);
+                    else
+                        foreach (var n in missing)
+                            await SendApi(HttpMethod.Post, "/command", "{\"name\":\"SeasonSearch\",\"seriesId\":" + existing.id + ",\"seasonNumber\":" + n + "}").ConfigureAwait(false);
+                    changed = true;
+                }
+                catch (Exception ex) { DiscoverDiagnostics.Add("Sonarr zoeken (" + title + "): " + ex.Message); }
+            }
+
+            if (changed) InvalidateCaches();
+            DiscoverDiagnostics.Add("Sonarr " + title + " (stond al in Sonarr): seizoen " + string.Join(", ", target) + " gemonitord (" + on.Count +
+                " afleveringen aangezet), zoekopdracht voor " + (missing.Count == 0 ? "niets (geen ontbrekende uitgezonden afleveringen)" : (all ? "de hele serie" : "seizoen " + string.Join(", ", missing))));
+            return changed;
         }
 
         /// <summary>Sonarr v5 heeft /api/v5; oudere versies alleen /api/v3. Eerst v5, bij een fout v3.</summary>
@@ -487,6 +679,7 @@ namespace Emby.Plugins.Discover
         /// <returns>true = verwijderd uit Radarr, false = stond er niet in.</returns>
         public async Task<bool> RemoveMovie(int tmdbId, bool deleteFiles, CancellationToken ct)
         {
+            if (SeerrClient.Enabled) return await SeerrClient.Remove(_json, false, tmdbId, deleteFiles, ct).ConfigureAwait(false);
             if (!RadarrConfigured) throw new InvalidOperationException("Radarr is niet ingesteld.");
             var cfg = Plugin.GetCurrentConfiguration();
 
@@ -506,6 +699,7 @@ namespace Emby.Plugins.Discover
         /// <returns>true = verwijderd uit Sonarr, false = stond er niet in.</returns>
         public async Task<bool> RemoveSeries(int tmdbId, bool deleteFiles, CancellationToken ct)
         {
+            if (SeerrClient.Enabled) return await SeerrClient.Remove(_json, true, tmdbId, deleteFiles, ct).ConfigureAwait(false);
             if (!SonarrConfigured) throw new InvalidOperationException("Sonarr is niet ingesteld.");
             var cfg = Plugin.GetCurrentConfiguration();
 

@@ -41,6 +41,16 @@ namespace Emby.Plugins.Discover
             }
         }
 
+        /// <summary>Taal staat op Automatisch: de browser-scripts volgen dan de taal van de Emby-app van de kijker.</summary>
+        public static bool IsAuto
+        {
+            get
+            {
+                var configured = Plugin.GetCurrentConfiguration().PluginLanguage;
+                return string.IsNullOrWhiteSpace(configured) || string.Equals(configured, Auto, StringComparison.OrdinalIgnoreCase);
+            }
+        }
+
         public static bool IsDutch => PluginLanguage == Dutch;
         public static bool IsGerman => PluginLanguage == German;
         public static bool IsNorwegian => PluginLanguage == Norwegian;

@@ -81,13 +81,75 @@ namespace Emby.Plugins.Discover
         }
 
         /// <summary>Geeft het pad van het plaatje (uit de bewaarde bestanden of net gemaakt), of null als het niet lukt.</summary>
-        public static async Task<string> Create(string key, string text, string backgroundUrl, CancellationToken ct, string fallbackColor = null, bool allowStale = true)
+        // Achtergrondrij voor tegels die tijdens een kanaalverversing nog ontbreken: één tegelijk, zodat Emby niet stil valt.
+        private static readonly SemaphoreSlim BackgroundLane = new SemaphoreSlim(1, 1);
+        private static int _backgroundQueued;
+        private static int _backgroundMade;
+
+        /// <summary>
+        /// Maak een tegel op de achtergrond (niet wachten). Emby 4.11 vraagt kanaalmappen bij het openen niet altijd opnieuw op
+        /// bij de plugin; dan worden de tegels nooit "bij het openen" gemaakt. Zo staan ze er bij de volgende verversing wel.
+        /// </summary>
+        public static void EnsureInBackground(string key, string text, string backgroundUrl)
+        {
+            if (!Plugin.GetCurrentConfiguration().TileTextImages || string.IsNullOrEmpty(text) || string.IsNullOrEmpty(backgroundUrl)) return;
+            var tag = "bg|" + key + "|" + text + "|" + backgroundUrl;
+            lock (Building)
+            {
+                if (Building.Contains(tag) || _backgroundQueued >= 5000) return;
+                Building.Add(tag);
+                _backgroundQueued++;
+            }
+            Task.Run(async () =>
+            {
+                try
+                {
+                    await BackgroundLane.WaitAsync().ConfigureAwait(false);
+                    try
+                    {
+                        var made = await Create(key, text, backgroundUrl, CancellationToken.None, null, false).ConfigureAwait(false);
+                        if (made != null) Interlocked.Increment(ref _backgroundMade);
+                    }
+                    finally { BackgroundLane.Release(); }
+                }
+                catch (Exception ex) { DiscoverDiagnostics.Add("tegel op de achtergrond mislukt: " + ex.Message); }
+                finally
+                {
+                    bool drained;
+                    lock (Building) { Building.Remove(tag); _backgroundQueued--; drained = _backgroundQueued == 0; }
+                    // Rij leeg en er is iets gemaakt: Emby laten verversen, zodat de tegels met tekst ook echt verschijnen.
+                    if (drained && Interlocked.Exchange(ref _backgroundMade, 0) > 0) ChannelRefresher.Request("nieuwe tegels klaar");
+                }
+            });
+        }
+
+        /// <summary>
+        /// Al gemaakte tegel (liggend, zonder ffmpeg te starten), of een oudere versie ervan; anders null.
+        /// Voor de kanaalverversing zonder gebruiker: dan blijft de tekst op de tegel staan in plaats van te verdwijnen.
+        /// </summary>
+        public static string Existing(string key, string text, string backgroundUrl)
+        {
+            try
+            {
+                if (!Plugin.GetCurrentConfiguration().TileTextImages || string.IsNullOrEmpty(text)) return null;
+                var dir = Plugin.Instance.WorkDir("discover-tiles");
+                var final = Path.Combine(dir, string.Format("tile-{0}-{1}-v{2}.jpg", key, Hash(text + "|" + backgroundUrl + "|" + (string)null), TileVersion));
+                if (File.Exists(final) && new FileInfo(final).Length > 0) { CacheCleaner.Touch(final); return final; }
+                return FindStale(dir, "tile-" + key + "-????????-v" + TileVersion + ".jpg", final);
+            }
+            catch { return null; }
+        }
+
+        public static async Task<string> Create(string key, string text, string backgroundUrl, CancellationToken ct, string fallbackColor = null, bool allowStale = true, int width = 0, int height = 0)
         {
             try
             {
                 if (!Plugin.GetCurrentConfiguration().TileTextImages) return null;
                 if (string.IsNullOrEmpty(text)) return null;
                 if (string.IsNullOrEmpty(backgroundUrl) && string.IsNullOrEmpty(fallbackColor)) return null;
+                // Standaard liggend (1280x720); met width/height bv. een staande tegel (2:3) voor het "Alle seizoenen"-item.
+                int tw = width > 0 ? width : W;
+                int th = height > 0 ? height : H;
 
                 var ffmpeg = RequestCard.FindFfmpeg();
                 if (ffmpeg == null)
@@ -97,8 +159,8 @@ namespace Emby.Plugins.Discover
                 }
 
                 var dir = Plugin.Instance.WorkDir("discover-tiles");
-                var final = Path.Combine(dir, string.Format("tile-{0}-{1}-v{2}.jpg", key, Hash(text + "|" + backgroundUrl + "|" + fallbackColor), TileVersion));
-                if (File.Exists(final) && new FileInfo(final).Length > 0) return final;
+                var final = Path.Combine(dir, string.Format("tile-{0}-{1}-v{2}.jpg", key, Hash(text + "|" + backgroundUrl + "|" + fallbackColor + (width > 0 || height > 0 ? "|" + tw + "x" + th : "")), TileVersion));
+                if (File.Exists(final) && new FileInfo(final).Length > 0) { CacheCleaner.Touch(final); return final; }
 
                 // Is er al een eerder plaatje van deze tegel, toon dat dan meteen en maak het nieuwe op de achtergrond.
                 if (allowStale)
@@ -106,7 +168,7 @@ namespace Emby.Plugins.Discover
                     var stale = FindStale(dir, "tile-" + key + "-????????-v" + TileVersion + ".jpg", final);
                     if (stale != null)
                     {
-                        RebuildInBackground(final, () => Create(key, text, backgroundUrl, CancellationToken.None, fallbackColor, false));
+                        RebuildInBackground(final, () => Create(key, text, backgroundUrl, CancellationToken.None, fallbackColor, false, width, height));
                         return stale;
                     }
                 }
@@ -135,7 +197,7 @@ namespace Emby.Plugins.Discover
                         else if (!string.IsNullOrEmpty(fallbackColor))
                         {
                             DiscoverDiagnostics.Add("mapplaatje '" + text + "': effen achtergrond gebruikt");
-                            input = "-f lavfi -i color=c=0x" + fallbackColor.TrimStart('#') + ":s=" + W + "x" + H + ":d=1";
+                            input = "-f lavfi -i color=c=0x" + fallbackColor.TrimStart('#') + ":s=" + tw + "x" + th + ":d=1";
                         }
                         else
                         {
@@ -145,13 +207,16 @@ namespace Emby.Plugins.Discover
                         CopyResource("Poppins-Bold.ttf", Path.Combine(work, "bold.ttf"));
                         File.WriteAllText(Path.Combine(work, "text.txt"), text, new UTF8Encoding(false));
 
-                        // Lettergrootte: zo groot mogelijk (max 120), maar de tekst blijft binnen 1040 px van de 1280.
+                        // Lettergrootte: zo groot mogelijk (max 120), maar de tekst blijft binnen 81% van de breedte (1040 px van de 1280).
+                        // Bij meerdere regels (\n in de tekst) telt de breedste regel.
                         int size = 120;
-                        double width = RequestCard.Measure(text, size, true);
-                        if (width > 1040) size = (int)Math.Floor(size * 1040 / width);
+                        double textWidth = 0;
+                        foreach (var line in text.Split('\n')) textWidth = Math.Max(textWidth, RequestCard.Measure(line, size, true));
+                        double maxWidth = tw * 1040.0 / W;
+                        if (textWidth > maxWidth) size = (int)Math.Floor(size * maxWidth / textWidth);
 
                         // Eerst de volledige opmaak (donkerder, schaduw); werkt die niet in jouw ffmpeg, dan een eenvoudiger versie.
-                        var scaleCrop = "scale=" + W + ":" + H + ":force_original_aspect_ratio=increase,crop=" + W + ":" + H;
+                        var scaleCrop = "scale=" + tw + ":" + th + ":force_original_aspect_ratio=increase,crop=" + tw + ":" + th;
                         var full =
                             "[0:v]" + scaleCrop + "," +
                             "colorchannelmixer=rr=0.75:gg=0.75:bb=0.75," +
@@ -195,13 +260,6 @@ namespace Emby.Plugins.Discover
                         try { Directory.Delete(work, true); } catch { }
                     }
 
-                    // Oude plaatjes opruimen (30 dagen); de achtergronden wisselen mee met wat trending is.
-                    try
-                    {
-                        foreach (var f in Directory.GetFiles(dir, "tile-*.jpg"))
-                            if (File.GetLastWriteTimeUtc(f) < DateTime.UtcNow.AddDays(-30)) File.Delete(f);
-                    }
-                    catch { }
                     return final;
                 }
                 finally { Gate.Release(); }
@@ -212,6 +270,130 @@ namespace Emby.Plugins.Discover
             {
                 if (ex is OperationCanceledException) throw;
                 DiscoverDiagnostics.Add("mapplaatje '" + text + "' mislukt: " + ex.Message + " (plaatje zonder tekst gebruikt)");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Staande tegel (720x1080) voor "Alle seizoenen": het midden van een liggende achtergrondfoto van de serie, naar onderen
+        /// donkerder, met het logo van de serie (of de naam als tekst), een geel lijntje, het label en het aantal seizoenen.
+        /// Zo lijkt hij nooit op een seizoensposter. Null als het niet lukt (geen ffmpeg, geen achtergrond, ...).
+        /// </summary>
+        public static async Task<string> CreateAllSeasons(string key, string backdropUrl, string logoUrl, string name, string label, string sub, CancellationToken ct, bool allowStale = true)
+        {
+            const int tw = 720, th = 1080;
+            try
+            {
+                if (string.IsNullOrEmpty(backdropUrl) || string.IsNullOrEmpty(label)) return null;
+                var ffmpeg = RequestCard.FindFfmpeg();
+                if (ffmpeg == null) return null;
+                var dir = Plugin.Instance.WorkDir("discover-tiles");
+                var final = Path.Combine(dir, string.Format("alls-{0}-{1}-v{2}.jpg", key, Hash(backdropUrl + "|" + logoUrl + "|" + name + "|" + label + "|" + sub), TileVersion));
+                if (File.Exists(final) && new FileInfo(final).Length > 0) { CacheCleaner.Touch(final); return final; }
+                if (allowStale)
+                {
+                    var stale = FindStale(dir, "alls-" + key + "-????????-v" + TileVersion + ".jpg", final);
+                    if (stale != null)
+                    {
+                        RebuildInBackground(final, () => CreateAllSeasons(key, backdropUrl, logoUrl, name, label, sub, CancellationToken.None, false));
+                        return stale;
+                    }
+                }
+
+                var bgPre = await PreDownload(backdropUrl, dir, ".jpg", ct).ConfigureAwait(false);
+                if (bgPre == null) return null;
+                string logoPre = string.IsNullOrEmpty(logoUrl) ? null : await PreDownload(logoUrl, dir, ".png", ct).ConfigureAwait(false);
+                try
+                {
+                    await Gate.WaitAsync(ct).ConfigureAwait(false);
+                    try
+                    {
+                        if (File.Exists(final) && new FileInfo(final).Length > 0) return final;
+                        var work = Path.Combine(dir, "w-" + Guid.NewGuid().ToString("N"));
+                        Directory.CreateDirectory(work);
+                        try
+                        {
+                            File.Move(bgPre, Path.Combine(work, "bg.jpg")); bgPre = null;
+                            bool hasLogo = false;
+                            if (logoPre != null) { File.Move(logoPre, Path.Combine(work, "logo.png")); logoPre = null; hasLogo = true; }
+                            CopyResource("Poppins-Bold.ttf", Path.Combine(work, "bold.ttf"));
+                            CopyResource("Poppins-Regular.ttf", Path.Combine(work, "reg.ttf"));
+                            File.WriteAllText(Path.Combine(work, "label.txt"), label, new UTF8Encoding(false));
+                            File.WriteAllText(Path.Combine(work, "sub.txt"), sub ?? "", new UTF8Encoding(false));
+
+                            int labelSize = 76;
+                            double lw = RequestCard.Measure(label, labelSize, true);
+                            if (lw > tw * 0.86) labelSize = (int)Math.Floor(labelSize * tw * 0.86 / lw);
+
+                            // Achtergrond: midden uitsnijden, iets donkerder; daaronder een verloop naar bijna zwart.
+                            var chain = "[0:v]scale=" + tw + ":" + th + ":force_original_aspect_ratio=increase,crop=" + tw + ":" + th +
+                                        ",colorchannelmixer=rr=0.8:gg=0.8:bb=0.8,format=rgba[bg];" +
+                                        "color=c=black:s=" + tw + "x" + th + ":d=1,format=rgba,geq=r=8:g=12:b=24:a='if(gt(Y,H*0.3),min(235,30+205*pow((Y-H*0.3)/(H*0.7),1.1)),30)'[gr];" +
+                                        "[bg][gr]overlay=0:0[b0];";
+                            string last = "b0";
+                            if (hasLogo)
+                            {
+                                chain += "[1:v]format=rgba,scale=" + (int)(tw * 0.8) + ":" + (int)(th * 0.2) + ":force_original_aspect_ratio=decrease[lg];" +
+                                         "[b0][lg]overlay=x=(W-w)/2:y=" + (int)(th * 0.63) + "-h/2[b1];";
+                                last = "b1";
+                            }
+                            else
+                            {
+                                var nm = string.IsNullOrWhiteSpace(name) ? label : name.Trim();
+                                File.WriteAllText(Path.Combine(work, "name.txt"), nm, new UTF8Encoding(false));
+                                int ns = 84;
+                                double nw = RequestCard.Measure(nm, ns, true);
+                                if (nw > tw * 0.86) ns = Math.Max(40, (int)Math.Floor(ns * tw * 0.86 / nw));
+                                chain += "[b0]drawtext=fontfile=bold.ttf:textfile=name.txt:expansion=none:fontsize=" + ns +
+                                         ":fontcolor=white:x=(w-text_w)/2:y=" + (int)(th * 0.63) + "-text_h/2:shadowcolor=black@0.7:shadowx=3:shadowy=3[b1];";
+                                last = "b1";
+                            }
+                            chain += "[" + last + "]drawbox=x=" + (int)(tw * 0.2) + ":y=" + (int)(th * 0.75) + ":w=" + (int)(tw * 0.6) + ":h=4:color=0xFFC83C@1:t=fill," +
+                                     "drawtext=fontfile=bold.ttf:textfile=label.txt:expansion=none:fontsize=" + labelSize +
+                                     ":fontcolor=white:x=(w-text_w)/2:y=" + (int)(th * 0.775) + ":shadowcolor=black@0.6:shadowx=3:shadowy=3";
+                            if (!string.IsNullOrEmpty(sub))
+                                chain += ",drawtext=fontfile=reg.ttf:textfile=sub.txt:expansion=none:fontsize=40:fontcolor=0xFFC83C:x=(w-text_w)/2:y=" + (int)(th * 0.775 + labelSize * 1.25);
+                            chain += ",format=yuvj420p[v]";
+                            var args = "-y -hide_banner -loglevel error -i bg.jpg" + (hasLogo ? " -i logo.png" : "") +
+                                       " -filter_complex \"" + chain + "\" -map [v] -frames:v 1 -q:v 3 out.jpg";
+                            try { await RunFfmpeg(ffmpeg, work, args).ConfigureAwait(false); }
+                            catch (Exception lex) when (hasLogo)
+                            {
+                                // Logo onleesbaar (bv. een formaat dat ffmpeg niet kent): dan de naam als tekst.
+                                DiscoverDiagnostics.Add("logo voor 'alle seizoenen' onbruikbaar, naam als tekst: " + lex.Message);
+                                var nm2 = string.IsNullOrWhiteSpace(name) ? label : name.Trim();
+                                File.WriteAllText(Path.Combine(work, "name.txt"), nm2, new UTF8Encoding(false));
+                                int ns2 = 84;
+                                double nw2 = RequestCard.Measure(nm2, ns2, true);
+                                if (nw2 > tw * 0.86) ns2 = Math.Max(40, (int)Math.Floor(ns2 * tw * 0.86 / nw2));
+                                var chain2 = chain.Substring(0, chain.IndexOf("[1:v]", StringComparison.Ordinal)) +
+                                    "[b0]drawtext=fontfile=bold.ttf:textfile=name.txt:expansion=none:fontsize=" + ns2 +
+                                    ":fontcolor=white:x=(w-text_w)/2:y=" + (int)(th * 0.63) + "-text_h/2:shadowcolor=black@0.7:shadowx=3:shadowy=3[b1];" +
+                                    chain.Substring(chain.IndexOf("[b1]drawbox", StringComparison.Ordinal));
+                                var args2 = "-y -hide_banner -loglevel error -i bg.jpg -filter_complex \"" + chain2 + "\" -map [v] -frames:v 1 -q:v 3 out.jpg";
+                                await RunFfmpeg(ffmpeg, work, args2).ConfigureAwait(false);
+                            }
+                            var made = Path.Combine(work, "out.jpg");
+                            if (!File.Exists(made) || new FileInfo(made).Length == 0) throw new InvalidOperationException("ffmpeg maakte geen bestand");
+                            if (File.Exists(final)) File.Delete(final);
+                            File.Move(made, final);
+                            DiscoverDiagnostics.Add("tegel 'alle seizoenen' gemaakt: " + final);
+                        }
+                        finally { try { Directory.Delete(work, true); } catch { } }
+                        return final;
+                    }
+                    finally { Gate.Release(); }
+                }
+                finally
+                {
+                    if (bgPre != null) { try { File.Delete(bgPre); } catch { } }
+                    if (logoPre != null) { try { File.Delete(logoPre); } catch { } }
+                }
+            }
+            catch (Exception ex)
+            {
+                if (ex is OperationCanceledException) throw;
+                DiscoverDiagnostics.Add("tegel 'alle seizoenen' mislukt: " + ex.Message);
                 return null;
             }
         }
@@ -288,12 +470,6 @@ namespace Emby.Plugins.Discover
                         try { Directory.Delete(work, true); } catch { }
                     }
 
-                    try
-                    {
-                        foreach (var f in Directory.GetFiles(dir, "logo-*.png"))
-                            if (File.GetLastWriteTimeUtc(f) < DateTime.UtcNow.AddDays(-30)) File.Delete(f);
-                    }
-                    catch { }
                     return final;
                 }
                 finally { Gate.Release(); }

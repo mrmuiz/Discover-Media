@@ -22,6 +22,23 @@ namespace Emby.Plugins.Discover
         public int SonarrQualityProfileId { get; set; } = 0;
         public string SonarrRootFolder { get; set; } = "";
 
+        /// <summary>Waarheen aanvragen gaan: "arr" = rechtstreeks naar Radarr en Sonarr (standaard), "seerr" = via Seerr.</summary>
+        public string RequestService { get; set; } = "arr";
+        public string SeerrUrl { get; set; } = "";
+        public string SeerrApiKey { get; set; } = "";
+
+        /// <summary>Maximaal aantal aanvragen per gebruiker binnen RequestLimitDays (0 = geen limiet). Beheerders tellen niet mee. In de Seerr-modus regelt Seerr dit.</summary>
+        public int RequestLimit { get; set; } = 0;
+        public int RequestLimitDays { get; set; } = 7;
+
+        /// <summary>Optioneel: Trakt-watchlist als rij op de Discover-pagina (openbaar profiel nodig).</summary>
+        public string TraktUser { get; set; } = "";
+        public string TraktClientId { get; set; } = "";
+        /// <summary>Optioneel: openbare TMDB-lijst (id of link) als rij op de Discover-pagina.</summary>
+        public string TmdbListId { get; set; } = "";
+        /// <summary>Rij "Nieuwe seizoenen" (series in de bibliotheek met een nieuwer seizoen op TMDB).</summary>
+        public bool ShowNewSeasons { get; set; } = true;
+
         /// <summary>Optioneel: map van de Emby-webclient (met index.html) als die niet vanzelf gevonden wordt.</summary>
         public string DashboardUiPath { get; set; } = "";
 
@@ -44,5 +61,17 @@ namespace Emby.Plugins.Discover
 
         // Oorspronkelijke talen (ISO 639-1, komma-gescheiden, bv. "ja,ko,hi") die niet in rijen/mappen verschijnen.
         public string ExcludedOriginalLanguages { get; set; } = "";
+
+        /// <summary>Kaartclips en tekst-tegels per titel vooraf maken (tijdens de kanaalverversing). Uit = alleen als iemand ze nodig heeft.</summary>
+        public bool PrecreateCards { get; set; } = false;
+        /// <summary>Bewaartermijn kaartclips in dagen (0 = niet op leeftijd opruimen).</summary>
+        public int CardRetentionDays { get; set; } = 14;
+        /// <summary>Bewaartermijn tegelplaatjes in dagen (0 = niet op leeftijd opruimen).</summary>
+        public int TileRetentionDays { get; set; } = 30;
+        /// <summary>Maximale grootte van kaarten en tegels samen in MB (0 = geen limiet). Daarboven gaan de oudste bestanden eerst weg.</summary>
+        public int MaxCacheMb { get; set; } = 2048;
+
+        /// <summary>Emby-gebruikers (id, komma-gescheiden) die NIET mogen aanvragen. Leeg = iedereen mag.</summary>
+        public string BlockedUserIds { get; set; } = "";
     }
 }

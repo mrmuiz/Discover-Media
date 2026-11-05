@@ -22,12 +22,28 @@ namespace Emby.Plugins.Discover
         public List<TmdbCreditItem> crew { get; set; }
     }
 
+    public class TmdbPersonDetail
+    {
+        public int id { get; set; }
+        public string name { get; set; }
+        public string biography { get; set; }
+        public string birthday { get; set; }
+        public string deathday { get; set; }
+        public string place_of_birth { get; set; }
+        public string profile_path { get; set; }
+        public string known_for_department { get; set; }
+        /// <summary>0 onbekend, 1 vrouw, 2 man, 3 non-binair</summary>
+        public int gender { get; set; }
+    }
+
     public class TmdbPersonHit
     {
         public int id { get; set; }
         public string name { get; set; }
         public double popularity { get; set; }
         public string known_for_department { get; set; }
+        public string profile_path { get; set; }
+        public bool adult { get; set; }
     }
 
     public class TmdbPersonSearchPage
@@ -83,6 +99,35 @@ namespace Emby.Plugins.Discover
             var exact = hits.Where(h => string.Equals((h.name ?? "").Trim(), name.Trim(), StringComparison.OrdinalIgnoreCase))
                             .OrderByDescending(h => h.popularity).FirstOrDefault();
             return (exact ?? hits.OrderByDescending(h => h.popularity).FirstOrDefault())?.id ?? 0;
+        }
+
+        /// <summary>Personen voor de zoekbalk (met foto), populairste eerst.</summary>
+        public async Task<List<TmdbPersonHit>> SearchPeople(string query, CancellationToken ct)
+        {
+            if (string.IsNullOrWhiteSpace(query)) return new List<TmdbPersonHit>();
+            var page = await Get<TmdbPersonSearchPage>("/search/person", "&include_adult=false&query=" + Uri.EscapeDataString(query.Trim()),
+                FallbackLanguage, ct).ConfigureAwait(false);
+            return (page?.results ?? new List<TmdbPersonHit>())
+                .Where(h => h != null && !h.adult && h.id > 0)
+                .OrderByDescending(h => h.popularity)
+                .ToList();
+        }
+
+        /// <summary>Gegevens van een persoon; is de biografie in de gekozen taal leeg, dan de Engelse.</summary>
+        public async Task<TmdbPersonDetail> GetPerson(int personId, CancellationToken ct)
+        {
+            var lang = Language();
+            var p = await Get<TmdbPersonDetail>("/person/" + personId, "", lang, ct).ConfigureAwait(false);
+            if (p != null && string.IsNullOrWhiteSpace(p.biography) && !string.Equals(lang, FallbackLanguage, StringComparison.OrdinalIgnoreCase))
+            {
+                try
+                {
+                    var en = await Get<TmdbPersonDetail>("/person/" + personId, "", FallbackLanguage, ct).ConfigureAwait(false);
+                    if (en != null) p.biography = en.biography;
+                }
+                catch { /* alleen een aanvulling */ }
+            }
+            return p;
         }
 
         /// <summary>Films en series van een persoon: als acteur (niet als zichzelf) en als regisseur.</summary>
