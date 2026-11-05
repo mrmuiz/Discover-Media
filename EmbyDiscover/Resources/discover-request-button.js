@@ -8,7 +8,7 @@
         console.warn('[Discover] oudere knopcode is nog actief; vernieuw de webclient om dubbele handlers te voorkomen.');
         return;
     }
-    var DC_BUILD = 'big-r3 2026-11-05';
+    var DC_BUILD = 'big-r4 2026-11-05';
     window.__discoverRequestButton = true;
     window.__discoverRequestButtonVersion = '1.4.0.0';
     window.__discoverRequestButtonBuild = DC_BUILD;
@@ -1967,7 +1967,7 @@
     // ---- De Discover-popup boven de huidige pagina ----
     // Laadt de Discover-pagina één keer onzichtbaar (alleen de popup wordt gebruikt) met dezelfde controller
     // als de echte pagina, in "embedded"-modus. Zo is de popup overal gelijk: info, cast, seizoenen, trailer, aanvragen.
-    var DC_UI_PAGE = 'discoverui1085', DC_UI_JS = 'discoveruijs1379';
+    var DC_UI_PAGE = 'discoverui1085', DC_UI_JS = 'discoveruijs1380';
     var embedPromise = null;
     function pageText(c, name) {
         var url = c.getUrl('web/ConfigurationPage', { name: name });

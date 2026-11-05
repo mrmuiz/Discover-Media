@@ -623,15 +623,13 @@ define([], function () {
                 });
                 function newest(a, b) { return (b.Year || 0) - (a.Year || 0); }
                 films.sort(newest); series.sort(newest); mine.sort(newest);
-                // "Meer films van deze acteur / actrice / regisseur" (geslacht en vak uit TMDB).
-                var dir = who.Department === 'Directing', fem = who.Gender === 1;
-                var whoNl = dir ? 'deze regisseur' : fem ? 'deze actrice' : 'deze acteur';
-                var whoEn = dir ? 'this director' : fem ? 'this actress' : 'this actor';
-                var whoDe = dir ? (fem ? 'dieser Regisseurin' : 'dieses Regisseurs') : fem ? 'dieser Schauspielerin' : 'dieses Schauspielers';
-                var whoNo = dir ? 'denne regissøren' : fem ? 'denne skuespillerinnen' : 'denne skuespilleren';
+                // "Meer films met <naam>" (regisseur: "van <naam>"): altijd de naam, dus geen gok naar man of vrouw.
+                var nm = who.Name || name || '';
+                var dir = who.Department === 'Directing';
+                var withNl = dir ? ' van ' : ' met ', withEn = dir ? ' by ' : ' with ', withDe = dir ? ' von ' : ' mit ', withNo = dir ? ' av ' : ' med ';
                 var html = personRow(text('In je bibliotheek', 'In your library', 'In deiner Bibliothek', 'I biblioteket ditt'), 'person_lib', mine, embyIds) +
-                    personRow(text('Meer films van ' + whoNl, 'More movies from ' + whoEn, 'Weitere Filme ' + whoDe, 'Flere filmer med ' + whoNo), 'person_movie', films) +
-                    personRow(text('Meer series van ' + whoNl, 'More series from ' + whoEn, 'Weitere Serien ' + whoDe, 'Flere serier med ' + whoNo), 'person_tv', series);
+                    personRow(text('Meer films' + withNl + nm, 'More movies' + withEn + nm, 'Weitere Filme' + withDe + nm, 'Flere filmer' + withNo + nm), 'person_movie', films) +
+                    personRow(text('Meer series' + withNl + nm, 'More series' + withEn + nm, 'Weitere Serien' + withDe + nm, 'Flere serier' + withNo + nm), 'person_tv', series);
                 box.innerHTML = html || '<div class="dcMsg">' + text('Geen titels gevonden.', 'No titles found.', 'Keine Titel gefunden.') + '</div>';
                 setTimeout(updateAllArrows, 0);
                 // Achtergrond: de bekendste titel (hoogste score met achtergrond).
