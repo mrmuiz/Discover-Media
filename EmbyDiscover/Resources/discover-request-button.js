@@ -1149,12 +1149,7 @@
                 head.appendChild(rt);
             }
             if (head.textContent) { card.appendChild(head); }
-            if (info.SeasonOverview) {
-                var ov = document.createElement('div');
-                ov.className = 'discover-season-info-overview';
-                ov.textContent = info.SeasonOverview;
-                card.appendChild(ov);
-            }
+            // De seizoensbeschrijving staat al in de tekst onder de knop Request; hier alleen de extra's.
             // Het aantal afleveringen staat al in de beschrijving erboven.
             if (info.SeasonAirDate) {
                 appendSeasonInfoRow(card, text('Uitgezonden', 'Aired', 'Ausgestrahlt', 'Sendt'),
