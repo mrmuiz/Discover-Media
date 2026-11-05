@@ -123,7 +123,7 @@ namespace Emby.Plugins.Discover
             {
                 new PluginPageInfo
                 {
-                    Name = "discoverconfig1081",
+                    Name = "discoverconfig1082",
                     // Eigen naam, zodat het dashboard niet twee keer "Discover" onder elkaar toont.
                     DisplayName = DiscoverLanguage.Text("Discover-instellingen", "Discover settings", "Discover-Einstellungen"),
                     EmbeddedResourcePath = GetType().Namespace + ".Configuration.configPage.html",
