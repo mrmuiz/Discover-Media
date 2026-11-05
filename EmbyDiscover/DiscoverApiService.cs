@@ -161,6 +161,8 @@ namespace Emby.Plugins.Discover
         public string TmdbLanguage { get; set; }
         public bool RadarrSet { get; set; }
         public bool SonarrSet { get; set; }
+        /// <summary>"Seerr" in de Seerr-modus, anders leeg (rechtstreeks naar Radarr/Sonarr).</summary>
+        public string RequestService { get; set; }
         public string LoadedAt { get; set; }
         public int ChannelCalls { get; set; }
         public int Requests { get; set; }
@@ -386,6 +388,7 @@ namespace Emby.Plugins.Discover
                 TmdbLanguage = TmdbClient.Language(),
                 RadarrSet = ArrClient.RadarrConfigured,
                 SonarrSet = ArrClient.SonarrConfigured,
+                RequestService = SeerrClient.Enabled ? "Seerr" : "",
                 LoadedAt = DiscoverDiagnostics.LoadedUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss"),
                 ChannelCalls = DiscoverDiagnostics.ChannelCalls,
                 Requests = DiscoverDiagnostics.Requests,
@@ -936,11 +939,17 @@ namespace Emby.Plugins.Discover
             try
             {
                 object requesterId = null;
+                object requesterGuid = null;   // Emby-gebruikers-id zoals de Emby-API het toont (voor de koppeling met Seerr)
                 string requesterName = null;
                 try
                 {
                     var info = _auth.GetAuthorizationInfo(Request);
-                    if (info != null) { requesterId = info.UserId; requesterName = info.User != null ? info.User.Name : null; }
+                    if (info != null)
+                    {
+                        requesterId = info.UserId;
+                        requesterName = info.User != null ? info.User.Name : null;
+                        requesterGuid = info.User != null ? (object)info.User.Id : info.UserId;
+                    }
                 }
                 catch (Exception ex) { DiscoverDiagnostics.Add("gebruiker bij aanvraag niet te bepalen: " + ex.Message); }
                 if (!RequestAccess.IsAllowed(requesterId))
@@ -957,15 +966,15 @@ namespace Emby.Plugins.Discover
                 {
                     var t = await _tmdb.GetTv(request.TmdbId, CancellationToken.None).ConfigureAwait(false);
                     var ext = await _tmdb.GetTvExternalIds(request.TmdbId, CancellationToken.None).ConfigureAwait(false);
-                    if (ext?.tvdb_id == null)
+                    if (ext?.tvdb_id == null && !SeerrClient.Enabled)
                         throw new InvalidOperationException("Geen TVDB-id bij deze serie; Sonarr kan hem niet toevoegen.");
-                    added = await _arr.AddSeries(request.TmdbId, ext.tvdb_id.Value, t.name ?? t.title, request.Seasons, CancellationToken.None).ConfigureAwait(false);
+                    added = await _arr.AddSeries(request.TmdbId, ext?.tvdb_id ?? 0, t.name ?? t.title, request.Seasons, CancellationToken.None, requesterGuid).ConfigureAwait(false);
                     requested = t;
                 }
                 else
                 {
                     var m = await _tmdb.GetMovie(request.TmdbId, CancellationToken.None).ConfigureAwait(false);
-                    added = await _arr.AddMovie(request.TmdbId, m.title ?? m.name, YearOf(m.release_date), CancellationToken.None).ConfigureAwait(false);
+                    added = await _arr.AddMovie(request.TmdbId, m.title ?? m.name, YearOf(m.release_date), CancellationToken.None, requesterGuid).ConfigureAwait(false);
                     requested = m;
                 }
 
@@ -978,8 +987,11 @@ namespace Emby.Plugins.Discover
                     seasonNote = " (" + DiscoverLanguage.Text("seizoen ", "season ", "Staffel ") +
                         string.Join(", ", request.Seasons.OrderBy(x => x)) + ")";
                 res.Message = added
-                    ? DiscoverLanguage.Text("Aangevraagd", "Requested", "Angefordert") + seasonNote
-                    : DiscoverLanguage.Text("Stond al in ", "Already in ", "Bereits in ") + (tv ? "Sonarr" : "Radarr");
+                    ? DiscoverLanguage.Text("Aangevraagd", "Requested", "Angefordert") + seasonNote +
+                        (SeerrClient.WaitsForApproval(tv, request.TmdbId)
+                            ? DiscoverLanguage.Text(" (wacht op goedkeuring)", " (awaiting approval)", " (wartet auf Freigabe)")
+                            : "")
+                    : DiscoverLanguage.Text("Stond al in ", "Already in ", "Bereits in ") + ArrClient.ServiceName(tv);
                 _logger.Info("Discover: {0} {1} {2}", tv ? "serie" : "film", request.TmdbId, res.Message);
                 DiscoverDiagnostics.Add((tv ? "serie " : "film ") + request.TmdbId + ": " + res.Message);
                 DiscoverDiagnostics.CountRequest(true);
@@ -1042,8 +1054,8 @@ namespace Emby.Plugins.Discover
                 res.Success = true;
                 res.Status = 0;
                 res.Message = removed
-                    ? DiscoverLanguage.Text("Verwijderd uit ", "Removed from ", "Entfernt aus ") + (tv ? "Sonarr" : "Radarr")
-                    : DiscoverLanguage.Text("Stond niet meer in ", "Was no longer in ", "War nicht mehr in ") + (tv ? "Sonarr" : "Radarr");
+                    ? DiscoverLanguage.Text("Verwijderd uit ", "Removed from ", "Entfernt aus ") + ArrClient.ServiceName(tv)
+                    : DiscoverLanguage.Text("Stond niet meer in ", "Was no longer in ", "War nicht mehr in ") + ArrClient.ServiceName(tv);
                 _logger.Info("Discover: {0} {1} {2}", tv ? "serie" : "film", request.TmdbId, res.Message);
                 DiscoverDiagnostics.Add((tv ? "serie " : "film ") + request.TmdbId + ": " + res.Message);
             }
@@ -1075,7 +1087,7 @@ namespace Emby.Plugins.Discover
             catch (Exception ex)
             {
                 _logger.Error("Discover: status ophalen mislukt: {0}", ex.Message);
-                DiscoverDiagnostics.Add("FOUT status " + (tv ? "Sonarr" : "Radarr") + ": " + ex.Message);
+                DiscoverDiagnostics.Add("FOUT status " + ArrClient.ServiceName(tv) + ": " + ex.Message);
                 return new Dictionary<int, bool>();
             }
         }

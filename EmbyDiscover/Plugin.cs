@@ -103,7 +103,7 @@ namespace Emby.Plugins.Discover
         public override string Name => "Discover";
 
         public override string Description =>
-            "Discover movies and series (TMDB) in Emby and request them through Radarr and Sonarr.";
+            "Discover movies and series (TMDB) in Emby and request them through Radarr and Sonarr, or through Seerr.";
 
         // Emby stores plugin settings by this ID. Never change it between DLL versions.
         public override Guid Id => new Guid("7b0f3a52-4c1e-4a7b-9d2e-5f6c8a1b3d90");
@@ -139,12 +139,12 @@ namespace Emby.Plugins.Discover
                 },
                 new PluginPageInfo
                 {
-                    Name = "discoveruijs1373",
+                    Name = "discoveruijs1374",
                     EmbeddedResourcePath = GetType().Namespace + ".Configuration.discoverPage.js"
                 },
                 new PluginPageInfo
                 {
-                    Name = "discoverbuttonjs1373",
+                    Name = "discoverbuttonjs1374",
                     EmbeddedResourcePath = GetType().Namespace + ".Resources.discover-request-button.js"
                 },
                 new PluginPageInfo
@@ -154,12 +154,12 @@ namespace Emby.Plugins.Discover
                 },
                 new PluginPageInfo
                 {
-                    Name = "discoverstatusjs1100",
+                    Name = "discoverstatusjs1101",
                     EmbeddedResourcePath = GetType().Namespace + ".Configuration.statusPage.js"
                 },
                 new PluginPageInfo
                 {
-                    Name = "discoverconfigjs1350",
+                    Name = "discoverconfigjs1356",
                     EmbeddedResourcePath = GetType().Namespace + ".Configuration.configPage.js"
                 }
             };

@@ -8,7 +8,7 @@
         console.warn('[Discover] oudere knopcode is nog actief; vernieuw de webclient om dubbele handlers te voorkomen.');
         return;
     }
-    var DC_BUILD = 'rows-progress-r6 2026-11-04T21:25';
+    var DC_BUILD = 'seerr-r1 2026-11-05';
     window.__discoverRequestButton = true;
     window.__discoverRequestButtonVersion = '1.3.5.5';
     window.__discoverRequestButtonBuild = DC_BUILD;
@@ -345,6 +345,7 @@
         diagnosticsRequest = true;
         client.ajax({ type: 'GET', url: client.getUrl('Discover/Status'), dataType: 'json' }).then(function (status) {
             diagnosticsEnabled = !!(status && status.ShowDiagnostics);
+            window.__discoverRequestService = (status && status.RequestService) || '';
             // Automatisch: de taal van deze Emby-app (html lang), niet die van de server.
             var culture = String((status && status.PluginLanguageAuto && clientLanguage()) || (status && status.PluginLanguage) || '').toLowerCase();
             uiLanguage = culture.indexOf('nl') === 0 ? 'nl' : culture.indexOf('de') === 0 ? 'de' : (culture.indexOf('nb') === 0 || culture.indexOf('nn') === 0 || culture.indexOf('no') === 0) ? 'no' : 'en';
@@ -863,7 +864,7 @@
             e.stopImmediatePropagation();
             var cur = btn._info || info;
             if (!cur || cur.Status === 0 || rm.disabled) { return; }
-            var arr = cur.Type === 'tv' ? 'Sonarr' : 'Radarr';
+            var arr = window.__discoverRequestService || (cur.Type === 'tv' ? 'Sonarr' : 'Radarr');
             var withFiles = cur.Status === 2;
             var q = withFiles
                 ? text('"' + (cur.Title || 'Titel') + '" verwijderen uit ' + arr + ' EN de bestanden van schijf verwijderen?',

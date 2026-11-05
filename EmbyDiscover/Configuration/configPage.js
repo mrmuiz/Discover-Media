@@ -36,7 +36,20 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
     var TEXTS = {
         tab_general: ['Algemeen', 'General', 'Allgemein'],
         tab_tmdb: ['TMDB', 'TMDB', 'TMDB'],
-        tab_arr: ['Radarr & Sonarr', 'Radarr & Sonarr', 'Radarr & Sonarr'],
+        tab_arr: ['Aanvragen', 'Requests', 'Anfragen'],
+        desc_requestService: [
+            'Met Seerr gaan aanvragen naar Seerr, en Seerr stuurt ze door naar zijn eigen Radarr en Sonarr. Radarr en Sonarr hoef je hier dan niet in te stellen.',
+            'With Seerr, requests go to Seerr, which passes them on to its own Radarr and Sonarr. You then do not need to set up Radarr and Sonarr here.',
+            'Mit Seerr gehen Anfragen an Seerr, das sie an sein eigenes Radarr und Sonarr weitergibt. Radarr und Sonarr musst du hier dann nicht einrichten.'],
+        desc_seerrKey: ['Te vinden in Seerr onder Instellingen > Algemeen.', 'Found in Seerr under Settings > General.', 'Zu finden in Seerr unter Einstellungen > Allgemein.'],
+        lbl_chkSeerrRequestAsUser: [
+            'Aanvragen op naam van de Seerr-gebruiker die bij de Emby-gebruiker hoort',
+            'Request as the Seerr user that belongs to the Emby user',
+            'Im Namen des Seerr-Benutzers anfordern, der zum Emby-Benutzer gehört'],
+        desc_seerrAsUser: [
+            'Seerr-gebruikers die uit Emby zijn geïmporteerd worden herkend. Dan gelden hun rechten, limieten en goedkeuring in Seerr. Zonder koppeling (of met dit vinkje uit) gaat de aanvraag op naam van de eigenaar van de API key.',
+            'Seerr users imported from Emby are recognised, so their permissions, limits and approval in Seerr apply. Without a match (or with this box unticked) the request is made as the owner of the API key.',
+            'Aus Emby importierte Seerr-Benutzer werden erkannt; dann gelten ihre Rechte, Limits und Freigaben in Seerr. Ohne Zuordnung (oder ohne diesen Haken) wird im Namen des Besitzers des API-Schlüssels angefordert.'],
         tab_users: ['Gebruikers', 'Users', 'Benutzer'],
         tab_storage: ['Opslag', 'Storage', 'Speicher'],
         tab_diag: ['Diagnose', 'Diagnostics', 'Diagnose'],
@@ -84,6 +97,15 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         }
 
         label('txtTmdbKey', 'API key', 'API key', 'API-Schlüssel');
+        label('selRequestService', 'Aanvragen via', 'Send requests to', 'Anfragen senden an');
+        label('txtSeerrUrl', 'URL (bijv. http://192.168.1.10:5055)', 'URL (e.g. http://192.168.1.10:5055)', 'URL (z. B. http://192.168.1.10:5055)');
+        label('txtSeerrKey', 'API key', 'API key', 'API-Schlüssel');
+        var serviceSelect = el(view, 'selRequestService');
+        if (serviceSelect && serviceSelect.options.length > 1) {
+            serviceSelect.options[0].textContent = languageText('Radarr & Sonarr (rechtstreeks)', 'Radarr & Sonarr (directly)', 'Radarr & Sonarr (direkt)');
+        }
+        var seerrTest = view.querySelector('.btnTestSeerr span');
+        if (seerrTest) { seerrTest.textContent = languageText('Test verbinding', 'Test connection', 'Verbindung testen'); }
         label('selPluginLanguage', 'Plugin-taal', 'Plugin language', 'Plugin-Sprache');
         label('selTmdbLang', 'TMDB-taal', 'TMDB language', 'TMDB-Sprache');
         var diagLabel = el(view, 'lbl_chkShowDiagnostics');
@@ -294,6 +316,54 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         });
     }
 
+    // ---- Aanvragen via Radarr & Sonarr of via Seerr ----
+    function updateServiceView(view) {
+        var seerr = el(view, 'selRequestService').value === 'seerr';
+        el(view, 'seerrFields').style.display = seerr ? '' : 'none';
+        el(view, 'arrFields').style.display = seerr ? 'none' : '';
+    }
+
+    function testSeerr(view) {
+        var status = el(view, 'statusSeerr');
+        var url = el(view, 'txtSeerrUrl').value.trim();
+        var key = el(view, 'txtSeerrKey').value.trim();
+        status.style.color = '';
+        status.textContent = languageText('Testen...', 'Testing...', 'Verbindung wird getestet...');
+        ApiClient.ajax({
+            type: 'POST',
+            url: ApiClient.getUrl('Discover/TestConnection'),
+            data: JSON.stringify({ Type: 'Seerr', Url: url, ApiKey: key }),
+            contentType: 'application/json',
+            dataType: 'json'
+        }).then(function (r) {
+            if (!r || !r.Success) {
+                status.style.color = '#e53935';
+                status.textContent = languageText('Mislukt: ', 'Failed: ', 'Fehlgeschlagen: ') +
+                    ((r && r.Error) || languageText('onbekende fout', 'unknown error', 'unbekannter Fehler'));
+                return;
+            }
+            // Version = "versie|Radarr-servers|Sonarr-servers"
+            var parts = String(r.Version || '').split('|');
+            var msg = languageText('Verbonden met Seerr', 'Connected to Seerr', 'Verbunden mit Seerr') + (parts[0] ? ' ' + parts[0] : '');
+            if (parts.length >= 3) {
+                msg += ' - ' + parts[1] + ' Radarr-, ' + parts[2] + ' Sonarr-' + languageText('server(s) ingesteld in Seerr.', 'server(s) set up in Seerr.', 'Server in Seerr eingerichtet.');
+                if (parts[1] === '0' || parts[2] === '0') {
+                    msg += ' ' + languageText('Zonder Radarr- of Sonarr-server kan Seerr die aanvragen niet uitvoeren.',
+                        'Without a Radarr or Sonarr server Seerr cannot fulfil those requests.',
+                        'Ohne Radarr- oder Sonarr-Server kann Seerr diese Anfragen nicht ausführen.');
+                }
+            } else {
+                msg += '.';
+            }
+            status.style.color = '#43a047';
+            status.textContent = msg;
+        }, function (err) {
+            console.error('Discover: Seerr-test mislukt', err);
+            status.style.color = '#e53935';
+            status.textContent = languageText('Mislukt: ', 'Failed: ', 'Fehlgeschlagen: ') + ajaxErrorMessage(err);
+        });
+    }
+
     function intValue(view, id, fallback) {
         var v = parseInt(el(view, id).value, 10);
         return isNaN(v) || v < 0 ? fallback : v;
@@ -457,6 +527,11 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             }, function (err) {
                 console.error('Discover: Emby-taal ophalen mislukt', err);
             });
+            el(view, 'selRequestService').value = c.RequestService === 'seerr' ? 'seerr' : 'arr';
+            el(view, 'txtSeerrUrl').value = c.SeerrUrl || '';
+            el(view, 'txtSeerrKey').value = c.SeerrApiKey || '';
+            el(view, 'chkSeerrRequestAsUser').checked = c.SeerrRequestAsUser !== false;
+            updateServiceView(view);
             el(view, 'txtRadarrUrl').value = c.RadarrUrl || '';
             el(view, 'txtRadarrKey').value = c.RadarrApiKey || '';
             el(view, 'txtSonarrUrl').value = c.SonarrUrl || '';
@@ -467,6 +542,7 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             // Haal profielen/mappen automatisch op als URL en key bekend zijn
             if (c.RadarrUrl && c.RadarrApiKey) { testConnection(view, 'Radarr', state); }
             if (c.SonarrUrl && c.SonarrApiKey) { testConnection(view, 'Sonarr', state); }
+            if (c.RequestService === 'seerr' && c.SeerrUrl && c.SeerrApiKey) { testSeerr(view); }
             hideLoading();
         }, function (err) {
             console.error('Discover: config laden mislukt', err);
@@ -496,6 +572,10 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             if (state.usersLoaded) { c.BlockedUserIds = blockedFromList(view); }
             c.TmdbLanguageMode = tmdbLanguage === 'auto' ? 'auto' : 'manual';
             if (tmdbLanguage !== 'auto') { c.TmdbLanguage = tmdbLanguage; }
+            c.RequestService = el(view, 'selRequestService').value === 'seerr' ? 'seerr' : 'arr';
+            c.SeerrUrl = el(view, 'txtSeerrUrl').value.trim();
+            c.SeerrApiKey = el(view, 'txtSeerrKey').value.trim();
+            c.SeerrRequestAsUser = el(view, 'chkSeerrRequestAsUser').checked;
             c.RadarrUrl = el(view, 'txtRadarrUrl').value.trim();
             c.RadarrApiKey = el(view, 'txtRadarrKey').value.trim();
             c.RadarrQualityProfileId = parseInt(el(view, 'selRadarrProfile').value, 10) || 0;
@@ -655,6 +735,12 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         });
         view.querySelector('.btnTestSonarr').addEventListener('click', function () {
             testConnection(view, 'Sonarr', state);
+        });
+        view.querySelector('.btnTestSeerr').addEventListener('click', function () {
+            testSeerr(view);
+        });
+        el(view, 'selRequestService').addEventListener('change', function () {
+            updateServiceView(view);
         });
 
         // Oogje bij de API keys: tonen of verbergen (standaard verborgen).

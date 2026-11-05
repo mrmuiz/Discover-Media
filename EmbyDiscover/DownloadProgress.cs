@@ -108,6 +108,15 @@ namespace Emby.Plugins.Discover
             {
                 c = _cache;
                 if (c != null && DateTime.UtcNow - _cacheAt < Ttl) return c;
+                if (SeerrClient.Enabled)
+                {
+                    var seerrParts = SeerrClient.Configured
+                        ? await SeerrClient.GetQueueParts(json, ct).ConfigureAwait(false)
+                        : new List<RawPart>();
+                    _cache = seerrParts;
+                    _cacheAt = DateTime.UtcNow;
+                    return seerrParts;
+                }
                 var list = new List<RawPart>();
                 var movies = ArrClient.RadarrConfigured ? ReadSafe(json, false, ct) : Task.FromResult(new List<ArrQueueFullItemDto>());
                 var series = ArrClient.SonarrConfigured ? ReadSafe(json, true, ct) : Task.FromResult(new List<ArrQueueFullItemDto>());

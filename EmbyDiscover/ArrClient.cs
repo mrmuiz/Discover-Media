@@ -21,7 +21,7 @@ namespace Emby.Plugins.Discover
     public class ArrQueueDto { public List<ArrQueueItemDto> records { get; set; } }
     public class RecentEntry { public int TmdbId { get; set; } public bool HasFile { get; set; } public string Added { get; set; } }
 
-    /// <summary>Praat met Radarr (films) en Sonarr v4 (series).</summary>
+    /// <summary>Praat met Radarr (films) en Sonarr v4 (series), of in de Seerr-modus via SeerrClient met Seerr.</summary>
     internal class ArrClient
     {
         private static readonly HttpClient Http = new HttpClient(new HttpClientHandler { AutomaticDecompression = System.Net.DecompressionMethods.GZip | System.Net.DecompressionMethods.Deflate }) { Timeout = TimeSpan.FromSeconds(30) };
@@ -57,13 +57,17 @@ namespace Emby.Plugins.Discover
                 : Send(HttpMethod.Get, cfg.RadarrUrl, cfg.RadarrApiKey, path, null, ct);
         }
 
-        public static bool RadarrConfigured =>
+        /// <summary>In de Seerr-modus: true als Seerr is ingesteld (Seerr regelt dan zowel films als series).</summary>
+        public static bool RadarrConfigured => SeerrClient.Enabled ? SeerrClient.Configured :
             !string.IsNullOrWhiteSpace(Plugin.GetCurrentConfiguration().RadarrUrl) &&
             !string.IsNullOrWhiteSpace(Plugin.GetCurrentConfiguration().RadarrApiKey);
 
-        public static bool SonarrConfigured =>
+        public static bool SonarrConfigured => SeerrClient.Enabled ? SeerrClient.Configured :
             !string.IsNullOrWhiteSpace(Plugin.GetCurrentConfiguration().SonarrUrl) &&
             !string.IsNullOrWhiteSpace(Plugin.GetCurrentConfiguration().SonarrApiKey);
+
+        /// <summary>Naam van de dienst waar aanvragen heen gaan, voor meldingen: "Seerr", of "Sonarr"/"Radarr".</summary>
+        public static string ServiceName(bool tv) => SeerrClient.Enabled ? "Seerr" : (tv ? "Sonarr" : "Radarr");
 
         /// <summary>Spaties weg, geen slash aan het eind en http:// ervoor als het schema ontbreekt.</summary>
         private static string NormalizeBase(string baseUrl)
@@ -119,6 +123,7 @@ namespace Emby.Plugins.Discover
         public async Task<Dictionary<int, bool>> GetMovieStates(CancellationToken ct)
         {
             if (!RadarrConfigured) return new Dictionary<int, bool>();
+            if (SeerrClient.Enabled) return await SeerrClient.GetStates(_json, false, ct).ConfigureAwait(false);
             var cachedNow = _movieCache;
             if (cachedNow != null && DateTime.UtcNow - _movieCacheAt < CacheTtl) return cachedNow;
 
@@ -146,6 +151,13 @@ namespace Emby.Plugins.Discover
         public async Task<Dictionary<int, bool>> GetSeriesStates(CancellationToken ct)
         {
             if (!SonarrConfigured) return new Dictionary<int, bool>();
+            if (SeerrClient.Enabled)
+            {
+                var seerrStates = await SeerrClient.GetStates(_json, true, ct).ConfigureAwait(false);
+                var seerrPartial = await SeerrClient.GetPartial(_json, ct).ConfigureAwait(false);
+                lock (_seriesCacheLock) { _seriesPartial = seerrPartial; }
+                return seerrStates;
+            }
             var cachedNow = _seriesCache;
             if (cachedNow != null && DateTime.UtcNow - _seriesCacheAt < CacheTtl) return cachedNow;
 
@@ -199,6 +211,7 @@ namespace Emby.Plugins.Discover
         public async Task<Dictionary<int, SonarrSeasonDto>> GetSeasonStates(int tmdbId, CancellationToken ct)
         {
             if (!SonarrConfigured) return new Dictionary<int, SonarrSeasonDto>();
+            if (SeerrClient.Enabled) return await SeerrClient.GetSeasonStates(_json, tmdbId, ct).ConfigureAwait(false);
             await GetSeriesStates(ct).ConfigureAwait(false);
             lock (_seriesCacheLock)
             {
@@ -212,6 +225,7 @@ namespace Emby.Plugins.Discover
         /// <summary>Laatst toegevoegde titels in Radarr/Sonarr (nieuwste eerst).</summary>
         public async Task<List<RecentEntry>> GetRecent(bool tv, CancellationToken ct)
         {
+            if (SeerrClient.Enabled) return await SeerrClient.GetRecent(_json, tv, ct).ConfigureAwait(false);
             if (tv) await GetSeriesStates(ct).ConfigureAwait(false); else await GetMovieStates(ct).ConfigureAwait(false);
             return new List<RecentEntry>(tv ? _seriesRecent : _movieRecent);
         }
@@ -263,6 +277,7 @@ namespace Emby.Plugins.Discover
         {
             _movieCache = null;
             _seriesCache = null;
+            SeerrClient.Invalidate();
             lock (_seriesCacheLock) { _seriesSeasonCache = new Dictionary<int, Dictionary<int, SonarrSeasonDto>>(); }
         }
 
@@ -287,8 +302,9 @@ namespace Emby.Plugins.Discover
         }
 
         /// <returns>true = nieuw toegevoegd, false = stond al in Radarr.</returns>
-        public async Task<bool> AddMovie(int tmdbId, string title, int year, CancellationToken ct)
+        public async Task<bool> AddMovie(int tmdbId, string title, int year, CancellationToken ct, object embyUserId = null)
         {
+            if (SeerrClient.Enabled) return await SeerrClient.Request(_json, false, tmdbId, 0, null, embyUserId, ct).ConfigureAwait(false);
             if (!RadarrConfigured) throw new InvalidOperationException("Radarr is niet ingesteld.");
             var cfg = Plugin.GetCurrentConfiguration();
 
@@ -317,8 +333,9 @@ namespace Emby.Plugins.Discover
         /// de gevraagde seizoenen gaan erbij op gemonitord en wat ontbreekt wordt gezocht.
         /// </remarks>
         /// <returns>true = nieuw toegevoegd of bij een bestaande serie iets aangezet/gezocht, false = er was niets te doen.</returns>
-        public async Task<bool> AddSeries(int tmdbId, int tvdbId, string title, int[] seasons, CancellationToken ct)
+        public async Task<bool> AddSeries(int tmdbId, int tvdbId, string title, int[] seasons, CancellationToken ct, object embyUserId = null)
         {
+            if (SeerrClient.Enabled) return await SeerrClient.Request(_json, true, tmdbId, tvdbId, seasons, embyUserId, ct).ConfigureAwait(false);
             if (!SonarrConfigured) throw new InvalidOperationException("Sonarr is niet ingesteld.");
             var cfg = Plugin.GetCurrentConfiguration();
 
@@ -638,6 +655,7 @@ namespace Emby.Plugins.Discover
         /// <returns>true = verwijderd uit Radarr, false = stond er niet in.</returns>
         public async Task<bool> RemoveMovie(int tmdbId, bool deleteFiles, CancellationToken ct)
         {
+            if (SeerrClient.Enabled) return await SeerrClient.Remove(_json, false, tmdbId, deleteFiles, ct).ConfigureAwait(false);
             if (!RadarrConfigured) throw new InvalidOperationException("Radarr is niet ingesteld.");
             var cfg = Plugin.GetCurrentConfiguration();
 
@@ -657,6 +675,7 @@ namespace Emby.Plugins.Discover
         /// <returns>true = verwijderd uit Sonarr, false = stond er niet in.</returns>
         public async Task<bool> RemoveSeries(int tmdbId, bool deleteFiles, CancellationToken ct)
         {
+            if (SeerrClient.Enabled) return await SeerrClient.Remove(_json, true, tmdbId, deleteFiles, ct).ConfigureAwait(false);
             if (!SonarrConfigured) throw new InvalidOperationException("Sonarr is niet ingesteld.");
             var cfg = Plugin.GetCurrentConfiguration();
 

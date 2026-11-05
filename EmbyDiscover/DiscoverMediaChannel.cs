@@ -200,7 +200,7 @@ namespace Emby.Plugins.Discover
                 throw new InvalidOperationException("Titelgegevens van TMDB niet beschikbaar voor " + rest + "; probeer het zo opnieuw.");
 
             string title = TitleOf(t, tv);
-            string arr = tv ? "Sonarr" : "Radarr";
+            string arr = ArrClient.ServiceName(tv);
 
             // Status (Radarr/Sonarr) en extra info (TMDB) tegelijk ophalen; mislukt de extra info, dan blijft het bij de basis.
             var statesTask = SafeStates(tv, ct);
@@ -371,7 +371,12 @@ namespace Emby.Plugins.Discover
                     "Druk op \u25B6 om alle seizoenen in \u00E9\u00E9n keer aan te vragen, ook seizoenen die later uitkomen.",
                     "Press \u25B6 to request all seasons at once, including seasons released later.",
                     "Drücke auf \u25B6, um alle Staffeln auf einmal anzufordern, auch später erscheinende Staffeln.");
-                if (sonarrSeasons.Count > 0)
+                if (sonarrSeasons.Count > 0 && SeerrClient.Enabled)
+                    allOverview += "\n\n" + DiscoverLanguage.Text(
+                        "\u23F3 Deze serie is al aangevraagd in Seerr. Opnieuw aanvragen vraagt de seizoenen aan die nog niet zijn aangevraagd.",
+                        "\u23F3 This series has already been requested in Seerr. Requesting again requests the seasons that have not been requested yet.",
+                        "\u23F3 Diese Serie wurde bereits in Seerr angefordert. Eine erneute Anfrage fordert die noch nicht angeforderten Staffeln an.");
+                else if (sonarrSeasons.Count > 0)
                     allOverview += "\n\n" + DiscoverLanguage.Text(
                         "\u23F3 Deze serie staat al in Sonarr. Opnieuw aanvragen zet alle seizoenen (behalve specials) op gemonitord en zoekt naar ontbrekende afleveringen.",
                         "\u23F3 This series is already in Sonarr. Requesting again monitors all seasons (except specials) and searches for missing episodes.",
@@ -454,9 +459,9 @@ namespace Emby.Plugins.Discover
                         "\u2713 Teilweise verfügbar: Einige Folgen befinden sich bereits in deiner Bibliothek. Drücke auf \u25B6, um die Staffel erneut anzufordern.");
                 else if (showHourglass)
                     overview = DiscoverLanguage.Text(
-                        "\u23F3 Dit seizoen is al aangevraagd en staat in Sonarr. Druk op \u25B6 om het opnieuw aan te vragen.",
-                        "\u23F3 This season has already been requested from Sonarr. Press \u25B6 to request it again.",
-                        "\u23F3 Diese Staffel wurde bereits bei Sonarr angefordert. Drücke auf \u25B6, um sie erneut anzufordern.");
+                        "\u23F3 Dit seizoen is al aangevraagd en staat in " + ArrClient.ServiceName(true) + ". Druk op \u25B6 om het opnieuw aan te vragen.",
+                        "\u23F3 This season has already been requested from " + ArrClient.ServiceName(true) + ". Press \u25B6 to request it again.",
+                        "\u23F3 Diese Staffel wurde bereits bei " + ArrClient.ServiceName(true) + " angefordert. Drücke auf \u25B6, um sie erneut anzufordern.");
                 else
                     overview = DiscoverLanguage.Text(
                         "Druk op \u25B6 om alleen seizoen " + seasonNumber + " aan te vragen.",
@@ -1164,28 +1169,28 @@ namespace Emby.Plugins.Discover
 
 
         /// <summary>Vraagt een titel aan bij Radarr/Sonarr; null seasons behoudt de bestaande all-seasons-aanvraag.</summary>
-        internal static async Task<string> RequestTitle(TmdbClient tmdb, ArrClient arr, bool tv, int tmdbId, int[] seasons, CancellationToken ct)
+        internal static async Task<string> RequestTitle(TmdbClient tmdb, ArrClient arr, bool tv, int tmdbId, int[] seasons, CancellationToken ct, object embyUserId = null)
         {
             bool added;
             if (tv)
             {
                 var t = await tmdb.GetTv(tmdbId, ct).ConfigureAwait(false);
                 var ext = await tmdb.GetTvExternalIds(tmdbId, ct).ConfigureAwait(false);
-                if (ext == null || ext.tvdb_id == null)
+                if ((ext == null || ext.tvdb_id == null) && !SeerrClient.Enabled)
                     throw new InvalidOperationException("Geen TVDB-id bij deze serie; Sonarr kan hem niet toevoegen.");
-                added = await arr.AddSeries(tmdbId, ext.tvdb_id.Value, t.name ?? t.title, seasons, ct).ConfigureAwait(false);
+                added = await arr.AddSeries(tmdbId, ext?.tvdb_id ?? 0, t.name ?? t.title, seasons, ct, embyUserId).ConfigureAwait(false);
             }
             else
             {
                 var m = await tmdb.GetMovie(tmdbId, ct).ConfigureAwait(false);
-                added = await arr.AddMovie(tmdbId, m.title ?? m.name, YearOf(m.release_date) ?? 0, ct).ConfigureAwait(false);
+                added = await arr.AddMovie(tmdbId, m.title ?? m.name, YearOf(m.release_date) ?? 0, ct, embyUserId).ConfigureAwait(false);
             }
             DiscoverDiagnostics.CountRequest(true);
             return added
                 ? (seasons != null && seasons.Length > 0
                     ? "Aangevraagd seizoen " + string.Join(", ", seasons)
                     : "Aangevraagd")
-                : "Stond al in " + (tv ? "Sonarr" : "Radarr");
+                : "Stond al in " + ArrClient.ServiceName(tv);
         }
 
         // ---------- Koppeling met het knop-script ----------

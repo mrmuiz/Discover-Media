@@ -5,7 +5,7 @@
     <title>Discover</title>
 </head>
 <body>
-<div data-role="page" class="page type-interior pluginConfigurationPage discoverConfigPage" data-require="emby-input,emby-button,emby-select,emby-checkbox" data-controller="__plugin/discoverconfigjs1350">
+<div data-role="page" class="page type-interior pluginConfigurationPage discoverConfigPage" data-require="emby-input,emby-button,emby-select,emby-checkbox" data-controller="__plugin/discoverconfigjs1356">
     <style>
         .discoverConfigPage .keyWrap { position: relative; }
         .discoverConfigPage .keyWrap input { padding-right: 2.8em; }
@@ -31,7 +31,7 @@
                 <div class="dcTabs" role="tablist">
                     <button type="button" class="dcTab active" role="tab" data-tab="general" id="tab_general">Algemeen</button>
                     <button type="button" class="dcTab" role="tab" data-tab="tmdb" id="tab_tmdb">TMDB</button>
-                    <button type="button" class="dcTab" role="tab" data-tab="arr" id="tab_arr">Radarr &amp; Sonarr</button>
+                    <button type="button" class="dcTab" role="tab" data-tab="arr" id="tab_arr">Aanvragen</button>
                     <button type="button" class="dcTab" role="tab" data-tab="users" id="tab_users">Gebruikers</button>
                     <button type="button" class="dcTab" role="tab" data-tab="storage" id="tab_storage">Opslag</button>
                     <button type="button" class="dcTab" role="tab" data-tab="diag" id="tab_diag">Diagnose</button>
@@ -100,6 +100,47 @@
 
                 <!-- Radarr & Sonarr -->
                 <div class="dcPanel" data-panel="arr">
+                <div class="selectContainer">
+                    <label class="selectLabel" for="selRequestService">Aanvragen via</label>
+                    <select is="emby-select" id="selRequestService">
+                        <option value="arr">Radarr &amp; Sonarr (rechtstreeks)</option>
+                        <option value="seerr">Seerr</option>
+                    </select>
+                    <div class="fieldDescription" id="desc_requestService">Met Seerr gaan aanvragen naar Seerr, en Seerr stuurt ze door naar zijn eigen Radarr en Sonarr. Radarr en Sonarr hoef je hier dan niet in te stellen.</div>
+                </div>
+
+                <!-- Seerr -->
+                <div id="seerrFields">
+                <h3 id="hdgSeerr">Seerr</h3>
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused" for="txtSeerrUrl">URL (bijv. http://192.168.1.10:5055)</label>
+                    <input is="emby-input" type="text" id="txtSeerrUrl" />
+                </div>
+                <div class="inputContainer keyWrap">
+                    <label class="inputLabel inputLabelUnfocused" for="txtSeerrKey">API key</label>
+                    <input is="emby-input" type="password" id="txtSeerrKey" autocomplete="new-password" spellcheck="false" />
+                    <button is="emby-button" type="button" class="paper-icon-button-light btnToggleKey" data-target="txtSeerrKey" title="Tonen" aria-label="Tonen"><i class="md-icon">visibility</i></button>
+                    <div class="fieldDescription" id="desc_seerrKey">Te vinden in Seerr onder Instellingen &gt; Algemeen.</div>
+                </div>
+                <div>
+                    <button is="emby-button" type="button" class="raised btnTestSeerr"><span>Test verbinding</span></button>
+                    <div class="fieldDescription testStatus" id="statusSeerr" style="margin-top:.5em;"></div>
+                </div>
+                <div class="checkboxContainer">
+                    <label class="emby-checkbox-label">
+                        <input is="emby-checkbox" type="checkbox" id="chkSeerrRequestAsUser" />
+                        <span class="checkboxLabel" id="lbl_chkSeerrRequestAsUser">Aanvragen op naam van de Seerr-gebruiker die bij de Emby-gebruiker hoort</span>
+                        <span class="emby-checkbox-outline">
+                            <span class="emby-checkbox-on"><i class="md-icon">check</i></span>
+                            <span class="emby-checkbox-off"></span>
+                        </span>
+                    </label>
+                    <div class="fieldDescription" id="desc_seerrAsUser">Seerr-gebruikers die uit Emby zijn geïmporteerd worden herkend. Dan gelden hun rechten, limieten en goedkeuring in Seerr. Zonder koppeling (of met dit vinkje uit) gaat de aanvraag op naam van de eigenaar van de API key.</div>
+                </div>
+                </div>
+
+                <!-- Radarr & Sonarr -->
+                <div id="arrFields">
                 <h3 id="hdgRadarr">Radarr (films)</h3>
                 <div class="inputContainer">
                     <label class="inputLabel inputLabelUnfocused" for="txtRadarrUrl">URL (bijv. http://192.168.1.10:7878)</label>
@@ -144,6 +185,7 @@
                 <div class="selectContainer">
                     <label class="selectLabel" for="selSonarrRoot">Root folder</label>
                     <select is="emby-select" id="selSonarrRoot"></select>
+                </div>
                 </div>
 
                 </div>

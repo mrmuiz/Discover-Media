@@ -38,8 +38,8 @@ define([], function () {
             return;
         }
         var urls = [
-            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1373' }),
-            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1373' }),
+            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1374' }),
+            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1374' }),
             ApiClient.getUrl('Plugins/Discover/Script')
         ];
         var n = 0;
@@ -77,6 +77,7 @@ define([], function () {
         api('GET', 'Discover/Status').then(function (r) {
             diagEl.style.display = r.ShowDiagnostics ? '' : 'none';
             showTrailer = r.ShowTrailerTile !== false;
+            window.__discoverRequestService = r.RequestService || '';
             diag.status = 'v' + (r.PluginVersion || '?') + ' | ' + text('pluginresource: ', 'plugin resource: ', 'Pluginressource: ') + (r.ButtonScript || text('onbekend', 'unknown', 'unbekannt'));
             showDiag();
         }, function () { diag.status = text('status ophalen mislukt', 'could not fetch status', 'Status konnte nicht abgerufen werden'); showDiag(); });
@@ -949,7 +950,7 @@ define([], function () {
         overlay.querySelector('.dcBtnDel').addEventListener('click', function () {
             var i = current;
             if (!i || i.Status === 0) { return; }
-            var arr = i.Type === 'tv' ? 'Sonarr' : 'Radarr';
+            var arr = window.__discoverRequestService || (i.Type === 'tv' ? 'Sonarr' : 'Radarr');
             var withFiles = i.Status === 2;
             var q = withFiles
                 ? text('"' + i.Title + '" verwijderen uit ' + arr + ' EN de bestanden van schijf verwijderen?',
