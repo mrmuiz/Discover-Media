@@ -51,6 +51,22 @@ namespace Emby.Plugins.Discover
         public List<string> Urls { get; set; } = new List<string>();
     }
 
+    [Route("/Discover/ItemBackdrop", "GET", Summary = "Achtergrond voor een pagina of tegel in het Discover-kanaal")]
+    [Authenticated]
+    public class DiscoverItemBackdropRequest : IReturn<DiscoverItemBackdropResult>
+    {
+        /// <summary>Emby-item-id (zoals in de URL van de webclient).</summary>
+        public string Id { get; set; }
+    }
+
+    public class DiscoverItemBackdropResult
+    {
+        /// <summary>Het item hoort bij het Discover-kanaal.</summary>
+        public bool InChannel { get; set; }
+        /// <summary>Achtergrond van de titel; leeg = map zonder eigen titel (dan een willekeurige uit /Discover/Backdrops).</summary>
+        public string Url { get; set; }
+    }
+
     [Route("/Discover/Seasons", "GET", Summary = "Seizoenen van een serie (voor de seizoenskeuze vanuit een rij)")]
     [Authenticated]
     public class DiscoverSeasonsRequest : IReturn<DiscoverSeasonsResult>
@@ -92,8 +108,11 @@ namespace Emby.Plugins.Discover
         private readonly ArrClient _arr;
         private readonly ILogger _logger;
 
-        public RelatedApiService(ILogManager logManager, IJsonSerializer json)
+        private readonly MediaBrowser.Controller.Library.ILibraryManager _library;
+
+        public RelatedApiService(ILogManager logManager, IJsonSerializer json, MediaBrowser.Controller.Library.ILibraryManager library)
         {
+            _library = library;
             _logger = logManager.GetLogger("Discover");
             _tmdb = new TmdbClient(json);
             _arr = new ArrClient(json);
@@ -133,6 +152,51 @@ namespace Emby.Plugins.Discover
                 if (ex is OperationCanceledException) throw;
                 DiscoverDiagnostics.Add("achtergronden voor de startpagina mislukt: " + ex.Message);
                 if (cached != null) res.Urls = cached;
+            }
+            return res;
+        }
+
+        private static readonly Dictionary<string, string> _itemBackdrops = new Dictionary<string, string>();
+        private static readonly System.Text.RegularExpressions.Regex ChannelTitleId =
+            new System.Text.RegularExpressions.Regex(@"(?:^|:)([mt]):(\d+)(?::|$)");
+
+        /// <summary>
+        /// Zoekt bij een kanaalpagina (titelmap, aanvraagmap, seizoen, trailer) de TMDB-achtergrond van die titel.
+        /// Kanaalitems herken je aan hun ExternalId ("ask..."/"tr..."), met daarin "m:123" (film) of "t:123" (serie).
+        /// </summary>
+        public async Task<object> Get(DiscoverItemBackdropRequest request)
+        {
+            var res = new DiscoverItemBackdropResult();
+            try
+            {
+                var raw = (request.Id ?? "").Trim();
+                if (raw.Length == 0) return res;
+                MediaBrowser.Controller.Entities.BaseItem item = null;
+                long internalId;
+                Guid guid;
+                if (long.TryParse(raw, out internalId)) item = _library.GetItemById(internalId);
+                else if (Guid.TryParse(raw, out guid)) item = _library.GetItemById(guid);
+                var ext = item == null ? null : item.ExternalId;
+                if (string.IsNullOrEmpty(ext) || !(ext.StartsWith("ask", StringComparison.Ordinal) || ext.StartsWith("tr", StringComparison.Ordinal)))
+                    return res;
+                res.InChannel = true;
+                var m = ChannelTitleId.Match(ext);
+                if (!m.Success || !TmdbReady) return res;
+                var key = m.Groups[1].Value + ":" + m.Groups[2].Value;
+                string url;
+                lock (_itemBackdrops) { if (_itemBackdrops.TryGetValue(key, out url)) { res.Url = url; return res; } }
+                int tmdbId = int.Parse(m.Groups[2].Value);
+                var t = m.Groups[1].Value == "t"
+                    ? await _tmdb.GetTv(tmdbId, CancellationToken.None).ConfigureAwait(false)
+                    : await _tmdb.GetMovie(tmdbId, CancellationToken.None).ConfigureAwait(false);
+                url = t != null && !string.IsNullOrEmpty(t.backdrop_path) ? "https://image.tmdb.org/t/p/w1280" + t.backdrop_path : null;
+                lock (_itemBackdrops) { if (_itemBackdrops.Count > 2000) _itemBackdrops.Clear(); _itemBackdrops[key] = url; }
+                res.Url = url;
+            }
+            catch (Exception ex)
+            {
+                if (ex is OperationCanceledException) throw;
+                DiscoverDiagnostics.Add("achtergrond item " + request.Id + ": " + ex.Message);
             }
             return res;
         }

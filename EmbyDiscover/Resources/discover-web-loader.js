@@ -174,7 +174,7 @@
     // ---- Achtergrond bij de tegel "Discover Media" (zoals Emby dat bij andere bibliotheken doet) ----
     // Alleen als de gebruiker in Emby "Achtergronden inschakelen" aan heeft. De foto komt in Emby's eigen
     // achtergrondlaag (.backdropContainer), zodat Emby's verduistering er gewoon overheen valt.
-    var bd = { urls: null, loading: null, on: false, timer: null, layer: null, addedClass: false, seenEmby: false, pref: null, prefAsked: false, last: '' };
+    var bd = { urls: null, loading: null, on: false, timer: null, layer: null, addedClass: false, seenEmby: false, pref: null, prefAsked: false, last: '', seq: 0, page: null, items: {} };
     function bdPrefFromStorage() {
         try {
             for (var i = 0; i < localStorage.length; i++) {
@@ -238,21 +238,29 @@
             // Emby ruimt zijn achtergrond op bij een tegel zonder eigen foto: dan zetten we de onze terug.
             if (bd.on && bd.layer && bd.layer.parentNode !== container) { container.appendChild(bd.layer); }
         }).observe(container, { childList: true });
+        var bg = document.querySelector('.backgroundContainer');
+        if (bg) {
+            new MutationObserver(function () {
+                if (bd.on && bd.layer && bd.layer.parentNode && !bg.classList.contains('withBackdrop')) { bg.classList.add('withBackdrop'); bd.addedClass = true; }
+            }).observe(bg, { attributes: true, attributeFilter: ['class'] });
+        }
     }
-    function bdShow() {
+    function bdShow(fixedUrl) {
         var container = document.querySelector('.backdropContainer');
         if (!container) { return; }
         bdWatch(container);
         if (!bdAllowed()) { return; }
         bd.on = true;
-        bdLoadUrls().then(function (urls) {
-            if (!bd.on || !urls.length) { return; }
+        var token = ++bd.seq;
+        (fixedUrl ? Promise.resolve([fixedUrl]) : bdLoadUrls()).then(function (urls) {
+            if (!bd.on || token !== bd.seq || !urls.length) { return; }
             var pick = urls[Math.floor(Math.random() * urls.length)];
             if (urls.length > 1 && pick === bd.last) { pick = urls[(urls.indexOf(pick) + 1) % urls.length]; }
+            if (fixedUrl && pick === bd.last && bd.layer && bd.layer.parentNode && bd.layer.classList.contains('on')) { return; }
             bd.last = pick;
             var img = new Image();
             img.onload = function () {
-                if (!bd.on) { return; }
+                if (!bd.on || token !== bd.seq) { return; }
                 bdStyle();
                 if (!bd.layer) { bd.layer = document.createElement('div'); bd.layer.className = 'dcHomeBackdrop'; }
                 bd.layer.classList.remove('on');
@@ -269,6 +277,7 @@
         clearTimeout(bd.timer);
         if (!bd.on) { return; }
         bd.on = false;
+        bd.seq++;
         var layer = bd.layer;
         if (layer) { layer.classList.remove('on'); }
         setTimeout(function () {
@@ -293,9 +302,32 @@
         }
         return String(id || '').toLowerCase();
     }
+    // Achtergrond bij een Emby-item-id uit het kanaal: { InChannel, Url } (bewaard per id).
+    function bdItem(id) {
+        var a = api();
+        if (!a || !id) { return Promise.resolve(null); }
+        if (bd.items[id]) { return bd.items[id]; }
+        var p = Promise.resolve(a.getJSON(a.getUrl('Discover/ItemBackdrop', { Id: id }))).then(function (r) { return r || null; }, function () { delete bd.items[id]; return null; });
+        bd.items[id] = p;
+        return p;
+    }
     function bdOnPointer(e) {
         var id = bdCardId(e.target);
         if (id === null) { return; }             // geen kaart: niets veranderen
+        if (bd.page) {
+            // In het kanaal: de achtergrond volgt de titel onder de muis (zoals in een Emby-bibliotheek).
+            if (id === bd.hoverId) { return; }
+            bd.hoverId = id;
+            var page = bd.page;
+            clearTimeout(bd.timer);
+            bd.timer = setTimeout(function () {
+                bdItem(id).then(function (r) {
+                    if (bd.page !== page || bd.hoverId !== id) { return; }
+                    if (r && r.InChannel && r.Url) { bdShow(r.Url); }
+                });
+            }, 150);
+            return;
+        }
         if (info && info.ids.indexOf(id) !== -1) {
             if (bd.on) { return; }                // al zichtbaar: niet bij elk kind-element een nieuwe foto
             bdAskServerPref();
@@ -305,10 +337,41 @@
             bdHide();                             // een andere tegel: Emby toont zijn eigen achtergrond
         }
     }
+    // Pagina's in het kanaal (hoofdmap, rijen, titelmap, aanvraagmap, seizoen, trailer) krijgen een achtergrond:
+    // de titel zelf als die er is, anders een willekeurige uit wat trending is.
+    function bdRouteId(route) {
+        var m = /^\/(?:list|videos|tv|movies)\b.*[?&]parentid=([^&]+)/.exec(route) || /^\/(?:item|details|channel)\b.*[?&]id=([^&]+)/.exec(route);
+        return m ? decodeURIComponent(m[1]).toLowerCase() : null;
+    }
+    function bdCheckPage() {
+        var route = routeOf(location.href);
+        var id = bdRouteId(route);
+        if (bd.page && bd.page.route === route) { return; }
+        if (!id) {
+            if (bd.page) { bd.page = null; bd.hoverId = null; bdHide(); }
+            return;
+        }
+        var page = { route: route };
+        bd.page = page;
+        bd.hoverId = null;
+        if (info && info.ids.indexOf(id) !== -1) { bdAskServerPref(); setTimeout(function () { if (bd.page === page) { bdShow(); } }, 250); return; }
+        bdItem(id).then(function (r) {
+            if (bd.page !== page) { return; }
+            if (!r || !r.InChannel) { bd.page = null; bdHide(); return; }
+            bdAskServerPref();
+            setTimeout(function () { if (bd.page === page) { bdShow(r.Url || null); } }, 250);
+        });
+    }
+    function bdOnNavigate() {
+        bdHide();
+        bd.page = null;
+        bd.hoverId = null;
+        setTimeout(bdCheckPage, 0);
+    }
     document.addEventListener('mouseover', bdOnPointer, true);
     document.addEventListener('focusin', bdOnPointer, true);
-    window.addEventListener('hashchange', bdHide);
-    if (window.navigation && typeof navigation.addEventListener === 'function') { navigation.addEventListener('navigate', bdHide); }
+    if (window.navigation && typeof navigation.addEventListener === 'function') { navigation.addEventListener('navigatesuccess', bdOnNavigate); }
+    else { window.addEventListener('hashchange', bdOnNavigate); }
 
     log('lader actief (v' + 3 + '); controleer in de console met: __discoverDebug()');
     setInterval(function () {
@@ -323,6 +386,7 @@
                 if (shouldRedirect(r0, 'push', '')) { log('kanaal staat open, doorsturen'); redirect(); }
             }
             if (!buttonActive() && !buttonTried) { buttonTried = true; loadButton(a, (i && i.buttonPages) || KNOWN_BTN, 0); }
+            if (i && !bd.pageChecked) { bd.pageChecked = true; bdCheckPage(); }
         });
     }, 1000);
 })();
