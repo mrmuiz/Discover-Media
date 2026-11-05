@@ -348,6 +348,7 @@ namespace Emby.Plugins.Discover
 
             string addOptions;
             string seasonsJson = null;
+            string monitorNew = "none";
             if (seasons == null || seasons.Length == 0)
             {
                 addOptions = "{\"monitor\":\"all\",\"searchForMissingEpisodes\":true}";
@@ -359,6 +360,7 @@ namespace Emby.Plugins.Discover
                 // Alle seizoenen van Sonarr worden meegestuurd (gekozen = true, rest = false), zodat de rest ook echt uit blijft.
                 var selected = new HashSet<int>(seasons);
                 var all = new SortedSet<int>(selected);
+                var sonarrKnows = new HashSet<int>();
                 try
                 {
                     var lookupText = await Send(HttpMethod.Get, cfg.SonarrUrl, cfg.SonarrApiKey,
@@ -366,7 +368,7 @@ namespace Emby.Plugins.Discover
                     var lookup = _json.DeserializeFromString<List<SonarrSeriesDto>>(lookupText);
                     var found = lookup == null ? null : lookup.FirstOrDefault(x => x.tvdbId == tvdbId) ?? lookup.FirstOrDefault();
                     if (found != null && found.seasons != null)
-                        foreach (var sn in found.seasons) all.Add(sn.seasonNumber);
+                        foreach (var sn in found.seasons) { all.Add(sn.seasonNumber); sonarrKnows.Add(sn.seasonNumber); }
                 }
                 catch (Exception ex)
                 {
@@ -378,12 +380,19 @@ namespace Emby.Plugins.Discover
                     parts.Add("{\"seasonNumber\":" + n + ",\"monitored\":" + (selected.Contains(n) ? "true" : "false") + "}");
                 seasonsJson = "[" + string.Join(",", parts) + "]";
                 addOptions = "{\"searchForMissingEpisodes\":true}";
+                // Aangekondigd seizoen dat Sonarr (TVDB) nog niet kent: nieuwe seizoenen laten monitoren,
+                // dan staat het meteen aan zodra het in Sonarr verschijnt.
+                if (sonarrKnows.Count > 0 && selected.Any(n => !sonarrKnows.Contains(n)))
+                {
+                    monitorNew = "all";
+                    DiscoverDiagnostics.Add("Sonarr kent seizoen " + string.Join(",", selected.Where(n => !sonarrKnows.Contains(n))) + " van " + title + " nog niet: nieuwe seizoenen worden gemonitord");
+                }
             }
 
             var body = "{\"title\":\"" + Esc(title) + "\",\"tvdbId\":" + tvdbId +
                        ",\"qualityProfileId\":" + profile + ",\"rootFolderPath\":\"" + Esc(root) + "\"" +
                        ",\"monitored\":true,\"seasonFolder\":true,\"seriesType\":\"standard\"" +
-                       (seasonsJson != null ? ",\"seasons\":" + seasonsJson + ",\"monitorNewItems\":\"none\"" : "") +
+                       (seasonsJson != null ? ",\"seasons\":" + seasonsJson + ",\"monitorNewItems\":\"" + monitorNew + "\"" : "") +
                        ",\"addOptions\":" + addOptions + "}";
 
             var created = await Send(HttpMethod.Post, cfg.SonarrUrl, cfg.SonarrApiKey, "/api/v3/series", body, ct).ConfigureAwait(false);
@@ -480,9 +489,24 @@ namespace Emby.Plugins.Discover
             if (existing.seasons != null)
                 foreach (var s in existing.seasons)
                     if (s != null) known[s.seasonNumber] = s;
+            // Gevraagd seizoen dat Sonarr nog niet kent (aangekondigd, TVDB loopt achter): nieuwe seizoenen laten monitoren.
+            var unknown = target.Where(n => !known.ContainsKey(n)).ToList();
+            // "Alle seizoenen" belooft ook latere seizoenen: dan ook nieuwe seizoenen laten monitoren.
+            if (all || unknown.Count > 0)
+            {
+                try
+                {
+                    await SendApi(HttpMethod.Put, "/series/editor", "{\"seriesIds\":[" + existing.id + "],\"monitorNewItems\":\"all\"}").ConfigureAwait(false);
+                    if (unknown.Count > 0) changed = true;
+                    DiscoverDiagnostics.Add(all ? "Sonarr: nieuwe seizoenen van " + title + " worden gemonitord"
+                        : "Sonarr kent seizoen " + string.Join(",", unknown) + " van " + title + " nog niet: nieuwe seizoenen worden gemonitord");
+                }
+                catch (Exception ex) { DiscoverDiagnostics.Add("Sonarr nieuwe seizoenen monitoren (" + title + "): " + ex.Message); }
+            }
             foreach (var n in target)
             {
                 SonarrSeasonDto sd;
+                if (!known.ContainsKey(n)) continue;   // bestaat (nog) niet in Sonarr
                 if (known.TryGetValue(n, out sd) && sd.monitored) continue;
                 try
                 {

@@ -38,8 +38,8 @@ define([], function () {
             return;
         }
         var urls = [
-            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1378' }),
-            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1378' }),
+            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1379' }),
+            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1379' }),
             ApiClient.getUrl('Plugins/Discover/Script')
         ];
         var n = 0;
@@ -70,7 +70,7 @@ define([], function () {
         })();
     }
 
-    var UI_PAGE = 'discoverui1085';
+    var UI_PAGE = 'discoverui1086';
 
     return function (view, params) {
         // embedded: alleen de popup, over een andere Emby-pagina heen (film-, serie- of acteurspagina).
@@ -910,6 +910,12 @@ define([], function () {
                 b.setAttribute('data-season', s.Number);
                 b.textContent = text('Seizoen ', 'Season ', 'Staffel ') + s.Number;
                 b.title = s.EpisodeCount ? s.EpisodeCount + ' ' + text('afl.', 'eps.', 'Folgen') : '';
+                // Aangekondigd seizoen: klein label "binnenkort"; aanvragen kan al (Sonarr pakt het op zodra het uitkomt).
+                if (s.Upcoming) {
+                    b.classList.add('dcSoon');
+                    b.insertAdjacentHTML('beforeend', '<span class="dcSoonTag">' + esc(text('binnenkort', 'coming soon', 'demnächst', 'snart')) + '</span>');
+                    b.title = s.AirDate ? text('Start ', 'Starts ', 'Start ', 'Start ') + s.AirDate : text('Aangekondigd', 'Announced', 'Angekündigt', 'Annonsert');
+                }
                 b.addEventListener('click', function () { requestSeasons(current, [s.Number], b); });
                 box.appendChild(b);
             });
@@ -935,6 +941,9 @@ define([], function () {
                     btns[k].title = text('Al in je bibliotheek', 'Already in your library', 'Bereits in deiner Bibliothek');
                 } else {
                     btns[k].textContent = base;
+                    if (btns[k].classList.contains('dcSoon')) {
+                        btns[k].insertAdjacentHTML('beforeend', '<span class="dcSoonTag">' + esc(text('binnenkort', 'coming soon', 'demnächst', 'snart')) + '</span>');
+                    }
                     btns[k].disabled = false;
                 }
             }

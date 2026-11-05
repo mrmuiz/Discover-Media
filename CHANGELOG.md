@@ -16,8 +16,15 @@
 - Fix: the Discover popup above an Emby page now loads the **download progress** right away and keeps refreshing it (every 15 s while something downloads) as long as it is open.
 - Change: on a season request page ("Season 1") the season info now sits **to the right of the poster**, under the description: season name, TMDB score, season description, number of episodes, aired from–to, status, network, original language, country and streaming services (`GET /Discover/SeriesCard?TmdbId=&Season=`). The blocks **About**, **Links (Trakt)** and **Media information** are hidden there; this also works on the Emby 4.11 detail page layout (`.itemView`).
 - Fix: the bar at the top of a Discover channel page could flicker now and then: Emby and the plugin kept replacing each other's backdrop. On a channel page where Emby shows its own backdrop, the plugin now leaves it to Emby.
+- New: **"All seasons" tile** made from a backdrop of the series (centre cut to a portrait tile, darker towards the bottom) with the **series logo** from TMDB (or the name as text), a yellow line, "All seasons" and the number of seasons. Without a backdrop the series poster is used; without ffmpeg the series poster as before.
+- New: the **"All seasons" description** shows series info like the trailer page (tagline, start, status, seasons/episodes, genres, network, creators, summary), also in the TV/mobile apps. Season items show "Aired from …".
+- New: **announced seasons** are marked **"Coming soon"** in the channel ("Season 3 · Coming soon", "Coming soon: from 12 March 2027") and with a small "coming soon" tag on the season buttons in the Discover popup. They can be requested already: if Sonarr does not know that season yet, the series is set to monitor new seasons, so Sonarr picks it up as soon as it appears. "All seasons" on a series already in Sonarr now also sets "monitor new seasons". In Seerr mode Seerr decides and its message is shown.
+- New: compact **info block above the list of a Discover folder** (season list, title folder) in the web client: title, score, year, tagline, status/seasons/network, a 3-line description with "More" and the cast as small round photos. Visible right away, also with 31 seasons.
+- Fix: the **Cast row** now also shows on trailer and movie request pages (hiding the "About" block hid everything after it, including the plugin's own sections).
+- Change: Emby's **play button in the middle of the poster** (and the tile buttons on Discover folder tiles) is hidden on Discover pages, where playing means requesting or the trailer. The season info card is placed after the Request button and the text below it.
+- Change: channel DataVersion 74 so Emby picks up the new descriptions and tiles.
 - Note: backdrops for channel items in the native TV/mobile apps are not possible (Emby has no backdrop field for channel items); they work in the web client.
-- Change: page names bumped (`discoverui1085`, `discoveruijs1381`, `discoverbuttonjs1378`, `discoverconfigjs1359`).
+- Change: page names bumped (`discoverui1086`, `discoveruijs1382`, `discoverbuttonjs1379`, `discoverconfigjs1359`).
 
 ## Version 1.3.5.6
 

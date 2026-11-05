@@ -216,6 +216,114 @@ namespace Emby.Plugins.Discover
         }
 
         /// <summary>
+        /// Staande tegel (720x1080) voor "Alle seizoenen": het midden van een liggende achtergrondfoto van de serie, naar onderen
+        /// donkerder, met het logo van de serie (of de naam als tekst), een geel lijntje, het label en het aantal seizoenen.
+        /// Zo lijkt hij nooit op een seizoensposter. Null als het niet lukt (geen ffmpeg, geen achtergrond, ...).
+        /// </summary>
+        public static async Task<string> CreateAllSeasons(string key, string backdropUrl, string logoUrl, string name, string label, string sub, CancellationToken ct, bool allowStale = true)
+        {
+            const int tw = 720, th = 1080;
+            try
+            {
+                if (string.IsNullOrEmpty(backdropUrl) || string.IsNullOrEmpty(label)) return null;
+                var ffmpeg = RequestCard.FindFfmpeg();
+                if (ffmpeg == null) return null;
+                var dir = Plugin.Instance.WorkDir("discover-tiles");
+                var final = Path.Combine(dir, string.Format("alls-{0}-{1}-v{2}.jpg", key, Hash(backdropUrl + "|" + logoUrl + "|" + name + "|" + label + "|" + sub), TileVersion));
+                if (File.Exists(final) && new FileInfo(final).Length > 0) { CacheCleaner.Touch(final); return final; }
+                if (allowStale)
+                {
+                    var stale = FindStale(dir, "alls-" + key + "-????????-v" + TileVersion + ".jpg", final);
+                    if (stale != null)
+                    {
+                        RebuildInBackground(final, () => CreateAllSeasons(key, backdropUrl, logoUrl, name, label, sub, CancellationToken.None, false));
+                        return stale;
+                    }
+                }
+
+                var bgPre = await PreDownload(backdropUrl, dir, ".jpg", ct).ConfigureAwait(false);
+                if (bgPre == null) return null;
+                string logoPre = string.IsNullOrEmpty(logoUrl) ? null : await PreDownload(logoUrl, dir, ".png", ct).ConfigureAwait(false);
+                try
+                {
+                    await Gate.WaitAsync(ct).ConfigureAwait(false);
+                    try
+                    {
+                        if (File.Exists(final) && new FileInfo(final).Length > 0) return final;
+                        var work = Path.Combine(dir, "w-" + Guid.NewGuid().ToString("N"));
+                        Directory.CreateDirectory(work);
+                        try
+                        {
+                            File.Move(bgPre, Path.Combine(work, "bg.jpg")); bgPre = null;
+                            bool hasLogo = false;
+                            if (logoPre != null) { File.Move(logoPre, Path.Combine(work, "logo.png")); logoPre = null; hasLogo = true; }
+                            CopyResource("Poppins-Bold.ttf", Path.Combine(work, "bold.ttf"));
+                            CopyResource("Poppins-Regular.ttf", Path.Combine(work, "reg.ttf"));
+                            File.WriteAllText(Path.Combine(work, "label.txt"), label, new UTF8Encoding(false));
+                            File.WriteAllText(Path.Combine(work, "sub.txt"), sub ?? "", new UTF8Encoding(false));
+
+                            int labelSize = 76;
+                            double lw = RequestCard.Measure(label, labelSize, true);
+                            if (lw > tw * 0.86) labelSize = (int)Math.Floor(labelSize * tw * 0.86 / lw);
+
+                            // Achtergrond: midden uitsnijden, iets donkerder; daaronder een verloop naar bijna zwart.
+                            var chain = "[0:v]scale=" + tw + ":" + th + ":force_original_aspect_ratio=increase,crop=" + tw + ":" + th +
+                                        ",colorchannelmixer=rr=0.8:gg=0.8:bb=0.8,format=rgba[bg];" +
+                                        "color=c=black:s=" + tw + "x" + th + ":d=1,format=rgba,geq=r=8:g=12:b=24:a='if(gt(Y,H*0.3),min(235,30+205*pow((Y-H*0.3)/(H*0.7),1.1)),30)'[gr];" +
+                                        "[bg][gr]overlay=0:0[b0];";
+                            string last = "b0";
+                            if (hasLogo)
+                            {
+                                chain += "[1:v]format=rgba,scale=" + (int)(tw * 0.8) + ":" + (int)(th * 0.2) + ":force_original_aspect_ratio=decrease[lg];" +
+                                         "[b0][lg]overlay=x=(W-w)/2:y=" + (int)(th * 0.63) + "-h/2[b1];";
+                                last = "b1";
+                            }
+                            else
+                            {
+                                var nm = string.IsNullOrWhiteSpace(name) ? label : name.Trim();
+                                File.WriteAllText(Path.Combine(work, "name.txt"), nm, new UTF8Encoding(false));
+                                int ns = 84;
+                                double nw = RequestCard.Measure(nm, ns, true);
+                                if (nw > tw * 0.86) ns = Math.Max(40, (int)Math.Floor(ns * tw * 0.86 / nw));
+                                chain += "[b0]drawtext=fontfile=bold.ttf:textfile=name.txt:expansion=none:fontsize=" + ns +
+                                         ":fontcolor=white:x=(w-text_w)/2:y=" + (int)(th * 0.63) + "-text_h/2:shadowcolor=black@0.7:shadowx=3:shadowy=3[b1];";
+                                last = "b1";
+                            }
+                            chain += "[" + last + "]drawbox=x=" + (int)(tw * 0.2) + ":y=" + (int)(th * 0.75) + ":w=" + (int)(tw * 0.6) + ":h=4:color=0xFFC83C@1:t=fill," +
+                                     "drawtext=fontfile=bold.ttf:textfile=label.txt:expansion=none:fontsize=" + labelSize +
+                                     ":fontcolor=white:x=(w-text_w)/2:y=" + (int)(th * 0.775) + ":shadowcolor=black@0.6:shadowx=3:shadowy=3";
+                            if (!string.IsNullOrEmpty(sub))
+                                chain += ",drawtext=fontfile=reg.ttf:textfile=sub.txt:expansion=none:fontsize=40:fontcolor=0xFFC83C:x=(w-text_w)/2:y=" + (int)(th * 0.775 + labelSize * 1.25);
+                            chain += ",format=yuvj420p[v]";
+                            var args = "-y -hide_banner -loglevel error -i bg.jpg" + (hasLogo ? " -i logo.png" : "") +
+                                       " -filter_complex \"" + chain + "\" -map [v] -frames:v 1 -q:v 3 out.jpg";
+                            await RunFfmpeg(ffmpeg, work, args).ConfigureAwait(false);
+                            var made = Path.Combine(work, "out.jpg");
+                            if (!File.Exists(made) || new FileInfo(made).Length == 0) throw new InvalidOperationException("ffmpeg maakte geen bestand");
+                            if (File.Exists(final)) File.Delete(final);
+                            File.Move(made, final);
+                            DiscoverDiagnostics.Add("tegel 'alle seizoenen' gemaakt: " + final);
+                        }
+                        finally { try { Directory.Delete(work, true); } catch { } }
+                        return final;
+                    }
+                    finally { Gate.Release(); }
+                }
+                finally
+                {
+                    if (bgPre != null) { try { File.Delete(bgPre); } catch { } }
+                    if (logoPre != null) { try { File.Delete(logoPre); } catch { } }
+                }
+            }
+            catch (Exception ex)
+            {
+                if (ex is OperationCanceledException) throw;
+                DiscoverDiagnostics.Add("tegel 'alle seizoenen' mislukt: " + ex.Message);
+                return null;
+            }
+        }
+
+        /// <summary>
         /// Zet een studio- of netwerklogo (al in kleur gezet door TMDB) in het midden van een liggend, doorzichtig plaatje
         /// van 1280x720, met de tegelnaam onder het logo. Geeft het pad van het PNG-bestand, of null als het niet lukt
         /// (dan gebruikt het kanaal het logo zoals het is).

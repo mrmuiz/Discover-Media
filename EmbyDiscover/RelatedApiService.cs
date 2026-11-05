@@ -86,6 +86,12 @@ namespace Emby.Plugins.Discover
         public string Type { get; set; }
         public int TmdbId { get; set; }
         public List<DiscoverPersonDto> Cast { get; set; } = new List<DiscoverPersonDto>();
+        /// <summary>Voor het infoblok boven een map: titel, jaar, score, infoteksten en beschrijving.</summary>
+        public string Title { get; set; }
+        public int Year { get; set; }
+        public double Rating { get; set; }
+        public List<string> Lines { get; set; } = new List<string>();
+        public string Overview { get; set; }
     }
 
     [Route("/Discover/ItemBackdrop", "GET", Summary = "Achtergrond voor een pagina of tegel in het Discover-kanaal")]
@@ -224,7 +230,14 @@ namespace Emby.Plugins.Discover
                 res.Type = tv ? "tv" : "movie";
                 res.TmdbId = tmdbId;
                 var x = await _tmdb.GetExtraCached(tv, tmdbId, CancellationToken.None).ConfigureAwait(false);
-                if (x == null || x.credits == null || x.credits.cast == null) return res;
+                if (x == null) return res;
+                res.Title = tv ? (x.name ?? x.title) : (x.title ?? x.name);
+                var d0 = tv ? x.first_air_date : x.release_date;
+                int yr; if (!string.IsNullOrEmpty(d0) && d0.Length >= 4 && int.TryParse(d0.Substring(0, 4), out yr)) res.Year = yr;
+                res.Rating = x.vote_average;
+                res.Overview = x.overview;
+                try { res.Lines = InfoText.Lines(null, x, tv, false); } catch { }
+                if (x.credits == null || x.credits.cast == null) return res;
                 res.Cast = x.credits.cast
                     .Where(c => c != null && c.id > 0 && !string.IsNullOrWhiteSpace(c.name))
                     .OrderBy(c => c.order)

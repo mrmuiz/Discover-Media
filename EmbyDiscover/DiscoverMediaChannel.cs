@@ -65,7 +65,7 @@ namespace Emby.Plugins.Discover
         // Ophogen als Emby oude (bewaarde) kanaalinhoud blijft tonen.
         // De tegel-epoch verandert als de opruiming tegelplaatjes heeft verwijderd: dan vraagt Emby de mappen opnieuw op
         // en maakt de plugin de ontbrekende plaatjes opnieuw (anders verwijst Emby naar een bestand dat niet meer bestaat).
-        public string DataVersion => (Plugin.GetCurrentConfiguration().ShowTrailerTile ? "73" : "73-notrailer") + "-e" + CacheCleaner.TileEpoch;
+        public string DataVersion => (Plugin.GetCurrentConfiguration().ShowTrailerTile ? "74" : "74-notrailer") + "-e" + CacheCleaner.TileEpoch;
         public ChannelParentalRating ParentalRating => ChannelParentalRating.GeneralAudience;
         public bool IsEnabledFor(string userId) => true;
 
@@ -362,10 +362,28 @@ namespace Emby.Plugins.Discover
             {
                 // Neutrale staande tegel (2:3, effen grijsblauw) met de tekst "Alle seizoenen" in plaats van een serieposter, zodat het
                 // niet op een gewoon seizoen lijkt. Lukt dat niet (geen ffmpeg, tekstplaatjes uit of te traag), dan de serieposter.
+                // Tegel: achtergrondfoto van de serie met het logo (of de naam), "Alle seizoenen" en het aantal seizoenen.
+                // Geen achtergrondfoto: dan de serieposter als achtergrond. Lukt het helemaal niet, dan de oude grijze tegel.
                 var allImage = !string.IsNullOrEmpty(detail.poster_path) ? TmdbClient.PosterUrl(detail.poster_path) : background;
-                var allTileText = DiscoverLanguage.Text("Alle seizoenen", "All seasons", "Alle Staffeln").Replace(' ', '\n');
-                var allTile = await TileWithin(FolderTile.Create("allseasons", allTileText, null, CancellationToken.None, "5B6573", true, 720, 1080),
-                    TimeSpan.FromSeconds(20)).ConfigureAwait(false);
+                var allLabel = DiscoverLanguage.Text("Alle seizoenen", "All seasons", "Alle Staffeln");
+                int seasonCount = seasons.Count;
+                var allSub = DiscoverLanguage.Text(seasonCount == 1 ? "1 seizoen" : seasonCount + " seizoenen",
+                    seasonCount == 1 ? "1 season" : seasonCount + " seasons", seasonCount == 1 ? "1 Staffel" : seasonCount + " Staffeln");
+                string allTile = null;
+                if (Plugin.GetCurrentConfiguration().TileTextImages)
+                {
+                    string logoPath = null;
+                    try { logoPath = await _tmdb.GetTitleLogo(true, tmdbId, ct).ConfigureAwait(false); } catch (Exception ex) { if (ex is OperationCanceledException) throw; }
+                    var bdUrl = !string.IsNullOrEmpty(detail.backdrop_path) ? "https://image.tmdb.org/t/p/w1280" + detail.backdrop_path
+                        : (!string.IsNullOrEmpty(detail.poster_path) ? TmdbClient.PosterUrl(detail.poster_path) : null);
+                    if (bdUrl != null)
+                        allTile = await TileWithin(FolderTile.CreateAllSeasons("t" + tmdbId, bdUrl,
+                            string.IsNullOrEmpty(logoPath) ? null : "https://image.tmdb.org/t/p/w500" + logoPath,
+                            TitleOf(detail, true), allLabel, allSub, CancellationToken.None), TimeSpan.FromSeconds(20)).ConfigureAwait(false);
+                    if (allTile == null)
+                        allTile = await TileWithin(FolderTile.Create("allseasons", allLabel.Replace(' ', '\n'), null, CancellationToken.None, "5B6573", true, 720, 1080),
+                            TimeSpan.FromSeconds(20)).ConfigureAwait(false);
+                }
                 if (allTile != null) allImage = allTile;
                 string allOverview = DiscoverLanguage.Text(
                     "Druk op \u25B6 om alle seizoenen in \u00E9\u00E9n keer aan te vragen, ook seizoenen die later uitkomen.",
@@ -381,6 +399,16 @@ namespace Emby.Plugins.Discover
                         "\u23F3 Deze serie staat al in Sonarr. Opnieuw aanvragen zet alle seizoenen (behalve specials) op gemonitord en zoekt naar ontbrekende afleveringen.",
                         "\u23F3 This series is already in Sonarr. Requesting again monitors all seasons (except specials) and searches for missing episodes.",
                         "\u23F3 Diese Serie ist bereits in Sonarr. Eine erneute Anfrage überwacht alle Staffeln (außer Specials) und sucht nach fehlenden Folgen.");
+                // Seriesinfo zoals op de trailerpagina (ook zichtbaar in de tv- en mobiele apps).
+                try
+                {
+                    var seriesExtra = await SafeExtra(true, tmdbId, ct).ConfigureAwait(false);
+                    var seriesLines = InfoText.Lines(detail, seriesExtra, true, false);
+                    if (seriesLines.Count > 0) allOverview += "\n\n" + string.Join("\n", seriesLines);
+                }
+                catch (Exception ex) { if (ex is OperationCanceledException) throw; }
+                if (!string.IsNullOrWhiteSpace(detail.overview)) allOverview += "\n\n" + detail.overview.Trim();
+
                 items.Add(new ChannelItemInfo
                 {
                     Id = AskAllPrefix + "t:" + tmdbId,
@@ -467,11 +495,28 @@ namespace Emby.Plugins.Discover
                         "Druk op \u25B6 om alleen seizoen " + seasonNumber + " aan te vragen.",
                         "Press \u25B6 to request season " + seasonNumber + " only.",
                         "Drücke auf \u25B6, um nur Staffel " + seasonNumber + " anzufordern.");
+                // Aangekondigd seizoen (nog niet begonnen of nog zonder datum): "Binnenkort", aanvragen kan al.
+                DateTime seasonStart;
+                bool hasStart = InfoText.TryDate(season.air_date, out seasonStart);
+                bool upcoming = !hasFiles && (!hasStart || seasonStart.Date > DateTime.UtcNow.Date);
+                if (upcoming)
+                {
+                    overview += "\n" + (hasStart
+                        ? DiscoverLanguage.Text("Binnenkort: vanaf " + InfoText.LongDate(seasonStart) + ".", "Coming soon: from " + InfoText.LongDate(seasonStart) + ".", "Demnächst: ab " + InfoText.LongDate(seasonStart) + ".")
+                        : DiscoverLanguage.Text("Aangekondigd, nog zonder startdatum.", "Announced, no start date yet.", "Angekündigt, noch ohne Startdatum."));
+                    overview += " " + DiscoverLanguage.Text(
+                        "Je kunt het nu al aanvragen; het wordt gedownload zodra de afleveringen uitkomen.",
+                        "You can request it now; it is downloaded as soon as the episodes come out.",
+                        "Du kannst sie jetzt schon anfordern; sie wird heruntergeladen, sobald die Folgen erscheinen.");
+                }
+                else if (hasStart)
+                    overview += "\n" + DiscoverLanguage.Text("Uitgezonden vanaf ", "Aired from ", "Ausgestrahlt ab ") + InfoText.LongDate(seasonStart) + ".";
                 if (!string.IsNullOrWhiteSpace(countText)) overview += "\n" + countText + ".";
                 if (!string.IsNullOrWhiteSpace(season.overview)) overview += "\n\n" + season.overview.Trim();
 
                 var displayName = DiscoverLanguage.Text("Seizoen ", "Season ", "Staffel ") +
                     seasonNumber.ToString(CultureInfo.InvariantCulture);
+                if (upcoming && !showHourglass) displayName += DiscoverLanguage.Text(" \u00B7 Binnenkort", " \u00B7 Coming soon", " \u00B7 Demnächst");
                 if (allFiles) displayName += " \u2713";
                 else if (showHourglass) displayName += " \u23F3";
 

@@ -141,6 +141,10 @@ namespace Emby.Plugins.Discover
         public int Number { get; set; }
         public string Name { get; set; }
         public int EpisodeCount { get; set; }
+        /// <summary>Aangekondigd, nog niet begonnen (of nog zonder datum).</summary>
+        public bool Upcoming { get; set; }
+        /// <summary>Startdatum (yyyy-MM-dd) als TMDB die heeft.</summary>
+        public string AirDate { get; set; }
     }
 
     public class DiscoverResolveResult
@@ -982,7 +986,10 @@ namespace Emby.Plugins.Discover
                                 {
                                     Number = s.season_number,
                                     Name = string.IsNullOrWhiteSpace(s.name) ? "Seizoen " + s.season_number : s.name,
-                                    EpisodeCount = s.episode_count
+                                    EpisodeCount = s.episode_count,
+                                    AirDate = s.air_date,
+                                    Upcoming = s.season_number > 0 && (string.IsNullOrEmpty(s.air_date) ||
+                                        string.CompareOrdinal(s.air_date, DateTime.UtcNow.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)) > 0)
                                 })
                                 .ToList();
                         }

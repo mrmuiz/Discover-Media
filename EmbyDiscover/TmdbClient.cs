@@ -138,6 +138,7 @@ namespace Emby.Plugins.Discover
     public class TmdbImagesPage
     {
         public List<TmdbImage> posters { get; set; }
+        public List<TmdbImage> logos { get; set; }
     }
 
     public class TmdbSeasonBrief
@@ -481,6 +482,34 @@ namespace Emby.Plugins.Discover
         {
             var r = await Get<TmdbGenreList>("/genre/" + (tv ? "tv" : "movie") + "/list", "", Language(), ct).ConfigureAwait(false);
             return r?.genres ?? new List<TmdbGenre>();
+        }
+
+        /// <summary>
+        /// Logo (titel als plaatje) van een serie of film: eerst in de taal van de plugin, dan Engels, dan zonder taal.
+        /// Bewaard in het geheugen; null als TMDB er geen heeft.
+        /// </summary>
+        public async Task<string> GetTitleLogo(bool tv, int id, CancellationToken ct)
+        {
+            var key = (tv ? "tl-t" : "tl-m") + id;
+            lock (LogoCache) { string c; if (LogoCache.TryGetValue(key, out c)) return c; }
+            string logo = null;
+            try
+            {
+                var lang = (Language() ?? "en").Split('-')[0].ToLowerInvariant();
+                var r = await Get<TmdbImagesPage>((tv ? "/tv/" : "/movie/") + id + "/images", "&include_image_language=" + lang + ",en,null", FallbackLanguage, ct).ConfigureAwait(false);
+                var list = (r?.logos ?? new List<TmdbImage>()).Where(l => l != null && !string.IsNullOrEmpty(l.file_path)).ToList();
+                Func<string, TmdbImage> pick = code => list.Where(l => string.Equals(l.iso_639_1 ?? "", code, StringComparison.OrdinalIgnoreCase))
+                    .OrderByDescending(l => l.vote_average).FirstOrDefault();
+                var best = pick(lang) ?? pick("en") ?? pick("") ?? list.FirstOrDefault();
+                if (best != null) logo = best.file_path;
+            }
+            catch (Exception ex)
+            {
+                if (ex is OperationCanceledException) throw;
+                DiscoverDiagnostics.Add("TMDB titellogo " + key + " mislukt: " + ex.Message);
+            }
+            lock (LogoCache) { LogoCache[key] = logo; }
+            return logo;
         }
 
         /// <summary>Logo-pad van een studio (company) of netwerk; blijft in het geheugen bewaard.</summary>

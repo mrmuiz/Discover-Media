@@ -8,7 +8,7 @@
         console.warn('[Discover] oudere knopcode is nog actief; vernieuw de webclient om dubbele handlers te voorkomen.');
         return;
     }
-    var DC_BUILD = 'big-r6 2026-11-05';
+    var DC_BUILD = 'big-r7 2026-11-05';
     window.__discoverRequestButton = true;
     window.__discoverRequestButtonVersion = '1.4.0.0';
     window.__discoverRequestButtonBuild = DC_BUILD;
@@ -117,6 +117,18 @@
             '.discover-cast-p:hover .discover-cast-ph, .discover-cast-p:focus .discover-cast-ph { border-color: #ffb400; transform: scale(1.05); }',
             '.discover-cast-p:focus { outline: 0; }',
             '.discover-cast-n { font-size: .85em; font-weight: 600; line-height: 1.2; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }',
+            '.discover-info-block { margin: 4px 0 18px; max-width: 1100px; }',
+            '.discover-ib-title { font-size: 1.5em; font-weight: 700; display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }',
+            '.discover-ib-meta { font-size: .6em; font-weight: 500; opacity: .75; }',
+            '.discover-ib-tag { font-style: italic; opacity: .85; margin-top: 4px; }',
+            '.discover-ib-lines { font-size: .9em; opacity: .75; margin-top: 4px; }',
+            '.discover-ib-ov { margin-top: 8px; line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }',
+            '.discover-info-block.open .discover-ib-ov { display: block; }',
+            '.discover-ib-more { background: none; border: 0; color: #00a4dc; cursor: pointer; padding: 2px 0; font: inherit; }',
+            '.discover-cast-row.compact { gap: 8px; padding-top: 10px; padding-bottom: 4px; }',
+            '.discover-cast-p.small { width: 74px; }',
+            '.discover-cast-p.small .discover-cast-ph { width: 54px; height: 54px; margin-bottom: 4px; }',
+            '.discover-cast-p.small .discover-cast-n { font-size: .72em; }',
             '.discover-cast-r { font-size: .75em; opacity: .65; line-height: 1.2; margin-top: 2px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }',
             '.mainCreditsSection.discover-hidden-credits { display: none !important; }',
             '.discover-row-wrap { position: relative; }',
@@ -1022,7 +1034,11 @@
                 var guard = '.btnPlay, .mainDetailButtons, .detailButtons, .btnDiscoverRequest';
                 if (!sec || sec === pages[p] || sec.querySelector(guard)) { sec = el.parentElement; }
                 if (!sec || sec === pages[p] || sec.querySelector(guard)) { continue; }
-                for (var n = sec; n; n = n.nextElementSibling) { n.classList.add('discover-hide'); }
+                // Eigen onderdelen van de plugin (cast, posterrijen, seizoensinfo) niet mee verbergen.
+                for (var n = sec; n; n = n.nextElementSibling) {
+                    if (n.classList.contains('discover-cast-section') || n.classList.contains('discover-row-section') || n.classList.contains('discover-season-info') || n.classList.contains('discover-info-block')) { continue; }
+                    n.classList.add('discover-hide');
+                }
             }
         }
     }
@@ -1131,9 +1147,7 @@
                 ov.textContent = info.SeasonOverview;
                 card.appendChild(ov);
             }
-            if (info.SeasonEpisodes > 0) {
-                appendSeasonInfoRow(card, text('Afleveringen', 'Episodes', 'Episoden', 'Episoder'), String(info.SeasonEpisodes));
-            }
+            // Het aantal afleveringen staat al in de beschrijving erboven.
             if (info.SeasonAirDate) {
                 appendSeasonInfoRow(card, text('Uitgezonden', 'Aired', 'Ausgestrahlt', 'Sendt'),
                     info.SeasonAirDate + (info.SeasonLastAirDate ? ' \u2013 ' + info.SeasonLastAirDate : ''));
@@ -1300,7 +1314,7 @@
             if (el.children.length !== 0 || !visible(el)) { continue; }
             var label = (el.textContent || '').trim();
             if (!SECTION_LABELS.test(label) || (diagnosticsEnabled && /media\s*(information|informatie)/i.test(label))) { continue; }
-            if (el.closest && el.closest('.btnDiscoverRequest, button, .dcRoot')) { continue; }
+            if (el.closest && el.closest('.btnDiscoverRequest, button, .dcRoot, .discover-cast-section, .discover-season-info, .discover-info-block, .discover-row-section')) { continue; }
             var sec = el;
             while (sec.parentElement && sec.parentElement !== document.body) {
                 var par = sec.parentElement;
@@ -1874,7 +1888,7 @@
         var link = document.createElement('a');
         link.className = 'discover-row-poster';
         // Klik op de poster: de Discover-popup met info en trailer.
-        link.href = '#!/configurationpage?name=discoverui1085&openType=' + item.Type + '&openId=' + item.TmdbId;
+        link.href = '#!/configurationpage?name=discoverui1086&openType=' + item.Type + '&openId=' + item.TmdbId;
         link.setAttribute('aria-label', item.Title);   // geen title: dat gaf een tooltip-vakje over de poster
         // Gewone klik: de popup hier op de pagina openen (Ctrl/middenklik volgt de link naar Discover).
         link.addEventListener('click', function (e) {
@@ -2064,12 +2078,78 @@
         var p = rowParent();
         return p ? { parent: p, after: null } : null;
     }
+    function castButton(p, small) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'discover-cast-p' + (small ? ' small' : '');
+        b.title = p.Name + (p.Character ? ' \u2013 ' + p.Character : '');
+        var ph = document.createElement('div');
+        ph.className = 'discover-cast-ph';
+        if (p.Photo) { ph.style.backgroundImage = 'url("' + p.Photo + '")'; }
+        else { ph.textContent = String(p.Name || '?').split(/\s+/).map(function (w) { return w.charAt(0); }).slice(0, 2).join(''); }
+        var n = document.createElement('div'); n.className = 'discover-cast-n'; n.textContent = p.Name;
+        b.appendChild(ph); b.appendChild(n);
+        if (p.Character && !small) { var r = document.createElement('div'); r.className = 'discover-cast-r'; r.textContent = p.Character; b.appendChild(r); }
+        b.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); openCastPerson(p.Id, p.Name); });
+        return b;
+    }
+    // Compact infoblok boven de lijst van een Discover-map (seizoenen of Request/Trailer): ook bij 31 seizoenen meteen zichtbaar.
+    function renderInfoBlock(id, d) {
+        if (document.querySelector('.discover-info-block[data-itemid="' + id + '"]')) { return; }
+        if (!d.Title && !(d.Cast && d.Cast.length)) { return; }
+        var conts = document.querySelectorAll('.itemsContainer'), cont = null;
+        for (var i = conts.length - 1; i >= 0; i--) { if (visible(conts[i]) && conts[i].parentNode) { cont = conts[i]; break; } }
+        if (!cont) { return; }
+        var box = document.createElement('div');
+        box.className = 'discover-info-block padded-left padded-left-page padded-right';
+        box.setAttribute('data-itemid', id);
+        var head = document.createElement('div');
+        head.className = 'discover-ib-title';
+        head.textContent = d.Title || '';
+        var meta = [];
+        if (d.Rating > 0) { meta.push('\u2605 ' + (Math.round(d.Rating * 10) / 10).toFixed(1)); }
+        if (d.Year) { meta.push(String(d.Year)); }
+        if (meta.length) { var m = document.createElement('span'); m.className = 'discover-ib-meta'; m.textContent = meta.join(' \u00B7 '); head.appendChild(m); }
+        box.appendChild(head);
+        var lines = (d.Lines || []).slice();
+        if (lines.length && /^\u201C/.test(lines[0])) {
+            var tg = document.createElement('div'); tg.className = 'discover-ib-tag'; tg.textContent = lines.shift(); box.appendChild(tg);
+        }
+        if (lines.length) {
+            var ln = document.createElement('div'); ln.className = 'discover-ib-lines'; ln.textContent = lines.join('  \u00B7  '); box.appendChild(ln);
+        }
+        if (d.Overview) {
+            var ov = document.createElement('div'); ov.className = 'discover-ib-ov'; ov.textContent = d.Overview; box.appendChild(ov);
+            var more = document.createElement('button'); more.type = 'button'; more.className = 'discover-ib-more';
+            more.textContent = text('Meer', 'More', 'Mehr', 'Mer');
+            more.addEventListener('click', function (e) {
+                e.preventDefault(); e.stopPropagation();
+                var open = box.classList.toggle('open');
+                more.textContent = open ? text('Minder', 'Less', 'Weniger', 'Mindre') : text('Meer', 'More', 'Mehr', 'Mer');
+            });
+            box.appendChild(more);
+            setTimeout(function () { if (ov.scrollHeight <= ov.clientHeight + 2) { more.style.display = 'none'; } }, 0);
+        }
+        if (d.Cast && d.Cast.length) {
+            var row = document.createElement('div');
+            row.className = 'discover-cast-row compact';
+            d.Cast.forEach(function (p) { row.appendChild(castButton(p, true)); });
+            box.appendChild(row);
+        }
+        cont.parentNode.insertBefore(box, cont);
+    }
     function syncItemCast(id) {
-        var old = document.querySelectorAll('.discover-cast-section');
+        var old = document.querySelectorAll('.discover-cast-section, .discover-info-block');
         for (var o = 0; o < old.length; o++) {
             if (old[o].getAttribute('data-itemid') !== id && old[o].parentNode) { old[o].parentNode.removeChild(old[o]); }
         }
         if (!id || !api() || !(folderPage[id] === true || askIds[id] || trailerIds[id])) { return; }
+        if (folderPage[id] === true && castData[id] && castData[id] !== 'loading') {
+            var ib = document.querySelector('.discover-info-block[data-itemid="' + id + '"]');
+            if (ib && !visible(ib) && ib.parentNode) { ib.parentNode.removeChild(ib); }
+            renderInfoBlock(id, castData[id]);
+            return;
+        }
         var mine = document.querySelector('.discover-cast-section[data-itemid="' + id + '"]');
         if (mine && visible(mine)) { return; }
         if (mine && mine.parentNode) { mine.parentNode.removeChild(mine); }
@@ -2095,21 +2175,7 @@
         sec.appendChild(h);
         var row = document.createElement('div');
         row.className = 'discover-cast-row padded-left padded-left-page padded-right';
-        d.Cast.forEach(function (p) {
-            var b = document.createElement('button');
-            b.type = 'button';
-            b.className = 'discover-cast-p';
-            b.title = p.Name;
-            var ph = document.createElement('div');
-            ph.className = 'discover-cast-ph';
-            if (p.Photo) { ph.style.backgroundImage = 'url("' + p.Photo + '")'; }
-            else { ph.textContent = String(p.Name || '?').split(/\s+/).map(function (w) { return w.charAt(0); }).slice(0, 2).join(''); }
-            var n = document.createElement('div'); n.className = 'discover-cast-n'; n.textContent = p.Name;
-            b.appendChild(ph); b.appendChild(n);
-            if (p.Character) { var r = document.createElement('div'); r.className = 'discover-cast-r'; r.textContent = p.Character; b.appendChild(r); }
-            b.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); openCastPerson(p.Id, p.Name); });
-            row.appendChild(b);
-        });
+        d.Cast.forEach(function (p) { row.appendChild(castButton(p, false)); });
         sec.appendChild(row);
         if (host.after && host.after.parentNode === host.parent) { host.parent.insertBefore(sec, host.after.nextSibling); }
         else { host.parent.appendChild(sec); }
@@ -2118,7 +2184,7 @@
     // ---- De Discover-popup boven de huidige pagina ----
     // Laadt de Discover-pagina één keer onzichtbaar (alleen de popup wordt gebruikt) met dezelfde controller
     // als de echte pagina, in "embedded"-modus. Zo is de popup overal gelijk: info, cast, seizoenen, trailer, aanvragen.
-    var DC_UI_PAGE = 'discoverui1085', DC_UI_JS = 'discoveruijs1381';
+    var DC_UI_PAGE = 'discoverui1086', DC_UI_JS = 'discoveruijs1382';
     var embedPromise = null;
     function pageText(c, name) {
         var url = c.getUrl('web/ConfigurationPage', { name: name });
