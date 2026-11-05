@@ -140,7 +140,8 @@ define(['emby-button'], function () {
         });
     }
 
-    var discoverChannelIdFromServer = null;   // gevuld via Discover/ChannelInfo (werkt ook bij een hernoemd kanaal)
+    var discoverChannelIdFromServer = null;
+    var discoverChannelName = null;   // gevuld via Discover/ChannelInfo (werkt ook bij een hernoemd kanaal)
     function isDiscoverChannel(channel) {
         if (channel && discoverChannelIdFromServer && String(channel.Id) === String(discoverChannelIdFromServer)) { return true; }
         var name = String(channel && channel.Name || '').trim();
@@ -286,7 +287,7 @@ define(['emby-button'], function () {
             lines.push('');
             lines.push('== ' + text('Kanaal', 'Channel', 'Kanal') + ' ==');
             return step(lines, text('Kanalen ophalen', 'Get channels', 'Kanäle abrufen'), function () {
-                return getJson('Discover/ChannelInfo').then(function (ci) { discoverChannelIdFromServer = ci && ci.Id; }, function () { })
+                return getJson('Discover/ChannelInfo').then(function (ci) { discoverChannelIdFromServer = ci && ci.Id; discoverChannelName = ci && ci.Name; }, function () { })
                     .then(function () { return getJson('Channels', { UserId: adminId }); }).then(function (r) {
                     var names = (r.Items || []).map(function (c) { return c.Name; });
                     var found = (r.Items || []).filter(isDiscoverChannel)[0];
@@ -314,7 +315,8 @@ define(['emby-button'], function () {
                 ok(lines, withCount + text(' van ', ' of ', ' von ') + res.length + text(' gebruikers zien het kanaal.', ' users can see the channel.', ' Benutzern kann den Kanal sehen.'));
                 if (without.length) {
                     bad(lines, text('Geen toegang tot het kanaal: ', 'No channel access: ', 'Kein Zugriff auf den Kanal: ') + without.join(', '));
-                    info(lines, text('Oplossen: Gebruiker > Toegang > Kanalen: "Alle kanalen" aanzetten of Discover Media / Films & Series Aanvragen toevoegen.', 'Fix: User > Access > Channels: enable "All channels" or add Discover Media / Films & Series Aanvragen.', 'Lösung: Benutzer > Zugriff > Kanäle: "Alle Kanäle" aktivieren oder Discover Media / Films & Series Aanvragen hinzufügen.'));
+                    var chn = discoverChannelName || 'Discover Media';
+                    info(lines, text('Oplossen: Gebruiker > Toegang > Kanalen: "Alle kanalen" aanzetten of "' + chn + '" toevoegen.', 'Fix: User > Access > Channels: enable "All channels" or add "' + chn + '".', 'Lösung: Benutzer > Zugriff > Kanäle: "Alle Kanäle" aktivieren oder "' + chn + '" hinzufügen.'));
                 }
                 if (unknown.length) { info(lines, text('Niet te controleren: ', 'Could not check: ', 'Nicht überprüfbar: ') + unknown.join(', ')); }
             });

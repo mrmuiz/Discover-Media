@@ -154,7 +154,7 @@ namespace Emby.Plugins.Discover
                 },
                 new PluginPageInfo
                 {
-                    Name = "discoverstatusjs1102",
+                    Name = "discoverstatusjs1103",
                     EmbeddedResourcePath = GetType().Namespace + ".Configuration.statusPage.js"
                 },
                 new PluginPageInfo
