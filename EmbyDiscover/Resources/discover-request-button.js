@@ -105,6 +105,9 @@
             /* De rijen nemen Emby's eigen maten over (zelfde postergrootte en uitlijning als "More Like This"):
                de sectie en titel krijgen Emby's klassen, de maten komen uit --dc-w/--dc-h (gemeten op de pagina). */
             '.discover-row-section { position: relative; }',
+            /* Emby's afspeelknop midden op de poster: op Discover-pagina's betekent afspelen aanvragen of trailer; daar weg. */
+            'body.discover-ask-page .detailImageContainer [class*="verlay"], body.discover-ask-page .detailImageContainer .cardOverlayContainer, body.discover-ask-page .itemDetailImage ~ [class*="verlay"] { display: none !important; }',
+            'body.discover-folder-page .card [class*="cardOverlayButton"], body.discover-folder-page .card [class*="cardOverlayFab"], body.discover-folder-page .card .cardOverlayContainer { display: none !important; }',
             /* Cast onder kanaalpagina's ("Request: titel", titelmap, trailer): ronde foto's zoals in de Discover-popup. */
             '.discover-cast-section { margin-top: 1.5em; }',
             '.discover-cast-row { display: flex; gap: 14px; overflow-x: auto; padding-top: 6px; padding-bottom: 12px; scrollbar-width: none; }',
@@ -1089,15 +1092,19 @@
         if (!info || itemIdFromHash() !== id) { return; }
         var page = detailPageEl();
         if (!page) { return; }
+        // Volgorde: knop Request, de tekst eronder ("Press ▶ ..."), dan dit kader. Emby 4.11 heeft ook boven de knoppen
+        // elementen met "overview" in de naam; daarom de eerste beschrijving NA de knoppen.
         var anchor = null;
+        var btns = null, bl = page.querySelectorAll('.mainDetailButtons, .detailButtons');
+        for (var b = 0; b < bl.length; b++) { if (visible(bl[b])) { btns = bl[b]; break; } }
         var cands = page.querySelectorAll('.overview-text, .itemOverview, .overview, [class*="verview"]');
         for (var i = 0; i < cands.length; i++) {
-            if (visible(cands[i]) && !(cands[i].closest && cands[i].closest('.discover-season-info'))) { anchor = cands[i]; break; }
+            var cd = cands[i];
+            if (!visible(cd) || (cd.closest && cd.closest('.discover-season-info'))) { continue; }
+            if (btns && (btns.contains(cd) || cd.contains(btns) || !(btns.compareDocumentPosition(cd) & Node.DOCUMENT_POSITION_FOLLOWING))) { continue; }
+            anchor = cd; break;
         }
-        if (!anchor) {
-            var btns = page.querySelector('.mainDetailButtons, .detailButtons');
-            if (btns && visible(btns)) { anchor = btns; }
-        }
+        if (!anchor) { anchor = btns; }
         if (!anchor || !anchor.parentElement) { return; }
 
         var card = page.querySelector('.discover-season-info');
