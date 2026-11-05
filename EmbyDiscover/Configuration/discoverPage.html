@@ -5,7 +5,7 @@
     <title>Discover</title>
 </head>
 <body>
-<div data-role="page" class="page type-interior discoverUiPage" data-controller="__plugin/discoveruijs1375">
+<div data-role="page" class="page type-interior discoverUiPage" data-controller="__plugin/discoveruijs1376">
 <style>
 /* Header on the Discover page only (body.dcDiscoverActive is set while this page is the active route): white text and icons on the dark page. The side drawer is deliberately left alone. */
 body.dcDiscoverActive .skinHeader .pageTitle,
@@ -26,6 +26,11 @@ body.dcDiscoverActive .skinHeader .headerButton svg { fill:#fff; }
 .dcSearch { display:flex; align-items:center; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.15); border-radius:2em; padding:0 1.2em; margin-bottom:1.5em; }
 .dcSearch input { flex:1; background:none; border:0; outline:0; color:#fff; font-size:1.1em; padding:.9em .5em; }
 .dcRowTitle { font-size:1.5em; font-weight:600; margin:1.2em 0 .5em; }
+.dcRowLink { display:inline-flex; align-items:center; gap:.4em; cursor:pointer; border-radius:.4em; transition:color .15s; }
+.dcRowLink .dcRowGo { width:1em; height:1em; opacity:.8; transition:transform .15s, opacity .15s; }
+.dcRowLink:hover, .dcRowLink:focus-visible { color:#ffb400; outline:0; }
+.dcRowLink:hover .dcRowGo, .dcRowLink:focus-visible .dcRowGo { opacity:1; transform:translateX(.15em); }
+.dcTvPage .dcRowLink:focus { color:#ffb400; outline:0; }
 .dcRow { display:flex; overflow-x:auto; padding:.5em .3em 1em; scrollbar-width:none; -ms-overflow-style:none; }
 .dcRow::-webkit-scrollbar { display:none; }
 .dcRowWrap { position:relative; }
@@ -136,7 +141,10 @@ body.dcDiscoverActive .skinHeader .headerButton svg { fill:#fff; }
 .dcBtnDel.show { display:inline-block; }
 .dcBtnTrailer, .dcBtnOpen { background:rgba(255,255,255,.12); color:#fff; border:1px solid rgba(255,255,255,.3); border-radius:2em; padding:.8em 1.6em; font-weight:700; font-size:1em; cursor:pointer; display:none; }
 .dcBtnTrailer.show, .dcBtnOpen.show { display:inline-block; }
-.dcBtnTrailer:hover, .dcBtnOpen:hover { background:#ffb400; color:#111; }
+.dcBtnTrailer { background:#1e6fd9; border-color:#1e6fd9; }
+.dcBtnOpen { background:#52b54b; border-color:#52b54b; }
+.dcBtnTrailer:hover, .dcBtnOpen:hover, .dcBtnDel:hover { filter:brightness(1.18); }
+.dcSeasons .dcBtnTrailer { padding:.55em 1.1em; font-size:.95em; }
 .dcTrailerOverlay { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,.9); z-index:10002; display:none; flex-direction:column; align-items:center; justify-content:center; padding:1em; }
 .dcTrailerOverlay.open { display:flex; }
 .dcTrailerFrame { width:960px; max-width:100%; height:540px; max-height:56vw; width:min(960px,100%); border:0; border-radius:.7em; background:#000; }
@@ -197,7 +205,6 @@ body.dcDiscoverActive .skinHeader .headerButton svg { fill:#fff; }
     <div class="dcRoot">
         <div class="dcDiag" style="margin:0 0 1em;font-size:.85em;opacity:.8;white-space:pre-wrap;color:#ffd666;"></div>
         <div class="dcSearch">
-            <button type="button" class="dcBack dcChannelBtn" style="margin-right:1em;white-space:nowrap;">Kanaaltegels</button>
             <span>&#128269;</span>
             <input type="text" class="dcSearchInput" placeholder="Films en series zoeken" autocomplete="off" />
         </div>

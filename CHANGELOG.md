@@ -5,7 +5,11 @@
 - Requests are made by the Seerr account of whoever is signed in to Emby. Seerr users imported from Emby are matched on their Emby user id and the request is sent with `X-Api-User`, so that user's permissions, quotas and approval rules in Seerr apply. Without a match the request is made as the owner of the API key (Diagnostics shows a line). If Seerr needs approval, the message says "Requested (awaiting approval)". Seerr errors such as quota or permission messages are shown as they are.
 - Change: messages and confirmations name the service that is actually used ("Already in Seerr", "Delete … from Seerr"), and the status page shows "Requests go through: Seerr" and tests the Seerr connection instead of Radarr/Sonarr.
 - Fix: the **genre tiles on the Discover page** (Movie Genres, Series Genres) show a photo in the genre colour again, like the channel tiles and Seerr (backdrop of a popular title in that genre with a duotone filter, cached 12 hours). If no photo can be fetched, the plain colour stays.
-- Change: page names bumped (`discoveruijs1375`, `discoverbuttonjs1374`, `discoverconfigjs1358`, `discoverstatusjs1101`) so browsers load the new scripts.
+- New: the titles of the rows **Trending, Popular movies, Upcoming movies, Popular series and Upcoming series** are clickable (round arrow icon) and open the whole list in a grid with **Load more**, like Seerr. Back returns to the Discover page.
+- Change: coloured buttons in the Discover popup: **Trailer** blue, **Open in Emby** Emby green, **Delete / Cancel request** red; on hover they get slightly brighter instead of turning yellow.
+- Change: for series the **Trailer** button sits in the row with the season buttons (on phones it stays in the button bar pinned to the bottom of the popup, so it is always visible).
+- Change: the **Channel tiles** button on the Discover page is gone. The channel folders are still reachable through Emby's own channel view.
+- Change: page names bumped (`discoverui1082`, `discoveruijs1376`, `discoverbuttonjs1375`, `discoverconfigjs1358`, `discoverstatusjs1101`) so browsers load the new scripts.
 - After updating, restart Emby once and hard-refresh the browser (Ctrl+F5).
 
 ## Version 1.3.5.5

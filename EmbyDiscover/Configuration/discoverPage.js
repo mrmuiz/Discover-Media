@@ -32,14 +32,14 @@ define([], function () {
 
     // Load as an external script so Emby's Content-Security-Policy does not block inline execution.
     function loadButtonScript() {
-        if (window.__discoverRequestButtonVersion === '1.3.5.5') {
-            diag.load = text('script is al actief v1.3.5.5', 'script already active v1.3.5.5', 'Skript bereits aktiv v1.3.5.5');
+        if (window.__discoverRequestButtonVersion === '1.3.5.6') {
+            diag.load = text('script is al actief v1.3.5.6', 'script already active v1.3.5.6', 'Skript bereits aktiv v1.3.5.6');
             showDiag();
             return;
         }
         var urls = [
-            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1374' }),
-            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1374' }),
+            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1375' }),
+            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1375' }),
             ApiClient.getUrl('Plugins/Discover/Script')
         ];
         var n = 0;
@@ -51,7 +51,7 @@ define([], function () {
             script.src = u + (u.indexOf('?') === -1 ? '?' : '&') + '_=' + Date.now();
             script.async = true;
             script.onload = function () {
-                if (window.__discoverRequestButtonVersion === '1.3.5.5') {
+                if (window.__discoverRequestButtonVersion === '1.3.5.6') {
                     diag.load = text('OK via extern script ', 'OK via external script ', 'OK über externes Skript ') + u;
                     showDiag();
                 } else {
@@ -85,19 +85,6 @@ define([], function () {
         var content = view.querySelector('.dcContent');
         var input = view.querySelector('.dcSearchInput');
         input.placeholder = text('Films en series zoeken', 'Search movies and series', 'Filme und Serien suchen', 'Søk filmer og serier');
-        var channelBtn = view.querySelector('.dcChannelBtn');
-        if (channelBtn) {
-            channelBtn.textContent = text('Kanaaltegels', 'Channel tiles', 'Kanalkacheln', 'Kanalfliser');
-            channelBtn.addEventListener('click', function () {
-                var uid = ApiClient.getCurrentUserId();
-                ApiClient.getJSON(ApiClient.getUrl('Channels', { UserId: uid })).then(function (r) {
-                    var ch = ((r && r.Items) || []).filter(function (c) { return /discover/i.test(c.Name || ''); })[0];
-                    if (!ch) { return; }
-                    window.__discoverStay = true;
-                    window.location.hash = '#!/list?parentid=' + encodeURIComponent(ch.Id) + '&serverId=' + encodeURIComponent(ApiClient.serverId());
-                });
-            });
-        }
         var overlay = view.querySelector('.dcOverlay');
         var toast = view.querySelector('.dcToast');
         var items = {};      // sleutel -> item (gedeeld door alle kaarten)
@@ -348,12 +335,25 @@ define([], function () {
                 '" data-name="' + esc(t.Name) + '" title="' + esc(t.Name) + '" style="' + bg + '">' + inner + '</div>';
         }
 
-        // ---- genre / studio / netwerk: alles in een raster met "Meer laden" ----
+        // Rijen die per TMDB-pagina verder kunnen: de titel opent alles in een raster (zoals Seerr).
+        var GRID_ROWS = { trending: 1, popular_movie: 1, upcoming_movie: 1, popular_tv: 1, upcoming_tv: 1 };
+        var CIRCLE_ARROW = '<svg class="dcRowGo" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><path d="M10.3 7.3a1 1 0 0 0 0 1.4l3.3 3.3-3.3 3.3a1 1 0 1 0 1.4 1.4l4-4a1 1 0 0 0 0-1.4l-4-4a1 1 0 0 0-1.4 0z" fill="currentColor"/></svg>';
+        function rowTitleHtml(rowKey, title) {
+            if (!GRID_ROWS[rowKey]) { return '<div class="dcRowTitle">' + esc(title) + '</div>'; }
+            return '<div class="dcRowTitle dcRowLink focusable" tabindex="0" role="button" data-rowkey="' + esc(rowKey) + '" data-title="' + esc(title) + '">' +
+                '<span>' + esc(title) + '</span>' + CIRCLE_ARROW + '</div>';
+        }
+
+        // ---- genre / studio / netwerk en hele rijen: alles in een raster met "Meer laden" ----
         var browse = null;
 
-        function openBrowse(kind, id, name) {
+        function openRowGrid(rowKey, title) {
+            openBrowse(null, null, title, rowKey);
+        }
+
+        function openBrowse(kind, id, name, rowKey) {
             homeShown = false;
-            browse = { kind: kind, id: id, next: 1, loading: false, done: false, seen: {} };
+            browse = { kind: kind, id: id, row: rowKey || null, next: 1, loading: false, done: false, seen: {} };
             content.innerHTML = '<div class="dcBrowseHead"><button type="button" class="dcBack">&#10094; ' + text('Terug', 'Back', 'Zurück') + '</button>' +
                 '<span class="dcBrowseTitle">' + esc(name) + '</span></div>' +
                 '<div class="dcGrid dcBrowseGrid"></div>' +
@@ -369,7 +369,10 @@ define([], function () {
             b.loading = true;
             var btn = content.querySelector('.dcMoreBtn');
             if (btn) { btn.disabled = true; btn.textContent = text('Laden...', 'Loading...', 'Wird geladen...'); }
-            api('GET', 'Discover/Browse', { Kind: b.kind, Id: b.id, Page: b.next }).then(function (r) {
+            var call = b.row
+                ? api('GET', 'Discover/List', { Key: b.row, Page: b.next })
+                : api('GET', 'Discover/Browse', { Kind: b.kind, Id: b.id, Page: b.next });
+            call.then(function (r) {
                 if (browse !== b) { return; }
                 var list = (r && r.Items) || [];
                 var fresh = list.filter(function (i) {
@@ -381,7 +384,7 @@ define([], function () {
                 var firstPage = grid && !grid.children.length;
                 if (grid && fresh.length) { grid.insertAdjacentHTML('beforeend', fresh.map(function (i) { return cardHtml(i); }).join('')); }
                 if (isTvClient && firstPage && grid.firstElementChild && !overlay.classList.contains('open')) { focusEl(grid.firstElementChild); }
-                b.next = (r && r.NextPage) || (b.next + 2);
+                b.next = (r && r.NextPage) || (b.next + (b.row ? 1 : 2));
                 b.loading = false;
                 if (!list.length) { b.done = true; }
                 var more = content.querySelector('.dcMore');
@@ -412,7 +415,7 @@ define([], function () {
                 var seen = {};
                 r.Items.forEach(function (i) { seen[key(i)] = true; });
                 rowState[r.Key] = { nextPage: r.NextPage || 4, loading: false, done: false, seen: seen };
-                html += '<div class="dcRowTitle">' + esc(r.Title) + '</div>' +
+                html += rowTitleHtml(r.Key, r.Title) +
                     rowWrapHtml('<div class="dcRow" data-row="' + esc(r.Key) + '">' + r.Items.map(function (i) { return cardHtml(i); }).join('') + '</div>');
             });
             content.innerHTML = html || '<div class="dcMsg">' + text('Geen resultaten.', 'No results.', 'Keine Ergebnisse.') + '</div>';
@@ -539,8 +542,24 @@ define([], function () {
             });
         }
 
+        // Trailer-knop: bij een serie in de rij met seizoenen, anders (en op telefoons) in de gewone knoppenrij.
+        function placeTrailer(inSeasons) {
+            var tb = overlay.querySelector('.dcBtnTrailer');
+            var row = overlay.querySelector('.dcBtnRow');
+            var box = overlay.querySelector('.dcSeasons');
+            if (!tb || !row || !box) { return; }
+            var phone = window.matchMedia && window.matchMedia('(max-width: 600px)').matches && !overlay.classList.contains('dcTv');
+            if (inSeasons && !phone) {
+                if (tb.parentNode !== box) { box.appendChild(tb); }
+            } else if (tb.parentNode !== row) {
+                var main = row.querySelector('.dcBtn');
+                row.insertBefore(tb, main ? main.nextSibling : row.firstChild);
+            }
+        }
+
         function renderSeasonButtons(i, seasons) {
             var box = overlay.querySelector('.dcSeasons');
+            placeTrailer(false);
             box.textContent = '';
             var list = (seasons || []).filter(function (s) { return s.Number > 0; });
             if (i.Type !== 'tv' || list.length === 0) { box.classList.remove('show'); return; }
@@ -565,6 +584,7 @@ define([], function () {
                 box.appendChild(b);
             });
             box.classList.add('show');
+            placeTrailer(true);
             applySeasonStates(i);
             // De losse Aanvragen-knop is voor series overbodig: "Alle seizoenen" doet hetzelfde.
             overlay.querySelector('.dcBtn').style.display = 'none';
@@ -613,6 +633,7 @@ define([], function () {
 
         function loadSeasonButtons(i) {
             var box = overlay.querySelector('.dcSeasons');
+            placeTrailer(false);   // eerst terug naar de knoppenrij, anders verdwijnt hij mee met de seizoenen
             box.textContent = '';
             box.classList.remove('show');
             overlay.querySelector('.dcBtn').style.display = '';
@@ -880,6 +901,11 @@ define([], function () {
 
         content.addEventListener('click', function (e) {
             var t = e.target;
+            var rowLink = t.closest ? t.closest('.dcRowLink') : null;
+            if (rowLink) {
+                openRowGrid(rowLink.getAttribute('data-rowkey'), rowLink.getAttribute('data-title'));
+                return;
+            }
             var tile = t.closest ? t.closest('.dcTile') : null;
             if (tile) {
                 openBrowse(tile.getAttribute('data-kind'), parseInt(tile.getAttribute('data-id'), 10), tile.getAttribute('data-name'));
@@ -895,7 +921,7 @@ define([], function () {
             var k = e.key || '';
             if (k !== 'Enter' && k !== ' ' && e.keyCode !== 13 && e.keyCode !== 32) { return; }
             var el = e.target;
-            if (el && el.classList && (el.classList.contains('dcCard') || el.classList.contains('dcTile'))) {
+            if (el && el.classList && (el.classList.contains('dcCard') || el.classList.contains('dcTile') || el.classList.contains('dcRowLink'))) {
                 e.preventDefault();
                 el.click();
             }
