@@ -38,8 +38,8 @@ define([], function () {
             return;
         }
         var urls = [
-            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1394' }),
-            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1394' }),
+            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1395' }),
+            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1395' }),
             ApiClient.getUrl('Plugins/Discover/Script')
         ];
         var n = 0;
@@ -70,7 +70,7 @@ define([], function () {
         })();
     }
 
-    var UI_PAGE = 'discoverui1093';
+    var UI_PAGE = 'discoverui1094';
 
     return function (view, params) {
         // embedded: alleen de popup, over een andere Emby-pagina heen (film-, serie- of acteurspagina).
