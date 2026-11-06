@@ -123,12 +123,12 @@ namespace Emby.Plugins.Discover
                 await Task.WhenAll(movies, series).ConfigureAwait(false);
                 foreach (var r in movies.Result)
                 {
-                    if (r.movie == null || r.movie.tmdbId <= 0) continue;
+                    if (r.movie == null || r.movie.tmdbId <= 0 || IsImported(r)) continue;
                     list.Add(ToPart(r, "movie", r.movie.tmdbId, r.movie.title, 0, 0, null));
                 }
                 foreach (var r in series.Result)
                 {
-                    if (r.series == null || r.series.tmdbId <= 0) continue;
+                    if (r.series == null || r.series.tmdbId <= 0 || IsImported(r)) continue;
                     var ep = r.episode ?? (r.episodes != null && r.episodes.Count > 0 ? r.episodes[0] : null);
                     int season = ep != null ? ep.seasonNumber : r.seasonNumber;
                     int number = ep != null ? ep.episodeNumber : 0;
@@ -185,6 +185,15 @@ namespace Emby.Plugins.Discover
                 Release = r.title, Detail = detail.Count > 0 ? string.Join(" · ", detail) : null,
                 Season = season, Episode = number
             };
+        }
+
+        /// <summary>
+        /// "imported" betekent dat de import klaar is; de download blijft dan nog in de wachtrij staan
+        /// (bijvoorbeeld een torrent die blijft seeden). Dat is geen "bezig met importeren" meer.
+        /// </summary>
+        private static bool IsImported(ArrQueueFullItemDto r)
+        {
+            return string.Equals(r.trackedDownloadState, "imported", StringComparison.OrdinalIgnoreCase);
         }
 
         /// <summary>Radarr/Sonarr-status vertaald naar de paar toestanden die de browser kent.</summary>

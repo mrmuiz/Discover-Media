@@ -1,3 +1,7 @@
+## Unreleased
+
+- Fix: a title stayed on **Importing** after it was already in Emby. Radarr/Sonarr keep a finished download in their queue with state `imported` (for example while the torrent keeps seeding); that state is no longer treated as importing, so the label disappears once the import is done.
+
 ## Version 1.4.0.2
 
 - Fix: **scroll arrows on TV with a pointer** (LG Magic Remote). The arrows only appeared when the device reported a "fine pointer"; LG webOS 24 does not, so rows could not be scrolled with the pointer there. Arrows now appear on hover as soon as the pointer is used (also on Emby's own pages), and hide again when the arrow keys are used.
