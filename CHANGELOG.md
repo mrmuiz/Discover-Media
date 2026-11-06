@@ -1,3 +1,8 @@
+## Version 1.4.0.3
+
+- Fix: the **theme colour** could not be chosen on LG TVs (the list showed no text and did not change). The colours are now buttons with a coloured dot and their name; the chosen colour has a ✓. Works with mouse, Magic Remote and arrow keys.
+- Page names bumped (`discoverconfig1090`, `discoverconfigjs1370`, `discoverui1110`, `discoveruijs1405`, `discoverbuttonjs1412`).
+
 ## Version 1.4.0.2
 
 - Fix: **scroll arrows on TV with a pointer** (LG Magic Remote). The arrows only appeared when the device reported a "fine pointer"; LG webOS 24 does not, so rows could not be scrolled with the pointer there. Arrows now appear on hover as soon as the pointer is used (also on Emby's own pages), and hide again when the arrow keys are used.
