@@ -78,9 +78,25 @@
 - Adds a **Collection** row to movie pages in the web client: the other movies from the same TMDB collection that are not in your library, with a Request button.
 - Adds a **More like this** row to movie and series pages in the web client: TMDB recommendations that are not in your library, with a Request button (series open the season picker). Clicking a poster in these rows opens that title in the Discover popup with its info and trailer.
 - Provides a Play-based request flow for Android, TV and other clients that cannot run the web button script.
-- Shows whether a title is already requested or available when that status can be matched in Radarr or Sonarr. Season items say whether the season is already requested, partially available or in your library; requesting again is still possible.
+- Shows whether a title is already requested or available when that status can be matched in Radarr or Sonarr (or Seerr). Season items say whether the season is already requested, partially available or in your library; requesting again is still possible.
 - The Request and Trailer tiles carry the text "Request" and "Trailer" on their image so they are easy to tell apart.
 - Follows the plugin language (Dutch, English or German) in the channel, on the Discover page and in the status and diagnostics pages.
+
+### Discover page and popup (web client)
+
+- Rows at the top: **Recently added**, **Recent requests**, **My requests** and **New seasons** (series in your library with a later season on TMDB), plus optional **Trakt watchlist** and **TMDB list** rows with **Request all**. Every row can be switched on or off; short rows use wide cards with download progress.
+- **Genre and sort** in Popular movies and Popular series (popular within a genre, newest, top rated), and filters in the grids (year, score, language, not in my library).
+- Studio and network tiles show the **logo in its own colours** when TMDB has a version that is visible on the dark tile.
+- The popup shows info, trailer, cast with photos (person page with biography and their other movies and series), optional **IMDb, Rotten Tomatoes and Metacritic** scores (your own OMDb key) and, for movies that are part of a series, the whole **collection**: request single films with the **+** on a poster or all films at once (with a warning and a confirmation step).
+- **Theme colour** for buttons, focus and accents, and optional year and score under the posters.
+- Works with a TV remote (arrow keys, including inside the popup) and with a pointer such as the LG Magic Remote.
+
+### Requests and users
+
+- **Request limit per user**: at most N requests per X days (administrators are exempt; in Seerr mode Seerr's own quotas apply).
+- **Overview of all requests** for administrators, with a count per user.
+- A **"… is available to watch"** notification in Emby for the person who requested a title, as soon as it has files.
+- Announced seasons can already be requested; Sonarr picks them up when they appear.
 
 ## Which Emby apps get what
 
@@ -98,7 +114,8 @@ The official Emby apps ship their own built-in client, which a plugin cannot ext
 
 - Emby Server 4.10.2 or newer (4.11 beta included). The plugin is built against `MediaBrowser.Server.Core` 4.10.0.1-beta; it has been installed on Emby Server 4.10.2.0 and on the 4.11 beta.
 - A [TMDB API key](https://www.themoviedb.org/settings/api).
-- Radarr for movie requests and/or Sonarr for series requests. Series requests require Sonarr v4 or v5 (tested with both; older versions are not supported).
+- Radarr for movie requests and/or Sonarr for series requests, **or** a Seerr (Jellyseerr/Overseerr) server. Series requests through Sonarr require Sonarr v4 or v5 (tested with both; older versions are not supported).
+- Optional: a free [OMDb API key](https://www.omdbapi.com/apikey.aspx) for IMDb, Rotten Tomatoes and Metacritic scores in the popup.
 - Emby's bundled `ffmpeg` is used to create some channel artwork and the request confirmation clip.
 
 ## Install
@@ -128,18 +145,27 @@ The request confirmation clip shows a large poster with the status (Requested / 
 
 ## Configuration
 
-| Setting | Purpose |
-|---|---|
-| TMDB API key | Provides titles, artwork and metadata. |
-| Plugin language | Defaults to following Emby's server UI language; Dutch, English and German can also be selected manually. |
-| TMDB language | Defaults to following Emby's server UI language (`nl-NL` for Dutch and `en-US` otherwise); a TMDB language can also be selected manually. |
-| Radarr URL and API key | Sends movie requests to Radarr. |
-| Sonarr URL and API key | Sends series requests to Sonarr. |
-| Quality profile and root folder | Selects the destination settings used for requests. Choose values returned by **Test connection**. |
-| Show Diagnostics | Optional yellow debug message and technical media information on item pages. **On by default** (turn it off here if you prefer the plain channel). |
-| Show the Trailer tile | Shows the "Trailer: title" tile next to "Request" in the channel. **On by default.** Turn it off to keep only the request tile. |
-| Tile opens the Discover page | Web client only. A tap on the **Discover Media** tile opens the Discover page directly, and the Request button works on detail pages without opening Discover first. Adds a small loader to the web client's `index.html`, re-applied on every server start. It stays in place and reads this switch live, so turning it on or off works right after saving (off = the tile opens the channel tiles). **On by default** (turn it off here if you prefer the plain channel). |
-| Web client path | Only needed when the web client folder (with `index.html`) is not found automatically. Leave empty. |
+The settings are split over tabs: **General**, **Appearance**, **TMDB**, **Requests** (Radarr/Sonarr or Seerr), **Users**, **Storage** and **Diagnostics**. The plugin finds the web client folder (with `index.html`) automatically; in the rare case it does not, the folder can be set as `WebClientPath` in the plugin's XML configuration file.
+
+| Setting | Tab | Purpose |
+|---|---|---|
+| Plugin language | General | Defaults to following Emby's server UI language; Dutch, English and German can also be selected manually. |
+| Tile opens the Discover page | Appearance | Web client only. A tap on the **Discover Media** tile opens the Discover page directly, and the Request button works on detail pages without opening Discover first. Adds a small loader to the web client's `index.html`, re-applied on every server start. It stays in place and reads this switch live, so turning it on or off works right after saving (off = the tile opens the channel tiles). **On by default.** |
+| Show the Trailer tile | Appearance | Shows the "Trailer: title" tile next to "Request" in the channel. **On by default.** |
+| Rows on the Discover page | Appearance | Switch **Recently added**, **Recent requests**, **My requests** and **New seasons** on or off. |
+| TMDB list / Trakt watchlist | Appearance | Optional extra rows: a TMDB list (id or link) and a public Trakt watchlist (username + Client ID), each with a test button. |
+| Theme colour | Appearance | Colour of buttons, focus and accents (yellow, Emby green, blue, turquoise, purple, pink, red, orange, white). |
+| Year / score under posters | Appearance | Show or hide the year and the TMDB score under the posters. |
+| TMDB API key | TMDB | Provides titles, artwork and metadata. |
+| TMDB language | TMDB | Defaults to following Emby's server UI language (`nl-NL` for Dutch and `en-US` otherwise); a TMDB language can also be selected manually. |
+| Exclude languages | TMDB | Hide titles by original language. |
+| OMDb API key | TMDB | Optional. Shows IMDb, Rotten Tomatoes and Metacritic scores in the popup (can be switched off). Cached 24 hours per title. |
+| Request through | Requests | Radarr/Sonarr directly, or a Seerr server (URL and API key). |
+| Radarr / Sonarr URL and API key | Requests | Sends movie requests to Radarr and series requests to Sonarr. |
+| Quality profile and root folder | Requests | Selects the destination settings used for requests. Choose values returned by **Test connection**. |
+| Request limit | Users | At most N requests per X days per user (0 = no limit). Administrators are exempt. Also shows the overview of all requests. |
+| Storage | Storage | How long confirmation clips and tile images are kept, and the maximum cache size. |
+| Show Diagnostics | Diagnostics | Optional yellow debug message and technical media information on item pages. **On by default.** |
 
 API keys are stored in the plugin configuration and masked in the settings form by default.
 
