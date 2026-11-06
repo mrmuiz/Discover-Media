@@ -114,6 +114,11 @@ html.dcNoYear .dcCapSub .dcYear, html.dcNoScore .dcCapSub .dcStar { display:none
 .dcOverlay.dcTv .dcModalBody img { width:30vh; height:45vh; flex:0 0 auto; }
 .dcOverlay.dcTv .dcModalBody > img { margin-right:2.5vw; }
 .dcOverlay.dcTv .dcModalInfo { display:flex; flex-direction:column; min-width:0; flex:1 1 auto; max-height:79vh; }
+/* Lange inhoud (veel seizoenen, lange downloadlijst): de info scrolt, zodat de knoppen onderaan bereikbaar blijven.
+   De focusEl()-navigatie scrolt het gefocuste element zelf in beeld (scrollIntoView). */
+.dcOverlay.dcTv .dcModalInfo { overflow-y:auto; overflow-x:hidden; padding-right:.6em; scroll-padding:1em 0; }
+.dcOverlay.dcTv .dcModalInfo::-webkit-scrollbar { width:.35em; }
+.dcOverlay.dcTv .dcModalInfo::-webkit-scrollbar-thumb { background:rgba(255,255,255,.35); border-radius:.2em; }
 .dcOverlay.dcTv .dcModalInfo h2 { font-size:1.6em; overflow:hidden; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; }
 .dcOverlay.dcTv .dcInfo { overflow:hidden; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:4; flex:0 0 auto; margin-bottom:.6em; }
 .dcOverlay.dcTv .dcOverview { overflow-x:hidden; overflow-y:auto; flex:0 1 auto; min-height:3em; margin-bottom:.8em; padding-right:.6em; scroll-behavior:smooth; }

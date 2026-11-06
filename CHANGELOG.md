@@ -1,3 +1,7 @@
+## Unreleased
+
+- Fix: on TV the **popup could cut off the buttons** at the bottom with a long list (many seasons or downloads). The info part of the popup now scrolls, and the remote focus scrolls the selected season or button into view. Page name bumped (`discoverui1110`).
+
 ## Version 1.4.0.2
 
 - Fix: **scroll arrows on TV with a pointer** (LG Magic Remote). The arrows only appeared when the device reported a "fine pointer"; LG webOS 24 does not, so rows could not be scrolled with the pointer there. Arrows now appear on hover as soon as the pointer is used (also on Emby's own pages), and hide again when the arrow keys are used.
