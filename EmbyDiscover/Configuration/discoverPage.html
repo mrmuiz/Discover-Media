@@ -5,7 +5,7 @@
     <title>Discover</title>
 </head>
 <body>
-<div data-role="page" class="page type-interior discoverUiPage" data-controller="__plugin/discoveruijs1390">
+<div data-role="page" class="page type-interior discoverUiPage" data-controller="__plugin/discoveruijs1391">
 <style>
 /* Header on the Discover page only (body.dcDiscoverActive is set while this page is the active route): white text and icons on the dark page. The side drawer is deliberately left alone. */
 body.dcDiscoverActive .skinHeader .pageTitle,
@@ -230,6 +230,26 @@ body.dcDiscoverActive .skinHeader .headerButton svg { fill:#fff; }
 .dcTvPage .dcProg { height:12px; }
 .dcProg i { display:block; height:100%; width:0; background:#ffb400; transition:width .6s; }
 .dcProg.paused i, .dcProg.stalled i { background:#9aa5b8; }
+/* Brede kaarten in de korte rijen bovenaan (Mijn aanvragen, Nieuwe seizoenen, watchlist/lijst):
+   achtergrond + kleine poster + titel + status; badge en status in de hoek, voortgang over de hele breedte. */
+.dcCard.dcWide { width:22em; max-width:calc(100% - 1em); height:9.6em; display:flex; align-items:flex-end; border-radius:.8em; overflow:hidden; background:#16223a; box-shadow:0 .3em 1em rgba(0,0,0,.45); border:2px solid transparent; transition:border-color .15s, box-shadow .15s, transform .15s; }
+.dcWide .dcWideBg { position:absolute; top:0; left:0; right:0; bottom:0; background-size:cover; background-position:center 25%; }
+.dcWide .dcWideBg.blur { filter:blur(14px) brightness(.7); transform:scale(1.2); }
+.dcWide .dcWideShade { position:absolute; top:0; left:0; right:0; bottom:0; background:linear-gradient(90deg, rgba(10,16,30,.95) 28%, rgba(10,16,30,.55) 70%, rgba(10,16,30,.35)); }
+.dcWide .dcPoster { position:static; flex:none; width:5.2em; height:7.8em; margin:0 .9em .8em; border-radius:.45em; border:0; box-shadow:0 0 0 2px rgba(255,255,255,.18), 0 .3em .8em rgba(0,0,0,.5); transform:none !important; }
+.dcWide .dcPoster img, .dcWide .dcPoster .dcNoPoster { position:relative; border-radius:.45em; }
+.dcWide .dcPoster .dcNoPoster { font-size:.7em; padding:.4em; }
+.dcWide .dcBadge { z-index:2; top:auto; left:auto; position:static; display:inline-block; margin-bottom:.5em; }
+.dcWide .dcStatus { z-index:2; }
+.dcWide .dcProg { height:6px; z-index:2; }
+.dcWide .dcCap { position:relative; flex:1; min-width:0; padding:0 1em .9em 0; }
+.dcWide .dcCapT { font-size:1.1em; font-weight:700; -webkit-line-clamp:2; }
+.dcWide .dcCapQ { display:inline-block; max-width:100%; margin-top:.45em; padding:.2em .7em; border-radius:1em; background:rgba(255,180,0,.2); font-size:.8em; box-sizing:border-box; }
+.dcWide .dcCapQ.req, .dcWide .dcCapQ.paused, .dcWide .dcCapQ.stalled { background:rgba(255,255,255,.12); }
+.dcWide .dcCapQ.avail { background:rgba(34,165,89,.25); }
+.dcCard.dcWide:hover, .dcCard.dcWide:focus-visible, .dcTvPage .dcCard.dcWide:focus { border-color:#ffb400; box-shadow:0 .5em 1.4em rgba(0,0,0,.5), 0 0 0 1px #ffb400; }
+.dcTvPage .dcCard.dcWide:focus { transform:scale(1.03); }
+.dcCard.dcWide:focus-visible .dcPoster, .dcTvPage .dcCard.dcWide:focus .dcPoster { box-shadow:0 0 0 2px rgba(255,255,255,.18); }
 .dcCapQ { margin-top:.3em; font-size:.86em; font-weight:600; color:#ffb400; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .dcCapQ.paused, .dcCapQ.stalled, .dcCapQ.req { color:#c9d2ea; }
 .dcCapQ.avail { color:#5fd38d; }

@@ -38,8 +38,8 @@ define([], function () {
             return;
         }
         var urls = [
-            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1396' }),
-            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1396' }),
+            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1397' }),
+            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1397' }),
             ApiClient.getUrl('Plugins/Discover/Script')
         ];
         var n = 0;
@@ -70,7 +70,7 @@ define([], function () {
         })();
     }
 
-    var UI_PAGE = 'discoverui1095';
+    var UI_PAGE = 'discoverui1096';
 
     return function (view, params) {
         // embedded: alleen de popup, over een andere Emby-pagina heen (film-, serie- of acteurspagina).
@@ -255,7 +255,7 @@ define([], function () {
             if (!list.length) { if (old) { old.parentNode.removeChild(old); } return; }
             var scroll = old ? old.querySelector('.dcRow').scrollLeft : 0;
             var html = '<div class="dcMine"><div class="dcRowTitle">' + esc(text('Mijn aanvragen', 'My requests', 'Meine Anfragen', 'Mine forespørsler')) + '</div>' +
-                rowWrapHtml('<div class="dcRow" data-row="my_requests">' + list.map(function (i) { return cardHtml(i, true); }).join('') + '</div>') + '</div>';
+                rowWrapHtml('<div class="dcRow" data-row="my_requests">' + list.map(function (i) { return cardHtml(i, true, null, list.length <= WIDE_MAX); }).join('') + '</div>') + '</div>';
             var hadFocus = old && old.contains(document.activeElement) ? document.activeElement.getAttribute('data-key') : null;
             if (old) { old.insertAdjacentHTML('afterend', html); old.parentNode.removeChild(old); }
             else { top.insertAdjacentHTML('afterbegin', html); }
@@ -298,7 +298,7 @@ define([], function () {
                     ? ' <button type="button" class="dcReqAll focusable" data-row="' + esc(r.Key) + '">' + esc(text('Alles aanvragen', 'Request all', 'Alle anfragen', 'Be om alle')) + ' (' + open + ')</button>'
                     : '';
                 html += '<div class="dcExtra"><div class="dcRowTitle">' + esc(extraTitle(r)) + all + '</div>' +
-                    rowWrapHtml('<div class="dcRow" data-row="' + esc(r.Key) + '">' + r.Items.map(function (i) { return cardHtml(i); }).join('') + '</div>') + '</div>';
+                    rowWrapHtml('<div class="dcRow" data-row="' + esc(r.Key) + '">' + r.Items.map(function (i) { return cardHtml(i, false, null, r.Items.length <= WIDE_MAX); }).join('') + '</div>') + '</div>';
             });
             top.insertAdjacentHTML('beforeend', html);
             Array.prototype.forEach.call(top.querySelectorAll('.dcExtra .dcRow'), function (rw) {
@@ -378,7 +378,10 @@ define([], function () {
             for (var w = 0; w < wraps.length; w++) { updateArrows(wraps[w]); }
         }
 
-        function cardHtml(i, mine, embyId) {
+        // Korte rijen bovenaan: tot en met WIDE_MAX titels brede kaarten (vult de ruimte), daarboven gewone posters.
+        var WIDE_MAX = 3;
+        // wide = brede kaart (achtergrond + kleine poster + status) voor de korte rijen bovenaan.
+        function cardHtml(i, mine, embyId, wide) {
             items[key(i)] = i;
             var poster = i.Poster
                 ? '<img loading="lazy" src="' + esc(i.Poster) + '" alt="" />'
@@ -388,12 +391,15 @@ define([], function () {
             if (i.Year) { sub.push('<span>' + i.Year + '</span>'); }
             // Persoonspagina: welke rol (personage of regie), op een eigen regel.
             var role = i.Role ? (i.Role === 'Director' ? text('Regie', 'Director', 'Regie', 'Regi') : i.Role) : '';
-            return '<div class="dcCard focusable" tabindex="0" role="button" data-key="' + key(i) + '"' + (mine === true ? ' data-mine="1"' : '') +
+            var bgUrl = wide ? (i.Backdrop || i.Poster || '') : '';
+            return '<div class="dcCard focusable' + (wide ? ' dcWide' : '') + '" tabindex="0" role="button" data-key="' + key(i) + '"' + (mine === true ? ' data-mine="1"' : '') +
                 (embyId ? ' data-emby="' + esc(embyId) + '"' : '') + '>' +
+                (wide ? '<div class="dcWideBg' + (i.Backdrop ? '' : ' blur') + '"' + (bgUrl ? ' style="background-image:url(&quot;' + esc(bgUrl) + '&quot;)"' : '') + '></div><div class="dcWideShade"></div>' : '') +
                 '<div class="dcPoster">' + poster +
-                '<span class="dcBadge ' + i.Type + '">' + (i.Type === 'tv' ? text('SERIE', 'SERIES', 'SERIE') : text('FILM', 'MOVIE', 'FILM')) + '</span>' +
+                (wide ? '' : '<span class="dcBadge ' + i.Type + '">' + (i.Type === 'tv' ? text('SERIE', 'SERIES', 'SERIE') : text('FILM', 'MOVIE', 'FILM')) + '</span>') +
                 '<span class="dcStatus s' + i.Status + '">' + statusIcon(i.Status) + '</span>' + queueHtml(i) + '</div>' +
-                '<div class="dcCap"><div class="dcCapT">' + esc(i.Title) + '</div>' +
+                '<div class="dcCap">' + (wide ? '<span class="dcBadge ' + i.Type + '">' + (i.Type === 'tv' ? text('SERIE', 'SERIES', 'SERIE') : text('FILM', 'MOVIE', 'FILM')) + '</span>' : '') +
+                '<div class="dcCapT">' + esc(i.Title) + '</div>' +
                 (sub.length ? '<div class="dcCapSub">' + sub.join('') + '</div>' : '') +
                 (role ? '<div class="dcRole" title="' + esc(role) + '">' + esc(role) + '</div>' : '') +
                 capQueueHtml(i, mine === true) +

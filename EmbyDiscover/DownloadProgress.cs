@@ -511,6 +511,7 @@ namespace Emby.Plugins.Discover
                 Key = "my_requests",
                 Title = DiscoverLanguage.Text("Mijn aanvragen", "My requests", "Meine Anfragen")
             };
+            if (!Plugin.GetCurrentConfiguration().ShowMyRequests) return row; // rij uitgezet in de instellingen
             var info = Who();
             if (info == null) return row;
             var mine = RequestStore.For(_json, info.UserId);
