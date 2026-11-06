@@ -5,7 +5,7 @@
     <title>Discover</title>
 </head>
 <body>
-<div data-role="page" class="page type-interior discoverUiPage" data-controller="__plugin/discoveruijs1392">
+<div data-role="page" class="page type-interior discoverUiPage" data-controller="__plugin/discoveruijs1393">
 <style>
 /* Header on the Discover page only (body.dcDiscoverActive is set while this page is the active route): white text and icons on the dark page. The side drawer is deliberately left alone. */
 body.dcDiscoverActive .skinHeader .pageTitle,
@@ -161,6 +161,9 @@ body.dcDiscoverActive .skinHeader .headerButton svg { fill:#fff; }
 .dcSeasons .dcBtnTrailer { padding:.55em 1.1em; font-size:.95em; }
 .dcTrailerOverlay { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,.9); z-index:100002; display:none; flex-direction:column; align-items:center; justify-content:center; padding:1em; }
 .dcTrailerOverlay.open { display:flex; }
+/* Popup of trailer open: Emby's kopbalk (die boven de pagina ligt) mag het kruisje en de klik naast de popup niet afvangen. */
+body.dcModalOpen .skinHeader, body.dcModalOpen .skinHeader * { pointer-events:none !important; }
+body.dcModalOpen .skinHeader { opacity:0 !important; transition:opacity .15s; }
 .dcTrailerFrame { width:960px; max-width:100%; height:540px; max-height:56vw; width:min(960px,100%); border:0; border-radius:.7em; background:#000; }
 .dcTrailerLink { margin-top:1em; color:#ffd666; }
 .dcBtnDel[disabled] { opacity:.6; cursor:default; }

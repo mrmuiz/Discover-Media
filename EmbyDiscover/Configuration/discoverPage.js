@@ -38,8 +38,8 @@ define([], function () {
             return;
         }
         var urls = [
-            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1400' }),
-            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1400' }),
+            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1401' }),
+            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1401' }),
             ApiClient.getUrl('Plugins/Discover/Script')
         ];
         var n = 0;
@@ -70,7 +70,7 @@ define([], function () {
         })();
     }
 
-    var UI_PAGE = 'discoverui1097';
+    var UI_PAGE = 'discoverui1098';
 
     return function (view, params) {
         // embedded: alleen de popup, over een andere Emby-pagina heen (film-, serie- of acteurspagina).
@@ -1636,6 +1636,23 @@ define([], function () {
         var trailerFrame = trailerOverlay.querySelector('.dcTrailerFrame');
         var trailerLink = trailerOverlay.querySelector('.dcTrailerLink');
         function closeTrailer() { trailerOverlay.classList.remove('open'); trailerFrame.src = 'about:blank'; }
+
+        // Zolang de popup of trailer open is: Emby's kopbalk onklikbaar en onzichtbaar. Die ligt anders boven de popup
+        // (de popup zit in de pagina, de kopbalk erbuiten) en vangt dan de klik op het kruisje rechtsboven af.
+        // Over alle Discover-pagina's heen: alleen een popup die echt in beeld is telt (een verborgen oude pagina niet).
+        function syncModalBody() {
+            var open = Array.prototype.some.call(document.querySelectorAll('.dcOverlay.open, .dcTrailerOverlay.open'), function (o) {
+                return o.getClientRects().length > 0;
+            });
+            document.body.classList.toggle('dcModalOpen', open);
+        }
+        if (typeof MutationObserver === 'function') {
+            var modalObs = new MutationObserver(syncModalBody);
+            modalObs.observe(overlay, { attributes: true, attributeFilter: ['class'] });
+            modalObs.observe(trailerOverlay, { attributes: true, attributeFilter: ['class'] });
+        }
+        view.addEventListener('viewhide', function () { setTimeout(syncModalBody, 0); });
+        window.addEventListener('hashchange', function () { setTimeout(syncModalBody, 0); });
         trailerOverlay.querySelector('.dcTrailerClose').addEventListener('click', closeTrailer);
         trailerOverlay.addEventListener('click', function (e) { if (e.target === trailerOverlay) { closeTrailer(); } });
         overlay.querySelector('.dcBtnTrailer').addEventListener('click', function () {
