@@ -38,8 +38,8 @@ define([], function () {
             return;
         }
         var urls = [
-            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1403' }),
-            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1403' }),
+            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1404' }),
+            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1404' }),
             ApiClient.getUrl('Plugins/Discover/Script')
         ];
         var n = 0;
@@ -70,7 +70,7 @@ define([], function () {
         })();
     }
 
-    var UI_PAGE = 'discoverui1100';
+    var UI_PAGE = 'discoverui1101';
 
     return function (view, params) {
         // embedded: alleen de popup, over een andere Emby-pagina heen (film-, serie- of acteurspagina).
@@ -428,7 +428,7 @@ define([], function () {
             var c = document.createElement('canvas'); c.width = w; c.height = h;
             var g = c.getContext('2d'); g.drawImage(img, 0, 0, w, h);
             var d = g.getImageData(0, 0, w, h).data;
-            var minX = w, minY = h, maxX = -1, maxY = -1, opaque = 0, dark = 0, light = 0, lumSum = 0, colorful = 0;
+            var minX = w, minY = h, maxX = -1, maxY = -1, opaque = 0, dark = 0, light = 0, lumSum = 0, colorful = 0, distSum = 0;
             for (var y = 0; y < h; y++) {
                 for (var x = 0; x < w; x++) {
                     var i = (y * w + x) * 4;
@@ -440,12 +440,14 @@ define([], function () {
                     var mx = Math.max(d[i], d[i + 1], d[i + 2]), mn = Math.min(d[i], d[i + 1], d[i + 2]);
                     lumSum += lum; if (mx && (mx - mn) / mx > 0.35 && lum >= 60) { colorful++; }
                     if (lum < 90) { dark++; } else if (lum > 170) { light++; }
+                    // afstand tot de tegelkleur (#1c2640): hoe goed steekt dit af tegen de donkerblauwe tegel
+                    distSum += Math.sqrt((d[i] - 28) * (d[i] - 28) + (d[i + 1] - 38) * (d[i + 1] - 38) + (d[i + 2] - 64) * (d[i + 2] - 64));
                 }
             }
             if (!opaque) { return null; }
             return {
                 fill: opaque / ((maxX - minX + 1) * (maxY - minY + 1)),
-                dark: dark / opaque, light: light / opaque, lum: lumSum / opaque, colorful: colorful / opaque
+                dark: dark / opaque, light: light / opaque, lum: lumSum / opaque, colorful: colorful / opaque, dist: distSum / opaque
             };
         }
         // Kan dit logo in zijn eigen kleuren op de donkere tegel?
@@ -457,7 +459,8 @@ define([], function () {
             if (!st) { return 0; }
             var lightVersion = st.lum >= 120 && st.dark < 0.35;
             if (lightVersion && st.colorful >= 0.02) { return 4; }
-            if (st.colorful > 0.55 && st.lum >= 85) { return 3; }
+            // gekleurd en genoeg contrast met de tegel (donkerblauw zoals het Disney-kasteel of DreamWorks valt weg)
+            if (st.colorful > 0.55 && st.lum >= 85 && st.dist >= 150) { return 3; }
             if (lightVersion) { return 2; }
             if (st.fill > 0.6 && Math.min(st.dark, st.light) > 0.03) { return 1; }
             return 0;
