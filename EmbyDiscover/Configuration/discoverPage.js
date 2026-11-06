@@ -1651,10 +1651,11 @@ define([], function () {
             if (collectionCache[i.TmdbId]) { renderCollection(i, collectionCache[i.TmdbId]); return; }
             api('GET', 'Discover/Related', { Type: 'movie', TmdbId: i.TmdbId }).then(done, function () { });
         }
-        function colStateHtml(f) {
-            if (f.Status === 2) { return '<span class="dcColBtn have">\u2713 ' + esc(text('In bibliotheek', 'In library', 'In Bibliothek', 'I biblioteket')) + '</span>'; }
-            if (f.Status === 1) { return '<span class="dcColBtn req">\u23F3 ' + esc(text('Aangevraagd', 'Requested', 'Angefragt', 'Forespurt')) + '</span>'; }
-            return '<button type="button" class="dcColBtn" data-req="' + f.TmdbId + '">' + esc(text('Aanvragen', 'Request', 'Anfragen', 'Forespør')) + '</button>';
+        // Status als klein bolletje in de hoek van de poster (geen losse knoppen meer).
+        function colBadgeHtml(f) {
+            if (f.Status === 2) { return '<span class="dcColBadge have" title="' + esc(text('In bibliotheek', 'In library', 'In Bibliothek', 'I biblioteket')) + '">\u2713</span>'; }
+            if (f.Status === 1) { return '<span class="dcColBadge req" title="' + esc(text('Aangevraagd', 'Requested', 'Angefragt', 'Forespurt')) + '">\u23F3</span>'; }
+            return '';
         }
         function renderCollection(i, r) {
             var box = overlay.querySelector('.dcCollection');
@@ -1664,12 +1665,18 @@ define([], function () {
             var open = list.filter(function (f) { return f.Status === 0; }).length;
             box.innerHTML = '<div class="dcColHead"><span class="dcColTitle">' + esc(r.CollectionName || text('Collectie', 'Collection', 'Sammlung', 'Samling')) +
                 ' \u00B7 ' + list.length + ' ' + esc(text('films', 'movies', 'Filme', 'filmer')) + '</span>' +
-                (open ? '<button type="button" class="dcColAll">' + esc(text('Alle films aanvragen', 'Request all movies', 'Alle Filme anfragen', 'Be om alle filmer')) + ' (' + open + ')</button>' : '') +
-                '</div><div class="dcColRow">' + list.map(function (f) {
+                (open ? '<button type="button" class="dcColAll" data-n="' + open + '">' + esc(text('Alle films aanvragen', 'Request all movies', 'Alle Filme anfragen', 'Be om alle filmer')) + ' (' + open + ')</button>' : '') +
+                '</div>' + (open ? '<div class="dcColWarn">\u26A0 ' + esc(text(
+                    'Hiermee vraag je in \u00E9\u00E9n keer alle ' + open + ' films uit deze collectie aan die je nog niet hebt. Telt mee voor je aanvraaglimiet.',
+                    'This requests all ' + open + ' movies from this collection that you don\u2019t have yet, in one go. Counts towards your request limit.',
+                    'Damit fragst du alle ' + open + ' Filme dieser Sammlung, die du noch nicht hast, auf einmal an. Z\u00E4hlt zu deinem Anfragelimit.',
+                    'Dette ber om alle ' + open + ' filmer i denne samlingen som du ikke har enn\u00E5, p\u00E5 \u00E9n gang. Teller mot forespørselsgrensen.')) + '</div>' : '') +
+                '<div class="dcColRow">' + list.map(function (f) {
                     return '<div class="dcColItem' + (f.TmdbId === i.TmdbId ? ' cur' : '') + '" data-tmdb="' + f.TmdbId + '">' +
                         '<button type="button" class="dcColPoster" data-open="' + f.TmdbId + '" title="' + esc(f.Title + (f.Year ? ' (' + f.Year + ')' : '')) + '"' +
-                        (f.Poster ? ' style="background-image:url(&quot;' + esc(f.Poster) + '&quot;)"' : '') + '></button>' +
-                        '<div class="dcColName">' + esc(f.Title) + (f.Year ? ' (' + f.Year + ')' : '') + '</div>' + colStateHtml(f) + '</div>';
+                        (f.Poster ? ' style="background-image:url(&quot;' + esc(f.Poster) + '&quot;)"' : '') + '>' + colBadgeHtml(f) + '</button>' +
+                        '<div class="dcColName">' + esc(f.Title) + (f.Year ? ' (' + f.Year + ')' : '') + '</div>' +
+                        (f.TmdbId === i.TmdbId ? '<div class="dcColCur">' + esc(text('Deze film', 'This movie', 'Dieser Film', 'Denne filmen')) + '</div>' : '') + '</div>';
                 }).join('') + '</div>';
         }
         function colFind(id) {
@@ -1693,25 +1700,23 @@ define([], function () {
                 if (f0 && current && f0.TmdbId !== current.TmdbId) { openModal(items[key(f0)] || f0); }
                 return;
             }
-            var reqBtn = t.closest('.dcColBtn[data-req]');
-            if (reqBtn) {
-                var f = colFind(parseInt(reqBtn.getAttribute('data-req'), 10));
-                if (!f) { return; }
-                reqBtn.disabled = true;
-                var cur = current;
-                requestColFilm(f).then(function (res) {
-                    if (res.ok) { showToast(text('Aangevraagd: ', 'Requested: ', 'Angefragt: ', 'Forespurt: ') + f.Title, false); afterRequest(); }
-                    else { showToast(res.msg, true); }
-                    if (current === cur) { renderCollection(cur, collectionCache[cur.TmdbId]); if (f.TmdbId === cur.TmdbId) { updateButton(); } }
-                });
-                return;
-            }
             var all = t.closest('.dcColAll');
             if (all) {
                 var curItem = current;
                 var r = collectionCache[curItem.TmdbId];
                 var todo = ((r && r.Collection) || []).filter(function (x) { return x.Status === 0; });
                 if (!todo.length) { return; }
+                // Twee stappen: eerste klik vraagt om bevestiging, tweede klik (binnen 5 s) vraagt alles aan.
+                if (!all.classList.contains('confirm')) {
+                    all.classList.add('confirm');
+                    all.textContent = text('Zeker? ' + todo.length + ' films aanvragen', 'Sure? Request ' + todo.length + ' movies', 'Sicher? ' + todo.length + ' Filme anfragen', 'Sikker? Be om ' + todo.length + ' filmer');
+                    clearTimeout(all._t);
+                    all._t = setTimeout(function () {
+                        if (!all.disabled) { all.classList.remove('confirm'); all.textContent = text('Alle films aanvragen', 'Request all movies', 'Alle Filme anfragen', 'Be om alle filmer') + ' (' + todo.length + ')'; }
+                    }, 5000);
+                    return;
+                }
+                clearTimeout(all._t);
                 all.disabled = true;
                 var ok = 0, fail = 0, lastErr = '';
                 (function next(n) {
@@ -2071,7 +2076,7 @@ define([], function () {
         function modalRows() {
             var q = function (sel) { return Array.prototype.filter.call(overlay.querySelectorAll(sel), isUsable); };
             return [q('.dcCast .dcCastP'), q('.dcCollection .dcColAll'), q('.dcCollection .dcColPoster'),
-                q('.dcCollection .dcColBtn[data-req]'), q('.dcSeasons button'), q('.dcBtnRow button')]
+                q('.dcSeasons button'), q('.dcBtnRow button')]
                 .filter(function (r) { return r.length > 0; });
         }
         function centerX(el) { var r = el.getBoundingClientRect(); return r.left + r.width / 2; }

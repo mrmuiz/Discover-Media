@@ -5,7 +5,7 @@
 - New: **theme colour** (Appearance tab): choose the colour of buttons, focus and accents (yellow, Emby green, blue, turquoise, purple, pink, red, orange, white). Applies to the Discover page, the popup and the rows on Emby's own pages, for everyone on the server.
 - New: **poster captions** (Appearance tab): show or hide the year and the TMDB score under the posters.
 - New: **IMDb, Rotten Tomatoes and Metacritic scores** in the popup via your own (free) OMDb API key, with a test button and an on/off switch. Cached 24 hours per title (`GET /Discover/Ratings`, `POST /Discover/TestOmdb`).
-- New: **collections** in the popup of a movie that belongs to a series of films (e.g. Saw): all films in order, with their status, a click opens the film, and request **per film** or **all films** at once (stops when the request limit is reached).
+- New: **collections** in the popup of a movie that belongs to a series of films (e.g. Saw): all films in order, with a small status badge on the poster (✓ in library, ⏳ requested) and "This movie" under the film you are looking at. A click on another poster opens that film (request it there), or use **Request all movies**: a warning under the button says how many films that is, and the button asks for confirmation first (stops when the request limit is reached).
 - New: **genre and sort** in Popular movies / Popular series: popular within a genre, newest or top rated (TMDB discover).
 - New: **scroll arrows** on the cast row in the popup, large and centred on the photos like the row arrows.
 - New: **TV remote navigation in the popup**: up/down moves between the rows (cast, collection, seasons, buttons) and left/right within a row; from the top row Up goes to the close button.
