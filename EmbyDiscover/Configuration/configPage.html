@@ -5,7 +5,7 @@
     <title>Discover</title>
 </head>
 <body>
-<div data-role="page" class="page type-interior pluginConfigurationPage discoverConfigPage" data-require="emby-input,emby-button,emby-select,emby-checkbox" data-controller="__plugin/discoverconfigjs1363">
+<div data-role="page" class="page type-interior pluginConfigurationPage discoverConfigPage" data-require="emby-input,emby-button,emby-select,emby-checkbox" data-controller="__plugin/discoverconfigjs1367">
     <style>
         .discoverConfigPage .keyWrap { position: relative; }
         .discoverConfigPage .keyWrap input { padding-right: 2.8em; }
@@ -36,6 +36,7 @@
 
                 <div class="dcTabs" role="tablist">
                     <button type="button" class="dcTab active" role="tab" data-tab="general" id="tab_general">Algemeen</button>
+                    <button type="button" class="dcTab" role="tab" data-tab="look" id="tab_look">Weergave</button>
                     <button type="button" class="dcTab" role="tab" data-tab="tmdb" id="tab_tmdb">TMDB</button>
                     <button type="button" class="dcTab" role="tab" data-tab="arr" id="tab_arr">Aanvragen</button>
                     <button type="button" class="dcTab" role="tab" data-tab="users" id="tab_users">Gebruikers</button>
@@ -55,6 +56,11 @@
                         <option value="nb-NO">Norsk</option>
                     </select>
                 </div>
+                </div>
+
+                <!-- Weergave -->
+                <div class="dcPanel" data-panel="look">
+                <h3 id="hdgTiles">Tegels</h3>
                 <div class="checkboxContainer">
                     <label class="emby-checkbox-label">
                         <input is="emby-checkbox" type="checkbox" id="chkInjectWebClientLoader" />
@@ -75,6 +81,72 @@
                             <span class="emby-checkbox-off"></span>
                         </span>
                     </label>
+                </div>
+
+                <h3 id="hdgExtraRows">Extra rijen op de Discover-pagina</h3>
+                <div class="checkboxContainer">
+                    <label class="emby-checkbox-label">
+                        <input is="emby-checkbox" type="checkbox" id="chkShowRecentlyAdded" />
+                        <span class="checkboxLabel" id="lbl_chkShowRecentlyAdded">Rij "Onlangs toegevoegd": wat het laatst in de bibliotheek is gekomen</span>
+                        <span class="emby-checkbox-outline">
+                            <span class="emby-checkbox-on"><i class="md-icon">check</i></span>
+                            <span class="emby-checkbox-off"></span>
+                        </span>
+                    </label>
+                </div>
+                <div class="checkboxContainer">
+                    <label class="emby-checkbox-label">
+                        <input is="emby-checkbox" type="checkbox" id="chkShowRecentRequests" />
+                        <span class="checkboxLabel" id="lbl_chkShowRecentRequests">Rij "Recente aanvragen": wat iedereen op de server het laatst heeft aangevraagd</span>
+                        <span class="emby-checkbox-outline">
+                            <span class="emby-checkbox-on"><i class="md-icon">check</i></span>
+                            <span class="emby-checkbox-off"></span>
+                        </span>
+                    </label>
+                </div>
+                <div class="checkboxContainer">
+                    <label class="emby-checkbox-label">
+                        <input is="emby-checkbox" type="checkbox" id="chkShowMyRequests" />
+                        <span class="checkboxLabel" id="lbl_chkShowMyRequests">Rij "Mijn aanvragen": wat de gebruiker zelf heeft aangevraagd, met de downloadvoortgang</span>
+                        <span class="emby-checkbox-outline">
+                            <span class="emby-checkbox-on"><i class="md-icon">check</i></span>
+                            <span class="emby-checkbox-off"></span>
+                        </span>
+                    </label>
+                </div>
+                <div class="checkboxContainer">
+                    <label class="emby-checkbox-label">
+                        <input is="emby-checkbox" type="checkbox" id="chkShowNewSeasons" />
+                        <span class="checkboxLabel" id="lbl_chkShowNewSeasons">Rij "Nieuwe seizoenen": series in je bibliotheek waarvan een nieuw seizoen bestaat dat je nog niet hebt</span>
+                        <span class="emby-checkbox-outline">
+                            <span class="emby-checkbox-on"><i class="md-icon">check</i></span>
+                            <span class="emby-checkbox-off"></span>
+                        </span>
+                    </label>
+                </div>
+                <h3 id="hdgOwnLists">Eigen lijsten als rij</h3>
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused" for="txtTmdbList" id="lbl_txtTmdbList">TMDB-lijst (id of link, optioneel)</label>
+                    <input is="emby-input" type="text" id="txtTmdbList" spellcheck="false" placeholder="https://www.themoviedb.org/list/123456" />
+                    <div class="fieldDescription" id="desc_txtTmdbList">Een openbare lijst op TMDB, bijvoorbeeld je eigen watchlist-lijst. Leeg = geen rij.</div>
+                </div>
+                <div>
+                    <button is="emby-button" type="button" class="raised btnTestTmdbList"><span id="btnTestTmdbListText">Test lijst</span></button>
+                    <div class="fieldDescription testStatus" id="statusTmdbList" style="margin-top:.5em;"></div>
+                </div>
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused" for="txtTraktUser" id="lbl_txtTraktUser">Trakt-gebruikersnaam (optioneel)</label>
+                    <input is="emby-input" type="text" id="txtTraktUser" spellcheck="false" />
+                </div>
+                <div class="inputContainer keyWrap">
+                    <label class="inputLabel inputLabelUnfocused" for="txtTraktClient" id="lbl_txtTraktClient">Trakt Client ID</label>
+                    <input is="emby-input" type="password" id="txtTraktClient" autocomplete="new-password" spellcheck="false" />
+                    <button is="emby-button" type="button" class="paper-icon-button-light btnToggleKey" data-target="txtTraktClient" title="Tonen" aria-label="Tonen"><i class="md-icon">visibility</i></button>
+                </div>
+                <div class="fieldDescription" id="desc_trakt">Maak op trakt.tv onder Settings &gt; Your API Apps een app aan (redirect: urn:ietf:wg:oauth:2.0:oob) en plak de Client ID hier. Je watchlist moet openbaar zijn. Leeg = geen rij.</div>
+                <div>
+                    <button is="emby-button" type="button" class="raised btnTestTrakt"><span id="btnTestTraktText">Test Trakt</span></button>
+                    <div class="fieldDescription testStatus" id="statusTrakt" style="margin-top:.5em;"></div>
                 </div>
                 </div>
 
@@ -102,40 +174,6 @@
                     <div class="fieldDescription testStatus" id="statusTmdb" style="margin-top:.5em;"></div>
                 </div>
 
-                <h3 id="hdgExtraRows">Extra rijen op de Discover-pagina</h3>
-                <div class="checkboxContainer">
-                    <label class="emby-checkbox-label">
-                        <input is="emby-checkbox" type="checkbox" id="chkShowNewSeasons" />
-                        <span class="checkboxLabel" id="lbl_chkShowNewSeasons">Rij "Nieuwe seizoenen": series uit je bibliotheek met een nieuwer seizoen</span>
-                        <span class="emby-checkbox-outline">
-                            <span class="emby-checkbox-on"><i class="md-icon">check</i></span>
-                            <span class="emby-checkbox-off"></span>
-                        </span>
-                    </label>
-                </div>
-                <div class="inputContainer">
-                    <label class="inputLabel inputLabelUnfocused" for="txtTmdbList" id="lbl_txtTmdbList">TMDB-lijst (id of link, optioneel)</label>
-                    <input is="emby-input" type="text" id="txtTmdbList" spellcheck="false" placeholder="https://www.themoviedb.org/list/123456" />
-                    <div class="fieldDescription" id="desc_txtTmdbList">Een openbare lijst op TMDB, bijvoorbeeld je eigen watchlist-lijst. Leeg = geen rij.</div>
-                </div>
-                <div>
-                    <button is="emby-button" type="button" class="raised btnTestTmdbList"><span id="btnTestTmdbListText">Test lijst</span></button>
-                    <div class="fieldDescription testStatus" id="statusTmdbList" style="margin-top:.5em;"></div>
-                </div>
-                <div class="inputContainer">
-                    <label class="inputLabel inputLabelUnfocused" for="txtTraktUser" id="lbl_txtTraktUser">Trakt-gebruikersnaam (optioneel)</label>
-                    <input is="emby-input" type="text" id="txtTraktUser" spellcheck="false" />
-                </div>
-                <div class="inputContainer keyWrap">
-                    <label class="inputLabel inputLabelUnfocused" for="txtTraktClient" id="lbl_txtTraktClient">Trakt Client ID</label>
-                    <input is="emby-input" type="password" id="txtTraktClient" autocomplete="new-password" spellcheck="false" />
-                    <button is="emby-button" type="button" class="paper-icon-button-light btnToggleKey" data-target="txtTraktClient" title="Tonen" aria-label="Tonen"><i class="md-icon">visibility</i></button>
-                </div>
-                <div class="fieldDescription" id="desc_trakt">Maak op trakt.tv onder Settings &gt; Your API Apps een app aan (redirect: urn:ietf:wg:oauth:2.0:oob) en plak de Client ID hier. Je watchlist moet openbaar zijn. Leeg = geen rij.</div>
-                <div>
-                    <button is="emby-button" type="button" class="raised btnTestTrakt"><span id="btnTestTraktText">Test Trakt</span></button>
-                    <div class="fieldDescription testStatus" id="statusTrakt" style="margin-top:.5em;"></div>
-                </div>
 
                 </div>
 
@@ -297,7 +335,7 @@
                     </label>
                 </div>
                     <div style="margin-top:1em;">
-                        <button is="emby-button" type="button" class="raised btnStatus"><span>Status en diagnose</span></button>
+                        <button is="emby-button" type="button" class="raised btnStatus"><span>Start diagnose</span></button>
                         <div class="fieldDescription" style="margin-top:.5em;">Controleert plugin, kanaal, TMDB, Radarr, Sonarr en gebruikerstoegang. Handig om twee servers te vergelijken.</div>
                     </div>
                 </div>

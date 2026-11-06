@@ -36,6 +36,12 @@ namespace Emby.Plugins.Discover
         public string TraktClientId { get; set; } = "";
         /// <summary>Optioneel: openbare TMDB-lijst (id of link) als rij op de Discover-pagina.</summary>
         public string TmdbListId { get; set; } = "";
+        /// <summary>Rij "Onlangs toegevoegd" op de Discover-pagina.</summary>
+        public bool ShowRecentlyAdded { get; set; } = true;
+        /// <summary>Rij "Recente aanvragen" (van iedereen) op de Discover-pagina.</summary>
+        public bool ShowRecentRequests { get; set; } = true;
+        /// <summary>Rij "Mijn aanvragen" bovenaan de Discover-pagina.</summary>
+        public bool ShowMyRequests { get; set; } = true;
         /// <summary>Rij "Nieuwe seizoenen" (series in de bibliotheek met een nieuwer seizoen op TMDB).</summary>
         public bool ShowNewSeasons { get; set; } = true;
 

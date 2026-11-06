@@ -5,7 +5,7 @@
     <title>Discover</title>
 </head>
 <body>
-<div data-role="page" class="page type-interior discoverUiPage" data-controller="__plugin/discoveruijs1389">
+<div data-role="page" class="page type-interior discoverUiPage" data-controller="__plugin/discoveruijs1396">
 <style>
 /* Header on the Discover page only (body.dcDiscoverActive is set while this page is the active route): white text and icons on the dark page. The side drawer is deliberately left alone. */
 body.dcDiscoverActive .skinHeader .pageTitle,
@@ -23,6 +23,8 @@ body.dcDiscoverActive .skinHeader .headerButton svg { fill:#fff; }
 .dcRoot { padding: 5.5em 3% 4em; color: #fff; background:#0b1426; height:100vh; overflow-y:auto; box-sizing:border-box; }
 @media (max-width: 800px) { .dcRoot { height:100vh; height:100dvh; padding-bottom: calc(7em + env(safe-area-inset-bottom, 0px)); } }
 .dcModal, .dcModal h2, .dcModal .dcOverview { color:#fff; }
+.dcHomeBtn { display:flex; align-items:center; justify-content:center; background:none; border:0; border-right:1px solid rgba(255,255,255,.18); color:inherit; cursor:pointer; padding:.35em .7em .35em 0; margin-right:.7em; font-size:1.25em; line-height:1; }
+.dcHomeBtn:hover, .dcHomeBtn:focus-visible { color:#ffb400; outline:none; }
 .dcSearch { display:flex; align-items:center; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.15); border-radius:2em; padding:0 1.2em; margin-bottom:1.5em; }
 .dcSearch input { flex:1; background:none; border:0; outline:0; color:#fff; font-size:1.1em; padding:.9em .5em; }
 .dcRowTitle { font-size:1.5em; font-weight:600; margin:1.2em 0 .5em; }
@@ -116,6 +118,7 @@ body.dcDiscoverActive .skinHeader .headerButton svg { fill:#fff; }
 .dcOverlay.dcTv .dcBtnRow { flex:0 0 auto; }
 .dcOverlay.dcTv .dcClose { top:2vh; right:1.5vw; }
 .dcTvPage .dcArrow { display:none; }
+.dcBack { display:none !important; } /* overal verborgen: Emby's pijl linksboven (en de terugtoets op tv) doet dit al */
 .dcTvPage .dcToast { bottom:auto; top:7vh; }
 /* Op tv is Emby's kop (.skinHeader, 9.125em met de paginatitel "Discover Media") hoger dan de
    5.5em die .dcRoot standaard vrijhoudt; daardoor viel de titel over de zoekbalk. Extra ruimte boven. */
@@ -156,21 +159,26 @@ body.dcDiscoverActive .skinHeader .headerButton svg { fill:#fff; }
 .dcBtnOpen { background:#52b54b; border-color:#52b54b; }
 .dcBtnTrailer:hover, .dcBtnOpen:hover, .dcBtnDel:hover { filter:brightness(1.18); }
 .dcSeasons .dcBtnTrailer { padding:.55em 1.1em; font-size:.95em; }
-.dcTrailerOverlay { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,.9); z-index:10002; display:none; flex-direction:column; align-items:center; justify-content:center; padding:1em; }
+.dcTrailerOverlay { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,.9); z-index:100002; display:none; flex-direction:column; align-items:center; justify-content:center; padding:1em; }
 .dcTrailerOverlay.open { display:flex; }
+/* Popup of trailer open: Emby's kopbalk (die boven de pagina ligt) mag het kruisje en de klik naast de popup niet afvangen. */
+body.dcModalOpen .skinHeader, body.dcModalOpen .skinHeader * { pointer-events:none !important; }
+body.dcModalOpen .skinHeader { opacity:0 !important; transition:opacity .15s; }
 .dcTrailerFrame { width:960px; max-width:100%; height:540px; max-height:56vw; width:min(960px,100%); border:0; border-radius:.7em; background:#000; }
 .dcTrailerLink { margin-top:1em; color:#ffd666; }
 .dcBtnDel[disabled] { opacity:.6; cursor:default; }
 .dcBtn[disabled] { background:#33415c; color:#cdd; cursor:default; }
 .dcClose { position:absolute; top:.6em; right:.9em; z-index:2; background:rgba(0,0,0,.55); color:#fff; border:0; border-radius:50%; width:2.2em; height:2.2em; font-size:1.1em; cursor:pointer; }
-.dcToast { position:fixed; bottom:2em; left:50%; transform:translateX(-50%); background:#22a559; color:#fff; padding:.8em 1.6em; border-radius:2em; z-index:10001; display:none; }
+.dcToast { position:fixed; bottom:2em; left:50%; transform:translateX(-50%); background:#22a559; color:#fff; padding:.8em 1.6em; border-radius:2em; z-index:100003; display:none; }
 .dcToast.err { background:#d32f2f; }
 .dcTileRow { }
 .dcTile { flex:0 0 auto; width:190px; height:84px; border-radius:.7em; display:flex; align-items:center; justify-content:center; text-align:center; padding:.5em 1em; box-sizing:border-box; font-weight:700; font-size:1.05em; color:#fff; cursor:pointer; border:1px solid rgba(255,255,255,.12); transition:transform .15s, border-color .15s; overflow:hidden; }
 .dcTile:hover { transform:scale(1.04); border-color:#ffb400; }
-.dcTile.logo { width:150px; padding:.8em 1.2em; }
+.dcTile.logo { width:170px; height:94px; padding:.8em 1.2em; }
 .dcTile.photo { width:220px; height:110px; font-size:1.2em; text-shadow:0 1px 4px rgba(0,0,0,.85), 0 0 2px rgba(0,0,0,.6); }
 .dcTileLogo { max-width:100%; max-height:100%; object-fit:contain; filter:brightness(0) invert(1); }
+/* Logo dat wit gemaakt een dichte vlek zou worden (bv. letters in een gevulde cirkel): eigen kleuren met een dun randje. */
+.dcTileLogo.dcOrig { filter:drop-shadow(0 0 1px rgba(255,255,255,.75)); }
 .dcBrowseHead { display:flex; align-items:center; margin:1em 0 .8em; }
 .dcBrowseTitle { font-size:1.6em; font-weight:600; }
 .dcBrowseHead > * { margin-right:1em; }
@@ -227,6 +235,26 @@ body.dcDiscoverActive .skinHeader .headerButton svg { fill:#fff; }
 .dcTvPage .dcProg { height:12px; }
 .dcProg i { display:block; height:100%; width:0; background:#ffb400; transition:width .6s; }
 .dcProg.paused i, .dcProg.stalled i { background:#9aa5b8; }
+/* Brede kaarten in de korte rijen bovenaan (Mijn aanvragen, Nieuwe seizoenen, watchlist/lijst):
+   achtergrond + kleine poster + titel + status; badge en status in de hoek, voortgang over de hele breedte. */
+.dcCard.dcWide { width:22em; max-width:calc(100% - 1em); height:9.6em; display:flex; align-items:flex-end; border-radius:.8em; overflow:hidden; background:#16223a; box-shadow:0 .3em 1em rgba(0,0,0,.45); border:2px solid transparent; transition:border-color .15s, box-shadow .15s, transform .15s; }
+.dcWide .dcWideBg { position:absolute; top:0; left:0; right:0; bottom:0; background-size:cover; background-position:center 25%; }
+.dcWide .dcWideBg.blur { filter:blur(14px) brightness(.7); transform:scale(1.2); }
+.dcWide .dcWideShade { position:absolute; top:0; left:0; right:0; bottom:0; background:linear-gradient(90deg, rgba(10,16,30,.95) 28%, rgba(10,16,30,.55) 70%, rgba(10,16,30,.35)); }
+.dcWide .dcPoster { position:static; flex:none; width:5.2em; height:7.8em; margin:0 .9em .8em; border-radius:.45em; border:0; box-shadow:0 0 0 2px rgba(255,255,255,.18), 0 .3em .8em rgba(0,0,0,.5); transform:none !important; }
+.dcWide .dcPoster img, .dcWide .dcPoster .dcNoPoster { position:relative; border-radius:.45em; }
+.dcWide .dcPoster .dcNoPoster { font-size:.7em; padding:.4em; }
+.dcWide .dcBadge { z-index:2; top:auto; left:auto; position:static; display:inline-block; margin-bottom:.5em; }
+.dcWide .dcStatus { z-index:2; }
+.dcWide .dcProg { height:6px; z-index:2; }
+.dcWide .dcCap { position:relative; flex:1; min-width:0; padding:0 1em .9em 0; }
+.dcWide .dcCapT { font-size:1.1em; font-weight:700; -webkit-line-clamp:2; }
+.dcWide .dcCapQ { display:inline-block; max-width:100%; margin-top:.45em; padding:.2em .7em; border-radius:1em; background:rgba(255,180,0,.2); font-size:.8em; box-sizing:border-box; }
+.dcWide .dcCapQ.req, .dcWide .dcCapQ.paused, .dcWide .dcCapQ.stalled { background:rgba(255,255,255,.12); }
+.dcWide .dcCapQ.avail { background:rgba(34,165,89,.25); }
+.dcCard.dcWide:hover, .dcCard.dcWide:focus-visible, .dcTvPage .dcCard.dcWide:focus { border-color:#ffb400; box-shadow:0 .5em 1.4em rgba(0,0,0,.5), 0 0 0 1px #ffb400; }
+.dcTvPage .dcCard.dcWide:focus { transform:scale(1.03); }
+.dcCard.dcWide:focus-visible .dcPoster, .dcTvPage .dcCard.dcWide:focus .dcPoster { box-shadow:0 0 0 2px rgba(255,255,255,.18); }
 .dcCapQ { margin-top:.3em; font-size:.86em; font-weight:600; color:#ffb400; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .dcCapQ.paused, .dcCapQ.stalled, .dcCapQ.req { color:#c9d2ea; }
 .dcCapQ.avail { color:#5fd38d; }
@@ -266,6 +294,7 @@ body.dcDiscoverActive .skinHeader .headerButton svg { fill:#fff; }
         <div class="dcPageBd" aria-hidden="true"><div class="dcPageBdImg"></div><div class="dcPageBdImg"></div><div class="dcPageBdShade"></div></div>
         <div class="dcDiag" style="margin:0 0 1em;font-size:.85em;opacity:.8;white-space:pre-wrap;color:#ffd666;"></div>
         <div class="dcSearch">
+            <button type="button" class="dcHomeBtn focusable" title="Discover"><i class="md-icon">explore</i></button>
             <span>&#128269;</span>
             <input type="text" class="dcSearchInput" placeholder="Films en series zoeken" autocomplete="off" />
         </div>

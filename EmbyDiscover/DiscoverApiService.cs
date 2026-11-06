@@ -217,6 +217,8 @@ namespace Emby.Plugins.Discover
         public string Name { get; set; }
         /// <summary>Logo-URL (studio/netwerk), anders leeg.</summary>
         public string Image { get; set; }
+        /// <summary>Andere logo-versies (studio/netwerk); de pagina kiest de versie die op een donkere tegel het best zichtbaar is.</summary>
+        public List<string> Images { get; set; }
         public string Color { get; set; }
         /// <summary>Genre: achtergrondfoto in de genrekleur (duotone, zoals Seerr), anders leeg.</summary>
         public string Backdrop { get; set; }
@@ -463,7 +465,10 @@ namespace Emby.Plugins.Discover
                 var ms = movieStatesTask.Result;
                 var ts = tvStatesTask.Result;
 
-                var tasks = Defs.Select(d => BuildRow(d, ms, ts)).ToList();
+                var pc = Plugin.GetCurrentConfiguration();
+                var tasks = Defs
+                    .Where(d => !(d.Kind == "recent_added" && !pc.ShowRecentlyAdded) && !(d.Kind == "recent_requests" && !pc.ShowRecentRequests))
+                    .Select(d => BuildRow(d, ms, ts)).ToList();
                 var rows = await Task.WhenAll(tasks).ConfigureAwait(false);
                 foreach (var r in rows) if (r != null) resp.Rows.Add(r);
             }
@@ -622,13 +627,18 @@ namespace Emby.Plugins.Discover
             bool network = kind == "network";
             var src = network ? Networks : Studios;
             var logos = await Task.WhenAll(src.Select(x => _tmdb.GetLogo(network, x.Key, CancellationToken.None))).ConfigureAwait(false);
+            List<string>[] variants;
+            try { variants = await Task.WhenAll(src.Select(x => _tmdb.GetLogoVariants(network, x.Key, CancellationToken.None))).ConfigureAwait(false); }
+            catch (Exception ex) { DiscoverDiagnostics.Add("logo-versies ophalen mislukt: " + ex.Message); variants = new List<string>[src.Length]; }
             for (int i = 0; i < src.Length; i++)
             {
+                var alts = (variants[i] ?? new List<string>()).Where(p => p != logos[i]).Select(p => "https://image.tmdb.org/t/p/w300" + p).ToList();
                 tiles.Add(new DiscoverTileDto
                 {
                     Id = src[i].Key.ToString(),
                     Name = src[i].Value,
                     Image = string.IsNullOrEmpty(logos[i]) ? null : "https://image.tmdb.org/t/p/w300" + logos[i],
+                    Images = alts.Count > 0 ? alts : null,
                     Color = "#1c2640"
                 });
             }

@@ -1,3 +1,19 @@
+## Version 1.4.0.1
+
+- New: **Appearance** tab in the settings with everything that changes what you see: the tiles (tile opens Discover, Trailer tile), the rows on the Discover page and your own lists (TMDB list, Trakt watchlist). TMDB now only holds the key and languages.
+- New: every row at the top of the Discover page can be switched on or off: **Recently added**, **Recent requests**, **My requests** and **New seasons** (clearer description: series in your library that have a new season you don't have yet).
+- New: **wide cards** for the short rows at the top (up to 3 titles): backdrop, small poster, title and status, with the download progress across the card. With 4 or more titles the row falls back to posters.
+- New: **Discover home button** (compass) in the search bar: back to the Discover start from anywhere, popup closed and search cleared.
+- New: studio and network tiles are slightly larger and show the **logo in its own colours** when possible. Discover checks all logo versions TMDB has and picks the one that is best visible on the dark tile (e.g. Netflix, Hulu, HBO, FOX, NBC, Peacock); logos without a suitable version stay white.
+- Change: **Emby's back arrow** at the top always stays within Discover (one step back, closes the popup; does nothing on the Discover start). On TV the remote's Back key does the same. The in-page "Back" button is gone.
+- Change: the diagnostics button is called **Run diagnostics**.
+- Fix: the **trailer** played behind the popup.
+- Fix: the **close button** of the popup was hard to hit: Emby's header lay on top of it. While a popup or trailer is open the header is now hidden and not clickable, so the close button and clicking next to the popup always work.
+- Fix: a removed TMDB list (or another extra row) stayed on the Discover page until a full reload; extra rows are now fetched again on every visit.
+- Fix: the tile → Discover redirect did not work in browsers without the Navigation API (e.g. LG webOS 6 / Chrome 79, Firefox), because Emby navigates with pushState. The loader now also checks the route every second there.
+- Change: own apps can set `window.__discoverAlwaysTile = true` before the loader so the tile always opens Discover, regardless of the browser setting.
+- Change: page names bumped (`discoverconfig1087`, `discoverconfigjs1367`, `discoverui1101`, `discoveruijs1396`, `discoverbuttonjs1405`).
+
 ## Version 1.4.0.0
 
 - New: **request limit per user** (Users tab): at most N requests per X days through Discover to Radarr/Sonarr, also when pressing Play in the channel. Administrators are exempt; in Seerr mode Seerr's own quotas apply.

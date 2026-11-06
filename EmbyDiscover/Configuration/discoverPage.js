@@ -38,8 +38,8 @@ define([], function () {
             return;
         }
         var urls = [
-            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1393' }),
-            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1393' }),
+            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1405' }),
+            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1405' }),
             ApiClient.getUrl('Plugins/Discover/Script')
         ];
         var n = 0;
@@ -70,7 +70,7 @@ define([], function () {
         })();
     }
 
-    var UI_PAGE = 'discoverui1092';
+    var UI_PAGE = 'discoverui1101';
 
     return function (view, params) {
         // embedded: alleen de popup, over een andere Emby-pagina heen (film-, serie- of acteurspagina).
@@ -255,7 +255,7 @@ define([], function () {
             if (!list.length) { if (old) { old.parentNode.removeChild(old); } return; }
             var scroll = old ? old.querySelector('.dcRow').scrollLeft : 0;
             var html = '<div class="dcMine"><div class="dcRowTitle">' + esc(text('Mijn aanvragen', 'My requests', 'Meine Anfragen', 'Mine forespørsler')) + '</div>' +
-                rowWrapHtml('<div class="dcRow" data-row="my_requests">' + list.map(function (i) { return cardHtml(i, true); }).join('') + '</div>') + '</div>';
+                rowWrapHtml('<div class="dcRow" data-row="my_requests">' + list.map(function (i) { return cardHtml(i, true, null, list.length <= WIDE_MAX); }).join('') + '</div>') + '</div>';
             var hadFocus = old && old.contains(document.activeElement) ? document.activeElement.getAttribute('data-key') : null;
             if (old) { old.insertAdjacentHTML('afterend', html); old.parentNode.removeChild(old); }
             else { top.insertAdjacentHTML('afterbegin', html); }
@@ -298,7 +298,7 @@ define([], function () {
                     ? ' <button type="button" class="dcReqAll focusable" data-row="' + esc(r.Key) + '">' + esc(text('Alles aanvragen', 'Request all', 'Alle anfragen', 'Be om alle')) + ' (' + open + ')</button>'
                     : '';
                 html += '<div class="dcExtra"><div class="dcRowTitle">' + esc(extraTitle(r)) + all + '</div>' +
-                    rowWrapHtml('<div class="dcRow" data-row="' + esc(r.Key) + '">' + r.Items.map(function (i) { return cardHtml(i); }).join('') + '</div>') + '</div>';
+                    rowWrapHtml('<div class="dcRow" data-row="' + esc(r.Key) + '">' + r.Items.map(function (i) { return cardHtml(i, false, null, r.Items.length <= WIDE_MAX); }).join('') + '</div>') + '</div>';
             });
             top.insertAdjacentHTML('beforeend', html);
             Array.prototype.forEach.call(top.querySelectorAll('.dcExtra .dcRow'), function (rw) {
@@ -378,7 +378,10 @@ define([], function () {
             for (var w = 0; w < wraps.length; w++) { updateArrows(wraps[w]); }
         }
 
-        function cardHtml(i, mine, embyId) {
+        // Korte rijen bovenaan: tot en met WIDE_MAX titels brede kaarten (vult de ruimte), daarboven gewone posters.
+        var WIDE_MAX = 3;
+        // wide = brede kaart (achtergrond + kleine poster + status) voor de korte rijen bovenaan.
+        function cardHtml(i, mine, embyId, wide) {
             items[key(i)] = i;
             var poster = i.Poster
                 ? '<img loading="lazy" src="' + esc(i.Poster) + '" alt="" />'
@@ -388,12 +391,15 @@ define([], function () {
             if (i.Year) { sub.push('<span>' + i.Year + '</span>'); }
             // Persoonspagina: welke rol (personage of regie), op een eigen regel.
             var role = i.Role ? (i.Role === 'Director' ? text('Regie', 'Director', 'Regie', 'Regi') : i.Role) : '';
-            return '<div class="dcCard focusable" tabindex="0" role="button" data-key="' + key(i) + '"' + (mine === true ? ' data-mine="1"' : '') +
+            var bgUrl = wide ? (i.Backdrop || i.Poster || '') : '';
+            return '<div class="dcCard focusable' + (wide ? ' dcWide' : '') + '" tabindex="0" role="button" data-key="' + key(i) + '"' + (mine === true ? ' data-mine="1"' : '') +
                 (embyId ? ' data-emby="' + esc(embyId) + '"' : '') + '>' +
+                (wide ? '<div class="dcWideBg' + (i.Backdrop ? '' : ' blur') + '"' + (bgUrl ? ' style="background-image:url(&quot;' + esc(bgUrl) + '&quot;)"' : '') + '></div><div class="dcWideShade"></div>' : '') +
                 '<div class="dcPoster">' + poster +
-                '<span class="dcBadge ' + i.Type + '">' + (i.Type === 'tv' ? text('SERIE', 'SERIES', 'SERIE') : text('FILM', 'MOVIE', 'FILM')) + '</span>' +
+                (wide ? '' : '<span class="dcBadge ' + i.Type + '">' + (i.Type === 'tv' ? text('SERIE', 'SERIES', 'SERIE') : text('FILM', 'MOVIE', 'FILM')) + '</span>') +
                 '<span class="dcStatus s' + i.Status + '">' + statusIcon(i.Status) + '</span>' + queueHtml(i) + '</div>' +
-                '<div class="dcCap"><div class="dcCapT">' + esc(i.Title) + '</div>' +
+                '<div class="dcCap">' + (wide ? '<span class="dcBadge ' + i.Type + '">' + (i.Type === 'tv' ? text('SERIE', 'SERIES', 'SERIE') : text('FILM', 'MOVIE', 'FILM')) + '</span>' : '') +
+                '<div class="dcCapT">' + esc(i.Title) + '</div>' +
                 (sub.length ? '<div class="dcCapSub">' + sub.join('') + '</div>' : '') +
                 (role ? '<div class="dcRole" title="' + esc(role) + '">' + esc(role) + '</div>' : '') +
                 capQueueHtml(i, mine === true) +
@@ -412,9 +418,102 @@ define([], function () {
             return out;
         }
 
+        // Logo's worden standaard wit gemaakt (filter). Per tegel meet de pagina het standaardlogo en de andere versies
+        // die TMDB heeft (Images), en toont de versie die op de donkere tegel het best zichtbaar is in eigen kleuren.
+        // Meten gebeurt met een losse afbeelding (crossOrigin); lukt dat niet, dan blijft het logo wit zoals altijd.
+        function logoStats(img) {
+            var nw = img.naturalWidth || 1, nh = img.naturalHeight || 1;
+            var w = 128, h = Math.max(1, Math.round(128 * nh / nw));
+            if (h > 128) { h = 128; w = Math.max(1, Math.round(128 * nw / nh)); }
+            var c = document.createElement('canvas'); c.width = w; c.height = h;
+            var g = c.getContext('2d'); g.drawImage(img, 0, 0, w, h);
+            var d = g.getImageData(0, 0, w, h).data;
+            var minX = w, minY = h, maxX = -1, maxY = -1, opaque = 0, dark = 0, light = 0, lumSum = 0, colorful = 0, distSum = 0;
+            for (var y = 0; y < h; y++) {
+                for (var x = 0; x < w; x++) {
+                    var i = (y * w + x) * 4;
+                    if (d[i + 3] < 128) { continue; }
+                    opaque++;
+                    if (x < minX) { minX = x; } if (x > maxX) { maxX = x; }
+                    if (y < minY) { minY = y; } if (y > maxY) { maxY = y; }
+                    var lum = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+                    var mx = Math.max(d[i], d[i + 1], d[i + 2]), mn = Math.min(d[i], d[i + 1], d[i + 2]);
+                    lumSum += lum; if (mx && (mx - mn) / mx > 0.35 && lum >= 60) { colorful++; }
+                    if (lum < 90) { dark++; } else if (lum > 170) { light++; }
+                    // afstand tot de tegelkleur (#1c2640): hoe goed steekt dit af tegen de donkerblauwe tegel
+                    distSum += Math.sqrt((d[i] - 28) * (d[i] - 28) + (d[i + 1] - 38) * (d[i + 1] - 38) + (d[i + 2] - 64) * (d[i + 2] - 64));
+                }
+            }
+            if (!opaque) { return null; }
+            return {
+                fill: opaque / ((maxX - minX + 1) * (maxY - minY + 1)),
+                dark: dark / opaque, light: light / opaque, lum: lumSum / opaque, colorful: colorful / opaque, dist: distSum / opaque
+            };
+        }
+        // Kan dit logo in zijn eigen kleuren op de donkere tegel?
+        //  1) gevuld vlak met zowel donkere als lichte delen (letters in een vlak: ABC, Warner Bros., Marvel, Cinemax);
+        //  2) grotendeels duidelijk gekleurd en licht genoeg (Netflix, Hulu, Prime Video, The CW);
+        //  3) een lichte versie (bedoeld voor donkere achtergronden), eventueel met kleuraccenten (Peacock, Disney).
+        // Score: lichte versie met kleur > gekleurd logo > lichte versie zonder kleur > letters in een vlak.
+        function logoScore(st) {
+            if (!st) { return 0; }
+            var lightVersion = st.lum >= 120 && st.dark < 0.35;
+            if (lightVersion && st.colorful >= 0.02) { return 4; }
+            // gekleurd en genoeg contrast met de tegel (donkerblauw zoals het Disney-kasteel of DreamWorks valt weg)
+            if (st.colorful > 0.55 && st.lum >= 85 && st.dist >= 150) { return 3; }
+            if (lightVersion) { return 2; }
+            if (st.fill > 0.6 && Math.min(st.dark, st.light) > 0.03) { return 1; }
+            return 0;
+        }
+        function probeLogo(url) {
+            return new Promise(function (resolve) {
+                var probe = new Image();
+                probe.crossOrigin = 'anonymous';
+                probe.onload = function () { var st = null; try { st = logoStats(probe); } catch (e) { st = null; } resolve(st); };
+                probe.onerror = function () { resolve(null); };
+                // Eigen adres voor de meting: een logo dat al zonder CORS in de browsercache staat, kan anders niet gemeten worden.
+                probe.src = url + (url.indexOf('?') === -1 ? '?' : '&') + 'dcprobe=1';
+            });
+        }
+        // Beslissing per tegel (op het eerste logo-adres): { src: te tonen logo, orig: eigen kleuren }.
+        var logoChoice = {};
+        function applyLogoChoice(key, ch) {
+            Array.prototype.forEach.call(view.querySelectorAll('img.dcTileLogo'), function (im) {
+                if (im.getAttribute('data-logo0') !== key) { return; }
+                if (ch.src && im.getAttribute('src') !== ch.src) { im.setAttribute('src', ch.src); }
+                im.classList.toggle('dcOrig', !!ch.orig);
+            });
+        }
+        function checkLogo(img) {
+            var key = img.getAttribute('data-logo0') || img.getAttribute('src');
+            if (!key) { return; }
+            if (!img.getAttribute('data-logo0')) { img.setAttribute('data-logo0', key); }
+            var known = logoChoice[key];
+            if (known && known !== 'busy') { applyLogoChoice(key, known); return; }
+            if (known === 'busy') { return; }
+            logoChoice[key] = 'busy';
+            var alts = (img.getAttribute('data-alts') || '').split('|').filter(function (u) { return u; });
+            var urls = [key].concat(alts);
+            Promise.all(urls.map(probeLogo)).then(function (stats) {
+                var best = -1, bestScore = 0;
+                for (var k = 0; k < stats.length; k++) {
+                    var sc = logoScore(stats[k]);
+                    if (sc > bestScore) { best = k; bestScore = sc; }   // gelijke score: de eerdere (eerste = standaardlogo) wint
+                }
+                var ch = best >= 0 ? { src: urls[best], orig: true } : { src: key, orig: false };
+                logoChoice[key] = ch;
+                applyLogoChoice(key, ch);
+            });
+        }
+        content.addEventListener('load', function (e) {
+            var t = e.target;
+            if (t && t.classList && t.classList.contains('dcTileLogo')) { checkLogo(t); }
+        }, true);
+
         function tileHtml(r, t) {
             var inner = t.Image
-                ? '<img class="dcTileLogo" loading="lazy" src="' + esc(t.Image) + '" alt="' + esc(t.Name) + '" />'
+                ? '<img class="dcTileLogo" loading="lazy" src="' + esc(t.Image) + '" data-logo0="' + esc(t.Image) + '"' +
+                    (t.Images && t.Images.length ? ' data-alts="' + esc(t.Images.join('|')) + '"' : '') + ' alt="' + esc(t.Name) + '" />'
                 : '<span>' + esc(t.Name) + '</span>';
             // Genres: foto in de genrekleur (zoals Seerr) met de naam erop; anders de effen kleur.
             var bg = t.Backdrop
@@ -566,6 +665,39 @@ define([], function () {
         // Wat er vóór de persoon in beeld was (zoekresultaten, lijst, startpagina): Terug zet dat ongewijzigd terug.
         var personPrev = null;
         function scrollBox() { return view.querySelector('.scrollY') || document.scrollingElement || document.documentElement; }
+        // Eén stap terug binnen Discover. fromHeader = Emby's pijl linksboven: die blijft altijd in Discover
+        // (ook bij een persoon die via een film-/kanaalpagina is geopend) en doet op de Discover-start niets.
+        // Geeft false terug als er niets terug te doen was (Discover-start zonder popup).
+        function goBack(fromHeader) {
+            if (trailerOverlay.classList.contains('open')) { closeTrailer(); return true; }
+            if (overlay.classList.contains('open')) { closeModal(); return true; }
+            var person = !!content.querySelector('.dcPersonHead');
+            if (!fromHeader && personFromLink && person && window.history.length > 1) { personFromLink = false; window.history.back(); return true; }
+            personFromLink = false;
+            if (personPrev && person) {
+                var prev = personPrev; personPrev = null;
+                content.innerHTML = '';
+                content.appendChild(prev.frag);
+                browse = prev.browse; homeShown = prev.homeShown;
+                try { scrollBox().scrollTop = prev.top; } catch (ignored) { }
+                return true;
+            }
+            personPrev = null;
+            if (homeShown && !browse && !person) { return false; }
+            if (input.value) { input.value = ''; }
+            loadHome();
+            try { scrollBox().scrollTop = 0; } catch (ignored) { }
+            return true;
+        }
+        function goHome() {
+            if (trailerOverlay.classList.contains('open')) { closeTrailer(); }
+            if (overlay.classList.contains('open')) { closeModal(); }
+            personPrev = null; personFromLink = false;
+            if (input.value) { input.value = ''; }
+            clearTimeout(searchTimer);
+            loadHome();
+            try { scrollBox().scrollTop = 0; } catch (ignored) { }
+        }
         function openPerson(pid, name, fromLink) {
             personFromLink = !!fromLink;
             personPrev = null;
@@ -1384,19 +1516,7 @@ define([], function () {
                 openBrowse(tile.getAttribute('data-kind'), parseInt(tile.getAttribute('data-id'), 10), tile.getAttribute('data-name'));
                 return;
             }
-            if (t.closest && t.closest('.dcBack')) {
-                if (personFromLink && content.querySelector('.dcPersonHead') && window.history.length > 1) { personFromLink = false; window.history.back(); return; }
-                personFromLink = false;
-                if (personPrev && content.querySelector('.dcPersonHead')) {
-                    var prev = personPrev; personPrev = null;
-                    content.innerHTML = '';
-                    content.appendChild(prev.frag);
-                    browse = prev.browse; homeShown = prev.homeShown;
-                    try { scrollBox().scrollTop = prev.top; } catch (ignored) { }
-                    return;
-                }
-                personPrev = null; loadHome(); return;
-            }
+            if (t.closest && t.closest('.dcBack')) { goBack(false); return; }
             if (t.closest && t.closest('.dcMoreBtn')) { loadBrowse(); }
         });
 
@@ -1532,6 +1652,7 @@ define([], function () {
             });
         });
 
+        view.querySelector('.dcHomeBtn').addEventListener('click', goHome);
         input.addEventListener('input', function () {
             clearTimeout(searchTimer);
             var q = input.value.trim();
@@ -1553,6 +1674,23 @@ define([], function () {
         var trailerFrame = trailerOverlay.querySelector('.dcTrailerFrame');
         var trailerLink = trailerOverlay.querySelector('.dcTrailerLink');
         function closeTrailer() { trailerOverlay.classList.remove('open'); trailerFrame.src = 'about:blank'; }
+
+        // Zolang de popup of trailer open is: Emby's kopbalk onklikbaar en onzichtbaar. Die ligt anders boven de popup
+        // (de popup zit in de pagina, de kopbalk erbuiten) en vangt dan de klik op het kruisje rechtsboven af.
+        // Over alle Discover-pagina's heen: alleen een popup die echt in beeld is telt (een verborgen oude pagina niet).
+        function syncModalBody() {
+            var open = Array.prototype.some.call(document.querySelectorAll('.dcOverlay.open, .dcTrailerOverlay.open'), function (o) {
+                return o.getClientRects().length > 0;
+            });
+            document.body.classList.toggle('dcModalOpen', open);
+        }
+        if (typeof MutationObserver === 'function') {
+            var modalObs = new MutationObserver(syncModalBody);
+            modalObs.observe(overlay, { attributes: true, attributeFilter: ['class'] });
+            modalObs.observe(trailerOverlay, { attributes: true, attributeFilter: ['class'] });
+        }
+        view.addEventListener('viewhide', function () { setTimeout(syncModalBody, 0); });
+        window.addEventListener('hashchange', function () { setTimeout(syncModalBody, 0); });
         trailerOverlay.querySelector('.dcTrailerClose').addEventListener('click', closeTrailer);
         trailerOverlay.addEventListener('click', function (e) { if (e.target === trailerOverlay) { closeTrailer(); } });
         overlay.querySelector('.dcBtnTrailer').addEventListener('click', function () {
@@ -1767,10 +1905,9 @@ define([], function () {
             var trailerOpen = trailerOverlay.classList.contains('open');
             var modalOpen = overlay.classList.contains('open') || trailerOpen;
             if (cmd === 'back') {
-                if (trailerOpen) { e.preventDefault(); closeTrailer(); return; }
-                if (overlay.classList.contains('open')) { e.preventDefault(); closeModal(); return; }
-                if (browse) { e.preventDefault(); loadHome(); return; } // terug uit een genre-/studio-overzicht
-                return; // anders: Emby verlaat de pagina
+                // Popup, overzicht, persoon of zoekresultaten: één stap terug binnen Discover.
+                if (goBack(true)) { e.preventDefault(); }
+                return; // op de Discover-start: Emby verlaat de pagina
             }
             if (cmd === 'select') {
                 // OK op een kaart of tegel is al als klik afgehandeld bij keydown; niet nog eens.
@@ -1840,8 +1977,17 @@ define([], function () {
         window.__dcHeaderSync = syncHeader;
         window.addEventListener('hashchange', syncHeader);
 
-        view.addEventListener('viewshow', function () { syncHeader(); document.addEventListener('command', onCommand, true); });
-        view.addEventListener('viewhide', function () { document.body.classList.remove('dcDiscoverActive'); document.removeEventListener('command', onCommand, true); });
+        // Emby's terugpijl linksboven: op Discover blijft die altijd binnen Discover (één stap terug, popup dicht;
+        // op de Discover-start doet hij niets in plaats van naar het Emby-menu te gaan).
+        function onHeaderBack(e) {
+            var b = e.target && e.target.closest && e.target.closest('.headerBackButton, .headerBackButton-back, [data-action="back"]');
+            if (!b || !b.closest('.skinHeader')) { return; }
+            if (!onDiscoverRoute() || !document.body.contains(view) || !isShown(view.querySelector('.dcRoot'))) { return; }
+            e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+            goBack(true);
+        }
+        view.addEventListener('viewshow', function () { syncHeader(); document.addEventListener('command', onCommand, true); document.addEventListener('click', onHeaderBack, true); });
+        view.addEventListener('viewhide', function () { document.body.classList.remove('dcDiscoverActive'); document.removeEventListener('command', onCommand, true); document.removeEventListener('click', onHeaderBack, true); });
 
         // ---- Directe link vanaf een film-/seriepagina: #!/configurationpage?name=...&openType=movie&openId=123 ----
         // Wat er geopend moet worden kan ook via sessionStorage komen: Emby laat soms de extra parameters in het adres
@@ -1900,7 +2046,7 @@ define([], function () {
 
         view.addEventListener('viewshow', function () {
             if (!loaded) { loadHome(); }
-            else { scheduleQueue(0); loadMyRequests(); }
+            else { scheduleQueue(0); loadMyRequests(); loadExtras(); } // extra rijen vers: een weggehaalde lijst verdwijnt meteen
             openFromLink();
         });
         // Geen hashchange-luisteraar: Emby 4.11 maakt bij elke navigatie een nieuwe Discover-pagina (met eigen viewshow);

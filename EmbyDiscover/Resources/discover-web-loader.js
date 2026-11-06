@@ -15,8 +15,8 @@
     window.__discoverWebLoader = 1;
 
     var CHANNEL_NAME = 'Discover Media';
-    var KNOWN_UI = ['discoverui1092', 'discoverui1091', 'discoverui1090', 'discoverui1089', 'discoverui1088', 'discoverui1087', 'discoverui1086', 'discoverui1085', 'discoverui1084', 'discoverui1083', 'discoverui1082', 'discoverui1081', 'discoverui1080', 'discoverui1079', 'discoverui1078', 'discoverui1077', 'discoverui1076', 'discoverui1075'];
-    var KNOWN_BTN = ['discoverbuttonjs1393', 'discoverbuttonjs1392', 'discoverbuttonjs1391', 'discoverbuttonjs1390', 'discoverbuttonjs1389', 'discoverbuttonjs1388', 'discoverbuttonjs1387', 'discoverbuttonjs1386', 'discoverbuttonjs1385', 'discoverbuttonjs1384', 'discoverbuttonjs1383', 'discoverbuttonjs1382', 'discoverbuttonjs1381', 'discoverbuttonjs1380', 'discoverbuttonjs1379', 'discoverbuttonjs1378', 'discoverbuttonjs1377', 'discoverbuttonjs1376', 'discoverbuttonjs1375', 'discoverbuttonjs1374', 'discoverbuttonjs1373', 'discoverbuttonjs1372', 'discoverbuttonjs1371', 'discoverbuttonjs1370', 'discoverbuttonjs1360', 'discoverbuttonjs1354', 'discoverbuttonjs1353', 'discoverbuttonjs1352', 'discoverbuttonjs1351', 'discoverbuttonjs1350', 'discoverbuttonjs1340'];
+    var KNOWN_UI = ['discoverui1101', 'discoverui1100', 'discoverui1099', 'discoverui1098', 'discoverui1097', 'discoverui1096', 'discoverui1095', 'discoverui1094', 'discoverui1093', 'discoverui1092', 'discoverui1091', 'discoverui1090', 'discoverui1089', 'discoverui1088', 'discoverui1087', 'discoverui1086', 'discoverui1085', 'discoverui1084', 'discoverui1083', 'discoverui1082', 'discoverui1081', 'discoverui1080', 'discoverui1079', 'discoverui1078', 'discoverui1077', 'discoverui1076', 'discoverui1075'];
+    var KNOWN_BTN = ['discoverbuttonjs1405', 'discoverbuttonjs1404', 'discoverbuttonjs1403', 'discoverbuttonjs1402', 'discoverbuttonjs1401', 'discoverbuttonjs1400', 'discoverbuttonjs1399', 'discoverbuttonjs1398', 'discoverbuttonjs1397', 'discoverbuttonjs1396', 'discoverbuttonjs1395', 'discoverbuttonjs1394', 'discoverbuttonjs1393', 'discoverbuttonjs1392', 'discoverbuttonjs1391', 'discoverbuttonjs1390', 'discoverbuttonjs1389', 'discoverbuttonjs1388', 'discoverbuttonjs1387', 'discoverbuttonjs1386', 'discoverbuttonjs1385', 'discoverbuttonjs1384', 'discoverbuttonjs1383', 'discoverbuttonjs1382', 'discoverbuttonjs1381', 'discoverbuttonjs1380', 'discoverbuttonjs1379', 'discoverbuttonjs1378', 'discoverbuttonjs1377', 'discoverbuttonjs1376', 'discoverbuttonjs1375', 'discoverbuttonjs1374', 'discoverbuttonjs1373', 'discoverbuttonjs1372', 'discoverbuttonjs1371', 'discoverbuttonjs1370', 'discoverbuttonjs1360', 'discoverbuttonjs1354', 'discoverbuttonjs1353', 'discoverbuttonjs1352', 'discoverbuttonjs1351', 'discoverbuttonjs1350', 'discoverbuttonjs1340'];
 
     function log(m) { try { console.log('[Discover web] ' + m); } catch (e) { } }
     function api() {
@@ -107,6 +107,13 @@
     // Setting "Tile opens the Discover page", read from the server (never cached): null = not known yet.
     var redirectOn = null, redirectAt = 0, redirectLoading = null;
     function refreshConfig(force) {
+        // Eigen app (bijv. de LG-app) kan vastleggen dat de tegel daar altijd Discover opent, los van de
+        // instelling (die is bedoeld voor de browser): window.__discoverAlwaysTile = true vóór dit script.
+        if (window.__discoverAlwaysTile === true) {
+            if (redirectOn !== true) { log('app: tegel opent altijd Discover'); }
+            redirectOn = true; redirectAt = Date.now();
+            return Promise.resolve(true);
+        }
         var a = api();
         if (!a) { return Promise.resolve(redirectOn); }
         if (redirectLoading) { return redirectLoading; }
@@ -132,6 +139,7 @@
         var why = null;
         if (!ignoreCfg && redirectOn !== true) { why = 'schakelaar uit'; }
         else if (!targetsChannel(route)) { why = 'geen kanaalroute'; }
+        else if (window.__discoverAlwaysTile === true) { why = null; }   // eigen app: altijd Discover, nooit de tegels
         else if (window.__discoverStay) { why = 'Kanaaltegels-knop actief'; }
         else if (navType === 'traverse' && inChannelRoutes(fromRoute || '')) { why = 'terug vanuit kanaal'; }
         if (why && targetsChannel(route)) { log('beslissing: NIET doorsturen (' + why + '), config=' + redirectOn); }
@@ -163,16 +171,20 @@
     }
     // Without the Navigation API (older engines) hashchange is the only signal; it also cannot tell Back apart,
     // so we only redirect when the previous route was outside the channel.
-    window.addEventListener('hashchange', function () {
-        if (window.navigation && typeof navigation.addEventListener === 'function') { return; }
+    // Emby wisselt van pagina met history.pushState; dat geeft geen hashchange. Zonder Navigation API
+    // (bv. LG webOS 6 / Chrome 79, Firefox) kijkt de timer onderaan daarom elke seconde of de route veranderde.
+    var hasNavApi = !!(window.navigation && typeof navigation.addEventListener === 'function');
+    window.addEventListener('hashchange', function () { if (!hasNavApi) { onRouteChange(); } });
+    function onRouteChange() {
         var route = routeOf(location.href);
+        if (route === prevRoute) { return; }
         var from = prevRoute;
         prevRoute = route;
         if (!inChannelRoutes(route)) { window.__discoverStay = false; }
         Promise.all([refreshConfig(true), loadInfo()]).then(function (r) {
             if (r[0] === true && routeOf(location.href) === route && shouldRedirect(route, 'traverse', from, true)) { redirect(); }
         });
-    });
+    }
 
     // ---- Achtergrond bij de tegel "Discover Media" (zoals Emby dat bij andere bibliotheken doet) ----
     // Alleen als de gebruiker in Emby "Achtergronden inschakelen" aan heeft. De foto komt in Emby's eigen
@@ -409,6 +421,7 @@
         var a = api();
         if (!a) { return; }
         refreshConfig(false);
+        if (!hasNavApi && initialChecked) { onRouteChange(); }
         loadInfo().then(function (i) {
             if (!initialChecked && i && redirectOn !== null) {
                 initialChecked = true;

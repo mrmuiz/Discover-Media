@@ -35,6 +35,9 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
     // Teksten van de tabbladen en de nieuwe instellingen: id -> [Nederlands, English, Deutsch]
     var TEXTS = {
         tab_general: ['Algemeen', 'General', 'Allgemein'],
+        tab_look: ['Weergave', 'Appearance', 'Darstellung'],
+        hdgTiles: ['Tegels', 'Tiles', 'Kacheln'],
+        hdgOwnLists: ['Eigen lijsten als rij', 'Your own lists as a row', 'Eigene Listen als Reihe'],
         tab_tmdb: ['TMDB', 'TMDB', 'TMDB'],
         tab_arr: ['Aanvragen', 'Requests', 'Anfragen'],
         desc_requestService: [
@@ -54,7 +57,10 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             'Tick who may make requests. A user without a tick can still browse and watch trailers, but a request is not sent to Radarr or Sonarr and the user gets a message. New users are allowed by default.',
             'Wähle aus, wer anfordern darf. Ein Benutzer ohne Haken kann weiter stöbern und Trailer ansehen, aber die Anfrage wird nicht an Radarr oder Sonarr gesendet und der Benutzer erhält eine Meldung. Neue Benutzer dürfen standardmäßig anfordern.'],
         hdgExtraRows: ['Extra rijen op de Discover-pagina', 'Extra rows on the Discover page', 'Zusätzliche Reihen auf der Discover-Seite'],
-        lbl_chkShowNewSeasons: ['Rij "Nieuwe seizoenen": series uit je bibliotheek met een nieuwer seizoen', 'Row "New seasons": series in your library with a newer season', 'Reihe „Neue Staffeln“: Serien in deiner Bibliothek mit einer neueren Staffel'],
+        lbl_chkShowMyRequests: ['Rij "Mijn aanvragen": wat de gebruiker zelf heeft aangevraagd, met de downloadvoortgang', 'Row "My requests": what the user requested, with download progress', 'Reihe „Meine Anfragen“: was der Benutzer angefragt hat, mit Download-Fortschritt'],
+        lbl_chkShowNewSeasons: ['Rij "Nieuwe seizoenen": series in je bibliotheek waarvan een nieuw seizoen bestaat dat je nog niet hebt', 'Row "New seasons": series in your library that have a new season you don\'t have yet', 'Reihe „Neue Staffeln“: Serien in deiner Bibliothek mit einer neuen Staffel, die du noch nicht hast'],
+        lbl_chkShowRecentlyAdded: ['Rij "Onlangs toegevoegd": wat het laatst in de bibliotheek is gekomen', 'Row "Recently added": what was added to the library most recently', 'Reihe „Kürzlich hinzugefügt“: was zuletzt in die Bibliothek kam'],
+        lbl_chkShowRecentRequests: ['Rij "Recente aanvragen": wat iedereen op de server het laatst heeft aangevraagd', 'Row "Recent requests": what everyone on the server requested most recently', 'Reihe „Kürzlich angefragt“: was alle auf dem Server zuletzt angefragt haben'],
         lbl_txtTmdbList: ['TMDB-lijst (id of link, optioneel)', 'TMDB list (id or link, optional)', 'TMDB-Liste (ID oder Link, optional)'],
         desc_txtTmdbList: ['Een openbare lijst op TMDB, bijvoorbeeld je eigen watchlist-lijst. Leeg = geen rij.', 'A public list on TMDB, for example your own watchlist list. Empty = no row.', 'Eine öffentliche Liste auf TMDB, zum Beispiel deine eigene Merkliste. Leer = keine Reihe.'],
         btnTestTmdbListText: ['Test lijst', 'Test list', 'Liste testen'],
@@ -177,7 +183,7 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         view.querySelector('.btnTestRadarr span').textContent = languageText('Test verbinding', 'Test connection', 'Verbindung testen');
         view.querySelector('.btnTestSonarr span').textContent = languageText('Test verbinding', 'Test connection', 'Verbindung testen');
         view.querySelector('.button-submit span').textContent = languageText('Opslaan', 'Save', 'Speichern');
-        view.querySelector('.btnStatus span').textContent = languageText('Status en diagnose', 'Status and diagnostics', 'Status und Diagnose');
+        view.querySelector('.btnStatus span').textContent = languageText('Start diagnose', 'Run diagnostics', 'Diagnose starten');
         view.querySelector('.btnStatus').nextElementSibling.textContent = languageText(
             'Controleert plugin, kanaal, TMDB, Radarr, Sonarr en gebruikerstoegang. Handig om twee servers te vergelijken.',
             'Checks the plugin, channel, TMDB, Radarr, Sonarr and user access. Useful when comparing two servers.',
@@ -607,6 +613,9 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             el(view, 'numMaxCacheMb').value = c.MaxCacheMb != null ? c.MaxCacheMb : 2048;
             el(view, 'numRequestLimit').value = c.RequestLimit != null ? c.RequestLimit : 0;
             el(view, 'chkShowNewSeasons').checked = c.ShowNewSeasons !== false;
+            el(view, 'chkShowMyRequests').checked = c.ShowMyRequests !== false;
+            el(view, 'chkShowRecentlyAdded').checked = c.ShowRecentlyAdded !== false;
+            el(view, 'chkShowRecentRequests').checked = c.ShowRecentRequests !== false;
             el(view, 'txtTmdbList').value = c.TmdbListId || '';
             el(view, 'txtTraktUser').value = c.TraktUser || '';
             el(view, 'txtTraktClient').value = c.TraktClientId || '';
@@ -677,6 +686,9 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             c.MaxCacheMb = intValue(view, 'numMaxCacheMb', 2048);
             c.RequestLimit = intValue(view, 'numRequestLimit', 0);
             c.ShowNewSeasons = el(view, 'chkShowNewSeasons').checked;
+            c.ShowMyRequests = el(view, 'chkShowMyRequests').checked;
+            c.ShowRecentlyAdded = el(view, 'chkShowRecentlyAdded').checked;
+            c.ShowRecentRequests = el(view, 'chkShowRecentRequests').checked;
             c.TmdbListId = el(view, 'txtTmdbList').value.trim();
             c.TraktUser = el(view, 'txtTraktUser').value.trim();
             c.TraktClientId = el(view, 'txtTraktClient').value.trim();
