@@ -1,3 +1,10 @@
+## Version 1.4.0.2
+
+- Fix: **scroll arrows on TV with a pointer** (LG Magic Remote). The arrows only appeared when the device reported a "fine pointer"; LG webOS 24 does not, so rows could not be scrolled with the pointer there. Arrows now appear on hover as soon as the pointer is used (also on Emby's own pages), and hide again when the arrow keys are used.
+- Fix: the scroll arrow to the right was sometimes missing on rows (e.g. "More like this · not in your library"): a row made while the page was still sliding in measured 0 wide. Arrows are now recalculated when the row gets its size and when you hover it.
+- Change: version strings in the scripts updated.
+- Change: page names bumped (`discoverui1104`, `discoveruijs1399`, `discoverbuttonjs1408`).
+
 ## Version 1.4.0.1
 
 - New: **Appearance** tab in the settings with everything that changes what you see: the tiles (tile opens Discover, Trailer tile), the rows on the Discover page and your own lists (TMDB list, Trakt watchlist). TMDB now only holds the key and languages.
@@ -11,9 +18,8 @@
 - Fix: the **close button** of the popup was hard to hit: Emby's header lay on top of it. While a popup or trailer is open the header is now hidden and not clickable, so the close button and clicking next to the popup always work.
 - Fix: a removed TMDB list (or another extra row) stayed on the Discover page until a full reload; extra rows are now fetched again on every visit.
 - Fix: the tile → Discover redirect did not work in browsers without the Navigation API (e.g. LG webOS 6 / Chrome 79, Firefox), because Emby navigates with pushState. The loader now also checks the route every second there.
-- Fix: the scroll arrow to the right was sometimes missing on rows (e.g. "More like this · not in your library"): a row made while the page was still sliding in measured 0 wide. Arrows are now recalculated when the row gets its size and when you hover it.
 - Change: own apps can set `window.__discoverAlwaysTile = true` before the loader so the tile always opens Discover, regardless of the browser setting.
-- Change: page names bumped (`discoverconfig1087`, `discoverconfigjs1367`, `discoverui1103`, `discoveruijs1398`, `discoverbuttonjs1407`).
+- Change: page names bumped (`discoverconfig1087`, `discoverconfigjs1367`, `discoverui1101`, `discoveruijs1396`, `discoverbuttonjs1405`).
 
 ## Version 1.4.0.0
 

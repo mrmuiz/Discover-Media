@@ -5,7 +5,7 @@
     <title>Discover</title>
 </head>
 <body>
-<div data-role="page" class="page type-interior discoverUiPage" data-controller="__plugin/discoveruijs1398">
+<div data-role="page" class="page type-interior discoverUiPage" data-controller="__plugin/discoveruijs1399">
 <style>
 /* Header on the Discover page only (body.dcDiscoverActive is set while this page is the active route): white text and icons on the dark page. The side drawer is deliberately left alone. */
 body.dcDiscoverActive .skinHeader .pageTitle,
@@ -47,6 +47,8 @@ body.dcDiscoverActive .skinHeader .headerButton svg { fill:#fff; }
 .dcArrow svg { width:2.2em; height:2.2em; fill:currentColor; }
 .dcArrow:hover { transform:translateY(-50%) scale(1.1); }
 @media (pointer: fine) { .dcRowWrap:hover .dcArrow { display:inline-flex; } }
+/* Aanwijzer in gebruik (muis, LG Magic Remote): pijlen bij het aanwijzen, ook op tv's die geen "fijne aanwijzer" melden. */
+html.dcPointer .dcRowWrap:hover .dcArrow { display:inline-flex; }
 .dcRowWrap .dcArrow.dcHide { display:none !important; }
 .dcArrow.left { left:.3em; }
 .dcArrow.right { right:.3em; }
