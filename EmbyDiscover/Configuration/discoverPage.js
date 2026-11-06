@@ -38,8 +38,8 @@ define([], function () {
             return;
         }
         var urls = [
-            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1402' }),
-            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1402' }),
+            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1403' }),
+            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1403' }),
             ApiClient.getUrl('Plugins/Discover/Script')
         ];
         var n = 0;
@@ -70,7 +70,7 @@ define([], function () {
         })();
     }
 
-    var UI_PAGE = 'discoverui1099';
+    var UI_PAGE = 'discoverui1100';
 
     return function (view, params) {
         // embedded: alleen de popup, over een andere Emby-pagina heen (film-, serie- of acteurspagina).
@@ -418,11 +418,10 @@ define([], function () {
             return out;
         }
 
-        // Logo's worden wit gemaakt (filter). Een logo dat grotendeels gevuld is met zowel donkere als lichte delen
-        // (bv. letters uitgespaard in een cirkel) wordt dan een witte vlek; dat logo tonen we in zijn eigen kleuren.
-        // Meten gebeurt met een losse afbeelding (crossOrigin); lukt dat niet (geen CORS), dan blijft alles zoals het was.
-        var logoOrig = {};
-        function logoNeedsColor(img) {
+        // Logo's worden standaard wit gemaakt (filter). Per tegel meet de pagina het standaardlogo en de andere versies
+        // die TMDB heeft (Images), en toont de versie die op de donkere tegel het best zichtbaar is in eigen kleuren.
+        // Meten gebeurt met een losse afbeelding (crossOrigin); lukt dat niet, dan blijft het logo wit zoals altijd.
+        function logoStats(img) {
             var nw = img.naturalWidth || 1, nh = img.naturalHeight || 1;
             var w = 128, h = Math.max(1, Math.round(128 * nh / nw));
             if (h > 128) { h = 128; w = Math.max(1, Math.round(128 * nw / nh)); }
@@ -443,38 +442,65 @@ define([], function () {
                     if (lum < 90) { dark++; } else if (lum > 170) { light++; }
                 }
             }
-            if (!opaque) { return false; }
-            var fill = opaque / ((maxX - minX + 1) * (maxY - minY + 1));
-            // 1) Gevuld vlak (> 60% van het kader) met zowel donkere als lichte delen (elk minstens 3%): letters in een
-            //    vlak; wit gemaakt wordt dat een vlek (ABC, Warner Bros., Marvel, Cinemax).
-            // 2) Grotendeels (> 55%) duidelijk gekleurd en licht genoeg voor de donkere tegel (Netflix, Hulu, Prime Video,
-            //    The CW...). Een logo met alleen een klein gekleurd deel en grijze letters (discovery+) blijft wit.
-            // Zwarte en donkere logo's (HBO, FOX, Apple TV, Pixar, DreamWorks...) blijven wit, anders zijn ze onleesbaar.
-            var meanLum = lumSum / opaque;
-            return (fill > 0.6 && Math.min(dark, light) / opaque > 0.03) || (colorful / opaque > 0.55 && meanLum >= 85);
+            if (!opaque) { return null; }
+            return {
+                fill: opaque / ((maxX - minX + 1) * (maxY - minY + 1)),
+                dark: dark / opaque, light: light / opaque, lum: lumSum / opaque, colorful: colorful / opaque
+            };
         }
-        function markLogo(url) {
+        // Kan dit logo in zijn eigen kleuren op de donkere tegel?
+        //  1) gevuld vlak met zowel donkere als lichte delen (letters in een vlak: ABC, Warner Bros., Marvel, Cinemax);
+        //  2) grotendeels duidelijk gekleurd en licht genoeg (Netflix, Hulu, Prime Video, The CW);
+        //  3) een lichte versie (bedoeld voor donkere achtergronden), eventueel met kleuraccenten (Peacock, Disney).
+        // Score: lichte versie met kleur > gekleurd logo > lichte versie zonder kleur > letters in een vlak.
+        function logoScore(st) {
+            if (!st) { return 0; }
+            var lightVersion = st.lum >= 120 && st.dark < 0.35;
+            if (lightVersion && st.colorful >= 0.02) { return 4; }
+            if (st.colorful > 0.55 && st.lum >= 85) { return 3; }
+            if (lightVersion) { return 2; }
+            if (st.fill > 0.6 && Math.min(st.dark, st.light) > 0.03) { return 1; }
+            return 0;
+        }
+        function probeLogo(url) {
+            return new Promise(function (resolve) {
+                var probe = new Image();
+                probe.crossOrigin = 'anonymous';
+                probe.onload = function () { var st = null; try { st = logoStats(probe); } catch (e) { st = null; } resolve(st); };
+                probe.onerror = function () { resolve(null); };
+                // Eigen adres voor de meting: een logo dat al zonder CORS in de browsercache staat, kan anders niet gemeten worden.
+                probe.src = url + (url.indexOf('?') === -1 ? '?' : '&') + 'dcprobe=1';
+            });
+        }
+        // Beslissing per tegel (op het eerste logo-adres): { src: te tonen logo, orig: eigen kleuren }.
+        var logoChoice = {};
+        function applyLogoChoice(key, ch) {
             Array.prototype.forEach.call(view.querySelectorAll('img.dcTileLogo'), function (im) {
-                if (im.getAttribute('src') === url) { im.classList.add('dcOrig'); }
+                if (im.getAttribute('data-logo0') !== key) { return; }
+                if (ch.src && im.getAttribute('src') !== ch.src) { im.setAttribute('src', ch.src); }
+                im.classList.toggle('dcOrig', !!ch.orig);
             });
         }
         function checkLogo(img) {
-            var url = img.getAttribute('src');
-            if (!url) { return; }
-            if (logoOrig[url] === true) { img.classList.add('dcOrig'); return; }
-            if (logoOrig[url] !== undefined) { return; }
-            logoOrig[url] = 'busy';
-            var probe = new Image();
-            probe.crossOrigin = 'anonymous';
-            probe.onload = function () {
-                var res = false;
-                try { res = logoNeedsColor(probe); } catch (e) { res = false; }
-                logoOrig[url] = res;
-                if (res) { markLogo(url); }
-            };
-            probe.onerror = function () { logoOrig[url] = false; };
-            // Eigen adres voor de meting: een logo dat al zonder CORS in de browsercache staat, kan anders niet gemeten worden.
-            probe.src = url + (url.indexOf('?') === -1 ? '?' : '&') + 'dcprobe=1';
+            var key = img.getAttribute('data-logo0') || img.getAttribute('src');
+            if (!key) { return; }
+            if (!img.getAttribute('data-logo0')) { img.setAttribute('data-logo0', key); }
+            var known = logoChoice[key];
+            if (known && known !== 'busy') { applyLogoChoice(key, known); return; }
+            if (known === 'busy') { return; }
+            logoChoice[key] = 'busy';
+            var alts = (img.getAttribute('data-alts') || '').split('|').filter(function (u) { return u; });
+            var urls = [key].concat(alts);
+            Promise.all(urls.map(probeLogo)).then(function (stats) {
+                var best = -1, bestScore = 0;
+                for (var k = 0; k < stats.length; k++) {
+                    var sc = logoScore(stats[k]);
+                    if (sc > bestScore) { best = k; bestScore = sc; }   // gelijke score: de eerdere (eerste = standaardlogo) wint
+                }
+                var ch = best >= 0 ? { src: urls[best], orig: true } : { src: key, orig: false };
+                logoChoice[key] = ch;
+                applyLogoChoice(key, ch);
+            });
         }
         content.addEventListener('load', function (e) {
             var t = e.target;
@@ -483,7 +509,8 @@ define([], function () {
 
         function tileHtml(r, t) {
             var inner = t.Image
-                ? '<img class="dcTileLogo" loading="lazy" src="' + esc(t.Image) + '" alt="' + esc(t.Name) + '" />'
+                ? '<img class="dcTileLogo" loading="lazy" src="' + esc(t.Image) + '" data-logo0="' + esc(t.Image) + '"' +
+                    (t.Images && t.Images.length ? ' data-alts="' + esc(t.Images.join('|')) + '"' : '') + ' alt="' + esc(t.Name) + '" />'
                 : '<span>' + esc(t.Name) + '</span>';
             // Genres: foto in de genrekleur (zoals Seerr) met de naam erop; anders de effen kleur.
             var bg = t.Backdrop

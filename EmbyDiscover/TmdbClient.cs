@@ -534,6 +534,36 @@ namespace Emby.Plugins.Discover
             return logo;
         }
 
+        private static readonly Dictionary<string, List<string>> LogoVariantCache = new Dictionary<string, List<string>>();
+
+        /// <summary>
+        /// Alle logo-versies van een studio of netwerk (TMDB heeft er vaak meerdere, ook een lichte voor donkere
+        /// achtergronden). SVG als de PNG-versie die TMDB daarvan maakt. Bewaard in het geheugen; lege lijst bij een fout.
+        /// </summary>
+        public async Task<List<string>> GetLogoVariants(bool network, int id, CancellationToken ct)
+        {
+            var key = (network ? "nv" : "cv") + id;
+            lock (LogoVariantCache) { List<string> c; if (LogoVariantCache.TryGetValue(key, out c)) return c; }
+            var list = new List<string>();
+            try
+            {
+                var r = await Get<TmdbImagesPage>((network ? "/network/" : "/company/") + id + "/images", "", FallbackLanguage, ct).ConfigureAwait(false);
+                foreach (var l in (r?.logos ?? new List<TmdbImage>()).Where(l => l != null && !string.IsNullOrEmpty(l.file_path)).OrderByDescending(l => l.vote_average))
+                {
+                    var p = l.file_path.EndsWith(".svg", StringComparison.OrdinalIgnoreCase) ? l.file_path.Substring(0, l.file_path.Length - 4) + ".png" : l.file_path;
+                    if (!list.Contains(p)) list.Add(p);
+                    if (list.Count >= 8) break;
+                }
+                lock (LogoVariantCache) { LogoVariantCache[key] = list; }
+            }
+            catch (Exception ex)
+            {
+                if (ex is OperationCanceledException) throw;
+                DiscoverDiagnostics.Add("TMDB logo-versies " + key + " mislukt: " + ex.Message);
+            }
+            return list;
+        }
+
         /// <summary>/discover/movie of /discover/tv op populariteit met een filter (genre, studio, netwerk).</summary>
         public async Task<List<TmdbItem>> BrowsePages(bool tv, string filter, int firstPage, int lastPage, CancellationToken ct)
         {
