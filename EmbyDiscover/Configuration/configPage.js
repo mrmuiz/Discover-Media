@@ -117,6 +117,17 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         btnClearAllText: ['Alles verwijderen', 'Delete everything', 'Alles löschen']
     };
 
+    // Themakleur: knoppen in plaats van een keuzelijst (werkt met muis, Magic Remote en pijltoetsen op de tv).
+    function setAccent(view, color) {
+        var input = el(view, 'selAccent');
+        if (input) { input.value = color; }
+        Array.prototype.forEach.call(view.querySelectorAll('.dcSwatch'), function (b) {
+            var on = b.getAttribute('data-color') === color;
+            b.classList.toggle('selected', on);
+            b.setAttribute('aria-checked', on ? 'true' : 'false');
+        });
+    }
+
     function applyTexts(view) {
         Object.keys(TEXTS).forEach(function (id) {
             var target = el(view, id);
@@ -658,9 +669,7 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             el(view, 'chkShowOmdb').checked = c.ShowOmdbRatings !== false;
             el(view, 'txtOmdbKey').value = c.OmdbApiKey || '';
             // Waarden in de keuzelijst zonder # (Emby's keuzelijst op de tv kan niet met # overweg).
-            var acc = String(c.AccentColor || '#ffb400').toLowerCase().replace('#', ''), accSel = el(view, 'selAccent');
-            if (!accSel.querySelector('option[value="' + acc + '"]')) { var o = document.createElement('option'); o.value = acc; o.textContent = acc; accSel.appendChild(o); }
-            accSel.value = acc;
+            setAccent(view, String(c.AccentColor || '#ffb400').toLowerCase().replace('#', ''));
             el(view, 'chkShowRecentlyAdded').checked = c.ShowRecentlyAdded !== false;
             el(view, 'chkShowRecentRequests').checked = c.ShowRecentRequests !== false;
             el(view, 'txtTmdbList').value = c.TmdbListId || '';
@@ -903,6 +912,9 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             return false;
         });
 
+        Array.prototype.forEach.call(view.querySelectorAll('.dcSwatch'), function (b) {
+            b.addEventListener('click', function (e) { e.preventDefault(); setAccent(view, b.getAttribute('data-color')); });
+        });
         view.querySelector('.btnTestTmdb').addEventListener('click', function () {
             testTmdb(view, state);
         });
