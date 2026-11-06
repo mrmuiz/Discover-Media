@@ -38,8 +38,8 @@ define([], function () {
             return;
         }
         var urls = [
-            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1401' }),
-            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1401' }),
+            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1402' }),
+            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1402' }),
             ApiClient.getUrl('Plugins/Discover/Script')
         ];
         var n = 0;
@@ -70,7 +70,7 @@ define([], function () {
         })();
     }
 
-    var UI_PAGE = 'discoverui1098';
+    var UI_PAGE = 'discoverui1099';
 
     return function (view, params) {
         // embedded: alleen de popup, over een andere Emby-pagina heen (film-, serie- of acteurspagina).
@@ -429,7 +429,7 @@ define([], function () {
             var c = document.createElement('canvas'); c.width = w; c.height = h;
             var g = c.getContext('2d'); g.drawImage(img, 0, 0, w, h);
             var d = g.getImageData(0, 0, w, h).data;
-            var minX = w, minY = h, maxX = -1, maxY = -1, opaque = 0, dark = 0, light = 0;
+            var minX = w, minY = h, maxX = -1, maxY = -1, opaque = 0, dark = 0, light = 0, lumSum = 0, colorful = 0;
             for (var y = 0; y < h; y++) {
                 for (var x = 0; x < w; x++) {
                     var i = (y * w + x) * 4;
@@ -438,13 +438,20 @@ define([], function () {
                     if (x < minX) { minX = x; } if (x > maxX) { maxX = x; }
                     if (y < minY) { minY = y; } if (y > maxY) { maxY = y; }
                     var lum = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+                    var mx = Math.max(d[i], d[i + 1], d[i + 2]), mn = Math.min(d[i], d[i + 1], d[i + 2]);
+                    lumSum += lum; if (mx && (mx - mn) / mx > 0.35 && lum >= 60) { colorful++; }
                     if (lum < 90) { dark++; } else if (lum > 170) { light++; }
                 }
             }
             if (!opaque) { return false; }
             var fill = opaque / ((maxX - minX + 1) * (maxY - minY + 1));
-            // Gevuld vlak (> 60% van het kader) met zowel donkere als lichte delen (elk minstens 3%): letters in een vlak.
-            return fill > 0.6 && Math.min(dark, light) / opaque > 0.03;
+            // 1) Gevuld vlak (> 60% van het kader) met zowel donkere als lichte delen (elk minstens 3%): letters in een
+            //    vlak; wit gemaakt wordt dat een vlek (ABC, Warner Bros., Marvel, Cinemax).
+            // 2) Grotendeels (> 55%) duidelijk gekleurd en licht genoeg voor de donkere tegel (Netflix, Hulu, Prime Video,
+            //    The CW...). Een logo met alleen een klein gekleurd deel en grijze letters (discovery+) blijft wit.
+            // Zwarte en donkere logo's (HBO, FOX, Apple TV, Pixar, DreamWorks...) blijven wit, anders zijn ze onleesbaar.
+            var meanLum = lumSum / opaque;
+            return (fill > 0.6 && Math.min(dark, light) / opaque > 0.03) || (colorful / opaque > 0.55 && meanLum >= 85);
         }
         function markLogo(url) {
             Array.prototype.forEach.call(view.querySelectorAll('img.dcTileLogo'), function (im) {
@@ -466,7 +473,8 @@ define([], function () {
                 if (res) { markLogo(url); }
             };
             probe.onerror = function () { logoOrig[url] = false; };
-            probe.src = url;
+            // Eigen adres voor de meting: een logo dat al zonder CORS in de browsercache staat, kan anders niet gemeten worden.
+            probe.src = url + (url.indexOf('?') === -1 ? '?' : '&') + 'dcprobe=1';
         }
         content.addEventListener('load', function (e) {
             var t = e.target;
