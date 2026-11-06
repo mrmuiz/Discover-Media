@@ -183,11 +183,13 @@
             '.discover-row-card:hover .discover-row-poster, .discover-row-poster:focus-visible { transform: scale(1.05); box-shadow: 0 0 0 3px var(--dc-accent,#ffb400), 0 .5em 1.2em rgba(0,0,0,.5); }',
             'html.layout-tv .discover-row-poster:focus, html.discover-tv .discover-row-poster:focus { transform: scale(1.05); box-shadow: 0 0 0 3px var(--dc-accent,#ffb400), 0 .5em 1.2em rgba(0,0,0,.5); }',
             /* De knop en titel lichten mee op met de geselecteerde poster (donker randje + gele ring, zodat de ring ook om een gele knop zichtbaar is). */
-            '.discover-row-btn { transition: background .15s, box-shadow .15s; }',
+            '.discover-row-btn { transition: background .15s, box-shadow .15s, filter .15s, transform .15s; }',
+            '.discover-row-btn:not(:disabled):hover { filter: brightness(1.18); transform: scale(1.04); }',
+            '.discover-ib-more:hover { filter: brightness(1.3); text-decoration: underline; }',
             '.discover-row-card:hover .discover-row-btn, .discover-row-poster:focus-visible ~ .discover-row-btn { box-shadow: 0 0 0 2px #111, 0 0 0 4px var(--dc-accent,#ffb400); }',
-            '.discover-row-card:hover .discover-row-btn:not(:disabled), .discover-row-poster:focus-visible ~ .discover-row-btn:not(:disabled) { background: #ffc633; }',
+            '.discover-row-card:hover .discover-row-btn:not(:disabled), .discover-row-poster:focus-visible ~ .discover-row-btn:not(:disabled) { filter: brightness(1.15); }',
             'html.layout-tv .discover-row-poster:focus ~ .discover-row-btn, html.discover-tv .discover-row-poster:focus ~ .discover-row-btn { box-shadow: 0 0 0 2px #111, 0 0 0 4px var(--dc-accent,#ffb400); }',
-            'html.layout-tv .discover-row-poster:focus ~ .discover-row-btn:not(:disabled), html.discover-tv .discover-row-poster:focus ~ .discover-row-btn:not(:disabled) { background: #ffc633; }',
+            'html.layout-tv .discover-row-poster:focus ~ .discover-row-btn:not(:disabled), html.discover-tv .discover-row-poster:focus ~ .discover-row-btn:not(:disabled) { filter: brightness(1.15); }',
             '.discover-row-card:hover .discover-row-name, .discover-row-poster:focus-visible ~ .discover-row-name, html.layout-tv .discover-row-poster:focus ~ .discover-row-name, html.discover-tv .discover-row-poster:focus ~ .discover-row-name { color: var(--dc-accent,#ffb400); }',
             /* Gele pijlknoppen links en rechts, zoals op de Discover-pagina. Niet op tv (afstandsbediening) en niet op touchscreens. */
             /* Pijlknoppen zoals Emby's eigen rijen: rond en wit, alleen zichtbaar als de muis boven de rij hangt,
