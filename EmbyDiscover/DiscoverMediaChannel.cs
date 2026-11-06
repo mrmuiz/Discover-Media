@@ -788,19 +788,6 @@ namespace Emby.Plugins.Discover
         private static readonly Dictionary<string, KeyValuePair<DateTime, string>> GenreBackdropCache =
             new Dictionary<string, KeyValuePair<DateTime, string>>();
 
-        /// <summary>Van welke titel de genre-achtergrond komt (voor het label "Achtergrond: …" op de Discover-pagina).</summary>
-        private static readonly Dictionary<string, TmdbItem> GenreBackdropSource = new Dictionary<string, TmdbItem>();
-
-        internal static TmdbItem GenreBackdropSourceFor(bool tv, int genreId)
-        {
-            var key = TmdbClient.Language() + "|" + (tv ? "t" : "m") + genreId;
-            lock (GenreBackdropSource)
-            {
-                TmdbItem it;
-                return GenreBackdropSource.TryGetValue(key, out it) ? it : null;
-            }
-        }
-
         private static string DuotoneUrl(string colorName, string backdrop)
         {
             if (string.IsNullOrEmpty(backdrop)) return null;
@@ -868,13 +855,8 @@ namespace Emby.Plugins.Discover
             try
             {
                 var items = await tmdb.BrowsePages(tv, "&with_genres=" + genreId, 1, 1, ct).ConfigureAwait(false);
-                var withBd = items.Where(x => !string.IsNullOrEmpty(x.backdrop_path)).ToList();
-                if (withBd.Count > 0)
-                {
-                    var pick = withBd.Count > 4 ? withBd[4] : withBd[withBd.Count - 1];
-                    chosen = pick.backdrop_path;
-                    lock (GenreBackdropSource) { GenreBackdropSource[key] = pick; }
-                }
+                var backs = items.Where(x => !string.IsNullOrEmpty(x.backdrop_path)).Select(x => x.backdrop_path).ToList();
+                if (backs.Count > 0) chosen = backs.Count > 4 ? backs[4] : backs[backs.Count - 1];
             }
             catch (Exception ex)
             {

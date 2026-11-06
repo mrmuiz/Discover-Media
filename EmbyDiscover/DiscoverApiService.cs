@@ -231,11 +231,6 @@ namespace Emby.Plugins.Discover
         public string Color { get; set; }
         /// <summary>Genre: achtergrondfoto in de genrekleur (duotone, zoals Seerr), anders leeg.</summary>
         public string Backdrop { get; set; }
-        /// <summary>Genre: de titel waar de achtergrondfoto van is (TMDB-id, movie/tv, titel, jaar).</summary>
-        public int BdId { get; set; }
-        public string BdType { get; set; }
-        public string BdTitle { get; set; }
-        public int BdYear { get; set; }
     }
 
     [Route("/Discover/Browse", "GET", Summary = "Films/series per genre, studio of netwerk")]
@@ -668,17 +663,6 @@ namespace Emby.Plugins.Discover
                         Color = Palette[Math.Abs(g.id) % Palette.Length],
                         Backdrop = DiscoverMediaChannel.GenreImageUrl(g.id, backs[gi])
                     });
-                    var bdSrc = string.IsNullOrEmpty(backs[gi]) ? null : DiscoverMediaChannel.GenreBackdropSourceFor(tvGenres, g.id);
-                    if (bdSrc != null)
-                    {
-                        var tile = tiles[tiles.Count - 1];
-                        tile.BdId = bdSrc.id;
-                        tile.BdType = tvGenres ? "tv" : "movie";
-                        tile.BdTitle = tvGenres ? (bdSrc.name ?? bdSrc.title) : (bdSrc.title ?? bdSrc.name);
-                        var date = tvGenres ? bdSrc.first_air_date : bdSrc.release_date;
-                        int y;
-                        if (!string.IsNullOrEmpty(date) && date.Length >= 4 && int.TryParse(date.Substring(0, 4), out y)) tile.BdYear = y;
-                    }
                 }
                 return tiles;
             }

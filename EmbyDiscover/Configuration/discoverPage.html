@@ -5,7 +5,7 @@
     <title>Discover</title>
 </head>
 <body>
-<div data-role="page" class="page type-interior discoverUiPage" data-controller="__plugin/discoveruijs1408">
+<div data-role="page" class="page type-interior discoverUiPage" data-controller="__plugin/discoveruijs1409">
 <style>
 /* Header on the Discover page only (body.dcDiscoverActive is set while this page is the active route): white text and icons on the dark page. The side drawer is deliberately left alone. */
 body.dcDiscoverActive .skinHeader .pageTitle,
@@ -343,13 +343,6 @@ html.dcPointer .dcCastWrap:hover .dcCastArr { display:inline-flex; }
 .dcPageBd { position:fixed; top:0; left:0; right:0; bottom:0; z-index:0; pointer-events:none; }
 .dcPageBdImg { position:absolute; top:0; left:0; right:0; bottom:0; background-size:cover; background-position:center top; opacity:0; transition:opacity .7s ease; }
 .dcPageBdImg.on { opacity:1; }
-.dcBdLabel { position:fixed; right:1.2em; top:4.2em; z-index:999; display:none; align-items:center; gap:.35em; max-width:min(36em, 70vw); padding:.4em .9em; border-radius:2em; border:1px solid rgba(255,255,255,.18); background:rgba(11,20,38,.72); color:rgba(255,255,255,.85); font:inherit; font-size:.8em; cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; backdrop-filter:blur(4px); transition:background .15s, color .15s, transform .15s, box-shadow .15s; }
-.dcBdLabel.show { display:inline-flex; }
-.dcBdLabelK { opacity:.6; }
-.dcBdLabelGo { color:var(--dc-accent,#ffb400); font-weight:800; font-size:1.2em; line-height:1; }
-.dcBdLabel:hover, .dcBdLabel:focus { background:rgba(11,20,38,.92); color:#fff; outline:0; transform:scale(1.05); box-shadow:0 0 0 2px var(--dc-accent,#ffb400); }
-body.dcModalOpen .dcBdLabel { display:none; }
-body:not(.dcDiscoverActive) .dcBdLabel { display:none !important; }
 .dcPageBdShade { position:absolute; top:0; left:0; right:0; bottom:0; background:linear-gradient(180deg, rgba(11,20,38,.62) 0%, rgba(11,20,38,.82) 45%, rgba(11,20,38,.93) 100%); }
 </style>
     <div class="dcRoot">
