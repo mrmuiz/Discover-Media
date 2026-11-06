@@ -1,3 +1,4 @@
+- New: **endless scrolling** in the Discover browse view; the "Load more" button is gone and the next page loads automatically (the button returns only after a load error).
 ## Version 1.4.0.2
 
 - Fix: **scroll arrows on TV with a pointer** (LG Magic Remote). The arrows only appeared when the device reported a "fine pointer"; LG webOS 24 does not, so rows could not be scrolled with the pointer there. Arrows now appear on hover as soon as the pointer is used (also on Emby's own pages), and hide again when the arrow keys are used.
