@@ -1,3 +1,10 @@
+## Unreleased
+
+- Fix: a title stayed on **Importing** after it was already in Emby. Radarr/Sonarr keep a finished download in their queue with state `imported` (for example while the torrent keeps seeding); that state is no longer treated as importing, so the label disappears once the import is done.
+- Fix: on TV the **popup could cut off the buttons** at the bottom with a long list (many seasons or downloads). The info part of the popup now scrolls, and the remote focus scrolls the selected season or button into view. Page name bumped (`discoverui1110`).
+- New: filter **Not requested yet** next to "Not in my library" in the Discover browse view; hides items that are already requested or available.
+- New: **endless scrolling** in the Discover browse view; the "Load more" button is gone and the next page loads automatically (the button returns only after a load error).
+
 ## Version 1.4.0.2
 
 - Fix: **scroll arrows on TV with a pointer** (LG Magic Remote). The arrows only appeared when the device reported a "fine pointer"; LG webOS 24 does not, so rows could not be scrolled with the pointer there. Arrows now appear on hover as soon as the pointer is used (also on Emby's own pages), and hide again when the arrow keys are used.

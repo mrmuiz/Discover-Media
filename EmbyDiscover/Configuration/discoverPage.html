@@ -5,7 +5,7 @@
     <title>Discover</title>
 </head>
 <body>
-<div data-role="page" class="page type-interior discoverUiPage" data-controller="__plugin/discoveruijs1404">
+<div data-role="page" class="page type-interior discoverUiPage" data-controller="__plugin/discoveruijs1406">
 <style>
 /* Header on the Discover page only (body.dcDiscoverActive is set while this page is the active route): white text and icons on the dark page. The side drawer is deliberately left alone. */
 body.dcDiscoverActive .skinHeader .pageTitle,
@@ -114,6 +114,11 @@ html.dcNoYear .dcCapSub .dcYear, html.dcNoScore .dcCapSub .dcStar { display:none
 .dcOverlay.dcTv .dcModalBody img { width:30vh; height:45vh; flex:0 0 auto; }
 .dcOverlay.dcTv .dcModalBody > img { margin-right:2.5vw; }
 .dcOverlay.dcTv .dcModalInfo { display:flex; flex-direction:column; min-width:0; flex:1 1 auto; max-height:79vh; }
+/* Lange inhoud (veel seizoenen, lange downloadlijst): de info scrolt, zodat de knoppen onderaan bereikbaar blijven.
+   De focusEl()-navigatie scrolt het gefocuste element zelf in beeld (scrollIntoView). */
+.dcOverlay.dcTv .dcModalInfo { overflow-y:auto; overflow-x:hidden; padding-right:.6em; scroll-padding:1em 0; }
+.dcOverlay.dcTv .dcModalInfo::-webkit-scrollbar { width:.35em; }
+.dcOverlay.dcTv .dcModalInfo::-webkit-scrollbar-thumb { background:rgba(255,255,255,.35); border-radius:.2em; }
 .dcOverlay.dcTv .dcModalInfo h2 { font-size:1.6em; overflow:hidden; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; }
 .dcOverlay.dcTv .dcInfo { overflow:hidden; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:4; flex:0 0 auto; margin-bottom:.6em; }
 .dcOverlay.dcTv .dcOverview { overflow-x:hidden; overflow-y:auto; flex:0 1 auto; min-height:3em; margin-bottom:.8em; padding-right:.6em; scroll-behavior:smooth; }
@@ -265,6 +270,8 @@ html.dcPointer .dcCastWrap:hover .dcCastArr { display:inline-flex; }
 .dcRole { margin-top:.15em; color:#9fb0cc; font-size:.8em; font-style:italic; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .dcRowCount { font-size:.6em; opacity:.55; font-weight:400; margin-left:.3em; }
 @media (max-width:600px) { .dcPersonHead { flex-direction:column; align-items:center; text-align:center; } .dcPersonBig { width:140px; height:210px; } }
+.dcMore.dcAuto { min-height:2px; }
+.dcMore.dcAuto .dcMoreBtn { display:none; }
 .dcFilters { display:flex; flex-wrap:wrap; align-items:center; gap:.6em 1.2em; margin:0 0 1em; font-size:.95em; }
 .dcFilters label { display:inline-flex; align-items:center; gap:.4em; opacity:.9; }
 .dcFilters select { background:rgba(255,255,255,.08); color:#fff; border:1px solid rgba(255,255,255,.2); border-radius:.5em; padding:.35em .5em; font:inherit; }
