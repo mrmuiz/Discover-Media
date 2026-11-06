@@ -35,6 +35,9 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
     // Teksten van de tabbladen en de nieuwe instellingen: id -> [Nederlands, English, Deutsch]
     var TEXTS = {
         tab_general: ['Algemeen', 'General', 'Allgemein'],
+        tab_look: ['Weergave', 'Appearance', 'Darstellung'],
+        hdgTiles: ['Tegels', 'Tiles', 'Kacheln'],
+        hdgOwnLists: ['Eigen lijsten als rij', 'Your own lists as a row', 'Eigene Listen als Reihe'],
         tab_tmdb: ['TMDB', 'TMDB', 'TMDB'],
         tab_arr: ['Aanvragen', 'Requests', 'Anfragen'],
         desc_requestService: [

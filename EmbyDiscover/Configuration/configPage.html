@@ -5,7 +5,7 @@
     <title>Discover</title>
 </head>
 <body>
-<div data-role="page" class="page type-interior pluginConfigurationPage discoverConfigPage" data-require="emby-input,emby-button,emby-select,emby-checkbox" data-controller="__plugin/discoverconfigjs1365">
+<div data-role="page" class="page type-interior pluginConfigurationPage discoverConfigPage" data-require="emby-input,emby-button,emby-select,emby-checkbox" data-controller="__plugin/discoverconfigjs1366">
     <style>
         .discoverConfigPage .keyWrap { position: relative; }
         .discoverConfigPage .keyWrap input { padding-right: 2.8em; }
@@ -36,6 +36,7 @@
 
                 <div class="dcTabs" role="tablist">
                     <button type="button" class="dcTab active" role="tab" data-tab="general" id="tab_general">Algemeen</button>
+                    <button type="button" class="dcTab" role="tab" data-tab="look" id="tab_look">Weergave</button>
                     <button type="button" class="dcTab" role="tab" data-tab="tmdb" id="tab_tmdb">TMDB</button>
                     <button type="button" class="dcTab" role="tab" data-tab="arr" id="tab_arr">Aanvragen</button>
                     <button type="button" class="dcTab" role="tab" data-tab="users" id="tab_users">Gebruikers</button>
@@ -55,6 +56,11 @@
                         <option value="nb-NO">Norsk</option>
                     </select>
                 </div>
+                </div>
+
+                <!-- Weergave -->
+                <div class="dcPanel" data-panel="look">
+                <h3 id="hdgTiles">Tegels</h3>
                 <div class="checkboxContainer">
                     <label class="emby-checkbox-label">
                         <input is="emby-checkbox" type="checkbox" id="chkInjectWebClientLoader" />
@@ -75,31 +81,6 @@
                             <span class="emby-checkbox-off"></span>
                         </span>
                     </label>
-                </div>
-                </div>
-
-                <!-- TMDB -->
-                <div class="dcPanel" data-panel="tmdb">
-                <div class="inputContainer keyWrap">
-                    <label class="inputLabel inputLabelUnfocused" for="txtTmdbKey">API key</label>
-                    <input is="emby-input" type="password" id="txtTmdbKey" autocomplete="new-password" spellcheck="false" />
-                    <button is="emby-button" type="button" class="paper-icon-button-light btnToggleKey" data-target="txtTmdbKey" title="Tonen" aria-label="Tonen"><i class="md-icon">visibility</i></button>
-                </div>
-                <div class="selectContainer">
-                    <label class="selectLabel" for="selTmdbLang">TMDB-taal</label>
-                    <select is="emby-select" id="selTmdbLang">
-                        <option value="auto">Volg de taal van Emby Server</option>
-                    </select>
-                    <div class="fieldDescription" id="statusTmdbLanguages">Voer een TMDB-key in en test deze om de volledige talenlijst te laden.</div>
-                </div>
-                <div class="inputContainer">
-                    <label class="inputLabel inputLabelUnfocused" for="txtExcludedLangs" id="lbl_txtExcludedLangs">Talen uitsluiten (oorspronkelijke taal)</label>
-                    <input is="emby-input" type="text" id="txtExcludedLangs" spellcheck="false" placeholder="ja, ko, hi" />
-                    <div class="fieldDescription" id="desc_txtExcludedLangs">Titels met deze oorspronkelijke taal verschijnen niet in de rijen en mappen. Gebruik taalcodes, gescheiden door komma's, bijv. ja (Japans), ko (Koreaans), zh (Chinees), hi (Hindi), ta (Tamil), te (Telugu), th (Thai), tr (Turks). Zoeken toont ze nog wel.</div>
-                </div>
-                <div>
-                    <button is="emby-button" type="button" class="raised btnTestTmdb"><span>Test TMDB-key</span></button>
-                    <div class="fieldDescription testStatus" id="statusTmdb" style="margin-top:.5em;"></div>
                 </div>
 
                 <h3 id="hdgExtraRows">Extra rijen op de Discover-pagina</h3>
@@ -143,6 +124,7 @@
                         </span>
                     </label>
                 </div>
+                <h3 id="hdgOwnLists">Eigen lijsten als rij</h3>
                 <div class="inputContainer">
                     <label class="inputLabel inputLabelUnfocused" for="txtTmdbList" id="lbl_txtTmdbList">TMDB-lijst (id of link, optioneel)</label>
                     <input is="emby-input" type="text" id="txtTmdbList" spellcheck="false" placeholder="https://www.themoviedb.org/list/123456" />
@@ -166,6 +148,32 @@
                     <button is="emby-button" type="button" class="raised btnTestTrakt"><span id="btnTestTraktText">Test Trakt</span></button>
                     <div class="fieldDescription testStatus" id="statusTrakt" style="margin-top:.5em;"></div>
                 </div>
+                </div>
+
+                <!-- TMDB -->
+                <div class="dcPanel" data-panel="tmdb">
+                <div class="inputContainer keyWrap">
+                    <label class="inputLabel inputLabelUnfocused" for="txtTmdbKey">API key</label>
+                    <input is="emby-input" type="password" id="txtTmdbKey" autocomplete="new-password" spellcheck="false" />
+                    <button is="emby-button" type="button" class="paper-icon-button-light btnToggleKey" data-target="txtTmdbKey" title="Tonen" aria-label="Tonen"><i class="md-icon">visibility</i></button>
+                </div>
+                <div class="selectContainer">
+                    <label class="selectLabel" for="selTmdbLang">TMDB-taal</label>
+                    <select is="emby-select" id="selTmdbLang">
+                        <option value="auto">Volg de taal van Emby Server</option>
+                    </select>
+                    <div class="fieldDescription" id="statusTmdbLanguages">Voer een TMDB-key in en test deze om de volledige talenlijst te laden.</div>
+                </div>
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused" for="txtExcludedLangs" id="lbl_txtExcludedLangs">Talen uitsluiten (oorspronkelijke taal)</label>
+                    <input is="emby-input" type="text" id="txtExcludedLangs" spellcheck="false" placeholder="ja, ko, hi" />
+                    <div class="fieldDescription" id="desc_txtExcludedLangs">Titels met deze oorspronkelijke taal verschijnen niet in de rijen en mappen. Gebruik taalcodes, gescheiden door komma's, bijv. ja (Japans), ko (Koreaans), zh (Chinees), hi (Hindi), ta (Tamil), te (Telugu), th (Thai), tr (Turks). Zoeken toont ze nog wel.</div>
+                </div>
+                <div>
+                    <button is="emby-button" type="button" class="raised btnTestTmdb"><span>Test TMDB-key</span></button>
+                    <div class="fieldDescription testStatus" id="statusTmdb" style="margin-top:.5em;"></div>
+                </div>
+
 
                 </div>
 
