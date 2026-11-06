@@ -1919,7 +1919,7 @@
         var link = document.createElement('a');
         link.className = 'discover-row-poster';
         // Klik op de poster: de Discover-popup met info en trailer.
-        link.href = '#!/configurationpage?name=discoverui1102&openType=' + item.Type + '&openId=' + item.TmdbId;
+        link.href = '#!/configurationpage?name=discoverui1103&openType=' + item.Type + '&openId=' + item.TmdbId;
         link.setAttribute('aria-label', item.Title);   // geen title: dat gaf een tooltip-vakje over de poster
         // Gewone klik: de popup hier op de pagina openen (Ctrl/middenklik volgt de link naar Discover).
         link.addEventListener('click', function (e) {
@@ -2044,6 +2044,12 @@
             if (after && after.parentNode === parent) { parent.insertBefore(sec, after.nextSibling); after = sec; }
             else { parent.appendChild(sec); }
             row.addEventListener('scroll', function () { updateRowArrows(wrap); });
+            // Opnieuw rekenen zodra de rij echt in beeld en op maat is (Emby schuift pagina's in: bij het maken kan de
+            // rij nog 0 breed zijn, dan bleef de pijl naar rechts weg) en bij het aanwijzen met de muis.
+            wrap.addEventListener('mouseenter', function () { updateRowArrows(wrap); });
+            if (typeof ResizeObserver === 'function') {
+                try { new ResizeObserver(function () { updateRowArrows(wrap); }).observe(row); } catch (x) { }
+            }
             // Toetsenbord: de gefocuste poster netjes in beeld (op tv doet onRowCommand dat al).
             row.addEventListener('focusin', function (ev) {
                 var card = ev.target && ev.target.closest ? ev.target.closest('.discover-row-card') : null;
@@ -2218,7 +2224,7 @@
     // ---- De Discover-popup boven de huidige pagina ----
     // Laadt de Discover-pagina één keer onzichtbaar (alleen de popup wordt gebruikt) met dezelfde controller
     // als de echte pagina, in "embedded"-modus. Zo is de popup overal gelijk: info, cast, seizoenen, trailer, aanvragen.
-    var DC_UI_PAGE = 'discoverui1102', DC_UI_JS = 'discoveruijs1397';
+    var DC_UI_PAGE = 'discoverui1103', DC_UI_JS = 'discoveruijs1398';
     var embedPromise = null;
     function pageText(c, name) {
         var url = c.getUrl('web/ConfigurationPage', { name: name });
