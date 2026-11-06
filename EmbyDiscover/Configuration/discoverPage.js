@@ -38,8 +38,8 @@ define([], function () {
             return;
         }
         var urls = [
-            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1393' }),
-            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1393' }),
+            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1394' }),
+            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1394' }),
             ApiClient.getUrl('Plugins/Discover/Script')
         ];
         var n = 0;
@@ -70,7 +70,7 @@ define([], function () {
         })();
     }
 
-    var UI_PAGE = 'discoverui1092';
+    var UI_PAGE = 'discoverui1093';
 
     return function (view, params) {
         // embedded: alleen de popup, over een andere Emby-pagina heen (film-, serie- of acteurspagina).
@@ -566,6 +566,39 @@ define([], function () {
         // Wat er vóór de persoon in beeld was (zoekresultaten, lijst, startpagina): Terug zet dat ongewijzigd terug.
         var personPrev = null;
         function scrollBox() { return view.querySelector('.scrollY') || document.scrollingElement || document.documentElement; }
+        // Eén stap terug binnen Discover. fromHeader = Emby's pijl linksboven: die blijft altijd in Discover
+        // (ook bij een persoon die via een film-/kanaalpagina is geopend) en doet op de Discover-start niets.
+        // Geeft false terug als er niets terug te doen was (Discover-start zonder popup).
+        function goBack(fromHeader) {
+            if (trailerOverlay.classList.contains('open')) { closeTrailer(); return true; }
+            if (overlay.classList.contains('open')) { closeModal(); return true; }
+            var person = !!content.querySelector('.dcPersonHead');
+            if (!fromHeader && personFromLink && person && window.history.length > 1) { personFromLink = false; window.history.back(); return true; }
+            personFromLink = false;
+            if (personPrev && person) {
+                var prev = personPrev; personPrev = null;
+                content.innerHTML = '';
+                content.appendChild(prev.frag);
+                browse = prev.browse; homeShown = prev.homeShown;
+                try { scrollBox().scrollTop = prev.top; } catch (ignored) { }
+                return true;
+            }
+            personPrev = null;
+            if (homeShown && !browse && !person) { return false; }
+            if (input.value) { input.value = ''; }
+            loadHome();
+            try { scrollBox().scrollTop = 0; } catch (ignored) { }
+            return true;
+        }
+        function goHome() {
+            if (trailerOverlay.classList.contains('open')) { closeTrailer(); }
+            if (overlay.classList.contains('open')) { closeModal(); }
+            personPrev = null; personFromLink = false;
+            if (input.value) { input.value = ''; }
+            clearTimeout(searchTimer);
+            loadHome();
+            try { scrollBox().scrollTop = 0; } catch (ignored) { }
+        }
         function openPerson(pid, name, fromLink) {
             personFromLink = !!fromLink;
             personPrev = null;
@@ -1384,19 +1417,7 @@ define([], function () {
                 openBrowse(tile.getAttribute('data-kind'), parseInt(tile.getAttribute('data-id'), 10), tile.getAttribute('data-name'));
                 return;
             }
-            if (t.closest && t.closest('.dcBack')) {
-                if (personFromLink && content.querySelector('.dcPersonHead') && window.history.length > 1) { personFromLink = false; window.history.back(); return; }
-                personFromLink = false;
-                if (personPrev && content.querySelector('.dcPersonHead')) {
-                    var prev = personPrev; personPrev = null;
-                    content.innerHTML = '';
-                    content.appendChild(prev.frag);
-                    browse = prev.browse; homeShown = prev.homeShown;
-                    try { scrollBox().scrollTop = prev.top; } catch (ignored) { }
-                    return;
-                }
-                personPrev = null; loadHome(); return;
-            }
+            if (t.closest && t.closest('.dcBack')) { goBack(false); return; }
             if (t.closest && t.closest('.dcMoreBtn')) { loadBrowse(); }
         });
 
@@ -1532,6 +1553,7 @@ define([], function () {
             });
         });
 
+        view.querySelector('.dcHomeBtn').addEventListener('click', goHome);
         input.addEventListener('input', function () {
             clearTimeout(searchTimer);
             var q = input.value.trim();
@@ -1767,10 +1789,9 @@ define([], function () {
             var trailerOpen = trailerOverlay.classList.contains('open');
             var modalOpen = overlay.classList.contains('open') || trailerOpen;
             if (cmd === 'back') {
-                if (trailerOpen) { e.preventDefault(); closeTrailer(); return; }
-                if (overlay.classList.contains('open')) { e.preventDefault(); closeModal(); return; }
-                if (browse) { e.preventDefault(); loadHome(); return; } // terug uit een genre-/studio-overzicht
-                return; // anders: Emby verlaat de pagina
+                // Popup, overzicht, persoon of zoekresultaten: één stap terug binnen Discover.
+                if (goBack(true)) { e.preventDefault(); }
+                return; // op de Discover-start: Emby verlaat de pagina
             }
             if (cmd === 'select') {
                 // OK op een kaart of tegel is al als klik afgehandeld bij keydown; niet nog eens.
@@ -1840,8 +1861,17 @@ define([], function () {
         window.__dcHeaderSync = syncHeader;
         window.addEventListener('hashchange', syncHeader);
 
-        view.addEventListener('viewshow', function () { syncHeader(); document.addEventListener('command', onCommand, true); });
-        view.addEventListener('viewhide', function () { document.body.classList.remove('dcDiscoverActive'); document.removeEventListener('command', onCommand, true); });
+        // Emby's terugpijl linksboven: op Discover blijft die altijd binnen Discover (één stap terug, popup dicht;
+        // op de Discover-start doet hij niets in plaats van naar het Emby-menu te gaan).
+        function onHeaderBack(e) {
+            var b = e.target && e.target.closest && e.target.closest('.headerBackButton, .headerBackButton-back, [data-action="back"]');
+            if (!b || !b.closest('.skinHeader')) { return; }
+            if (!onDiscoverRoute() || !document.body.contains(view) || !isShown(view.querySelector('.dcRoot'))) { return; }
+            e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+            goBack(true);
+        }
+        view.addEventListener('viewshow', function () { syncHeader(); document.addEventListener('command', onCommand, true); document.addEventListener('click', onHeaderBack, true); });
+        view.addEventListener('viewhide', function () { document.body.classList.remove('dcDiscoverActive'); document.removeEventListener('command', onCommand, true); document.removeEventListener('click', onHeaderBack, true); });
 
         // ---- Directe link vanaf een film-/seriepagina: #!/configurationpage?name=...&openType=movie&openId=123 ----
         // Wat er geopend moet worden kan ook via sessionStorage komen: Emby laat soms de extra parameters in het adres
@@ -1900,7 +1930,7 @@ define([], function () {
 
         view.addEventListener('viewshow', function () {
             if (!loaded) { loadHome(); }
-            else { scheduleQueue(0); loadMyRequests(); }
+            else { scheduleQueue(0); loadMyRequests(); loadExtras(); } // extra rijen vers: een weggehaalde lijst verdwijnt meteen
             openFromLink();
         });
         // Geen hashchange-luisteraar: Emby 4.11 maakt bij elke navigatie een nieuwe Discover-pagina (met eigen viewshow);
