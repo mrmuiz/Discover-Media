@@ -5,7 +5,7 @@
     <title>Discover</title>
 </head>
 <body>
-<div data-role="page" class="page type-interior discoverUiPage" data-controller="__plugin/discoveruijs1401">
+<div data-role="page" class="page type-interior discoverUiPage" data-controller="__plugin/discoveruijs1402">
 <style>
 /* Header on the Discover page only (body.dcDiscoverActive is set while this page is the active route): white text and icons on the dark page. The side drawer is deliberately left alone. */
 body.dcDiscoverActive .skinHeader .pageTitle,
@@ -83,17 +83,6 @@ html.dcNoYear .dcCapSub .dcYear, html.dcNoScore .dcCapSub .dcStar { display:none
 .dcOverlay { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,.75); z-index:100000; display:none; align-items:center; justify-content:center; padding:1em; box-sizing:border-box; }
 .dcOverlay.open { display:flex; }
 /* Popup zacht in en uit: de achtergrond vervaagt, de popup komt licht inzoomend binnen. */
-.dcOverlay.open { animation:dcFadeIn .2s ease-out; }
-.dcOverlay.open .dcModal { animation:dcPopIn .22s ease-out; }
-.dcOverlay.dcClosing { display:flex; pointer-events:none; animation:dcFadeOut .17s ease-in forwards; }
-.dcOverlay.dcClosing .dcModal { animation:dcPopOut .17s ease-in forwards; }
-.dcOverlay.dcTv.open .dcModal { animation:dcFadeIn .2s ease-out; }
-.dcOverlay.dcTv.dcClosing .dcModal { animation:dcFadeOut .17s ease-in forwards; }
-@keyframes dcFadeIn { from { opacity:0; } to { opacity:1; } }
-@keyframes dcFadeOut { from { opacity:1; } to { opacity:0; } }
-@keyframes dcPopIn { from { opacity:0; transform:scale(.96) translateY(10px); } to { opacity:1; transform:none; } }
-@keyframes dcPopOut { from { opacity:1; transform:none; } to { opacity:0; transform:scale(.97) translateY(6px); } }
-@media (prefers-reduced-motion: reduce) { .dcOverlay.open, .dcOverlay.open .dcModal, .dcOverlay.dcClosing, .dcOverlay.dcClosing .dcModal { animation:none; } .dcOverlay.dcClosing { display:none; } }
 .dcModal { position:relative; width:900px; max-width:100%; width:min(900px,100%); max-height:92vh; overflow:auto; -webkit-overflow-scrolling:touch; background:#0b1426; border:1px solid rgba(255,255,255,.15); border-radius:1em; }
 .dcModalBack { height:220px; background-size:cover; background-position:center top; border-radius:1em 1em 0 0; position:relative; }
 .dcModalBack:after { content:""; position:absolute; top:0; left:0; right:0; bottom:0; background:linear-gradient(transparent,#0b1426); }

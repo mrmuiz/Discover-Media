@@ -38,8 +38,8 @@ define([], function () {
             return;
         }
         var urls = [
-            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1410' }),
-            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1410' }),
+            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1411' }),
+            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1411' }),
             ApiClient.getUrl('Plugins/Discover/Script')
         ];
         var n = 0;
@@ -70,7 +70,7 @@ define([], function () {
         })();
     }
 
-    var UI_PAGE = 'discoverui1106';
+    var UI_PAGE = 'discoverui1107';
 
     return function (view, params) {
         // embedded: alleen de popup, over een andere Emby-pagina heen (film-, serie- of acteurspagina).
@@ -1246,7 +1246,6 @@ define([], function () {
             renderQueueInfo(i);
             updateButton();
             lastFocus = document.activeElement;
-            clearTimeout(closingTimer); overlay.classList.remove('dcClosing');
             overlay.classList.add('open');
             // Focus in de popup zetten, anders blijft de afstandsbediening op de kaarten erachter staan.
             setTimeout(function () {
@@ -1411,14 +1410,7 @@ define([], function () {
             }, function () { openModal(i); });
         }
 
-        var closingTimer = null;
         function closeModal() {
-            // Eerst zacht uitfaden (klasse dcClosing houdt hem nog even zichtbaar), dan echt weg.
-            if (overlay.classList.contains('open')) {
-                overlay.classList.add('dcClosing');
-                clearTimeout(closingTimer);
-                closingTimer = setTimeout(function () { overlay.classList.remove('dcClosing'); }, 180);
-            }
             overlay.classList.remove('open'); current = null;
             if (lastFocus && lastFocus.focus) { try { lastFocus.focus(); } catch (e) { } }
         }
