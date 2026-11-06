@@ -5,7 +5,7 @@
     <title>Discover</title>
 </head>
 <body>
-<div data-role="page" class="page type-interior pluginConfigurationPage discoverConfigPage" data-require="emby-input,emby-button,emby-select,emby-checkbox" data-controller="__plugin/discoverconfigjs1364">
+<div data-role="page" class="page type-interior pluginConfigurationPage discoverConfigPage" data-require="emby-input,emby-button,emby-select,emby-checkbox" data-controller="__plugin/discoverconfigjs1365">
     <style>
         .discoverConfigPage .keyWrap { position: relative; }
         .discoverConfigPage .keyWrap input { padding-right: 2.8em; }
@@ -105,6 +105,26 @@
                 <h3 id="hdgExtraRows">Extra rijen op de Discover-pagina</h3>
                 <div class="checkboxContainer">
                     <label class="emby-checkbox-label">
+                        <input is="emby-checkbox" type="checkbox" id="chkShowRecentlyAdded" />
+                        <span class="checkboxLabel" id="lbl_chkShowRecentlyAdded">Rij "Onlangs toegevoegd": wat het laatst in de bibliotheek is gekomen</span>
+                        <span class="emby-checkbox-outline">
+                            <span class="emby-checkbox-on"><i class="md-icon">check</i></span>
+                            <span class="emby-checkbox-off"></span>
+                        </span>
+                    </label>
+                </div>
+                <div class="checkboxContainer">
+                    <label class="emby-checkbox-label">
+                        <input is="emby-checkbox" type="checkbox" id="chkShowRecentRequests" />
+                        <span class="checkboxLabel" id="lbl_chkShowRecentRequests">Rij "Recente aanvragen": wat iedereen op de server het laatst heeft aangevraagd</span>
+                        <span class="emby-checkbox-outline">
+                            <span class="emby-checkbox-on"><i class="md-icon">check</i></span>
+                            <span class="emby-checkbox-off"></span>
+                        </span>
+                    </label>
+                </div>
+                <div class="checkboxContainer">
+                    <label class="emby-checkbox-label">
                         <input is="emby-checkbox" type="checkbox" id="chkShowMyRequests" />
                         <span class="checkboxLabel" id="lbl_chkShowMyRequests">Rij "Mijn aanvragen": wat de gebruiker zelf heeft aangevraagd, met de downloadvoortgang</span>
                         <span class="emby-checkbox-outline">
@@ -116,7 +136,7 @@
                 <div class="checkboxContainer">
                     <label class="emby-checkbox-label">
                         <input is="emby-checkbox" type="checkbox" id="chkShowNewSeasons" />
-                        <span class="checkboxLabel" id="lbl_chkShowNewSeasons">Rij "Nieuwe seizoenen": series uit je bibliotheek met een nieuwer seizoen</span>
+                        <span class="checkboxLabel" id="lbl_chkShowNewSeasons">Rij "Nieuwe seizoenen": series in je bibliotheek waarvan een nieuw seizoen bestaat dat je nog niet hebt</span>
                         <span class="emby-checkbox-outline">
                             <span class="emby-checkbox-on"><i class="md-icon">check</i></span>
                             <span class="emby-checkbox-off"></span>

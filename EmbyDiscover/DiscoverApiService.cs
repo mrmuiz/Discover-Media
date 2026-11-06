@@ -463,7 +463,10 @@ namespace Emby.Plugins.Discover
                 var ms = movieStatesTask.Result;
                 var ts = tvStatesTask.Result;
 
-                var tasks = Defs.Select(d => BuildRow(d, ms, ts)).ToList();
+                var pc = Plugin.GetCurrentConfiguration();
+                var tasks = Defs
+                    .Where(d => !(d.Kind == "recent_added" && !pc.ShowRecentlyAdded) && !(d.Kind == "recent_requests" && !pc.ShowRecentRequests))
+                    .Select(d => BuildRow(d, ms, ts)).ToList();
                 var rows = await Task.WhenAll(tasks).ConfigureAwait(false);
                 foreach (var r in rows) if (r != null) resp.Rows.Add(r);
             }

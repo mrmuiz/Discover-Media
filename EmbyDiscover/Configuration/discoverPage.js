@@ -38,8 +38,8 @@ define([], function () {
             return;
         }
         var urls = [
-            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1397' }),
-            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1397' }),
+            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1398' }),
+            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1398' }),
             ApiClient.getUrl('Plugins/Discover/Script')
         ];
         var n = 0;
@@ -70,7 +70,7 @@ define([], function () {
         })();
     }
 
-    var UI_PAGE = 'discoverui1096';
+    var UI_PAGE = 'discoverui1097';
 
     return function (view, params) {
         // embedded: alleen de popup, over een andere Emby-pagina heen (film-, serie- of acteurspagina).
@@ -417,6 +417,61 @@ define([], function () {
             for (var r = 0; r < (rows || 3); r++) { out += '<div class="dcRowTitle" style="opacity:.35"> </div><div class="dcSkelRow">' + skelCards(8) + '</div>'; }
             return out;
         }
+
+        // Logo's worden wit gemaakt (filter). Een logo dat grotendeels gevuld is met zowel donkere als lichte delen
+        // (bv. letters uitgespaard in een cirkel) wordt dan een witte vlek; dat logo tonen we in zijn eigen kleuren.
+        // Meten gebeurt met een losse afbeelding (crossOrigin); lukt dat niet (geen CORS), dan blijft alles zoals het was.
+        var logoOrig = {};
+        function logoNeedsColor(img) {
+            var nw = img.naturalWidth || 1, nh = img.naturalHeight || 1;
+            var w = 128, h = Math.max(1, Math.round(128 * nh / nw));
+            if (h > 128) { h = 128; w = Math.max(1, Math.round(128 * nw / nh)); }
+            var c = document.createElement('canvas'); c.width = w; c.height = h;
+            var g = c.getContext('2d'); g.drawImage(img, 0, 0, w, h);
+            var d = g.getImageData(0, 0, w, h).data;
+            var minX = w, minY = h, maxX = -1, maxY = -1, opaque = 0, dark = 0, light = 0;
+            for (var y = 0; y < h; y++) {
+                for (var x = 0; x < w; x++) {
+                    var i = (y * w + x) * 4;
+                    if (d[i + 3] < 128) { continue; }
+                    opaque++;
+                    if (x < minX) { minX = x; } if (x > maxX) { maxX = x; }
+                    if (y < minY) { minY = y; } if (y > maxY) { maxY = y; }
+                    var lum = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+                    if (lum < 90) { dark++; } else if (lum > 170) { light++; }
+                }
+            }
+            if (!opaque) { return false; }
+            var fill = opaque / ((maxX - minX + 1) * (maxY - minY + 1));
+            // Gevuld vlak (> 60% van het kader) met zowel donkere als lichte delen (elk minstens 3%): letters in een vlak.
+            return fill > 0.6 && Math.min(dark, light) / opaque > 0.03;
+        }
+        function markLogo(url) {
+            Array.prototype.forEach.call(view.querySelectorAll('img.dcTileLogo'), function (im) {
+                if (im.getAttribute('src') === url) { im.classList.add('dcOrig'); }
+            });
+        }
+        function checkLogo(img) {
+            var url = img.getAttribute('src');
+            if (!url) { return; }
+            if (logoOrig[url] === true) { img.classList.add('dcOrig'); return; }
+            if (logoOrig[url] !== undefined) { return; }
+            logoOrig[url] = 'busy';
+            var probe = new Image();
+            probe.crossOrigin = 'anonymous';
+            probe.onload = function () {
+                var res = false;
+                try { res = logoNeedsColor(probe); } catch (e) { res = false; }
+                logoOrig[url] = res;
+                if (res) { markLogo(url); }
+            };
+            probe.onerror = function () { logoOrig[url] = false; };
+            probe.src = url;
+        }
+        content.addEventListener('load', function (e) {
+            var t = e.target;
+            if (t && t.classList && t.classList.contains('dcTileLogo')) { checkLogo(t); }
+        }, true);
 
         function tileHtml(r, t) {
             var inner = t.Image
