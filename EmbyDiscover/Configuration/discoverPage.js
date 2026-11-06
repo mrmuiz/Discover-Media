@@ -32,14 +32,14 @@ define([], function () {
 
     // Load as an external script so Emby's Content-Security-Policy does not block inline execution.
     function loadButtonScript() {
-        if (window.__discoverRequestButtonVersion === '1.4.0.1') {
-            diag.load = text('script is al actief v1.4.0.1', 'script already active v1.4.0.1', 'Skript bereits aktiv v1.4.0.1');
+        if (window.__discoverRequestButtonVersion === '1.4.0.2') {
+            diag.load = text('script is al actief v1.4.0.2', 'script already active v1.4.0.2', 'Skript bereits aktiv v1.4.0.2');
             showDiag();
             return;
         }
         var urls = [
-            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1407' }),
-            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1407' }),
+            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1408' }),
+            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1408' }),
             ApiClient.getUrl('Plugins/Discover/Script')
         ];
         var n = 0;
@@ -51,7 +51,7 @@ define([], function () {
             script.src = u + (u.indexOf('?') === -1 ? '?' : '&') + '_=' + Date.now();
             script.async = true;
             script.onload = function () {
-                if (window.__discoverRequestButtonVersion === '1.4.0.1') {
+                if (window.__discoverRequestButtonVersion === '1.4.0.2') {
                     diag.load = text('OK via extern script ', 'OK via external script ', 'OK über externes Skript ') + u;
                     showDiag();
                 } else {
@@ -70,7 +70,7 @@ define([], function () {
         })();
     }
 
-    var UI_PAGE = 'discoverui1103';
+    var UI_PAGE = 'discoverui1104';
 
     return function (view, params) {
         // embedded: alleen de popup, over een andere Emby-pagina heen (film-, serie- of acteurspagina).

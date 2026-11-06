@@ -3,16 +3,39 @@
  * Verbergt ook "Media informatie" op Discover/Trailers-detailpagina's. */
 (function () {
     'use strict';
-    if (window.__discoverRequestButtonVersion === '1.4.0.1') { return; }
+    if (window.__discoverRequestButtonVersion === '1.4.0.2') { return; }
     if (window.__discoverRequestButton) {
         console.warn('[Discover] oudere knopcode is nog actief; vernieuw de webclient om dubbele handlers te voorkomen.');
         return;
     }
-    var DC_BUILD = '1.4.0.1 2026-11-06';
+    var DC_BUILD = '1.4.0.2 2026-11-06';
     window.__discoverRequestButton = true;
-    window.__discoverRequestButtonVersion = '1.4.0.1';
+    window.__discoverRequestButtonVersion = '1.4.0.2';
+
+    // Aanwijzer in gebruik? Klasse dcPointer op <html> zolang de muis / Magic Remote-aanwijzer beweegt; weg zodra de
+    // pijltoetsen gebruikt worden (dan verdwijnt de aanwijzer op een LG-tv ook). Toont de scrollpijlen bij de rijen.
+    if (!window.__dcPointerInit) {
+        window.__dcPointerInit = true;
+        (function () {
+            var root = document.documentElement, lx = null, ly = null;
+            document.addEventListener('mousemove', function (e) {
+                if (lx !== null && Math.abs(e.screenX - lx) + Math.abs(e.screenY - ly) < 2) { return; }
+                lx = e.screenX; ly = e.screenY;
+                if (!root.classList.contains('dcPointer')) { root.classList.add('dcPointer'); }
+            }, true);
+            document.addEventListener('keydown', function (e) {
+                var k = e.keyCode;
+                if (k >= 37 && k <= 40) { root.classList.remove('dcPointer'); }
+            }, true);
+            // webOS meldt zelf of de aanwijzer zichtbaar is.
+            document.addEventListener('cursorStateChange', function (e) {
+                var vis = e && e.detail && e.detail.visibility;
+                root.classList.toggle('dcPointer', !!vis);
+            }, false);
+        })();
+    }
     window.__discoverRequestButtonBuild = DC_BUILD;
-    console.log('[Discover] request-button script loaded v1.4.0.1 build ' + DC_BUILD);
+    console.log('[Discover] request-button script loaded v1.4.0.2 build ' + DC_BUILD);
 
     var uiLanguage = 'nl';
     function text(dutch, english, german, norwegian) {
@@ -43,7 +66,7 @@
                     'color:#ffd666;background:rgba(0,0,0,.7);padding:4px 8px;border-radius:4px;pointer-events:none;white-space:pre-wrap;';
                 document.body.appendChild(el);
             }
-            el.textContent = 'Discover v1.4.0.1 | ' + msg;
+            el.textContent = 'Discover v1.4.0.2 | ' + msg;
         } catch (e) { }
     }
     var isAdmin = false;
@@ -159,6 +182,8 @@
             '@media (pointer: fine) { .discover-row-section:hover .discover-row-arrowbox { display: flex; } }',
             '.discover-row-section .discover-row-arrowbox.is-hidden { display: none !important; }',
             'html.layout-tv .discover-row-arrowbox, html.discover-tv .discover-row-arrowbox { display: none !important; }',
+            // Aanwijzer in gebruik (muis, LG Magic Remote): pijlen bij het aanwijzen, ook op tv.
+            'html.dcPointer .discover-row-section:hover .discover-row-arrowbox:not(.is-hidden) { display: flex !important; }',
             '.discover-row-arrow { display: inline-flex; align-items: center; justify-content: center; width: 3.55em; height: 3.55em; margin: 0 .4em; padding: 0; border: 0; border-radius: 100em; background: #fff; color: #000; cursor: pointer;',
             '  box-shadow: 0 4px 5px 0 rgba(0,0,0,.14), 0 1px 10px 0 rgba(0,0,0,.12), 0 2px 4px -1px rgba(0,0,0,.4); transition: transform 250ms cubic-bezier(.175,.885,.32,1.15); }',
             '.discover-row-arrow:hover { transform: scale(1.1); }',
@@ -287,7 +312,7 @@
             var bcs = btn ? getComputedStyle(btn) : null;
             var vv = window.visualViewport;
             el.textContent = [
-                'Discover v1.4.0.1 build ' + DC_BUILD + ' (' + (window.__discoverRequestButtonBuild || '?') + ')',
+                'Discover v1.4.0.2 build ' + DC_BUILD + ' (' + (window.__discoverRequestButtonBuild || '?') + ')',
                 'item page: ' + (document.querySelector('.itemDetailPage') ? 'ja' : 'nee') + ' body=' + document.body.className.split(/\s+/).filter(function (c) { return /^(dc|discover)/.test(c); }).join(' '),
                 'bar: ' + (info.bar ? describe(info.bar) + ' ' + rectText(info.bar) : 'niet gevonden') + ' h=' + info.measured,
                 'mode=' + info.mode + ' --dc-bottom-clear=' + (document.documentElement.style.getPropertyValue('--dc-bottom-clear') || '(leeg)'),
@@ -1919,7 +1944,7 @@
         var link = document.createElement('a');
         link.className = 'discover-row-poster';
         // Klik op de poster: de Discover-popup met info en trailer.
-        link.href = '#!/configurationpage?name=discoverui1103&openType=' + item.Type + '&openId=' + item.TmdbId;
+        link.href = '#!/configurationpage?name=discoverui1104&openType=' + item.Type + '&openId=' + item.TmdbId;
         link.setAttribute('aria-label', item.Title);   // geen title: dat gaf een tooltip-vakje over de poster
         // Gewone klik: de popup hier op de pagina openen (Ctrl/middenklik volgt de link naar Discover).
         link.addEventListener('click', function (e) {
@@ -2224,7 +2249,7 @@
     // ---- De Discover-popup boven de huidige pagina ----
     // Laadt de Discover-pagina één keer onzichtbaar (alleen de popup wordt gebruikt) met dezelfde controller
     // als de echte pagina, in "embedded"-modus. Zo is de popup overal gelijk: info, cast, seizoenen, trailer, aanvragen.
-    var DC_UI_PAGE = 'discoverui1103', DC_UI_JS = 'discoveruijs1398';
+    var DC_UI_PAGE = 'discoverui1104', DC_UI_JS = 'discoveruijs1399';
     var embedPromise = null;
     function pageText(c, name) {
         var url = c.getUrl('web/ConfigurationPage', { name: name });
