@@ -38,8 +38,8 @@ define([], function () {
             return;
         }
         var urls = [
-            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1409' }),
-            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1409' }),
+            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1410' }),
+            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1410' }),
             ApiClient.getUrl('Plugins/Discover/Script')
         ];
         var n = 0;
@@ -70,7 +70,7 @@ define([], function () {
         })();
     }
 
-    var UI_PAGE = 'discoverui1105';
+    var UI_PAGE = 'discoverui1106';
 
     return function (view, params) {
         // embedded: alleen de popup, over een andere Emby-pagina heen (film-, serie- of acteurspagina).
@@ -2075,23 +2075,43 @@ define([], function () {
             return true;
         }
 
+        // Rijen in de popup, van boven naar onder: cast, collectie (alles / posters / per film), seizoenen, knoppen.
+        function modalRows() {
+            var q = function (sel) { return Array.prototype.filter.call(overlay.querySelectorAll(sel), isUsable); };
+            return [q('.dcCast .dcCastP'), q('.dcCollection .dcColAll'), q('.dcCollection .dcColPoster'),
+                q('.dcCollection .dcColBtn[data-req]'), q('.dcSeasons button'), q('.dcBtnRow button')]
+                .filter(function (r) { return r.length > 0; });
+        }
+        function centerX(el) { var r = el.getBoundingClientRect(); return r.left + r.width / 2; }
+        function nearestIn(row, from) {
+            var x = centerX(from), best = row[0], bd = Infinity;
+            row.forEach(function (el) { var d = Math.abs(centerX(el) - x); if (d < bd) { bd = d; best = el; } });
+            return best;
+        }
         function navModal(dir, active) {
             if (trailerOverlay.classList.contains('open')) {
                 focusEl(trailerOverlay.querySelector('.dcTrailerClose'));
                 return;
             }
-            var row = modalButtons(overlay);
+            var rows = modalRows();
             var close = overlay.querySelector('.dcClose');
-            var i = row.indexOf(active);
             if (active === close) {
-                if (dir === 'down' || dir === 'left') { focusEl(row[0] || close); }
+                if (dir === 'down') { focusEl((rows[0] && rows[0][0]) || firstModalButton(overlay)); }
+                else if (dir === 'left') { focusEl(firstModalButton(overlay)); }
                 return;
             }
-            if (i === -1) { focusEl(row[0] || close); return; }
-            if (dir === 'left' && i > 0) { focusEl(row[i - 1]); }
-            else if (dir === 'right' && i < row.length - 1) { focusEl(row[i + 1]); }
-            else if (dir === 'down') { scrollOverview('down'); }
-            else if (dir === 'up') { if (!scrollOverview('up')) { focusEl(close); } }
+            var r = -1, c = -1;
+            for (var k = 0; k < rows.length && r === -1; k++) { c = rows[k].indexOf(active); if (c !== -1) { r = k; } }
+            if (r === -1) { focusEl(firstModalButton(overlay)); return; }
+            var row = rows[r];
+            if (dir === 'left') { if (c > 0) { focusEl(row[c - 1]); } }
+            else if (dir === 'right') { if (c < row.length - 1) { focusEl(row[c + 1]); } }
+            else if (dir === 'down') { if (r < rows.length - 1) { focusEl(nearestIn(rows[r + 1], active)); } else { scrollOverview('down'); } }
+            else if (dir === 'up') {
+                if (r > 0) { focusEl(nearestIn(rows[r - 1], active)); }
+                else if (!scrollOverview('up')) { focusEl(close); }
+            }
+            if (row[0] && row[0].classList.contains('dcCastP')) { setTimeout(updateCastArrows, 350); }
         }
 
         var lastKeyClick = 0;
@@ -2191,8 +2211,9 @@ define([], function () {
             var b = e.target && e.target.closest && e.target.closest('.headerBackButton, .headerBackButton-back, [data-action="back"]');
             if (!b || !b.closest('.skinHeader')) { return; }
             if (!onDiscoverRoute() || !document.body.contains(view) || !isShown(view.querySelector('.dcRoot'))) { return; }
-            e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
-            goBack(true);
+            // Iets om terug te doen binnen Discover (popup, overzicht, persoon, zoeken): dat, en Emby doet niets.
+            // Op de Discover-start werkt de pijl gewoon als Emby's terugknop (net als de terugtoets op de tv).
+            if (goBack(true)) { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); }
         }
         view.addEventListener('viewshow', function () { syncHeader(); document.addEventListener('command', onCommand, true); document.addEventListener('click', onHeaderBack, true); });
         view.addEventListener('viewhide', function () { document.body.classList.remove('dcDiscoverActive'); document.removeEventListener('command', onCommand, true); document.removeEventListener('click', onHeaderBack, true); });

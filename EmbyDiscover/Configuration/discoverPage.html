@@ -5,7 +5,7 @@
     <title>Discover</title>
 </head>
 <body>
-<div data-role="page" class="page type-interior discoverUiPage" data-controller="__plugin/discoveruijs1400">
+<div data-role="page" class="page type-interior discoverUiPage" data-controller="__plugin/discoveruijs1401">
 <style>
 /* Header on the Discover page only (body.dcDiscoverActive is set while this page is the active route): white text and icons on the dark page. The side drawer is deliberately left alone. */
 body.dcDiscoverActive .skinHeader .pageTitle,
@@ -235,9 +235,10 @@ body.dcModalOpen .skinHeader { opacity:0 !important; transition:opacity .15s; }
 .dcRate.mc.mid b { background:#ffcc33; } .dcRate.mc.low b { background:#ff0000; color:#fff; }
 /* Pijlen bij de cast in de popup: bij het aanwijzen (muis / Magic Remote), niet bij bediening met de pijltoetsen. */
 .dcCastWrap { position:relative; }
-.dcCastArr { position:absolute; top:calc(32px + .2em - 1.2em); z-index:3; width:2.4em; height:2.4em; padding:0; border:0; border-radius:50%; background:#fff; color:#000; cursor:pointer; display:none; align-items:center; justify-content:center; box-shadow:0 2px 8px rgba(0,0,0,.5); }
-.dcCastArr.left { left:-.4em; } .dcCastArr.right { right:-.4em; }
-.dcCastArr svg { width:1.6em; height:1.6em; fill:currentColor; }
+.dcCastArr { position:absolute; top:calc(34px + .4em - 1.6em); z-index:3; width:3.2em; height:3.2em; padding:0; border:0; border-radius:50%; background:#fff; color:#000; cursor:pointer; display:none; align-items:center; justify-content:center; box-shadow:0 4px 5px 0 rgba(0,0,0,.14), 0 1px 10px 0 rgba(0,0,0,.12), 0 2px 4px -1px rgba(0,0,0,.4), 0 0 0 3px rgba(11,20,38,.6); transition:transform 200ms; }
+.dcCastArr:hover { transform:scale(1.1); }
+.dcCastArr.left { left:-.6em; } .dcCastArr.right { right:-.6em; }
+.dcCastArr svg { width:2.1em; height:2.1em; fill:currentColor; }
 @media (pointer: fine) { .dcCastWrap:hover .dcCastArr { display:inline-flex; } }
 html.dcPointer .dcCastWrap:hover .dcCastArr { display:inline-flex; }
 .dcCastWrap .dcCastArr.dcHide { display:none !important; }

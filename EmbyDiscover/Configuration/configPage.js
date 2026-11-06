@@ -657,7 +657,8 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             el(view, 'chkPosterScore').checked = c.PosterShowScore !== false;
             el(view, 'chkShowOmdb').checked = c.ShowOmdbRatings !== false;
             el(view, 'txtOmdbKey').value = c.OmdbApiKey || '';
-            var acc = String(c.AccentColor || '#ffb400').toLowerCase(), accSel = el(view, 'selAccent');
+            // Waarden in de keuzelijst zonder # (Emby's keuzelijst op de tv kan niet met # overweg).
+            var acc = String(c.AccentColor || '#ffb400').toLowerCase().replace('#', ''), accSel = el(view, 'selAccent');
             if (!accSel.querySelector('option[value="' + acc + '"]')) { var o = document.createElement('option'); o.value = acc; o.textContent = acc; accSel.appendChild(o); }
             accSel.value = acc;
             el(view, 'chkShowRecentlyAdded').checked = c.ShowRecentlyAdded !== false;
@@ -737,7 +738,7 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             c.PosterShowScore = el(view, 'chkPosterScore').checked;
             c.ShowOmdbRatings = el(view, 'chkShowOmdb').checked;
             c.OmdbApiKey = el(view, 'txtOmdbKey').value.trim();
-            c.AccentColor = el(view, 'selAccent').value || '#ffb400';
+            c.AccentColor = '#' + String(el(view, 'selAccent').value || 'ffb400').replace('#', '');
             c.ShowRecentlyAdded = el(view, 'chkShowRecentlyAdded').checked;
             c.ShowRecentRequests = el(view, 'chkShowRecentRequests').checked;
             c.TmdbListId = el(view, 'txtTmdbList').value.trim();
