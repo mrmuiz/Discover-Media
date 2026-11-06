@@ -1,3 +1,4 @@
+- New: filter **Not requested yet** next to "Not in my library" in the Discover browse view; hides items that are already requested or available.
 ## Version 1.4.0.2
 
 - Fix: **scroll arrows on TV with a pointer** (LG Magic Remote). The arrows only appeared when the device reported a "fine pointer"; LG webOS 24 does not, so rows could not be scrolled with the pointer there. Arrows now appear on hover as soon as the pointer is used (also on Emby's own pages), and hide again when the arrow keys are used.
