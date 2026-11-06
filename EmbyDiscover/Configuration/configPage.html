@@ -5,7 +5,7 @@
     <title>Discover</title>
 </head>
 <body>
-<div data-role="page" class="page type-interior pluginConfigurationPage discoverConfigPage" data-require="emby-input,emby-button,emby-select,emby-checkbox" data-controller="__plugin/discoverconfigjs1367">
+<div data-role="page" class="page type-interior pluginConfigurationPage discoverConfigPage" data-require="emby-input,emby-button,emby-select,emby-checkbox" data-controller="__plugin/discoverconfigjs1369">
     <style>
         .discoverConfigPage .keyWrap { position: relative; }
         .discoverConfigPage .keyWrap input { padding-right: 2.8em; }
@@ -76,6 +76,43 @@
                     <label class="emby-checkbox-label">
                         <input is="emby-checkbox" type="checkbox" id="chkShowTrailerTile" />
                         <span class="checkboxLabel" id="lbl_chkShowTrailerTile">Toon de tegel Trailer naast Aanvragen (kanaal en Discover-pagina)</span>
+                        <span class="emby-checkbox-outline">
+                            <span class="emby-checkbox-on"><i class="md-icon">check</i></span>
+                            <span class="emby-checkbox-off"></span>
+                        </span>
+                    </label>
+                </div>
+
+                <h3 id="hdgLook">Kleur en posters</h3>
+                <div class="selectContainer">
+                    <label class="selectLabel" for="selAccent" id="lbl_selAccent">Themakleur (knoppen, focus en accenten)</label>
+                    <select is="emby-select" id="selAccent">
+                        <option value="ffb400" id="optAccent0">Geel (standaard)</option>
+                        <option value="52b54b" id="optAccent1">Emby-groen</option>
+                        <option value="2f80ed" id="optAccent2">Blauw</option>
+                        <option value="14b8a6" id="optAccent3">Turquoise</option>
+                        <option value="8e5cf7" id="optAccent4">Paars</option>
+                        <option value="ec4899" id="optAccent5">Roze</option>
+                        <option value="e5484d" id="optAccent6">Rood</option>
+                        <option value="ff7a1a" id="optAccent7">Oranje</option>
+                        <option value="e9edf5" id="optAccent8">Wit</option>
+                    </select>
+                    <div class="fieldDescription" id="desc_selAccent">Geldt voor iedereen op deze server: de Discover-pagina, de popup en de rijen op Emby's eigen pagina's.</div>
+                </div>
+                <div class="checkboxContainer">
+                    <label class="emby-checkbox-label">
+                        <input is="emby-checkbox" type="checkbox" id="chkPosterYear" />
+                        <span class="checkboxLabel" id="lbl_chkPosterYear">Jaar onder de posters</span>
+                        <span class="emby-checkbox-outline">
+                            <span class="emby-checkbox-on"><i class="md-icon">check</i></span>
+                            <span class="emby-checkbox-off"></span>
+                        </span>
+                    </label>
+                </div>
+                <div class="checkboxContainer">
+                    <label class="emby-checkbox-label">
+                        <input is="emby-checkbox" type="checkbox" id="chkPosterScore" />
+                        <span class="checkboxLabel" id="lbl_chkPosterScore">TMDB-score onder de posters</span>
                         <span class="emby-checkbox-outline">
                             <span class="emby-checkbox-on"><i class="md-icon">check</i></span>
                             <span class="emby-checkbox-off"></span>
@@ -173,6 +210,28 @@
                     <button is="emby-button" type="button" class="raised btnTestTmdb"><span>Test TMDB-key</span></button>
                     <div class="fieldDescription testStatus" id="statusTmdb" style="margin-top:.5em;"></div>
                 </div>
+                <h3 id="hdgOmdb">OMDb (IMDb, Rotten Tomatoes, Metacritic)</h3>
+                <div class="inputContainer keyWrap">
+                    <label class="inputLabel inputLabelUnfocused" for="txtOmdbKey" id="lbl_txtOmdbKey">OMDb API-sleutel (optioneel)</label>
+                    <input is="emby-input" type="password" id="txtOmdbKey" autocomplete="new-password" spellcheck="false" />
+                    <button is="emby-button" type="button" class="paper-icon-button-light btnToggleKey" data-target="txtOmdbKey" title="Tonen" aria-label="Tonen"><i class="md-icon">visibility</i></button>
+                </div>
+                <div class="fieldDescription" id="desc_txtOmdbKey">Gratis aan te vragen op omdbapi.com (1000 opvragingen per dag). Daarmee toont de popup ook de scores van IMDb, Rotten Tomatoes en Metacritic. Leeg = alleen de TMDB-score.</div>
+                <div>
+                    <button is="emby-button" type="button" class="raised btnTestOmdb"><span id="btnTestOmdbText">Test OMDb</span></button>
+                    <div class="fieldDescription testStatus" id="statusOmdb" style="margin-top:.5em;"></div>
+                </div>
+                <div class="checkboxContainer">
+                    <label class="emby-checkbox-label">
+                        <input is="emby-checkbox" type="checkbox" id="chkShowOmdb" />
+                        <span class="checkboxLabel" id="lbl_chkShowOmdb">Scores van IMDb, Rotten Tomatoes en Metacritic in de popup tonen</span>
+                        <span class="emby-checkbox-outline">
+                            <span class="emby-checkbox-on"><i class="md-icon">check</i></span>
+                            <span class="emby-checkbox-off"></span>
+                        </span>
+                    </label>
+                </div>
+
 
 
                 </div>

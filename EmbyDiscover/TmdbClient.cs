@@ -45,6 +45,8 @@ namespace Emby.Plugins.Discover
     public class TmdbExtra
     {
         public string tagline { get; set; }
+        /// <summary>Alleen bij films (TMDB geeft dit in de filmdetails).</summary>
+        public string imdb_id { get; set; }
         public int runtime { get; set; }
         public int number_of_seasons { get; set; }
         public int number_of_episodes { get; set; }
@@ -107,6 +109,7 @@ namespace Emby.Plugins.Discover
     public class TmdbExternalIds
     {
         public int? tvdb_id { get; set; }
+        public string imdb_id { get; set; }
     }
 
     public class TmdbVideo
@@ -565,13 +568,13 @@ namespace Emby.Plugins.Discover
         }
 
         /// <summary>/discover/movie of /discover/tv op populariteit met een filter (genre, studio, netwerk).</summary>
-        public async Task<List<TmdbItem>> BrowsePages(bool tv, string filter, int firstPage, int lastPage, CancellationToken ct)
+        public async Task<List<TmdbItem>> BrowsePages(bool tv, string filter, int firstPage, int lastPage, CancellationToken ct, string sortBy = "popularity.desc")
         {
             var path = tv ? "/discover/tv" : "/discover/movie";
             var tasks = new List<Task<TmdbPage>>();
             for (int p = firstPage; p <= lastPage; p++)
             {
-                var extra = "&page=" + p + "&sort_by=popularity.desc" + filter;
+                var extra = "&page=" + p + "&sort_by=" + sortBy + filter;
                 tasks.Add(p == firstPage ? GetMergedCached(path, extra, ct) : GetMergedSafe(path, extra, ct, true));
             }
             await Task.WhenAll(tasks).ConfigureAwait(false);

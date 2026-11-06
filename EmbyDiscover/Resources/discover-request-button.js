@@ -8,9 +8,25 @@
         console.warn('[Discover] oudere knopcode is nog actief; vernieuw de webclient om dubbele handlers te voorkomen.');
         return;
     }
-    var DC_BUILD = '1.4.0.2 2026-11-06';
+    var DC_BUILD = '1.4.0.2d 2026-11-06';
     window.__discoverRequestButton = true;
     window.__discoverRequestButtonVersion = '1.4.0.2';
+
+    // Themakleur (instelling "Weergave"): CSS-variabelen op <html>, gebruikt door de Discover-pagina en de rijen en
+    // knoppen op Emby's pagina's. Laatste waarde onthouden, zodat de kleur bij het openen niet eerst geel flitst.
+    if (!window.__dcApplyAccent) {
+        window.__dcApplyAccent = function (hex) {
+            if (!/^#[0-9a-fA-F]{6}$/.test(hex || '')) { return; }
+            var r = parseInt(hex.substr(1, 2), 16), g = parseInt(hex.substr(3, 2), 16), b = parseInt(hex.substr(5, 2), 16);
+            var st = document.documentElement.style;
+            st.setProperty('--dc-accent', hex);
+            st.setProperty('--dc-accent-rgb', r + ',' + g + ',' + b);
+            // tekst op de accentkleur: donker op lichte kleuren, wit op donkere
+            st.setProperty('--dc-accent-text', (0.299 * r + 0.587 * g + 0.114 * b) > 150 ? '#111' : '#fff');
+            try { localStorage.setItem('dcAccent', hex); } catch (e) { }
+        };
+        try { var savedAccent = localStorage.getItem('dcAccent'); if (savedAccent) { window.__dcApplyAccent(savedAccent); } } catch (e) { }
+    }
 
     // Aanwijzer in gebruik? Klasse dcPointer op <html> zolang de muis / Magic Remote-aanwijzer beweegt; weg zodra de
     // pijltoetsen gebruikt worden (dan verdwijnt de aanwijzer op een LG-tv ook). Toont de scrollpijlen bij de rijen.
@@ -116,7 +132,7 @@
             '.discover-season-request-card .cardScalable { aspect-ratio: 2 / 3 !important; height: auto !important; padding: 0 !important; }',
             '.discover-season-info { box-sizing: border-box; margin-top: 14px; max-width: 640px; overflow: hidden; border: 1px solid rgba(255,255,255,.14); border-radius: 10px; background: rgba(10,16,28,.72); color: #e8edf6; font-size: 13px; line-height: 1.35; }',
             '.discover-season-info-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 14px; font-weight: 700; font-size: 14px; }',
-            '.discover-season-info-rating { color: #ffb400; white-space: nowrap; }',
+            '.discover-season-info-rating { color: var(--dc-accent,#ffb400); white-space: nowrap; }',
             '.discover-season-info-overview { padding: 0 14px 10px; color: #cfd8e6; white-space: pre-line; }',
             '.discover-season-info-row { display: flex; justify-content: space-between; gap: 10px; padding: 7px 14px; border-top: 1px solid rgba(255,255,255,.1); }',
             '.discover-season-info-label { font-weight: 700; }',
@@ -139,7 +155,7 @@
             '.discover-cast-row::-webkit-scrollbar { display: none; }',
             '.discover-cast-p { flex: 0 0 auto; width: 96px; display: flex; flex-direction: column; align-items: center; text-align: center; background: none; border: 0; color: inherit; cursor: pointer; padding: 4px; border-radius: 8px; font: inherit; }',
             '.discover-cast-ph { width: 80px; height: 80px; border-radius: 50%; background: #1c2640 center/cover no-repeat; border: 2px solid rgba(255,255,255,.15); display: flex; align-items: center; justify-content: center; font-weight: 600; margin-bottom: 6px; transition: border-color .15s, transform .15s; }',
-            '.discover-cast-p:hover .discover-cast-ph, .discover-cast-p:focus .discover-cast-ph { border-color: #ffb400; transform: scale(1.05); }',
+            '.discover-cast-p:hover .discover-cast-ph, .discover-cast-p:focus .discover-cast-ph { border-color: var(--dc-accent,#ffb400); transform: scale(1.05); }',
             '.discover-cast-p:focus { outline: 0; }',
             '.discover-cast-n { font-size: .85em; font-weight: 600; line-height: 1.2; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }',
             '.discover-info-block { margin: 4px 0 18px; max-width: 1100px; }',
@@ -164,15 +180,15 @@
             '.discover-row-poster { position: relative; display: block; border-radius: .54em; overflow: hidden; background: #222; height: var(--dc-h, 16em); outline: 0; transition: transform .15s, box-shadow .15s; }',
             '.discover-row-poster img { width: 100%; height: 100%; object-fit: cover; display: block; }',
             /* Geselecteerde poster: dunne gele rand, 5% groter, zachte schaduw. Muis: hover; toetsenbord: focus-visible; tv: focus. */
-            '.discover-row-card:hover .discover-row-poster, .discover-row-poster:focus-visible { transform: scale(1.05); box-shadow: 0 0 0 3px #ffb400, 0 .5em 1.2em rgba(0,0,0,.5); }',
-            'html.layout-tv .discover-row-poster:focus, html.discover-tv .discover-row-poster:focus { transform: scale(1.05); box-shadow: 0 0 0 3px #ffb400, 0 .5em 1.2em rgba(0,0,0,.5); }',
+            '.discover-row-card:hover .discover-row-poster, .discover-row-poster:focus-visible { transform: scale(1.05); box-shadow: 0 0 0 3px var(--dc-accent,#ffb400), 0 .5em 1.2em rgba(0,0,0,.5); }',
+            'html.layout-tv .discover-row-poster:focus, html.discover-tv .discover-row-poster:focus { transform: scale(1.05); box-shadow: 0 0 0 3px var(--dc-accent,#ffb400), 0 .5em 1.2em rgba(0,0,0,.5); }',
             /* De knop en titel lichten mee op met de geselecteerde poster (donker randje + gele ring, zodat de ring ook om een gele knop zichtbaar is). */
             '.discover-row-btn { transition: background .15s, box-shadow .15s; }',
-            '.discover-row-card:hover .discover-row-btn, .discover-row-poster:focus-visible ~ .discover-row-btn { box-shadow: 0 0 0 2px #111, 0 0 0 4px #ffb400; }',
+            '.discover-row-card:hover .discover-row-btn, .discover-row-poster:focus-visible ~ .discover-row-btn { box-shadow: 0 0 0 2px #111, 0 0 0 4px var(--dc-accent,#ffb400); }',
             '.discover-row-card:hover .discover-row-btn:not(:disabled), .discover-row-poster:focus-visible ~ .discover-row-btn:not(:disabled) { background: #ffc633; }',
-            'html.layout-tv .discover-row-poster:focus ~ .discover-row-btn, html.discover-tv .discover-row-poster:focus ~ .discover-row-btn { box-shadow: 0 0 0 2px #111, 0 0 0 4px #ffb400; }',
+            'html.layout-tv .discover-row-poster:focus ~ .discover-row-btn, html.discover-tv .discover-row-poster:focus ~ .discover-row-btn { box-shadow: 0 0 0 2px #111, 0 0 0 4px var(--dc-accent,#ffb400); }',
             'html.layout-tv .discover-row-poster:focus ~ .discover-row-btn:not(:disabled), html.discover-tv .discover-row-poster:focus ~ .discover-row-btn:not(:disabled) { background: #ffc633; }',
-            '.discover-row-card:hover .discover-row-name, .discover-row-poster:focus-visible ~ .discover-row-name, html.layout-tv .discover-row-poster:focus ~ .discover-row-name, html.discover-tv .discover-row-poster:focus ~ .discover-row-name { color: #ffb400; }',
+            '.discover-row-card:hover .discover-row-name, .discover-row-poster:focus-visible ~ .discover-row-name, html.layout-tv .discover-row-poster:focus ~ .discover-row-name, html.discover-tv .discover-row-poster:focus ~ .discover-row-name { color: var(--dc-accent,#ffb400); }',
             /* Gele pijlknoppen links en rechts, zoals op de Discover-pagina. Niet op tv (afstandsbediening) en niet op touchscreens. */
             /* Pijlknoppen zoals Emby's eigen rijen: rond en wit, alleen zichtbaar als de muis boven de rij hangt,
                en weg aan het begin/eind. Niet op tv (afstandsbediening) en niet op touchscreens. */
@@ -182,6 +198,7 @@
             '@media (pointer: fine) { .discover-row-section:hover .discover-row-arrowbox { display: flex; } }',
             '.discover-row-section .discover-row-arrowbox.is-hidden { display: none !important; }',
             'html.layout-tv .discover-row-arrowbox, html.discover-tv .discover-row-arrowbox { display: none !important; }',
+            'html.dcNoYear .discover-row-year { display: none; }',
             // Aanwijzer in gebruik (muis, LG Magic Remote): pijlen bij het aanwijzen, ook op tv.
             'html.dcPointer .discover-row-section:hover .discover-row-arrowbox:not(.is-hidden) { display: flex !important; }',
             '.discover-row-arrow { display: inline-flex; align-items: center; justify-content: center; width: 3.55em; height: 3.55em; margin: 0 .4em; padding: 0; border: 0; border-radius: 100em; background: #fff; color: #000; cursor: pointer;',
@@ -191,12 +208,12 @@
             /* Downloadvoortgang uit de Radarr/Sonarr-wachtrij */
             '.discover-row-prog { position: absolute; left: 0; right: 0; bottom: 0; height: 10px; background: rgba(0,0,0,.65); }',
             'html.layout-tv .discover-row-prog, html.discover-tv .discover-row-prog { height: 12px; }',
-            '.discover-row-prog i { display: block; height: 100%; width: 0; background: #ffb400; transition: width .6s; }',
+            '.discover-row-prog i { display: block; height: 100%; width: 0; background: var(--dc-accent,#ffb400); transition: width .6s; }',
             '.discover-row-prog.paused i, .discover-row-prog.stalled i { background: #9aa5b8; }',
             '.discover-row-name { margin-top: .5em; font-size: .9em; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }',
             '.discover-row-meta { font-size: .8em; opacity: .65; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }',
             '.discover-row-btn { display: block; width: 100%; box-sizing: border-box; margin-top: .5em; padding: .45em .6em; border: none;',
-            '  border-radius: 2em; font: inherit; font-size: .9em; font-weight: 600; cursor: pointer; background: #ffb400; color: #111; }',
+            '  border-radius: 2em; font: inherit; font-size: .9em; font-weight: 600; cursor: pointer; background: var(--dc-accent,#ffb400); color: var(--dc-accent-text,#111); }',
             '.discover-row-btn:focus { outline: 0; }',
             '.discover-row-btn:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }',
             'html.layout-tv .discover-row-btn:focus, html.discover-tv .discover-row-btn:focus { outline: 2px solid #fff; outline-offset: 2px; }',
@@ -206,9 +223,9 @@
             '.discover-row-btn.is-progress.paused, .discover-row-btn.is-progress.stalled { color: #d0d6e4; }',
             '.discover-row-btn.is-available { background: #22a559; color: #fff; }',
             '.discover-film-req { cursor: pointer; }',
-            '.discover-film-req .discover-film-badge { display:inline-block; margin-left:.6em; padding:0 .5em; border-radius:1em; background:#ffb400; color:#111; font-size:.8em; font-weight:700; vertical-align:middle; }',
+            '.discover-film-req .discover-film-badge { display:inline-block; margin-left:.6em; padding:0 .5em; border-radius:1em; background:var(--dc-accent,#ffb400); color:var(--dc-accent-text,#111); font-size:.8em; font-weight:700; vertical-align:middle; }',
             '.btnDiscoverRequest {',
-            '  background: #ffb400 !important; color: #111 !important;',
+            '  background: var(--dc-accent,#ffb400) !important; color: var(--dc-accent-text,#111) !important;',
             '  border: none !important; margin-left: .5em !important;',
             '}',
             '.btnDiscoverRequest:disabled { opacity: .55; cursor: default; }',
@@ -400,6 +417,12 @@
         client.ajax({ type: 'GET', url: client.getUrl('Discover/Status'), dataType: 'json' }).then(function (status) {
             diagnosticsEnabled = !!(status && status.ShowDiagnostics);
             window.__discoverRequestService = (status && status.RequestService) || '';
+            if (status && status.AccentColor && window.__dcApplyAccent) { window.__dcApplyAccent(status.AccentColor); }
+            // Weergave: jaar / score onder de posters verbergen (klassen op <html>, ook voor de Discover-pagina).
+            if (status) {
+                document.documentElement.classList.toggle('dcNoYear', status.PosterShowYear === false);
+                document.documentElement.classList.toggle('dcNoScore', status.PosterShowScore === false);
+            }
             // Automatisch: de taal van deze Emby-app (html lang), niet die van de server.
             var culture = String((status && status.PluginLanguageAuto && clientLanguage()) || (status && status.PluginLanguage) || '').toLowerCase();
             uiLanguage = culture.indexOf('nl') === 0 ? 'nl' : culture.indexOf('de') === 0 ? 'de' : (culture.indexOf('nb') === 0 || culture.indexOf('nn') === 0 || culture.indexOf('no') === 0) ? 'no' : 'en';
@@ -855,7 +878,7 @@
     function styleButton(btn) {
         var st = {
             'display': 'inline-flex', 'align-items': 'center', 'justify-content': 'center',
-            'background': '#ffb400', 'background-color': '#ffb400', 'color': '#111',
+            'background': 'var(--dc-accent,#ffb400)', 'background-color': 'var(--dc-accent,#ffb400)', 'color': 'var(--dc-accent-text,#111)',
             'border': 'none', 'border-radius': '2em', 'padding': '.6em 1.4em', 'margin-left': '.5em',
             'cursor': 'pointer', 'font-family': 'inherit', 'font-size': 'inherit', 'font-weight': '700',
             'visibility': 'visible', 'opacity': '1', 'transform': 'none', 'box-shadow': 'none'
@@ -1944,7 +1967,7 @@
         var link = document.createElement('a');
         link.className = 'discover-row-poster';
         // Klik op de poster: de Discover-popup met info en trailer.
-        link.href = '#!/configurationpage?name=discoverui1104&openType=' + item.Type + '&openId=' + item.TmdbId;
+        link.href = '#!/configurationpage?name=discoverui1106&openType=' + item.Type + '&openId=' + item.TmdbId;
         link.setAttribute('aria-label', item.Title);   // geen title: dat gaf een tooltip-vakje over de poster
         // Gewone klik: de popup hier op de pagina openen (Ctrl/middenklik volgt de link naar Discover).
         link.addEventListener('click', function (e) {
@@ -1965,7 +1988,9 @@
         meta.className = 'discover-row-meta';
         var kind = item.Type === 'tv' ? text('Serie', 'Series', 'Serie', 'Serie') : text('Film', 'Movie', 'Film', 'Film');
         var role = rowRoleText(item.Role);
-        meta.textContent = kind + (item.Year ? ' · ' + item.Year : '') + (role ? ' · ' + role : '');
+        meta.appendChild(document.createTextNode(kind));
+        if (item.Year) { var ys = document.createElement('span'); ys.className = 'discover-row-year'; ys.textContent = ' · ' + item.Year; meta.appendChild(ys); }
+        if (role) { meta.appendChild(document.createTextNode(' · ' + role)); }
         meta.title = meta.textContent;
         var btn = document.createElement('button');
         btn.type = 'button';
@@ -2249,7 +2274,7 @@
     // ---- De Discover-popup boven de huidige pagina ----
     // Laadt de Discover-pagina één keer onzichtbaar (alleen de popup wordt gebruikt) met dezelfde controller
     // als de echte pagina, in "embedded"-modus. Zo is de popup overal gelijk: info, cast, seizoenen, trailer, aanvragen.
-    var DC_UI_PAGE = 'discoverui1104', DC_UI_JS = 'discoveruijs1399';
+    var DC_UI_PAGE = 'discoverui1106', DC_UI_JS = 'discoveruijs1401';
     var embedPromise = null;
     function pageText(c, name) {
         var url = c.getUrl('web/ConfigurationPage', { name: name });

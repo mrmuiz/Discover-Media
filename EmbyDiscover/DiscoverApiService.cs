@@ -21,6 +21,10 @@ namespace Emby.Plugins.Discover
     {
         public string Key { get; set; }
         public int Page { get; set; }
+        /// <summary>Alleen Populaire films/series: TMDB-genre-id om op te filteren (0 = alle).</summary>
+        public int Genre { get; set; }
+        /// <summary>Alleen Populaire films/series: "popular" (standaard), "new" (nieuwste) of "top" (best beoordeeld).</summary>
+        public string Sort { get; set; }
     }
 
     [Route("/Discover/Search", "GET", Summary = "Zoek films en series")]
@@ -182,6 +186,11 @@ namespace Emby.Plugins.Discover
         /// <summary>Seerr heeft een 4K-server voor films / series: dan toont de popup "4K aanvragen".</summary>
         public bool Seerr4kMovie { get; set; }
         public bool Seerr4kTv { get; set; }
+        /// <summary>Weergave: jaar / TMDB-score onder de posters, themakleur, OMDb-scores in de popup.</summary>
+        public bool PosterShowYear { get; set; } = true;
+        public bool PosterShowScore { get; set; } = true;
+        public string AccentColor { get; set; }
+        public bool OmdbRatings { get; set; }
         public string LoadedAt { get; set; }
         public int ChannelCalls { get; set; }
         public int Requests { get; set; }
@@ -410,6 +419,13 @@ namespace Emby.Plugins.Discover
             catch { return "?"; }
         }
 
+        /// <summary>Themakleur als #rrggbb; alles anders wordt het standaardgeel.</summary>
+        internal static string AccentOf(string c)
+        {
+            c = (c ?? "").Trim();
+            return System.Text.RegularExpressions.Regex.IsMatch(c, "^#[0-9a-fA-F]{6}$") ? c.ToLowerInvariant() : "#ffb400";
+        }
+
         public object Get(DiscoverStatusRequest request)
         {
             var cfg = Plugin.GetCurrentConfiguration();
@@ -429,6 +445,10 @@ namespace Emby.Plugins.Discover
                 RequestService = SeerrClient.Enabled ? "Seerr" : "",
                 Seerr4kMovie = SeerrClient.Has4k(_json, false),
                 Seerr4kTv = SeerrClient.Has4k(_json, true),
+                PosterShowYear = cfg.PosterShowYear,
+                PosterShowScore = cfg.PosterShowScore,
+                AccentColor = AccentOf(cfg.AccentColor),
+                OmdbRatings = cfg.ShowOmdbRatings && !string.IsNullOrWhiteSpace(cfg.OmdbApiKey),
                 LoadedAt = DiscoverDiagnostics.LoadedUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss"),
                 ChannelCalls = DiscoverDiagnostics.ChannelCalls,
                 Requests = DiscoverDiagnostics.Requests,
@@ -546,7 +566,30 @@ namespace Emby.Plugins.Discover
             {
                 var ms = SafeStates(false);
                 var ts = SafeStates(true);
-                var itemsTask = _tmdb.GetListPages(def.Path, request.Page, request.Page, CancellationToken.None);
+                bool popular = def.Key == "popular_movie" || def.Key == "popular_tv";
+                var sort = (request.Sort ?? "").Trim().ToLowerInvariant();
+                Task<List<TmdbItem>> itemsTask;
+                if (popular && (request.Genre > 0 || sort == "new" || sort == "top"))
+                {
+                    // Populair binnen een genre en/of anders gesorteerd: via /discover van TMDB.
+                    var today = DateTime.UtcNow.ToString("yyyy-MM-dd");
+                    string sortBy = "popularity.desc", filter = request.Genre > 0 ? "&with_genres=" + request.Genre : "";
+                    if (sort == "new")
+                    {
+                        sortBy = def.Tv ? "first_air_date.desc" : "primary_release_date.desc";
+                        filter += (def.Tv ? "&first_air_date.lte=" : "&primary_release_date.lte=") + today + "&vote_count.gte=" + (def.Tv ? "10" : "20");
+                    }
+                    else if (sort == "top")
+                    {
+                        sortBy = "vote_average.desc";
+                        filter += "&vote_count.gte=" + (def.Tv ? "200" : "500");
+                    }
+                    itemsTask = _tmdb.BrowsePages(def.Tv, filter, request.Page, request.Page, CancellationToken.None, sortBy);
+                }
+                else
+                {
+                    itemsTask = _tmdb.GetListPages(def.Path, request.Page, request.Page, CancellationToken.None);
+                }
                 await Task.WhenAll(ms, ts, itemsTask).ConfigureAwait(false);
                 row.Items = ToDtos(itemsTask.Result, def, ms.Result, ts.Result);
             }

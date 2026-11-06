@@ -15,8 +15,8 @@
     window.__discoverWebLoader = 1;
 
     var CHANNEL_NAME = 'Discover Media';
-    var KNOWN_UI = ['discoverui1104', 'discoverui1103', 'discoverui1102', 'discoverui1101', 'discoverui1100', 'discoverui1099', 'discoverui1098', 'discoverui1097', 'discoverui1096', 'discoverui1095', 'discoverui1094', 'discoverui1093', 'discoverui1092', 'discoverui1091', 'discoverui1090', 'discoverui1089', 'discoverui1088', 'discoverui1087', 'discoverui1086', 'discoverui1085', 'discoverui1084', 'discoverui1083', 'discoverui1082', 'discoverui1081', 'discoverui1080', 'discoverui1079', 'discoverui1078', 'discoverui1077', 'discoverui1076', 'discoverui1075'];
-    var KNOWN_BTN = ['discoverbuttonjs1408', 'discoverbuttonjs1407', 'discoverbuttonjs1406', 'discoverbuttonjs1405', 'discoverbuttonjs1404', 'discoverbuttonjs1403', 'discoverbuttonjs1402', 'discoverbuttonjs1401', 'discoverbuttonjs1400', 'discoverbuttonjs1399', 'discoverbuttonjs1398', 'discoverbuttonjs1397', 'discoverbuttonjs1396', 'discoverbuttonjs1395', 'discoverbuttonjs1394', 'discoverbuttonjs1393', 'discoverbuttonjs1392', 'discoverbuttonjs1391', 'discoverbuttonjs1390', 'discoverbuttonjs1389', 'discoverbuttonjs1388', 'discoverbuttonjs1387', 'discoverbuttonjs1386', 'discoverbuttonjs1385', 'discoverbuttonjs1384', 'discoverbuttonjs1383', 'discoverbuttonjs1382', 'discoverbuttonjs1381', 'discoverbuttonjs1380', 'discoverbuttonjs1379', 'discoverbuttonjs1378', 'discoverbuttonjs1377', 'discoverbuttonjs1376', 'discoverbuttonjs1375', 'discoverbuttonjs1374', 'discoverbuttonjs1373', 'discoverbuttonjs1372', 'discoverbuttonjs1371', 'discoverbuttonjs1370', 'discoverbuttonjs1360', 'discoverbuttonjs1354', 'discoverbuttonjs1353', 'discoverbuttonjs1352', 'discoverbuttonjs1351', 'discoverbuttonjs1350', 'discoverbuttonjs1340'];
+    var KNOWN_UI = ['discoverui1106', 'discoverui1105', 'discoverui1104', 'discoverui1103', 'discoverui1102', 'discoverui1101', 'discoverui1100', 'discoverui1099', 'discoverui1098', 'discoverui1097', 'discoverui1096', 'discoverui1095', 'discoverui1094', 'discoverui1093', 'discoverui1092', 'discoverui1091', 'discoverui1090', 'discoverui1089', 'discoverui1088', 'discoverui1087', 'discoverui1086', 'discoverui1085', 'discoverui1084', 'discoverui1083', 'discoverui1082', 'discoverui1081', 'discoverui1080', 'discoverui1079', 'discoverui1078', 'discoverui1077', 'discoverui1076', 'discoverui1075'];
+    var KNOWN_BTN = ['discoverbuttonjs1410', 'discoverbuttonjs1409', 'discoverbuttonjs1408', 'discoverbuttonjs1407', 'discoverbuttonjs1406', 'discoverbuttonjs1405', 'discoverbuttonjs1404', 'discoverbuttonjs1403', 'discoverbuttonjs1402', 'discoverbuttonjs1401', 'discoverbuttonjs1400', 'discoverbuttonjs1399', 'discoverbuttonjs1398', 'discoverbuttonjs1397', 'discoverbuttonjs1396', 'discoverbuttonjs1395', 'discoverbuttonjs1394', 'discoverbuttonjs1393', 'discoverbuttonjs1392', 'discoverbuttonjs1391', 'discoverbuttonjs1390', 'discoverbuttonjs1389', 'discoverbuttonjs1388', 'discoverbuttonjs1387', 'discoverbuttonjs1386', 'discoverbuttonjs1385', 'discoverbuttonjs1384', 'discoverbuttonjs1383', 'discoverbuttonjs1382', 'discoverbuttonjs1381', 'discoverbuttonjs1380', 'discoverbuttonjs1379', 'discoverbuttonjs1378', 'discoverbuttonjs1377', 'discoverbuttonjs1376', 'discoverbuttonjs1375', 'discoverbuttonjs1374', 'discoverbuttonjs1373', 'discoverbuttonjs1372', 'discoverbuttonjs1371', 'discoverbuttonjs1370', 'discoverbuttonjs1360', 'discoverbuttonjs1354', 'discoverbuttonjs1353', 'discoverbuttonjs1352', 'discoverbuttonjs1351', 'discoverbuttonjs1350', 'discoverbuttonjs1340'];
 
     function log(m) { try { console.log('[Discover web] ' + m); } catch (e) { } }
     function api() {
@@ -46,7 +46,10 @@
             safe(a.getJSON(a.getUrl('web/configurationpages', { PageType: 'PluginConfiguration', UserId: uid }))),
             safe(a.getJSON(a.getUrl('Channels', { UserId: uid }))),
             safe(a.getJSON(a.getUrl('Users/' + uid + '/Views'))),
-            safe(a.getJSON(a.getUrl('Discover/ChannelInfo')))
+            safe(a.getJSON(a.getUrl('Discover/ChannelInfo'))),
+            // De server noemt zelf de actuele paginanamen (het knop-script staat niet in de lijst hierboven);
+            // zo laadt ook een oude, ingebakken kopie van dit script in een eigen app altijd de nieuwste versie.
+            safe(a.getJSON(a.getUrl('Discover/LoaderConfig', { _: Date.now() })))
         ]).then(function (r) {
             var names = [];
             items(r[0]).forEach(function (pg) { var n = pg && (pg.Name || pg.name); if (n && names.indexOf(n) === -1) { names.push(n); } });
@@ -61,6 +64,8 @@
             if (r[3] && r[3].Id) { var cid = String(r[3].Id).toLowerCase(); if (ids.indexOf(cid) === -1) { ids.push(cid); } }
             var ui = newest(names, /^discoverui\d+$/i);
             var btn = newest(names, /^discoverbuttonjs\d+$/i);
+            if (r[4] && r[4].UiPage) { ui = [r[4].UiPage].concat(ui.filter(function (n) { return n !== r[4].UiPage; })); }
+            if (r[4] && r[4].ButtonPage) { btn = [r[4].ButtonPage].concat(btn.filter(function (n) { return n !== r[4].ButtonPage; })); }
             KNOWN_UI.forEach(function (n) { if (ui.indexOf(n) === -1) { ui.push(n); } });
             KNOWN_BTN.forEach(function (n) { if (btn.indexOf(n) === -1) { btn.push(n); } });
             info = { key: key, ids: ids, uiPage: ui[0], buttonPages: btn };

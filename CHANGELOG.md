@@ -2,8 +2,19 @@
 
 - Fix: **scroll arrows on TV with a pointer** (LG Magic Remote). The arrows only appeared when the device reported a "fine pointer"; LG webOS 24 does not, so rows could not be scrolled with the pointer there. Arrows now appear on hover as soon as the pointer is used (also on Emby's own pages), and hide again when the arrow keys are used.
 - Fix: the scroll arrow to the right was sometimes missing on rows (e.g. "More like this · not in your library"): a row made while the page was still sliding in measured 0 wide. Arrows are now recalculated when the row gets its size and when you hover it.
+- New: **theme colour** (Appearance tab): choose the colour of buttons, focus and accents (yellow, Emby green, blue, turquoise, purple, pink, red, orange, white). Applies to the Discover page, the popup and the rows on Emby's own pages, for everyone on the server.
+- New: **poster captions** (Appearance tab): show or hide the year and the TMDB score under the posters.
+- New: **IMDb, Rotten Tomatoes and Metacritic scores** in the popup via your own (free) OMDb API key, with a test button and an on/off switch. Cached 24 hours per title (`GET /Discover/Ratings`, `POST /Discover/TestOmdb`).
+- New: **collections** in the popup of a movie that belongs to a series of films (e.g. Saw): all films in order, with their status, a click opens the film, and request **per film** or **all films** at once (stops when the request limit is reached).
+- New: **genre and sort** in Popular movies / Popular series: popular within a genre, newest or top rated (TMDB discover).
+- New: **scroll arrows** on the cast row in the popup, large and centred on the photos like the row arrows.
+- New: **TV remote navigation in the popup**: up/down moves between the rows (cast, collection, seasons, buttons) and left/right within a row; from the top row Up goes to the close button.
+- Change: the popup **fades in and out**.
+- Fix: in an app with its own (bundled) copy of the loader, e.g. the LG app, item and person pages could run a very old request-button script (no person rows, Emby's long filmography list, "More like this"). The server now tells the loader the current page names (`/Discover/LoaderConfig`: `UiPage`, `ButtonPage`), so the newest script is always loaded.
+- Change: Emby's **back arrow on the Discover start** now does Emby's normal back (it did nothing there); inside Discover it still goes one step back.
+- Fix: the **theme colour** could not be chosen on TV (empty selection, stayed yellow): the option values no longer contain `#`.
 - Change: version strings in the scripts updated.
-- Change: page names bumped (`discoverui1104`, `discoveruijs1399`, `discoverbuttonjs1408`).
+- Change: page names bumped (`discoverconfig1089`, `discoverconfigjs1369`, `discoverui1106`, `discoveruijs1401`, `discoverbuttonjs1410`).
 
 ## Version 1.4.0.1
 

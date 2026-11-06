@@ -38,8 +38,8 @@ define([], function () {
             return;
         }
         var urls = [
-            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1408' }),
-            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1408' }),
+            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1410' }),
+            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1410' }),
             ApiClient.getUrl('Plugins/Discover/Script')
         ];
         var n = 0;
@@ -70,7 +70,7 @@ define([], function () {
         })();
     }
 
-    var UI_PAGE = 'discoverui1104';
+    var UI_PAGE = 'discoverui1106';
 
     return function (view, params) {
         // embedded: alleen de popup, over een andere Emby-pagina heen (film-, serie- of acteurspagina).
@@ -79,12 +79,30 @@ define([], function () {
             var lc = String(document.documentElement.lang || '').toLowerCase();
             uiLanguage = lc.indexOf('nl') === 0 ? 'nl' : lc.indexOf('de') === 0 ? 'de' : (lc.indexOf('nb') === 0 || lc.indexOf('nn') === 0 || lc.indexOf('no') === 0) ? 'no' : 'en';
         }
+        // Themakleur: dezelfde functie als het knop-script (dat misschien nog niet geladen is).
+        function applyAccent(hex) {
+            if (window.__dcApplyAccent) { window.__dcApplyAccent(hex); return; }
+            if (!/^#[0-9a-fA-F]{6}$/.test(hex || '')) { return; }
+            var r = parseInt(hex.substr(1, 2), 16), g = parseInt(hex.substr(3, 2), 16), b = parseInt(hex.substr(5, 2), 16);
+            var st = document.documentElement.style;
+            st.setProperty('--dc-accent', hex);
+            st.setProperty('--dc-accent-rgb', r + ',' + g + ',' + b);
+            st.setProperty('--dc-accent-text', (0.299 * r + 0.587 * g + 0.114 * b) > 150 ? '#111' : '#fff');
+            try { localStorage.setItem('dcAccent', hex); } catch (e) { }
+        }
+        try { var savedAccent = localStorage.getItem('dcAccent'); if (savedAccent) { applyAccent(savedAccent); } } catch (e) { }
+        var omdbOn = false;
         diagEl = view.querySelector('.dcDiag');
         diagEl.style.display = 'none';
         loadButtonScript();
         api('GET', 'Discover/Status').then(function (r) {
             diagEl.style.display = r.ShowDiagnostics ? '' : 'none';
             showTrailer = r.ShowTrailerTile !== false;
+            // Weergave: themakleur en wat er onder de posters staat (klassen op <html>, zie de CSS).
+            applyAccent(r.AccentColor);
+            document.documentElement.classList.toggle('dcNoYear', r.PosterShowYear === false);
+            document.documentElement.classList.toggle('dcNoScore', r.PosterShowScore === false);
+            omdbOn = !!r.OmdbRatings;
             fourK = { movie: !!r.Seerr4kMovie, tv: !!r.Seerr4kTv };
             window.__discoverRequestService = r.RequestService || '';
             diag.status = 'v' + (r.PluginVersion || '?') + ' | ' + text('pluginresource: ', 'plugin resource: ', 'Pluginressource: ') + (r.ButtonScript || text('onbekend', 'unknown', 'unbekannt'));
@@ -394,7 +412,7 @@ define([], function () {
                 : '<div class="dcNoPoster">' + esc(i.Title) + '</div>';
             var sub = [];
             if (typeof i.Rating === 'number' && i.Rating > 0) { sub.push('<span class="dcStar">&#9733; ' + i.Rating.toFixed(1) + '</span>'); }
-            if (i.Year) { sub.push('<span>' + i.Year + '</span>'); }
+            if (i.Year) { sub.push('<span class="dcYear">' + i.Year + '</span>'); }
             // Persoonspagina: welke rol (personage of regie), op een eigen regel.
             var role = i.Role ? (i.Role === 'Director' ? text('Regie', 'Director', 'Regie', 'Regi') : i.Role) : '';
             var bgUrl = wide ? (i.Backdrop || i.Poster || '') : '';
@@ -594,6 +612,20 @@ define([], function () {
             var b = browse;
             if (!b || !e.target || !e.target.closest || !e.target.closest('.dcFilters')) { return; }
             var bar = content.querySelector('.dcFilters');
+            // Genre of sortering gewijzigd: opnieuw ophalen vanaf pagina 1 (dit filtert de server, niet de pagina).
+            var gSel = bar.querySelector('.dcFGenre'), sSel = bar.querySelector('.dcFSort');
+            if (gSel && sSel && (parseInt(gSel.value, 10) !== (b.genre || 0) || sSel.value !== (b.sort || 'popular'))) {
+                b.genre = parseInt(gSel.value, 10) || 0;
+                b.sort = sSel.value || 'popular';
+                b.next = 1; b.done = false; b.seen = {}; b.langs = {}; b.auto = 0; b.seenAny = false;
+                var grid = content.querySelector('.dcBrowseGrid');
+                if (grid) { grid.innerHTML = ''; }
+                var more = content.querySelector('.dcMore');
+                if (more) { more.style.display = 'block'; }
+                if (b.loading) { b.loading = false; }   // een lopende oude aanvraag wordt genegeerd (zie b.req)
+                b.req = (b.req || 0) + 1;
+                loadBrowse();
+            }
             b.filter = {
                 year: parseInt(bar.querySelector('.dcFYear').value, 10) || 0,
                 score: parseFloat(bar.querySelector('.dcFScore').value) || 0,
@@ -796,6 +828,13 @@ define([], function () {
             });
         }
 
+        // Genres uit de startpagina (tegels "Filmgenres"/"Seriegenres"), voor het genrefilter in Populaire films/series.
+        var homeRowsData = [];
+        function genreTiles(tv) {
+            var k = tv ? 'genres_tv' : 'genres_movie', out = [];
+            homeRowsData.forEach(function (r) { if (r.Key === k) { out = r.Tiles || []; } });
+            return out;
+        }
         function openRowGrid(rowKey, title) {
             openBrowse(null, null, title, rowKey);
         }
@@ -803,11 +842,24 @@ define([], function () {
         function openBrowse(kind, id, name, rowKey) {
             homeShown = false;
             browse = { kind: kind, id: id, row: rowKey || null, next: 1, loading: false, done: false, seen: {}, langs: {}, auto: 0,
-                filter: { year: 0, score: 0, lang: '', hideOwned: false } };
+                filter: { year: 0, score: 0, lang: '', hideOwned: false }, genre: 0, sort: 'popular' };
             var years = [0, 2025, 2020, 2015, 2010, 2000, 1990];
+            // Populaire films/series: ook op genre filteren en anders sorteren (dat doet de server via TMDB).
+            var popular = rowKey === 'popular_movie' || rowKey === 'popular_tv';
+            var serverFilters = '';
+            if (popular) {
+                var gs = genreTiles(rowKey === 'popular_tv');
+                serverFilters =
+                    '<label>' + text('Genre', 'Genre', 'Genre') + ' <select class="dcFGenre"><option value="0">' + text('alle', 'all', 'alle') + '</option>' +
+                    gs.map(function (g) { return '<option value="' + esc(g.Id) + '">' + esc(g.Name) + '</option>'; }).join('') + '</select></label>' +
+                    '<label>' + text('Sorteren', 'Sort', 'Sortieren') + ' <select class="dcFSort">' +
+                    '<option value="popular">' + text('Populair', 'Popular', 'Beliebt') + '</option>' +
+                    '<option value="new">' + text('Nieuwste', 'Newest', 'Neueste') + '</option>' +
+                    '<option value="top">' + text('Best beoordeeld', 'Top rated', 'Bestbewertet') + '</option></select></label>';
+            }
             content.innerHTML = '<div class="dcBrowseHead"><button type="button" class="dcBack">&#10094; ' + text('Terug', 'Back', 'Zurück') + '</button>' +
                 '<span class="dcBrowseTitle">' + esc(name) + '</span></div>' +
-                '<div class="dcFilters">' +
+                '<div class="dcFilters">' + serverFilters +
                 '<label>' + text('Jaar', 'Year', 'Jahr') + ' <select class="dcFYear">' + years.map(function (y) { return '<option value="' + y + '">' + (y ? y + '+' : text('alle', 'all', 'alle')) + '</option>'; }).join('') + '</select></label>' +
                 '<label>' + text('Score', 'Score', 'Bewertung') + ' <select class="dcFScore"><option value="0">' + text('alle', 'all', 'alle') + '</option><option value="6">6+</option><option value="7">7+</option><option value="8">8+</option></select></label>' +
                 '<label>' + text('Taal', 'Language', 'Sprache') + ' <select class="dcFLang"><option value="">' + text('alle', 'all', 'alle') + '</option></select></label>' +
@@ -828,10 +880,11 @@ define([], function () {
             var btn = content.querySelector('.dcMoreBtn');
             if (btn) { btn.disabled = true; btn.textContent = text('Laden...', 'Loading...', 'Wird geladen...'); }
             var call = b.row
-                ? api('GET', 'Discover/List', { Key: b.row, Page: b.next })
+                ? api('GET', 'Discover/List', { Key: b.row, Page: b.next, Genre: b.genre || 0, Sort: b.sort || '' })
                 : api('GET', 'Discover/Browse', { Kind: b.kind, Id: b.id, Page: b.next });
+            var reqNo = b.req || 0;
             call.then(function (r) {
-                if (browse !== b) { return; }
+                if (browse !== b || (b.req || 0) !== reqNo) { return; }
                 var list = (r && r.Items) || [];
                 var fresh = list.filter(function (i) {
                     if (b.seen[key(i)]) { return false; }
@@ -924,6 +977,7 @@ define([], function () {
                 if (r.LanguageAuto) { (r.Rows || []).forEach(function (row) { row.Title = rowTitle(row.Key) || row.Title; }); }
                 // Intussen een persoonspagina of overzicht geopend (directe link): die niet overschrijven.
                 if (browse || content.querySelector('.dcPersonHead')) { loaded = true; return; }
+                homeRowsData = r.Rows || [];
                 renderRows(r.Rows || []);
                 loaded = true;
                 randomPageBackdrop();
@@ -1156,6 +1210,22 @@ define([], function () {
             infoEl.textContent = '';
             var castEl = overlay.querySelector('.dcCast');
             castEl.innerHTML = '';
+            var rateEl = overlay.querySelector('.dcRatings');
+            rateEl.innerHTML = '';
+            loadCollection(i);
+            if (omdbOn) {
+                api('GET', 'Discover/Ratings', { Type: i.Type, TmdbId: i.TmdbId }).then(function (r) {
+                    if (current !== i || !r) { return; }
+                    var h = '';
+                    if (r.Imdb) { h += '<span class="dcRate imdb" title="IMDb' + (r.ImdbVotes ? ' \u00B7 ' + esc(r.ImdbVotes) + ' ' + esc(text('stemmen', 'votes', 'Stimmen', 'stemmer')) : '') + '"><b>IMDb</b>' + esc(r.Imdb) + '</span>'; }
+                    if (r.RottenTomatoes) { h += '<span class="dcRate rt" title="Rotten Tomatoes"><b>RT</b>' + esc(r.RottenTomatoes) + '</span>'; }
+                    if (r.Metacritic) {
+                        var mc = parseInt(r.Metacritic, 10);
+                        h += '<span class="dcRate mc' + (mc < 40 ? ' low' : mc < 61 ? ' mid' : '') + '" title="Metacritic"><b>MC</b>' + esc(r.Metacritic) + '</span>';
+                    }
+                    rateEl.innerHTML = h;
+                }, function () { });
+            }
             api('GET', 'Discover/Info', { Type: i.Type, TmdbId: i.TmdbId }).then(function (r) {
                 if (current !== i || !r) { return; }
                 if (r.Lines && r.Lines.length) { infoEl.textContent = r.Lines.join('\n'); }
@@ -1166,6 +1236,8 @@ define([], function () {
                         '<div class="dcCastN">' + esc(p.Name) + '</div>' + (p.Character ? '<div class="dcCastR">' + esc(p.Character) + '</div>' : '') + '</button>';
                 }).join('');
                 castEl.scrollLeft = 0;
+                updateCastArrows();
+                setTimeout(updateCastArrows, 300);
             }, function () { });
             var ob = overlay.querySelector('.dcBtnOpen');
             ob.classList.remove('show'); ob.removeAttribute('data-id');
@@ -1174,6 +1246,7 @@ define([], function () {
             renderQueueInfo(i);
             updateButton();
             lastFocus = document.activeElement;
+            clearTimeout(closingTimer); overlay.classList.remove('dcClosing');
             overlay.classList.add('open');
             // Focus in de popup zetten, anders blijft de afstandsbediening op de kaarten erachter staan.
             setTimeout(function () {
@@ -1338,7 +1411,14 @@ define([], function () {
             }, function () { openModal(i); });
         }
 
+        var closingTimer = null;
         function closeModal() {
+            // Eerst zacht uitfaden (klasse dcClosing houdt hem nog even zichtbaar), dan echt weg.
+            if (overlay.classList.contains('open')) {
+                overlay.classList.add('dcClosing');
+                clearTimeout(closingTimer);
+                closingTimer = setTimeout(function () { overlay.classList.remove('dcClosing'); }, 180);
+            }
             overlay.classList.remove('open'); current = null;
             if (lastFocus && lastFocus.focus) { try { lastFocus.focus(); } catch (e) { } }
         }
@@ -1566,6 +1646,123 @@ define([], function () {
         overlay.querySelector('.dcClose').addEventListener('click', closeModal);
         // Klik op een acteur in de popup: op de Discover-pagina de persoonspagina hier; boven een Emby-pagina
         // naar Emby's eigen acteurspagina als die persoon in je bibliotheek staat, anders naar die van Discover.
+        // ---- Collectie (filmreeks) in de popup: zoals bij seizoenen alles in één keer of per film aanvragen ----
+        var collectionCache = {};
+        function loadCollection(i) {
+            var box = overlay.querySelector('.dcCollection');
+            box.innerHTML = '';
+            if (!i || i.Type !== 'movie') { return; }
+            var done = function (r) {
+                collectionCache[i.TmdbId] = r || {};
+                if (current === i) { renderCollection(i, collectionCache[i.TmdbId]); }
+            };
+            if (collectionCache[i.TmdbId]) { renderCollection(i, collectionCache[i.TmdbId]); return; }
+            api('GET', 'Discover/Related', { Type: 'movie', TmdbId: i.TmdbId }).then(done, function () { });
+        }
+        function colStateHtml(f) {
+            if (f.Status === 2) { return '<span class="dcColBtn have">\u2713 ' + esc(text('In bibliotheek', 'In library', 'In Bibliothek', 'I biblioteket')) + '</span>'; }
+            if (f.Status === 1) { return '<span class="dcColBtn req">\u23F3 ' + esc(text('Aangevraagd', 'Requested', 'Angefragt', 'Forespurt')) + '</span>'; }
+            return '<button type="button" class="dcColBtn" data-req="' + f.TmdbId + '">' + esc(text('Aanvragen', 'Request', 'Anfragen', 'Forespør')) + '</button>';
+        }
+        function renderCollection(i, r) {
+            var box = overlay.querySelector('.dcCollection');
+            var list = (r && r.Collection) || [];
+            if (list.length < 2) { box.innerHTML = ''; return; }
+            list.forEach(function (f) { f.Type = f.Type || 'movie'; items[key(f)] = items[key(f)] || f; });
+            var open = list.filter(function (f) { return f.Status === 0; }).length;
+            box.innerHTML = '<div class="dcColHead"><span class="dcColTitle">' + esc(r.CollectionName || text('Collectie', 'Collection', 'Sammlung', 'Samling')) +
+                ' \u00B7 ' + list.length + ' ' + esc(text('films', 'movies', 'Filme', 'filmer')) + '</span>' +
+                (open ? '<button type="button" class="dcColAll">' + esc(text('Alle films aanvragen', 'Request all movies', 'Alle Filme anfragen', 'Be om alle filmer')) + ' (' + open + ')</button>' : '') +
+                '</div><div class="dcColRow">' + list.map(function (f) {
+                    return '<div class="dcColItem' + (f.TmdbId === i.TmdbId ? ' cur' : '') + '" data-tmdb="' + f.TmdbId + '">' +
+                        '<button type="button" class="dcColPoster" data-open="' + f.TmdbId + '" title="' + esc(f.Title + (f.Year ? ' (' + f.Year + ')' : '')) + '"' +
+                        (f.Poster ? ' style="background-image:url(&quot;' + esc(f.Poster) + '&quot;)"' : '') + '></button>' +
+                        '<div class="dcColName">' + esc(f.Title) + (f.Year ? ' (' + f.Year + ')' : '') + '</div>' + colStateHtml(f) + '</div>';
+                }).join('') + '</div>';
+        }
+        function colFind(id) {
+            var r = current && collectionCache[current.TmdbId];
+            var list = (r && r.Collection) || [];
+            for (var k = 0; k < list.length; k++) { if (list[k].TmdbId === id) { return list[k]; } }
+            return null;
+        }
+        function requestColFilm(f) {
+            return api('POST', 'Discover/RequestItem', null, { Type: 'movie', TmdbId: f.TmdbId }).then(function (r) {
+                if (r && r.Success) { f.Status = 1; var it = items[key(f)]; if (it && it !== f) { it.Status = 1; } refreshCards(f); return { ok: true }; }
+                return { ok: false, msg: (r && r.Message) || '?' };
+            }, function (e) { return { ok: false, msg: (e && (e.statusText || e.message)) || '?' }; });
+        }
+        overlay.querySelector('.dcCollection').addEventListener('click', function (e) {
+            var t = e.target && e.target.closest ? e.target : null;
+            if (!t) { return; }
+            var openBtn = t.closest('.dcColPoster');
+            if (openBtn) {
+                var f0 = colFind(parseInt(openBtn.getAttribute('data-open'), 10));
+                if (f0 && current && f0.TmdbId !== current.TmdbId) { openModal(items[key(f0)] || f0); }
+                return;
+            }
+            var reqBtn = t.closest('.dcColBtn[data-req]');
+            if (reqBtn) {
+                var f = colFind(parseInt(reqBtn.getAttribute('data-req'), 10));
+                if (!f) { return; }
+                reqBtn.disabled = true;
+                var cur = current;
+                requestColFilm(f).then(function (res) {
+                    if (res.ok) { showToast(text('Aangevraagd: ', 'Requested: ', 'Angefragt: ', 'Forespurt: ') + f.Title, false); afterRequest(); }
+                    else { showToast(res.msg, true); }
+                    if (current === cur) { renderCollection(cur, collectionCache[cur.TmdbId]); if (f.TmdbId === cur.TmdbId) { updateButton(); } }
+                });
+                return;
+            }
+            var all = t.closest('.dcColAll');
+            if (all) {
+                var curItem = current;
+                var r = collectionCache[curItem.TmdbId];
+                var todo = ((r && r.Collection) || []).filter(function (x) { return x.Status === 0; });
+                if (!todo.length) { return; }
+                all.disabled = true;
+                var ok = 0, fail = 0, lastErr = '';
+                (function next(n) {
+                    if (n >= todo.length) {
+                        showToast(text(ok + ' aangevraagd', ok + ' requested', ok + ' angefragt', ok + ' forespurt') + (fail ? ' \u00B7 ' + text(fail + ' mislukt: ', fail + ' failed: ', fail + ' fehlgeschlagen: ', fail + ' mislyktes: ') + lastErr : ''), fail > 0);
+                        afterRequest();
+                        if (current === curItem) { renderCollection(curItem, r); updateButton(); }
+                        return;
+                    }
+                    all.textContent = text('Aanvragen... ', 'Requesting... ', 'Wird angefragt... ', 'Ber om... ') + (n + 1) + '/' + todo.length;
+                    requestColFilm(todo[n]).then(function (res) {
+                        if (res.ok) { ok++; } else { fail++; lastErr = res.msg; }
+                        // Limiet bereikt: niet verder proberen.
+                        if (!res.ok && /limi/i.test(res.msg || '')) { n = todo.length; }
+                        next(n + 1);
+                    });
+                })(0);
+            }
+        });
+
+        // Pijlen bij de cast: links weg aan het begin, rechts weg aan het eind (of als alles al past).
+        function updateCastArrows() {
+            var c = overlay.querySelector('.dcCast');
+            var l = overlay.querySelector('.dcCastArr.left'), r = overlay.querySelector('.dcCastArr.right');
+            if (!c || !l || !r) { return; }
+            var max = c.scrollWidth - c.clientWidth;
+            l.classList.toggle('dcHide', c.scrollLeft <= 8);
+            r.classList.toggle('dcHide', c.scrollLeft >= max - 8);
+        }
+        (function () {
+            var c = overlay.querySelector('.dcCast');
+            var wrap = overlay.querySelector('.dcCastWrap');
+            Array.prototype.forEach.call(overlay.querySelectorAll('.dcCastArr'), function (b) {
+                b.innerHTML = b.classList.contains('left') ? CHEV_L : CHEV_R;
+                b.addEventListener('click', function (e) {
+                    e.preventDefault(); e.stopPropagation();
+                    var amount = Math.max(160, c.clientWidth * 0.8) * parseInt(b.getAttribute('data-dir'), 10);
+                    if (c.scrollBy) { c.scrollBy({ left: amount, behavior: 'smooth' }); } else { c.scrollLeft += amount; }
+                });
+            });
+            c.addEventListener('scroll', updateCastArrows);
+            wrap.addEventListener('mouseenter', updateCastArrows);
+        })();
         overlay.querySelector('.dcCast').addEventListener('click', function (e) {
             var b = e.target.closest ? e.target.closest('.dcCastP') : null;
             if (!b) { return; }
@@ -1752,9 +1949,14 @@ define([], function () {
 
         function modalButtons(host) {
             if (host === trailerOverlay) { return [trailerOverlay.querySelector('.dcTrailerClose')]; }
-            return Array.prototype.filter.call(overlay.querySelectorAll('.dcSeasons button, .dcBtnRow button'), isUsable);
+            return Array.prototype.filter.call(overlay.querySelectorAll('.dcCollection button, .dcSeasons button, .dcBtnRow button'), isUsable);
         }
         function firstModalButton(host) {
+            // Eerst de aanvraagknoppen (seizoenen / knoppenrij), pas daarna de collectie bovenin.
+            if (host !== trailerOverlay) {
+                var main = Array.prototype.filter.call(overlay.querySelectorAll('.dcSeasons button, .dcBtnRow button'), isUsable);
+                if (main.length) { return main[0]; }
+            }
             return modalButtons(host)[0] || host.querySelector('.dcClose');
         }
 
@@ -1873,23 +2075,43 @@ define([], function () {
             return true;
         }
 
+        // Rijen in de popup, van boven naar onder: cast, collectie (alles / posters / per film), seizoenen, knoppen.
+        function modalRows() {
+            var q = function (sel) { return Array.prototype.filter.call(overlay.querySelectorAll(sel), isUsable); };
+            return [q('.dcCast .dcCastP'), q('.dcCollection .dcColAll'), q('.dcCollection .dcColPoster'),
+                q('.dcCollection .dcColBtn[data-req]'), q('.dcSeasons button'), q('.dcBtnRow button')]
+                .filter(function (r) { return r.length > 0; });
+        }
+        function centerX(el) { var r = el.getBoundingClientRect(); return r.left + r.width / 2; }
+        function nearestIn(row, from) {
+            var x = centerX(from), best = row[0], bd = Infinity;
+            row.forEach(function (el) { var d = Math.abs(centerX(el) - x); if (d < bd) { bd = d; best = el; } });
+            return best;
+        }
         function navModal(dir, active) {
             if (trailerOverlay.classList.contains('open')) {
                 focusEl(trailerOverlay.querySelector('.dcTrailerClose'));
                 return;
             }
-            var row = modalButtons(overlay);
+            var rows = modalRows();
             var close = overlay.querySelector('.dcClose');
-            var i = row.indexOf(active);
             if (active === close) {
-                if (dir === 'down' || dir === 'left') { focusEl(row[0] || close); }
+                if (dir === 'down') { focusEl((rows[0] && rows[0][0]) || firstModalButton(overlay)); }
+                else if (dir === 'left') { focusEl(firstModalButton(overlay)); }
                 return;
             }
-            if (i === -1) { focusEl(row[0] || close); return; }
-            if (dir === 'left' && i > 0) { focusEl(row[i - 1]); }
-            else if (dir === 'right' && i < row.length - 1) { focusEl(row[i + 1]); }
-            else if (dir === 'down') { scrollOverview('down'); }
-            else if (dir === 'up') { if (!scrollOverview('up')) { focusEl(close); } }
+            var r = -1, c = -1;
+            for (var k = 0; k < rows.length && r === -1; k++) { c = rows[k].indexOf(active); if (c !== -1) { r = k; } }
+            if (r === -1) { focusEl(firstModalButton(overlay)); return; }
+            var row = rows[r];
+            if (dir === 'left') { if (c > 0) { focusEl(row[c - 1]); } }
+            else if (dir === 'right') { if (c < row.length - 1) { focusEl(row[c + 1]); } }
+            else if (dir === 'down') { if (r < rows.length - 1) { focusEl(nearestIn(rows[r + 1], active)); } else { scrollOverview('down'); } }
+            else if (dir === 'up') {
+                if (r > 0) { focusEl(nearestIn(rows[r - 1], active)); }
+                else if (!scrollOverview('up')) { focusEl(close); }
+            }
+            if (row[0] && row[0].classList.contains('dcCastP')) { setTimeout(updateCastArrows, 350); }
         }
 
         var lastKeyClick = 0;
@@ -1989,8 +2211,9 @@ define([], function () {
             var b = e.target && e.target.closest && e.target.closest('.headerBackButton, .headerBackButton-back, [data-action="back"]');
             if (!b || !b.closest('.skinHeader')) { return; }
             if (!onDiscoverRoute() || !document.body.contains(view) || !isShown(view.querySelector('.dcRoot'))) { return; }
-            e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
-            goBack(true);
+            // Iets om terug te doen binnen Discover (popup, overzicht, persoon, zoeken): dat, en Emby doet niets.
+            // Op de Discover-start werkt de pijl gewoon als Emby's terugknop (net als de terugtoets op de tv).
+            if (goBack(true)) { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); }
         }
         view.addEventListener('viewshow', function () { syncHeader(); document.addEventListener('command', onCommand, true); document.addEventListener('click', onHeaderBack, true); });
         view.addEventListener('viewhide', function () { document.body.classList.remove('dcDiscoverActive'); document.removeEventListener('command', onCommand, true); document.removeEventListener('click', onHeaderBack, true); });
