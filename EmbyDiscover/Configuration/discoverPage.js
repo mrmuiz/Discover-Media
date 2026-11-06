@@ -38,8 +38,8 @@ define([], function () {
             return;
         }
         var urls = [
-            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1413' }),
-            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1413' }),
+            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1414' }),
+            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1414' }),
             ApiClient.getUrl('Plugins/Discover/Script')
         ];
         var n = 0;
@@ -70,7 +70,7 @@ define([], function () {
         })();
     }
 
-    var UI_PAGE = 'discoverui1112';
+    var UI_PAGE = 'discoverui1113';
 
     return function (view, params) {
         // embedded: alleen de popup, over een andere Emby-pagina heen (film-, serie- of acteurspagina).
@@ -1535,6 +1535,7 @@ define([], function () {
             var b = backdropOf(e.target);
             if (!b) { return; }
             clearTimeout(pageBd.timer);
+            pageBd.lastHover = Date.now();
             pageBd.timer = setTimeout(function () { setPageBackdrop(b.url, b.info); }, 120);
         }
         content.addEventListener('mouseover', onBackdropHover);
@@ -1542,8 +1543,21 @@ define([], function () {
         // Na het laden van de startpagina: een willekeurige achtergrond uit wat er te zien is.
         function randomPageBackdrop() {
             var all = Object.keys(items).map(function (k) { return items[k]; }).filter(function (i) { return i && i.Backdrop; });
-            if (all.length) { var pick = all[Math.floor(Math.random() * all.length)]; setPageBackdrop(pick.Backdrop, pick); }
+            if (!all.length) { return; }
+            var pick = all[Math.floor(Math.random() * all.length)];
+            if (all.length > 1 && pick.Backdrop === pageBd.cur) { pick = all[(all.indexOf(pick) + 1) % all.length]; }
+            setPageBackdrop(pick.Backdrop, pick);
         }
+        // Zoals Emby: de achtergrond wisselt vanzelf (elke 10 s), maar niet terwijl je over een poster/tegel gaat,
+        // niet met een popup open en niet als de pagina niet in beeld is.
+        setInterval(function () {
+            if (!document.body.classList.contains('dcDiscoverActive') || document.body.classList.contains('dcModalOpen') || document.hidden) { return; }
+            if (Date.now() - (pageBd.lastHover || 0) < 8000) { return; }
+            try { if (view.querySelector('.dcCard:hover, .dcTile:hover')) { return; } } catch (e) { }
+            var a = document.activeElement;
+            if (a && a.closest && view.contains(a) && a.closest('.dcCard, .dcTile') && !document.documentElement.classList.contains('dcPointer') && isTvClient) { return; }
+            randomPageBackdrop();
+        }, 10000);
 
         // ---- snelmenu: rechtsklik of lang indrukken op een poster ----
         var quick = document.createElement('div');
