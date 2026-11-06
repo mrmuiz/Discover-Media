@@ -183,7 +183,7 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         view.querySelector('.btnTestRadarr span').textContent = languageText('Test verbinding', 'Test connection', 'Verbindung testen');
         view.querySelector('.btnTestSonarr span').textContent = languageText('Test verbinding', 'Test connection', 'Verbindung testen');
         view.querySelector('.button-submit span').textContent = languageText('Opslaan', 'Save', 'Speichern');
-        view.querySelector('.btnStatus span').textContent = languageText('Status en diagnose', 'Status and diagnostics', 'Status und Diagnose');
+        view.querySelector('.btnStatus span').textContent = languageText('Start diagnose', 'Run diagnostics', 'Diagnose starten');
         view.querySelector('.btnStatus').nextElementSibling.textContent = languageText(
             'Controleert plugin, kanaal, TMDB, Radarr, Sonarr en gebruikerstoegang. Handig om twee servers te vergelijken.',
             'Checks the plugin, channel, TMDB, Radarr, Sonarr and user access. Useful when comparing two servers.',
