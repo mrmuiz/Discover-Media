@@ -139,6 +139,7 @@
         var why = null;
         if (!ignoreCfg && redirectOn !== true) { why = 'schakelaar uit'; }
         else if (!targetsChannel(route)) { why = 'geen kanaalroute'; }
+        else if (window.__discoverAlwaysTile === true) { why = null; }   // eigen app: altijd Discover, nooit de tegels
         else if (window.__discoverStay) { why = 'Kanaaltegels-knop actief'; }
         else if (navType === 'traverse' && inChannelRoutes(fromRoute || '')) { why = 'terug vanuit kanaal'; }
         if (why && targetsChannel(route)) { log('beslissing: NIET doorsturen (' + why + '), config=' + redirectOn); }
