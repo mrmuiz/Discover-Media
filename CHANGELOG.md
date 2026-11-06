@@ -1,6 +1,7 @@
 ## Unreleased
 
 - Fix: a title stayed on **Importing** after it was already in Emby. Radarr/Sonarr keep a finished download in their queue with state `imported` (for example while the torrent keeps seeding); that state is no longer treated as importing, so the label disappears once the import is done.
+- Fix: on TV the **popup could cut off the buttons** at the bottom with a long list (many seasons or downloads). The info part of the popup now scrolls, and the remote focus scrolls the selected season or button into view. Page name bumped (`discoverui1110`).
 
 ## Version 1.4.0.2
 
