@@ -1657,6 +1657,12 @@ define([], function () {
             if (f.Status === 1) { return '<span class="dcColBadge req" title="' + esc(text('Aangevraagd', 'Requested', 'Angefragt', 'Forespurt')) + '">\u23F3</span>'; }
             return '';
         }
+        // Losse film uit de collectie aanvragen: klein "+"-rondje op de poster (niet bij de film van deze popup: die heeft de grote knop).
+        function colAddHtml(f, i) {
+            if (f.Status !== 0 || f.TmdbId === i.TmdbId) { return ''; }
+            var t = text('Aanvragen', 'Request', 'Anfragen', 'Forespør') + ': ' + f.Title;
+            return '<button type="button" class="dcColAdd" data-req="' + f.TmdbId + '" title="' + esc(t) + '" aria-label="' + esc(t) + '">+</button>';
+        }
         function renderCollection(i, r) {
             var box = overlay.querySelector('.dcCollection');
             var list = (r && r.Collection) || [];
@@ -1674,7 +1680,7 @@ define([], function () {
                 '<div class="dcColRow">' + list.map(function (f) {
                     return '<div class="dcColItem' + (f.TmdbId === i.TmdbId ? ' cur' : '') + '" data-tmdb="' + f.TmdbId + '">' +
                         '<button type="button" class="dcColPoster" data-open="' + f.TmdbId + '" title="' + esc(f.Title + (f.Year ? ' (' + f.Year + ')' : '')) + '"' +
-                        (f.Poster ? ' style="background-image:url(&quot;' + esc(f.Poster) + '&quot;)"' : '') + '>' + colBadgeHtml(f) + '</button>' +
+                        (f.Poster ? ' style="background-image:url(&quot;' + esc(f.Poster) + '&quot;)"' : '') + '>' + colBadgeHtml(f) + '</button>' + colAddHtml(f, i) +
                         '<div class="dcColName">' + esc(f.Title) + (f.Year ? ' (' + f.Year + ')' : '') + '</div>' +
                         (f.TmdbId === i.TmdbId ? '<div class="dcColCur">' + esc(text('Deze film', 'This movie', 'Dieser Film', 'Denne filmen')) + '</div>' : '') + '</div>';
                 }).join('') + '</div>';
@@ -1698,6 +1704,19 @@ define([], function () {
             if (openBtn) {
                 var f0 = colFind(parseInt(openBtn.getAttribute('data-open'), 10));
                 if (f0 && current && f0.TmdbId !== current.TmdbId) { openModal(items[key(f0)] || f0); }
+                return;
+            }
+            var reqBtn = t.closest('.dcColAdd[data-req]');
+            if (reqBtn) {
+                var f = colFind(parseInt(reqBtn.getAttribute('data-req'), 10));
+                if (!f) { return; }
+                reqBtn.disabled = true; reqBtn.textContent = '\u2026';
+                var cur = current;
+                requestColFilm(f).then(function (res) {
+                    if (res.ok) { showToast(text('Aangevraagd: ', 'Requested: ', 'Angefragt: ', 'Forespurt: ') + f.Title, false); afterRequest(); }
+                    else { showToast(res.msg, true); }
+                    if (current === cur) { renderCollection(cur, collectionCache[cur.TmdbId]); }
+                });
                 return;
             }
             var all = t.closest('.dcColAll');
@@ -2076,7 +2095,7 @@ define([], function () {
         function modalRows() {
             var q = function (sel) { return Array.prototype.filter.call(overlay.querySelectorAll(sel), isUsable); };
             return [q('.dcCast .dcCastP'), q('.dcCollection .dcColAll'), q('.dcCollection .dcColPoster'),
-                q('.dcSeasons button'), q('.dcBtnRow button')]
+                q('.dcCollection .dcColAdd'), q('.dcSeasons button'), q('.dcBtnRow button')]
                 .filter(function (r) { return r.length > 0; });
         }
         function centerX(el) { var r = el.getBoundingClientRect(); return r.left + r.width / 2; }
