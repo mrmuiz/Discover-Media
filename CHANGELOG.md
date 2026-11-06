@@ -9,12 +9,12 @@
 - New: **genre and sort** in Popular movies / Popular series: popular within a genre, newest or top rated (TMDB discover).
 - New: **scroll arrows** on the cast row in the popup, large and centred on the photos like the row arrows.
 - New: **TV remote navigation in the popup**: up/down moves between the rows (cast, collection, seasons, buttons) and left/right within a row; from the top row Up goes to the close button.
-- Change: the popup **fades in and out**.
 - Fix: in an app with its own (bundled) copy of the loader, e.g. the LG app, item and person pages could run a very old request-button script (no person rows, Emby's long filmography list, "More like this"). The server now tells the loader the current page names (`/Discover/LoaderConfig`: `UiPage`, `ButtonPage`), so the newest script is always loaded.
+- Change: **all buttons light up on mouse-over** (Request, 4K, Trailer, seasons, collection, Request all, close); the Request buttons in the rows on Emby's pages now light up in the chosen theme colour instead of always yellow.
 - Change: Emby's **back arrow on the Discover start** now does Emby's normal back (it did nothing there); inside Discover it still goes one step back.
 - Fix: the **theme colour** could not be chosen on TV (empty selection, stayed yellow): the option values no longer contain `#`.
 - Change: version strings in the scripts updated.
-- Change: page names bumped (`discoverconfig1089`, `discoverconfigjs1369`, `discoverui1106`, `discoveruijs1401`, `discoverbuttonjs1410`).
+- Change: page names bumped (`discoverconfig1089`, `discoverconfigjs1369`, `discoverui1107`, `discoveruijs1402`, `discoverbuttonjs1411`).
 
 ## Version 1.4.0.1
 
