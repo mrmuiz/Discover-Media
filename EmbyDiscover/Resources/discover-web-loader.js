@@ -107,6 +107,13 @@
     // Setting "Tile opens the Discover page", read from the server (never cached): null = not known yet.
     var redirectOn = null, redirectAt = 0, redirectLoading = null;
     function refreshConfig(force) {
+        // Eigen app (bijv. de LG-app) kan vastleggen dat de tegel daar altijd Discover opent, los van de
+        // instelling (die is bedoeld voor de browser): window.__discoverAlwaysTile = true vóór dit script.
+        if (window.__discoverAlwaysTile === true) {
+            if (redirectOn !== true) { log('app: tegel opent altijd Discover'); }
+            redirectOn = true; redirectAt = Date.now();
+            return Promise.resolve(true);
+        }
         var a = api();
         if (!a) { return Promise.resolve(redirectOn); }
         if (redirectLoading) { return redirectLoading; }
