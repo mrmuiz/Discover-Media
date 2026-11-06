@@ -36,6 +36,16 @@ namespace Emby.Plugins.Discover
         public string TraktClientId { get; set; } = "";
         /// <summary>Optioneel: openbare TMDB-lijst (id of link) als rij op de Discover-pagina.</summary>
         public string TmdbListId { get; set; } = "";
+        /// <summary>OMDb API-sleutel (omdbapi.com) voor de scores van IMDb, Rotten Tomatoes en Metacritic.</summary>
+        public string OmdbApiKey { get; set; } = "";
+        /// <summary>IMDb-, Rotten Tomatoes- en Metacritic-scores in de popup (alleen met een OMDb-sleutel).</summary>
+        public bool ShowOmdbRatings { get; set; } = true;
+        /// <summary>Jaar onder de posters.</summary>
+        public bool PosterShowYear { get; set; } = true;
+        /// <summary>TMDB-score onder de posters.</summary>
+        public bool PosterShowScore { get; set; } = true;
+        /// <summary>Themakleur (knoppen, focus, accenten) als #rrggbb.</summary>
+        public string AccentColor { get; set; } = "#ffb400";
         /// <summary>Rij "Onlangs toegevoegd" op de Discover-pagina.</summary>
         public bool ShowRecentlyAdded { get; set; } = true;
         /// <summary>Rij "Recente aanvragen" (van iedereen) op de Discover-pagina.</summary>

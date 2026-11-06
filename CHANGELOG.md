@@ -2,8 +2,15 @@
 
 - Fix: **scroll arrows on TV with a pointer** (LG Magic Remote). The arrows only appeared when the device reported a "fine pointer"; LG webOS 24 does not, so rows could not be scrolled with the pointer there. Arrows now appear on hover as soon as the pointer is used (also on Emby's own pages), and hide again when the arrow keys are used.
 - Fix: the scroll arrow to the right was sometimes missing on rows (e.g. "More like this · not in your library"): a row made while the page was still sliding in measured 0 wide. Arrows are now recalculated when the row gets its size and when you hover it.
+- New: **theme colour** (Appearance tab): choose the colour of buttons, focus and accents (yellow, Emby green, blue, turquoise, purple, pink, red, orange, white). Applies to the Discover page, the popup and the rows on Emby's own pages, for everyone on the server.
+- New: **poster captions** (Appearance tab): show or hide the year and the TMDB score under the posters.
+- New: **IMDb, Rotten Tomatoes and Metacritic scores** in the popup via your own (free) OMDb API key, with a test button and an on/off switch. Cached 24 hours per title (`GET /Discover/Ratings`, `POST /Discover/TestOmdb`).
+- New: **collections** in the popup of a movie that belongs to a series of films (e.g. Saw): all films in order, with their status, a click opens the film, and request **per film** or **all films** at once (stops when the request limit is reached).
+- New: **genre and sort** in Popular movies / Popular series: popular within a genre, newest or top rated (TMDB discover).
+- New: **scroll arrows** on the cast row in the popup.
+- Change: the popup **fades in and out**.
 - Change: version strings in the scripts updated.
-- Change: page names bumped (`discoverui1104`, `discoveruijs1399`, `discoverbuttonjs1408`).
+- Change: page names bumped (`discoverconfig1088`, `discoverconfigjs1368`, `discoverui1105`, `discoveruijs1400`, `discoverbuttonjs1409`).
 
 ## Version 1.4.0.1
 

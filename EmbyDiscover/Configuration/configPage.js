@@ -36,6 +36,25 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
     var TEXTS = {
         tab_general: ['Algemeen', 'General', 'Allgemein'],
         tab_look: ['Weergave', 'Appearance', 'Darstellung'],
+        hdgLook: ['Kleur en posters', 'Colour and posters', 'Farbe und Poster'],
+        lbl_selAccent: ['Themakleur (knoppen, focus en accenten)', 'Theme colour (buttons, focus and accents)', 'Themenfarbe (Schaltflächen, Fokus und Akzente)'],
+        desc_selAccent: ['Geldt voor iedereen op deze server: de Discover-pagina, de popup en de rijen op Emby\'s eigen pagina\'s.', 'Applies to everyone on this server: the Discover page, the popup and the rows on Emby\'s own pages.', 'Gilt für alle auf diesem Server: die Discover-Seite, das Popup und die Reihen auf Embys eigenen Seiten.'],
+        optAccent0: ['Geel (standaard)', 'Yellow (default)', 'Gelb (Standard)'],
+        optAccent1: ['Emby-groen', 'Emby green', 'Emby-Grün'],
+        optAccent2: ['Blauw', 'Blue', 'Blau'],
+        optAccent3: ['Turquoise', 'Teal', 'Türkis'],
+        optAccent4: ['Paars', 'Purple', 'Lila'],
+        optAccent5: ['Roze', 'Pink', 'Rosa'],
+        optAccent6: ['Rood', 'Red', 'Rot'],
+        optAccent7: ['Oranje', 'Orange', 'Orange'],
+        optAccent8: ['Wit', 'White', 'Weiß'],
+        lbl_chkPosterYear: ['Jaar onder de posters', 'Year below the posters', 'Jahr unter den Postern'],
+        lbl_chkPosterScore: ['TMDB-score onder de posters', 'TMDB score below the posters', 'TMDB-Bewertung unter den Postern'],
+        hdgOmdb: ['OMDb (IMDb, Rotten Tomatoes, Metacritic)', 'OMDb (IMDb, Rotten Tomatoes, Metacritic)', 'OMDb (IMDb, Rotten Tomatoes, Metacritic)'],
+        lbl_txtOmdbKey: ['OMDb API-sleutel (optioneel)', 'OMDb API key (optional)', 'OMDb-API-Schlüssel (optional)'],
+        desc_txtOmdbKey: ['Gratis aan te vragen op omdbapi.com (1000 opvragingen per dag). Daarmee toont de popup ook de scores van IMDb, Rotten Tomatoes en Metacritic. Leeg = alleen de TMDB-score.', 'Free from omdbapi.com (1000 requests per day). With it the popup also shows the IMDb, Rotten Tomatoes and Metacritic scores. Empty = TMDB score only.', 'Kostenlos bei omdbapi.com (1000 Abfragen pro Tag). Damit zeigt das Popup auch die Bewertungen von IMDb, Rotten Tomatoes und Metacritic. Leer = nur die TMDB-Bewertung.'],
+        btnTestOmdbText: ['Test OMDb', 'Test OMDb', 'OMDb testen'],
+        lbl_chkShowOmdb: ['Scores van IMDb, Rotten Tomatoes en Metacritic in de popup tonen', 'Show IMDb, Rotten Tomatoes and Metacritic scores in the popup', 'Bewertungen von IMDb, Rotten Tomatoes und Metacritic im Popup zeigen'],
         hdgTiles: ['Tegels', 'Tiles', 'Kacheln'],
         hdgOwnLists: ['Eigen lijsten als rij', 'Your own lists as a row', 'Eigene Listen als Reihe'],
         tab_tmdb: ['TMDB', 'TMDB', 'TMDB'],
@@ -471,6 +490,26 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         });
     }
 
+    // ---- Test van de OMDb-sleutel ----
+    function testOmdb(view) {
+        var status = el(view, 'statusOmdb');
+        status.style.color = '';
+        status.textContent = languageText('Testen...', 'Testing...', 'Wird getestet...');
+        ApiClient.ajax({
+            type: 'POST',
+            url: ApiClient.getUrl('Discover/TestOmdb'),
+            data: JSON.stringify({ Key: el(view, 'txtOmdbKey').value.trim() }),
+            contentType: 'application/json',
+            dataType: 'json'
+        }).then(function (r) {
+            status.style.color = r && r.Success ? '#43a047' : '#e53935';
+            status.textContent = (r && r.Message) || '?';
+        }, function (err) {
+            status.style.color = '#e53935';
+            status.textContent = ajaxErrorMessage(err);
+        });
+    }
+
     // ---- Overzicht van alle aanvragen (beheerder) ----
     function fmtDate(iso) {
         var d = new Date(iso);
@@ -614,6 +653,13 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             el(view, 'numRequestLimit').value = c.RequestLimit != null ? c.RequestLimit : 0;
             el(view, 'chkShowNewSeasons').checked = c.ShowNewSeasons !== false;
             el(view, 'chkShowMyRequests').checked = c.ShowMyRequests !== false;
+            el(view, 'chkPosterYear').checked = c.PosterShowYear !== false;
+            el(view, 'chkPosterScore').checked = c.PosterShowScore !== false;
+            el(view, 'chkShowOmdb').checked = c.ShowOmdbRatings !== false;
+            el(view, 'txtOmdbKey').value = c.OmdbApiKey || '';
+            var acc = String(c.AccentColor || '#ffb400').toLowerCase(), accSel = el(view, 'selAccent');
+            if (!accSel.querySelector('option[value="' + acc + '"]')) { var o = document.createElement('option'); o.value = acc; o.textContent = acc; accSel.appendChild(o); }
+            accSel.value = acc;
             el(view, 'chkShowRecentlyAdded').checked = c.ShowRecentlyAdded !== false;
             el(view, 'chkShowRecentRequests').checked = c.ShowRecentRequests !== false;
             el(view, 'txtTmdbList').value = c.TmdbListId || '';
@@ -687,6 +733,11 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             c.RequestLimit = intValue(view, 'numRequestLimit', 0);
             c.ShowNewSeasons = el(view, 'chkShowNewSeasons').checked;
             c.ShowMyRequests = el(view, 'chkShowMyRequests').checked;
+            c.PosterShowYear = el(view, 'chkPosterYear').checked;
+            c.PosterShowScore = el(view, 'chkPosterScore').checked;
+            c.ShowOmdbRatings = el(view, 'chkShowOmdb').checked;
+            c.OmdbApiKey = el(view, 'txtOmdbKey').value.trim();
+            c.AccentColor = el(view, 'selAccent').value || '#ffb400';
             c.ShowRecentlyAdded = el(view, 'chkShowRecentlyAdded').checked;
             c.ShowRecentRequests = el(view, 'chkShowRecentRequests').checked;
             c.TmdbListId = el(view, 'txtTmdbList').value.trim();
@@ -896,6 +947,7 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         view.querySelector('.btnLoadRequests').addEventListener('click', function () { loadAllRequests(view); });
         view.querySelector('.btnTestTrakt').addEventListener('click', function () { testWatch(view, 'trakt'); });
         view.querySelector('.btnTestTmdbList').addEventListener('click', function () { testWatch(view, 'tmdb'); });
+        view.querySelector('.btnTestOmdb').addEventListener('click', function () { testOmdb(view); });
         view.querySelector('.btnClearAll').addEventListener('click', function () {
             var q = languageText(
                 'Alle bewaarde kaartclips en tegelplaatjes verwijderen? Ze worden bij gebruik vanzelf opnieuw gemaakt.',
