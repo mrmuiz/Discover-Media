@@ -5,7 +5,7 @@
     <title>Discover</title>
 </head>
 <body>
-<div data-role="page" class="page type-interior discoverUiPage" data-controller="__plugin/discoveruijs1402">
+<div data-role="page" class="page type-interior discoverUiPage" data-controller="__plugin/discoveruijs1403">
 <style>
 /* Header on the Discover page only (body.dcDiscoverActive is set while this page is the active route): white text and icons on the dark page. The side drawer is deliberately left alone. */
 body.dcDiscoverActive .skinHeader .pageTitle,
@@ -163,8 +163,8 @@ html.dcNoYear .dcCapSub .dcYear, html.dcNoScore .dcCapSub .dcStar { display:none
 .dcBtn4k[disabled] { opacity:.5; cursor:default; }
 .dcBtnOpen { background:#52b54b; border-color:#52b54b; }
 /* Alle knoppen lichten op bij mouse-over */
-.dcBtn, .dcBtn4k, .dcBtnTrailer, .dcBtnOpen, .dcBtnDel, .dcColAll, .dcColBtn, .dcBtnSeason, .dcReqAll, .dcClose, .dcTrailerClose { transition:filter .15s, transform .15s, box-shadow .15s, background .15s; }
-.dcBtn:not([disabled]):hover, .dcBtn4k:not([disabled]):hover, .dcBtnTrailer:hover, .dcBtnOpen:hover, .dcBtnDel:not([disabled]):hover, .dcColAll:not([disabled]):hover, .dcColBtn:not([disabled]):hover, .dcBtnSeason:not([disabled]):hover, .dcReqAll:not([disabled]):hover { filter:brightness(1.18); transform:scale(1.05); box-shadow:0 0 0 2px rgba(255,255,255,.35), 0 .3em 1em rgba(0,0,0,.45); }
+.dcBtn, .dcBtn4k, .dcBtnTrailer, .dcBtnOpen, .dcBtnDel, .dcColAll, .dcBtnSeason, .dcReqAll, .dcClose, .dcTrailerClose { transition:filter .15s, transform .15s, box-shadow .15s, background .15s; }
+.dcBtn:not([disabled]):hover, .dcBtn4k:not([disabled]):hover, .dcBtnTrailer:hover, .dcBtnOpen:hover, .dcBtnDel:not([disabled]):hover, .dcColAll:not([disabled]):hover, .dcBtnSeason:not([disabled]):hover, .dcReqAll:not([disabled]):hover { filter:brightness(1.18); transform:scale(1.05); box-shadow:0 0 0 2px rgba(255,255,255,.35), 0 .3em 1em rgba(0,0,0,.45); }
 .dcClose:hover, .dcTrailerClose:hover { background:rgba(255,255,255,.22); transform:scale(1.1); }
 .dcBioMore:hover, .dcTrailerLink:hover { filter:brightness(1.3); text-decoration:underline; }
 .dcSeasons .dcBtnTrailer { padding:.55em 1.1em; font-size:.95em; }
@@ -212,12 +212,23 @@ body.dcModalOpen .skinHeader { opacity:0 !important; transition:opacity .15s; }
 .dcColItem { flex:0 0 auto; width:84px; display:flex; flex-direction:column; align-items:stretch; gap:.3em; }
 .dcColPoster { width:84px; height:126px; border-radius:.45em; background:#1c2640 center/cover no-repeat; border:2px solid transparent; cursor:pointer; padding:0; position:relative; }
 .dcColPoster:hover, .dcColPoster:focus-visible, .dcTvPage .dcColPoster:focus { border-color:var(--dc-accent,#ffb400); outline:0; }
-.dcColItem.cur .dcColPoster { box-shadow:0 0 0 2px rgba(255,255,255,.6); }
+.dcColItem.cur .dcColPoster { box-shadow:0 0 0 2px var(--dc-accent,#ffb400); cursor:default; }
 .dcColName { font-size:.72em; line-height:1.15; opacity:.85; overflow:hidden; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; }
-.dcColBtn { border:1px solid rgba(255,255,255,.25); background:rgba(255,255,255,.06); color:#fff; border-radius:1em; padding:.2em .3em; font-size:.72em; font-weight:700; cursor:pointer; }
-.dcColBtn:hover, .dcColBtn:focus-visible, .dcTvPage .dcColBtn:focus { background:var(--dc-accent,#ffb400); color:var(--dc-accent-text,#111); border-color:var(--dc-accent,#ffb400); outline:0; }
-.dcColBtn.have { color:#5fd38d; border-color:rgba(95,211,141,.4); background:none; cursor:default; }
-.dcColBtn.req { color:#c9d2ea; background:none; cursor:default; }
+.dcColBadge { position:absolute; top:.3em; right:.3em; min-width:1.5em; height:1.5em; border-radius:1em; display:flex; align-items:center; justify-content:center; font-size:.75em; font-weight:800; box-shadow:0 1px 4px rgba(0,0,0,.6); }
+.dcColBadge.have { background:#22a559; color:#fff; }
+.dcColBadge.req { background:#26304a; color:#ffd666; }
+.dcColItem { position:relative; }
+.dcColAdd { position:absolute; top:94px; right:.3em; width:1.9em; height:1.9em; border-radius:50%; border:2px solid rgba(255,255,255,.85); background:var(--dc-accent,#ffb400); color:var(--dc-accent-text,#111); font-size:1em; font-weight:800; line-height:1; padding:0; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,.6); transition:filter .15s, transform .15s; }
+.dcColAdd:hover, .dcColAdd:focus-visible, .dcTvPage .dcColAdd:focus { filter:brightness(1.18); transform:scale(1.15); outline:0; box-shadow:0 0 0 3px #fff, 0 2px 6px rgba(0,0,0,.6); }
+/* TV: groter rondje (makkelijker raak met de Magic Remote) en duidelijk focuskader bij de pijltoetsen */
+.dcOverlay.dcTv .dcColAdd, .dcTvPage .dcColAdd { width:2.4em; height:2.4em; top:84px; font-size:1.05em; }
+.dcOverlay.dcTv .dcColAdd:focus, .dcOverlay.dcTv .dcColPoster:focus { outline:0; }
+.dcOverlay.dcTv .dcColAdd:focus { transform:scale(1.2); box-shadow:0 0 0 3px #fff, 0 0 0 6px var(--dc-accent,#ffb400); }
+.dcOverlay.dcTv .dcColPoster:focus { border-color:var(--dc-accent,#ffb400); }
+.dcColAdd:disabled { opacity:.6; cursor:default; transform:none; }
+.dcColCur { font-size:.68em; font-weight:700; color:var(--dc-accent,#ffb400); }
+.dcColWarn { font-size:.78em; color:#e9c46a; opacity:.9; margin:-.2em 0 .6em; max-width:46em; line-height:1.35; }
+.dcColAll.confirm { background:#e5484d; color:#fff; }
 .dcRatings { display:flex; flex-wrap:wrap; gap:.4em; margin:.1em 0 .6em; }
 .dcRatings:empty { display:none; }
 .dcRate { display:inline-flex; align-items:center; gap:.35em; padding:.18em .6em; border-radius:.45em; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.14); font-size:.85em; font-weight:700; white-space:nowrap; }
