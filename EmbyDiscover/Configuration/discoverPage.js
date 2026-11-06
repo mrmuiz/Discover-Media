@@ -1492,6 +1492,12 @@ define([], function () {
             bdLabel.innerHTML = '<span class="dcBdLabelK">' + esc(text('Achtergrond', 'Background', 'Hintergrund', 'Bakgrunn')) + '</span> ' +
                 esc(info.Title) + (info.Year ? ' (' + info.Year + ')' : '') + ' <span class="dcBdLabelGo">\u203A</span>';
             bdLabel.title = text('Open de popup van deze titel', 'Open this title', 'Diesen Titel öffnen', 'Åpne denne tittelen');
+            // Bovenaan, net onder Emby's kopbalk (onderaan valt hij weg tussen de vele posters).
+            try {
+                var hdr = document.querySelector('.skinHeader');
+                var r = hdr ? hdr.getBoundingClientRect() : null;
+                bdLabel.style.top = (r && r.bottom > 0 ? Math.round(r.bottom + 8) : 64) + 'px';
+            } catch (e) { }
             bdLabel.classList.add('show');
         }
         bdLabel.addEventListener('click', function (e) {
