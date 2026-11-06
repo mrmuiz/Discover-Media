@@ -70,7 +70,7 @@ define([], function () {
         })();
     }
 
-    var UI_PAGE = 'discoverui1108';
+    var UI_PAGE = 'discoverui1109';
 
     return function (view, params) {
         // embedded: alleen de popup, over een andere Emby-pagina heen (film-, serie- of acteurspagina).
@@ -1652,6 +1652,9 @@ define([], function () {
             api('GET', 'Discover/Related', { Type: 'movie', TmdbId: i.TmdbId }).then(done, function () { });
         }
         // Status als klein bolletje in de hoek van de poster (geen losse knoppen meer).
+        function colAllLabel(n) {
+            return text('Collectie aanvragen (' + n + ' films)', 'Request collection (' + n + ' movies)', 'Sammlung anfragen (' + n + ' Filme)', 'Be om samlingen (' + n + ' filmer)');
+        }
         function colBadgeHtml(f) {
             if (f.Status === 2) { return '<span class="dcColBadge have" title="' + esc(text('In bibliotheek', 'In library', 'In Bibliothek', 'I biblioteket')) + '">\u2713</span>'; }
             if (f.Status === 1) { return '<span class="dcColBadge req" title="' + esc(text('Aangevraagd', 'Requested', 'Angefragt', 'Forespurt')) + '">\u23F3</span>'; }
@@ -1671,7 +1674,7 @@ define([], function () {
             var open = list.filter(function (f) { return f.Status === 0; }).length;
             box.innerHTML = '<div class="dcColHead"><span class="dcColTitle">' + esc(r.CollectionName || text('Collectie', 'Collection', 'Sammlung', 'Samling')) +
                 ' \u00B7 ' + list.length + ' ' + esc(text('films', 'movies', 'Filme', 'filmer')) + '</span>' +
-                (open ? '<button type="button" class="dcColAll" data-n="' + open + '">' + esc(text('Alle films aanvragen', 'Request all movies', 'Alle Filme anfragen', 'Be om alle filmer')) + ' (' + open + ')</button>' : '') +
+                (open ? '<button type="button" class="dcColAll" data-n="' + open + '">' + esc(colAllLabel(open)) + '</button>' : '') +
                 '</div>' + (open ? '<div class="dcColWarn">\u26A0 ' + esc(text(
                     'Hiermee vraag je in \u00E9\u00E9n keer alle ' + open + ' films uit deze collectie aan die je nog niet hebt. Telt mee voor je aanvraaglimiet.',
                     'This requests all ' + open + ' movies from this collection that you don\u2019t have yet, in one go. Counts towards your request limit.',
@@ -1731,7 +1734,7 @@ define([], function () {
                     all.textContent = text('Zeker? ' + todo.length + ' films aanvragen', 'Sure? Request ' + todo.length + ' movies', 'Sicher? ' + todo.length + ' Filme anfragen', 'Sikker? Be om ' + todo.length + ' filmer');
                     clearTimeout(all._t);
                     all._t = setTimeout(function () {
-                        if (!all.disabled) { all.classList.remove('confirm'); all.textContent = text('Alle films aanvragen', 'Request all movies', 'Alle Filme anfragen', 'Be om alle filmer') + ' (' + todo.length + ')'; }
+                        if (!all.disabled) { all.classList.remove('confirm'); all.textContent = colAllLabel(todo.length); }
                     }, 5000);
                     return;
                 }
