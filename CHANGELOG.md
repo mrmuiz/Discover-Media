@@ -12,7 +12,7 @@
 - Fix: a removed TMDB list (or another extra row) stayed on the Discover page until a full reload; extra rows are now fetched again on every visit.
 - Fix: the tile → Discover redirect did not work in browsers without the Navigation API (e.g. LG webOS 6 / Chrome 79, Firefox), because Emby navigates with pushState. The loader now also checks the route every second there.
 - Change: own apps can set `window.__discoverAlwaysTile = true` before the loader so the tile always opens Discover, regardless of the browser setting.
-- Change: page names bumped (`discoverconfig1087`, `discoverconfigjs1367`, `discoverui1101`, `discoveruijs1396`, `discoverbuttonjs1405`).
+- Change: page names bumped (`discoverconfig1087`, `discoverconfigjs1367`, `discoverui1102`, `discoveruijs1397`, `discoverbuttonjs1406`).
 
 ## Version 1.4.0.0
 

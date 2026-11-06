@@ -3,16 +3,16 @@
  * Verbergt ook "Media informatie" op Discover/Trailers-detailpagina's. */
 (function () {
     'use strict';
-    if (window.__discoverRequestButtonVersion === '1.4.0.0') { return; }
+    if (window.__discoverRequestButtonVersion === '1.4.0.1') { return; }
     if (window.__discoverRequestButton) {
         console.warn('[Discover] oudere knopcode is nog actief; vernieuw de webclient om dubbele handlers te voorkomen.');
         return;
     }
     var DC_BUILD = '1.4.0.1 2026-11-06';
     window.__discoverRequestButton = true;
-    window.__discoverRequestButtonVersion = '1.4.0.0';
+    window.__discoverRequestButtonVersion = '1.4.0.1';
     window.__discoverRequestButtonBuild = DC_BUILD;
-    console.log('[Discover] request-button script loaded v1.4.0.0 build ' + DC_BUILD);
+    console.log('[Discover] request-button script loaded v1.4.0.1 build ' + DC_BUILD);
 
     var uiLanguage = 'nl';
     function text(dutch, english, german, norwegian) {
@@ -43,7 +43,7 @@
                     'color:#ffd666;background:rgba(0,0,0,.7);padding:4px 8px;border-radius:4px;pointer-events:none;white-space:pre-wrap;';
                 document.body.appendChild(el);
             }
-            el.textContent = 'Discover v1.4.0.0 | ' + msg;
+            el.textContent = 'Discover v1.4.0.1 | ' + msg;
         } catch (e) { }
     }
     var isAdmin = false;
@@ -287,7 +287,7 @@
             var bcs = btn ? getComputedStyle(btn) : null;
             var vv = window.visualViewport;
             el.textContent = [
-                'Discover v1.4.0.0 build ' + DC_BUILD + ' (' + (window.__discoverRequestButtonBuild || '?') + ')',
+                'Discover v1.4.0.1 build ' + DC_BUILD + ' (' + (window.__discoverRequestButtonBuild || '?') + ')',
                 'item page: ' + (document.querySelector('.itemDetailPage') ? 'ja' : 'nee') + ' body=' + document.body.className.split(/\s+/).filter(function (c) { return /^(dc|discover)/.test(c); }).join(' '),
                 'bar: ' + (info.bar ? describe(info.bar) + ' ' + rectText(info.bar) : 'niet gevonden') + ' h=' + info.measured,
                 'mode=' + info.mode + ' --dc-bottom-clear=' + (document.documentElement.style.getPropertyValue('--dc-bottom-clear') || '(leeg)'),
@@ -1919,7 +1919,7 @@
         var link = document.createElement('a');
         link.className = 'discover-row-poster';
         // Klik op de poster: de Discover-popup met info en trailer.
-        link.href = '#!/configurationpage?name=discoverui1101&openType=' + item.Type + '&openId=' + item.TmdbId;
+        link.href = '#!/configurationpage?name=discoverui1102&openType=' + item.Type + '&openId=' + item.TmdbId;
         link.setAttribute('aria-label', item.Title);   // geen title: dat gaf een tooltip-vakje over de poster
         // Gewone klik: de popup hier op de pagina openen (Ctrl/middenklik volgt de link naar Discover).
         link.addEventListener('click', function (e) {
@@ -2218,7 +2218,7 @@
     // ---- De Discover-popup boven de huidige pagina ----
     // Laadt de Discover-pagina één keer onzichtbaar (alleen de popup wordt gebruikt) met dezelfde controller
     // als de echte pagina, in "embedded"-modus. Zo is de popup overal gelijk: info, cast, seizoenen, trailer, aanvragen.
-    var DC_UI_PAGE = 'discoverui1101', DC_UI_JS = 'discoveruijs1396';
+    var DC_UI_PAGE = 'discoverui1102', DC_UI_JS = 'discoveruijs1397';
     var embedPromise = null;
     function pageText(c, name) {
         var url = c.getUrl('web/ConfigurationPage', { name: name });
