@@ -70,7 +70,7 @@ define([], function () {
         })();
     }
 
-    var UI_PAGE = 'discoverui1111';
+    var UI_PAGE = 'discoverui1112';
 
     return function (view, params) {
         // embedded: alleen de popup, over een andere Emby-pagina heen (film-, serie- of acteurspagina).
@@ -1480,7 +1480,12 @@ define([], function () {
         var bdLabel = document.createElement('button');
         bdLabel.type = 'button';
         bdLabel.className = 'dcBdLabel focusable';
-        view.appendChild(bdLabel);
+        // Aan body hangen: Emby geeft de pagina soms een transform, dan zit "position:fixed" onderaan de hele pagina
+        // (buiten beeld) in plaats van onderaan het scherm. Alleen zichtbaar zolang deze pagina actief is.
+        document.body.appendChild(bdLabel);
+        view.addEventListener('viewhide', function () { bdLabel.classList.remove('show'); });
+        view.addEventListener('viewshow', function () { if (pageBd.info) { showBdLabel(pageBd.info); } });
+        view.addEventListener('viewdestroy', function () { if (bdLabel.parentNode) { bdLabel.parentNode.removeChild(bdLabel); } });
         function showBdLabel(info) {
             pageBd.info = info || null;
             if (!info || !info.TmdbId || !info.Title) { bdLabel.classList.remove('show'); return; }
