@@ -171,16 +171,20 @@
     }
     // Without the Navigation API (older engines) hashchange is the only signal; it also cannot tell Back apart,
     // so we only redirect when the previous route was outside the channel.
-    window.addEventListener('hashchange', function () {
-        if (window.navigation && typeof navigation.addEventListener === 'function') { return; }
+    // Emby wisselt van pagina met history.pushState; dat geeft geen hashchange. Zonder Navigation API
+    // (bv. LG webOS 6 / Chrome 79, Firefox) kijkt de timer onderaan daarom elke seconde of de route veranderde.
+    var hasNavApi = !!(window.navigation && typeof navigation.addEventListener === 'function');
+    window.addEventListener('hashchange', function () { if (!hasNavApi) { onRouteChange(); } });
+    function onRouteChange() {
         var route = routeOf(location.href);
+        if (route === prevRoute) { return; }
         var from = prevRoute;
         prevRoute = route;
         if (!inChannelRoutes(route)) { window.__discoverStay = false; }
         Promise.all([refreshConfig(true), loadInfo()]).then(function (r) {
             if (r[0] === true && routeOf(location.href) === route && shouldRedirect(route, 'traverse', from, true)) { redirect(); }
         });
-    });
+    }
 
     // ---- Achtergrond bij de tegel "Discover Media" (zoals Emby dat bij andere bibliotheken doet) ----
     // Alleen als de gebruiker in Emby "Achtergronden inschakelen" aan heeft. De foto komt in Emby's eigen
@@ -417,6 +421,7 @@
         var a = api();
         if (!a) { return; }
         refreshConfig(false);
+        if (!hasNavApi && initialChecked) { onRouteChange(); }
         loadInfo().then(function (i) {
             if (!initialChecked && i && redirectOn !== null) {
                 initialChecked = true;
