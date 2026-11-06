@@ -873,7 +873,21 @@ define([], function () {
                 '<div class="dcMore"><button type="button" class="dcBtn dcMoreBtn">' + text('Meer laden', 'Load more', 'Mehr laden') + '</button></div>';
             var root = view.querySelector('.dcRoot');
             if (root) { root.scrollTop = 0; }
+            watchMore();
             loadBrowse();
+        }
+
+        // Eindeloos scrollen: de "Meer laden"-knop is verborgen en dient als meetpunt; komt die in beeld, dan laadt de volgende pagina.
+        var moreObserver = null;
+        function watchMore() {
+            if (moreObserver) { moreObserver.disconnect(); moreObserver = null; }
+            var more = content.querySelector('.dcMore');
+            if (!more || !window.IntersectionObserver) { return; }
+            more.classList.add('dcAuto');
+            moreObserver = new IntersectionObserver(function (entries) {
+                if (entries.some(function (en) { return en.isIntersecting; })) { loadBrowse(); }
+            }, { rootMargin: '0px 0px 800px 0px' });
+            moreObserver.observe(more);
         }
 
         function loadBrowse() {
@@ -907,12 +921,13 @@ define([], function () {
                 if (btn) { btn.disabled = false; btn.textContent = text('Meer laden', 'Load more', 'Mehr laden'); }
                 updateLangOptions(b);
                 applyFilters(b);
+                if (moreObserver && more && !b.done) { more.classList.add('dcAuto'); moreObserver.unobserve(more); moreObserver.observe(more); }
                 if (b.done && !b.seenAny && !fresh.length && grid && !grid.children.length) {
                     grid.innerHTML = '<div class="dcMsg">' + text('Geen resultaten.', 'No results.', 'Keine Ergebnisse.') + '</div>';
                 }
             }, function () {
                 b.loading = false;
-                if (btn) { btn.disabled = false; btn.textContent = text('Opnieuw proberen', 'Try again', 'Erneut versuchen'); }
+                if (btn) { var m = content.querySelector('.dcMore'); if (m) { m.classList.remove('dcAuto'); } btn.disabled = false; btn.textContent = text('Opnieuw proberen', 'Try again', 'Erneut versuchen'); }
             });
         }
 
