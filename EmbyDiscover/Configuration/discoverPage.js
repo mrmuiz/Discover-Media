@@ -38,8 +38,8 @@ define([], function () {
             return;
         }
         var urls = [
-            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1406' }),
-            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1406' }),
+            ApiClient.getUrl('web/ConfigurationPage', { name: 'discoverbuttonjs1407' }),
+            ApiClient.getUrl('web/configurationpage', { name: 'discoverbuttonjs1407' }),
             ApiClient.getUrl('Plugins/Discover/Script')
         ];
         var n = 0;
@@ -70,7 +70,7 @@ define([], function () {
         })();
     }
 
-    var UI_PAGE = 'discoverui1102';
+    var UI_PAGE = 'discoverui1103';
 
     return function (view, params) {
         // embedded: alleen de popup, over een andere Emby-pagina heen (film-, serie- of acteurspagina).
@@ -364,6 +364,12 @@ define([], function () {
                 '</div>';
         }
         // Pijl links weg aan het begin, rechts weg aan het eind; geen pijlen als alles al in beeld past.
+        // Pijlen opnieuw rekenen bij het aanwijzen van een rij (een rij die gemaakt werd terwijl de pagina nog niet in
+        // beeld was, had 0 breedte en dus geen pijl naar rechts).
+        content.addEventListener('mouseenter', function (e) {
+            var w = e.target && e.target.classList && e.target.classList.contains('dcRowWrap') ? e.target : null;
+            if (w) { updateArrows(w); }
+        }, true);
         function updateArrows(wrap) {
             if (!wrap) { return; }
             var row = wrap.querySelector('.dcRow');
