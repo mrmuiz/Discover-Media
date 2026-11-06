@@ -1,7 +1,8 @@
 ## Version 1.4.0.3
 
 - Fix: the **theme colour** could not be chosen on LG TVs (the list showed no text and did not change). The colours are now buttons with a coloured dot and their name; the chosen colour has a ✓. Works with mouse, Magic Remote and arrow keys.
-- Page names bumped (`discoverconfig1090`, `discoverconfigjs1370`, `discoverui1110`, `discoveruijs1405`, `discoverbuttonjs1412`).
+- New: **background label**: when the Discover page shows a background from a genre tile or a random title, a small label bottom right says which title it is ("Background: Title (year)"). Click it (or select it with the remote) to open that title's popup.
+- Page names bumped (`discoverconfig1090`, `discoverconfigjs1370`, `discoverui1111`, `discoveruijs1406`, `discoverbuttonjs1412`).
 
 ## Version 1.4.0.2
 

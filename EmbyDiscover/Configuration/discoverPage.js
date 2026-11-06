@@ -70,7 +70,7 @@ define([], function () {
         })();
     }
 
-    var UI_PAGE = 'discoverui1110';
+    var UI_PAGE = 'discoverui1111';
 
     return function (view, params) {
         // embedded: alleen de popup, over een andere Emby-pagina heen (film-, serie- of acteurspagina).
@@ -545,6 +545,7 @@ define([], function () {
                 : 'background:' + esc(t.Color || '#1c2640');
             return '<div class="dcTile focusable' + (t.Image ? ' logo' : '') + (t.Backdrop ? ' photo' : '') + '" tabindex="0" role="button" data-kind="' + esc(r.TileKind) + '" data-id="' + esc(t.Id) +
                 (t.Backdrop ? '" data-bd="' + esc(t.Backdrop) : '') +
+                (t.Backdrop && t.BdId ? '" data-bdid="' + t.BdId + '" data-bdtype="' + esc(t.BdType || 'movie') + '" data-bdtitle="' + esc(t.BdTitle || '') + '" data-bdyear="' + (t.BdYear || '') : '') +
                 '" data-name="' + esc(t.Name) + '" title="' + esc(t.Name) + '" style="' + bg + '">' + inner + '</div>';
         }
 
@@ -820,7 +821,7 @@ define([], function () {
                 setTimeout(updateAllArrows, 0);
                 // Achtergrond: de bekendste titel (hoogste score met achtergrond).
                 var withBd = list.filter(function (i) { return i.Backdrop; }).sort(function (a, b) { return (b.Rating || 0) - (a.Rating || 0); });
-                if (withBd.length) { setPageBackdrop(withBd[0].Backdrop); }
+                if (withBd.length) { setPageBackdrop(withBd[0].Backdrop, withBd[0]); }
                 if (isTvClient) { var f = box.querySelector('.dcCard'); if (f) { focusEl(f); } }
             }, function () {
                 var box = content.querySelector('.dcPersonRows');
@@ -1475,14 +1476,35 @@ define([], function () {
             } catch (e) { }
             return true;
         }
-        function setPageBackdrop(url) {
+        // Label rechtsonder: van welke titel de (willekeurige) achtergrond is; klik = popup van die titel.
+        var bdLabel = document.createElement('button');
+        bdLabel.type = 'button';
+        bdLabel.className = 'dcBdLabel focusable';
+        view.appendChild(bdLabel);
+        function showBdLabel(info) {
+            pageBd.info = info || null;
+            if (!info || !info.TmdbId || !info.Title) { bdLabel.classList.remove('show'); return; }
+            bdLabel.innerHTML = '<span class="dcBdLabelK">' + esc(text('Achtergrond', 'Background', 'Hintergrund', 'Bakgrunn')) + '</span> ' +
+                esc(info.Title) + (info.Year ? ' (' + info.Year + ')' : '') + ' <span class="dcBdLabelGo">\u203A</span>';
+            bdLabel.title = text('Open de popup van deze titel', 'Open this title', 'Diesen Titel öffnen', 'Åpne denne tittelen');
+            bdLabel.classList.add('show');
+        }
+        bdLabel.addEventListener('click', function (e) {
+            e.preventDefault(); e.stopPropagation();
+            var info = pageBd.info;
+            if (!info) { return; }
+            openModal(items[key(info)] || info);
+        });
+        function setPageBackdrop(url, info) {
             if (url) { url = String(url).replace('/t/p/w780/', '/t/p/w1280/'); }
-            if (!url || url === pageBd.cur || !pageBd.layers.length || !pageBdAllowed()) { return; }
+            if (url && url === pageBd.cur) { showBdLabel(info); return; }
+            if (!url || !pageBd.layers.length || !pageBdAllowed()) { return; }
             var token = ++pageBd.seq;
             var img = new Image();
             img.onload = function () {
                 if (token !== pageBd.seq) { return; }
                 pageBd.cur = url;
+                showBdLabel(info);
                 var next = pageBd.layers[pageBd.idx = 1 - pageBd.idx];
                 var prev = pageBd.layers[1 - pageBd.idx];
                 next.style.backgroundImage = 'url("' + url.replace(/"/g, '%22') + '")';
@@ -1491,25 +1513,31 @@ define([], function () {
             };
             img.src = url;
         }
+        // Geeft { url, info }: info alleen bij een tegel (bij een poster weet je al welke titel het is).
         function backdropOf(el) {
             if (!el || !el.closest) { return null; }
             var card = el.closest('.dcCard');
-            if (card) { var it = items[card.getAttribute('data-key')]; return it && it.Backdrop; }
+            if (card) { var it = items[card.getAttribute('data-key')]; return it && it.Backdrop ? { url: it.Backdrop, info: null } : null; }
             var tile = el.closest('.dcTile');
-            return tile ? tile.getAttribute('data-bd') : null;
+            if (!tile || !tile.getAttribute('data-bd')) { return null; }
+            var id = parseInt(tile.getAttribute('data-bdid') || '0', 10);
+            return {
+                url: tile.getAttribute('data-bd'),
+                info: id ? { TmdbId: id, Type: tile.getAttribute('data-bdtype') || 'movie', Title: tile.getAttribute('data-bdtitle') || '', Year: parseInt(tile.getAttribute('data-bdyear') || '0', 10) || 0 } : null
+            };
         }
         function onBackdropHover(e) {
-            var url = backdropOf(e.target);
-            if (!url) { return; }
+            var b = backdropOf(e.target);
+            if (!b) { return; }
             clearTimeout(pageBd.timer);
-            pageBd.timer = setTimeout(function () { setPageBackdrop(url); }, 120);
+            pageBd.timer = setTimeout(function () { setPageBackdrop(b.url, b.info); }, 120);
         }
         content.addEventListener('mouseover', onBackdropHover);
         content.addEventListener('focusin', onBackdropHover);
         // Na het laden van de startpagina: een willekeurige achtergrond uit wat er te zien is.
         function randomPageBackdrop() {
-            var all = Object.keys(items).map(function (k) { return items[k] && items[k].Backdrop; }).filter(Boolean);
-            if (all.length) { setPageBackdrop(all[Math.floor(Math.random() * all.length)]); }
+            var all = Object.keys(items).map(function (k) { return items[k]; }).filter(function (i) { return i && i.Backdrop; });
+            if (all.length) { var pick = all[Math.floor(Math.random() * all.length)]; setPageBackdrop(pick.Backdrop, pick); }
         }
 
         // ---- snelmenu: rechtsklik of lang indrukken op een poster ----
