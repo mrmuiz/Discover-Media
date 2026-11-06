@@ -1,8 +1,8 @@
 ## Version 1.4.0.3
 
 - Fix: the **theme colour** could not be chosen on LG TVs (the list showed no text and did not change). The colours are now buttons with a coloured dot and their name; the chosen colour has a ✓. Works with mouse, Magic Remote and arrow keys.
-- New: **background label**: when the Discover page shows a background from a genre tile or a random title, a small label bottom right says which title it is ("Background: Title (year)"). Click it (or select it with the remote) to open that title's popup.
-- Page names bumped (`discoverconfig1090`, `discoverconfigjs1370`, `discoverui1112`, `discoveruijs1407`, `discoverbuttonjs1412`).
+- New: **background label**: when the Discover page shows a background from a genre tile or a random title, a small label bottom right says which title it is ("Background: Title (year)"). Click it (or select it with the remote) to open that title's popup. The same label appears on Emby's own pages (home, Movies, Series …) for Emby's background; a click opens that item in Emby.
+- Page names bumped (`discoverconfig1090`, `discoverconfigjs1370`, `discoverui1112`, `discoveruijs1407`, `discoverbuttonjs1413`).
 
 ## Version 1.4.0.2
 

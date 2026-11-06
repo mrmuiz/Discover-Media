@@ -2692,5 +2692,85 @@
         setInterval(function () { if (!isIdleRoute()) { schedule(); } }, 2000);
     }
 
+    // ---- Label "Achtergrond: titel" bij Emby's eigen achtergronden (startpagina, Films, Series ...) ----
+    // Emby laadt de achtergrond als <img class="backdropImage"> met /Items/{id}/Images/Backdrop in het adres;
+    // daaruit halen we het item. Klik op het label = de Emby-pagina van dat item.
+    (function () {
+        var label = null, curId = null, seq = 0, names = {};
+        function ensureLabel() {
+            if (label) { return label; }
+            label = document.createElement('button');
+            label.type = 'button';
+            label.className = 'dcEmbyBdLabel focusable';
+            label.addEventListener('click', function (e) {
+                e.preventDefault(); e.stopPropagation();
+                if (!curId) { return; }
+                var sid = '';
+                try { sid = window.ApiClient && ApiClient.serverId ? ApiClient.serverId() : ''; } catch (x) { }
+                location.hash = '#!/item?id=' + encodeURIComponent(curId) + (sid ? '&serverId=' + encodeURIComponent(sid) : '');
+            });
+            var st = document.createElement('style');
+            st.textContent = '.dcEmbyBdLabel{position:fixed;right:1.2em;bottom:1em;z-index:999;display:none;align-items:center;gap:.35em;max-width:min(36em,70vw);padding:.4em .9em;border-radius:2em;border:1px solid rgba(255,255,255,.18);background:rgba(11,20,38,.72);color:rgba(255,255,255,.85);font:inherit;font-size:.8em;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:background .15s,color .15s,transform .15s,box-shadow .15s}' +
+                '.dcEmbyBdLabel.show{display:inline-flex}.dcEmbyBdLabel .k{opacity:.6}.dcEmbyBdLabel .go{color:var(--dc-accent,#ffb400);font-weight:800;font-size:1.2em;line-height:1}' +
+                '.dcEmbyBdLabel:hover,.dcEmbyBdLabel:focus{background:rgba(11,20,38,.92);color:#fff;outline:0;transform:scale(1.05);box-shadow:0 0 0 2px var(--dc-accent,#ffb400)}' +
+                '.dialogContainer ~ .dcEmbyBdLabel, body.dcModalOpen .dcEmbyBdLabel{display:none !important}';
+            document.head.appendChild(st);
+            document.body.appendChild(label);
+            return label;
+        }
+        function hide() { if (label) { label.classList.remove('show'); } }
+        function routeAllows() {
+            var h = location.hash || '';
+            // Niet op Discover (heeft een eigen label), niet op een itempagina (daar is de achtergrond van dat item zelf),
+            // niet tijdens afspelen en niet in het dashboard.
+            return !/configurationpage|\/item\?|\/details\?|videoosd|\/dashboard|\/plugins/i.test(h);
+        }
+        function currentBackdropId() {
+            var img = document.querySelector('.backdropContainer img.backdropImage.displayingBackdropImage') ||
+                document.querySelector('.backdropContainer img.backdropImage');
+            if (!img) { return null; }
+            var m = /\/Items\/([^\/?]+)\/Images\/Backdrop/i.exec(img.currentSrc || img.src || img.getAttribute('data-id') || '');
+            return m ? m[1] : null;
+        }
+        function show(id, item) {
+            if (id !== curId) { return; }
+            var l = ensureLabel();
+            var name = item.SeriesName && item.Type === 'Episode' ? item.SeriesName : item.Name;
+            var year = item.ProductionYear ? ' (' + item.ProductionYear + ')' : '';
+            l.innerHTML = '<span class="k"></span> <span class="t"></span> <span class="go">\u203A</span>';
+            l.querySelector('.k').textContent = text('Achtergrond', 'Background', 'Hintergrund', 'Bakgrunn');
+            l.querySelector('.t').textContent = name + year;
+            l.title = text('Open deze titel', 'Open this title', 'Diesen Titel öffnen', 'Åpne denne tittelen');
+            l.classList.add('show');
+        }
+        function update() {
+            if (!routeAllows() || !document.querySelector('.backgroundContainer.withBackdrop, .backdropContainer.withBackdrop')) { curId = null; hide(); return; }
+            var id = currentBackdropId();
+            if (!id) { curId = null; hide(); return; }
+            if (id === curId && label && label.classList.contains('show')) { return; }
+            curId = id;
+            if (names[id]) { show(id, names[id]); return; }
+            if (!window.ApiClient) { return; }
+            var my = ++seq;
+            try {
+                ApiClient.getItem(ApiClient.getCurrentUserId(), id).then(function (item) {
+                    if (my !== seq || !item) { return; }
+                    names[id] = { Name: item.Name, SeriesName: item.SeriesName, Type: item.Type, ProductionYear: item.ProductionYear };
+                    show(id, names[id]);
+                }, function () { });
+            } catch (e) { }
+        }
+        function startBdLabel() {
+            try {
+                var pending = null;
+                var mo = new MutationObserver(function () { if (pending) { return; } pending = setTimeout(function () { pending = null; update(); }, 150); });
+                mo.observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['class', 'src'] });
+            } catch (e) { setInterval(update, 1500); }
+            window.addEventListener('hashchange', function () { setTimeout(update, 300); });
+            update();
+        }
+        if (document.body) { startBdLabel(); } else { document.addEventListener('DOMContentLoaded', startBdLabel); }
+    })();
+
     if (document.body) { start(); } else { document.addEventListener('DOMContentLoaded', start); }
 })();
