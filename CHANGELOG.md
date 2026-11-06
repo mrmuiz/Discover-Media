@@ -14,7 +14,7 @@
 - Change: Emby's **back arrow on the Discover start** now does Emby's normal back (it did nothing there); inside Discover it still goes one step back.
 - Fix: the **theme colour** could not be chosen on TV (empty selection, stayed yellow): the option values no longer contain `#`.
 - Change: version strings in the scripts updated.
-- Change: page names bumped (`discoverconfig1089`, `discoverconfigjs1369`, `discoverui1107`, `discoveruijs1402`, `discoverbuttonjs1411`).
+- Change: page names bumped (`discoverconfig1089`, `discoverconfigjs1369`, `discoverui1108`, `discoveruijs1403`, `discoverbuttonjs1411`).
 
 ## Version 1.4.0.1
 
