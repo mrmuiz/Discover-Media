@@ -9,6 +9,7 @@
 - New: **genre and sort** in Popular movies / Popular series: popular within a genre, newest or top rated (TMDB discover).
 - New: **scroll arrows** on the cast row in the popup.
 - Change: the popup **fades in and out**.
+- Fix: in an app with its own (bundled) copy of the loader, e.g. the LG app, item and person pages could run a very old request-button script (no person rows, Emby's long filmography list, "More like this"). The server now tells the loader the current page names (`/Discover/LoaderConfig`: `UiPage`, `ButtonPage`), so the newest script is always loaded.
 - Change: version strings in the scripts updated.
 - Change: page names bumped (`discoverconfig1088`, `discoverconfigjs1368`, `discoverui1105`, `discoveruijs1400`, `discoverbuttonjs1409`).
 

@@ -62,6 +62,10 @@ namespace Emby.Plugins.Discover
     public class DiscoverLoaderConfigResult
     {
         public bool RedirectTile { get; set; }
+        /// <summary>Huidige paginanamen, zodat een lader (ook een ingebakken kopie in een eigen app) altijd het actuele script laadt.</summary>
+        public string UiPage { get; set; }
+        public string ButtonPage { get; set; }
+        public string Version { get; set; }
     }
 
     [Route("/Discover/Backdrops", "GET", Summary = "Achtergronden (TMDB trending) voor de tegel Discover Media op de Emby-startpagina")]
@@ -403,7 +407,16 @@ namespace Emby.Plugins.Discover
 
         public object Get(DiscoverLoaderConfigRequest request)
         {
-            return new DiscoverLoaderConfigResult { RedirectTile = Plugin.GetCurrentConfiguration().InjectWebClientLoader };
+            var res = new DiscoverLoaderConfigResult { RedirectTile = Plugin.GetCurrentConfiguration().InjectWebClientLoader };
+            try
+            {
+                var pages = Plugin.Instance?.GetPages()?.Select(p => p.Name).ToList() ?? new List<string>();
+                res.UiPage = pages.FirstOrDefault(n => System.Text.RegularExpressions.Regex.IsMatch(n ?? "", "^discoverui\\d+$"));
+                res.ButtonPage = pages.FirstOrDefault(n => (n ?? "").StartsWith("discoverbuttonjs", StringComparison.OrdinalIgnoreCase));
+                res.Version = Plugin.VersionString;
+            }
+            catch { }
+            return res;
         }
 
         public async Task<object> Get(DiscoverPersonRequest request)

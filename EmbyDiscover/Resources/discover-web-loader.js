@@ -46,7 +46,10 @@
             safe(a.getJSON(a.getUrl('web/configurationpages', { PageType: 'PluginConfiguration', UserId: uid }))),
             safe(a.getJSON(a.getUrl('Channels', { UserId: uid }))),
             safe(a.getJSON(a.getUrl('Users/' + uid + '/Views'))),
-            safe(a.getJSON(a.getUrl('Discover/ChannelInfo')))
+            safe(a.getJSON(a.getUrl('Discover/ChannelInfo'))),
+            // De server noemt zelf de actuele paginanamen (het knop-script staat niet in de lijst hierboven);
+            // zo laadt ook een oude, ingebakken kopie van dit script in een eigen app altijd de nieuwste versie.
+            safe(a.getJSON(a.getUrl('Discover/LoaderConfig', { _: Date.now() })))
         ]).then(function (r) {
             var names = [];
             items(r[0]).forEach(function (pg) { var n = pg && (pg.Name || pg.name); if (n && names.indexOf(n) === -1) { names.push(n); } });
@@ -61,6 +64,8 @@
             if (r[3] && r[3].Id) { var cid = String(r[3].Id).toLowerCase(); if (ids.indexOf(cid) === -1) { ids.push(cid); } }
             var ui = newest(names, /^discoverui\d+$/i);
             var btn = newest(names, /^discoverbuttonjs\d+$/i);
+            if (r[4] && r[4].UiPage) { ui = [r[4].UiPage].concat(ui.filter(function (n) { return n !== r[4].UiPage; })); }
+            if (r[4] && r[4].ButtonPage) { btn = [r[4].ButtonPage].concat(btn.filter(function (n) { return n !== r[4].ButtonPage; })); }
             KNOWN_UI.forEach(function (n) { if (ui.indexOf(n) === -1) { ui.push(n); } });
             KNOWN_BTN.forEach(function (n) { if (btn.indexOf(n) === -1) { btn.push(n); } });
             info = { key: key, ids: ids, uiPage: ui[0], buttonPages: btn };
