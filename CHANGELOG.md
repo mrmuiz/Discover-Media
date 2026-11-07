@@ -1,11 +1,3 @@
-#
-- Fix: the Dashboard status page showed none of the new tile diagnostics because Emby/browser kept the old cached `statusPage.js` (same plugin version); its resource name is now new (`discoverstatusjs1406`). The status page also shows the real DLL build time. The tile's Primary/Thumb image is now built from the spotlight title (backdrop + "Now: <title>" text, via the existing ffmpeg tile code) and falls back to the logo if that fails; the status page shows which one Emby received.
-
-# Version 1.4.0.6
-- Diagnostics: the status page now shows the DLL build, the current tile title, when/if it was chosen, and counters for how often Emby asked for the channel Backdrop/Primary image, supported images and description. The channel `DataVersion` now includes the hourly title slot so Emby refreshes the cached channel root (first item/description) every hour.
-
-- New: the **Discover Media tile** now shows a real backdrop of a trending title (rotates hourly, alternating movie/series; falls back to Emby's own pick if unavailable). The channel description shows the same title (`Now: <title> (<year>) - Movie/Series`) and the first item in the channel is that title (OK opens its Request/Trailer items), so image and text always belong together.
-
 ## Version 1.4.0.5
 
 - New: choose the **score below the posters**: TMDB, IMDb or none (setting 'Score below the posters'). The IMDb score comes from the free official IMDb dataset (`title.ratings.tsv.gz`, non-commercial use only): no API key or limit; the server downloads it into the plugin data folder, refreshes it weekly and keeps it compact in memory (~14 MB). IMDb scores are fetched lazily for visible posters only; without IMDb data the TMDB score stays. Existing 'TMDB score' setting migrates to TMDB (off = none). The popup (OMDb) is unchanged.
