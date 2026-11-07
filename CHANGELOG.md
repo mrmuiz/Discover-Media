@@ -1,4 +1,5 @@
 ## Version 1.4.0.6
+- Diagnostics: the status page now shows the DLL build, the current tile title, when/if it was chosen, and counters for how often Emby asked for the channel Backdrop/Primary image, supported images and description. The channel `DataVersion` now includes the hourly title slot so Emby refreshes the cached channel root (first item/description) every hour.
 
 - New: the **Discover Media tile** now shows a real backdrop of a trending title (rotates hourly, alternating movie/series; falls back to Emby's own pick if unavailable). The channel description shows the same title (`Now: <title> (<year>) - Movie/Series`) and the first item in the channel is that title (OK opens its Request/Trailer items), so image and text always belong together.
 

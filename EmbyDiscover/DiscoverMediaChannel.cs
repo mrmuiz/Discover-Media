@@ -73,8 +73,9 @@ namespace Emby.Plugins.Discover
                     "Entdecke Filme und Serien und fordere sie an.");
                 try
                 {
+                    DiscoverDiagnostics.DescCalls++; DiscoverDiagnostics.LastDescCallUtc = DateTime.UtcNow.ToString("u");
                     TileSpotlight.Refresh(_tmdb);
-                    var l = TileSpotlight.Label(TileSpotlight.Current);
+                    var l =  TileSpotlight.Label(TileSpotlight.Current);
                     if (l != null) return DiscoverLanguage.Text("Nu: ", "Now: ", "Jetzt: ") + l + "\n" + basis;
                 }
                 catch { }
@@ -86,25 +87,42 @@ namespace Emby.Plugins.Discover
         // Ophogen als Emby oude (bewaarde) kanaalinhoud blijft tonen.
         // De tegel-epoch verandert als de opruiming tegelplaatjes heeft verwijderd: dan vraagt Emby de mappen opnieuw op
         // en maakt de plugin de ontbrekende plaatjes opnieuw (anders verwijst Emby naar een bestand dat niet meer bestaat).
-        public string DataVersion => (Plugin.GetCurrentConfiguration().ShowTrailerTile ? "76" : "76-notrailer") + "-e" + CacheCleaner.TileEpoch;
+        public string DataVersion => (Plugin.GetCurrentConfiguration().ShowTrailerTile ? "76" : "76-notrailer") + "-e" + CacheCleaner.TileEpoch + "-s" + TileSpotlight.CurrentSlot;
         public ChannelParentalRating ParentalRating => ChannelParentalRating.GeneralAudience;
         public bool IsEnabledFor(string userId) => true;
 
-        public IEnumerable<ImageType> GetSupportedChannelImages() =>
-            new[] { ImageType.Primary, ImageType.Thumb, ImageType.Backdrop };
+        public IEnumerable<ImageType> GetSupportedChannelImages()
+        {
+            DiscoverDiagnostics.SupportedImageCalls++;
+            return new[] { ImageType.Primary, ImageType.Thumb, ImageType.Backdrop };
+        }
 
         public async Task<DynamicImageResponse> GetChannelImage(ImageType type, CancellationToken cancellationToken)
         {
+            if (type != ImageType.Backdrop) DiscoverDiagnostics.PrimaryCalls++;
             if (type == ImageType.Backdrop)
             {
                 // Achtergrond van de titel van het moment (zelfde titel als in de kanaalbeschrijving en de eerste map).
+                DiscoverDiagnostics.BackdropCalls++;
+                DiscoverDiagnostics.LastBackdropUtc = DateTime.UtcNow.ToString("u");
                 try
                 {
                     var bytes = await TileSpotlight.ImageAsync(_tmdb).ConfigureAwait(false);
                     if (bytes != null && bytes.Length > 0)
+                    {
+                        DiscoverDiagnostics.BackdropOk++;
+                        DiscoverDiagnostics.LastBackdropResult = "OK " + bytes.Length + " B";
                         return new DynamicImageResponse { Stream = new System.IO.MemoryStream(bytes), Format = ImageFormat.Jpg };
+                    }
+                    DiscoverDiagnostics.BackdropFail++;
+                    DiscoverDiagnostics.LastBackdropResult = "geen afbeelding (nog geen titel of TMDB-fout)";
                 }
-                catch (Exception ex) { DiscoverDiagnostics.Add("kanaal-achtergrond mislukt: " + ex.Message); }
+                catch (Exception ex)
+                {
+                    DiscoverDiagnostics.BackdropFail++;
+                    DiscoverDiagnostics.LastBackdropResult = "FOUT " + ex.Message;
+                    DiscoverDiagnostics.Add("kanaal-achtergrond mislukt: " + ex.Message);
+                }
                 return new DynamicImageResponse();
             }
             var stream = GetType().Assembly.GetManifestResourceStream(
