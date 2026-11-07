@@ -3,14 +3,14 @@
  * Verbergt ook "Media informatie" op Discover/Trailers-detailpagina's. */
 (function () {
     'use strict';
-    if (window.__discoverRequestButtonVersion === '1.4.0.5') { return; }
+    if (window.__discoverRequestButtonVersion === '1.4.0.6') { return; }
     if (window.__discoverRequestButton) {
         console.warn('[Discover] oudere knopcode is nog actief; vernieuw de webclient om dubbele handlers te voorkomen.');
         return;
     }
-    var DC_BUILD = '1.4.0.5 2026-11-07';
+    var DC_BUILD = '1.4.0.6 2026-11-07';
     window.__discoverRequestButton = true;
-    window.__discoverRequestButtonVersion = '1.4.0.5';
+    window.__discoverRequestButtonVersion = '1.4.0.6';
 
     // Themakleur (instelling "Weergave"): CSS-variabelen op <html>, gebruikt door de Discover-pagina en de rijen en
     // knoppen op Emby's pagina's. Laatste waarde onthouden, zodat de kleur bij het openen niet eerst geel flitst.
@@ -51,7 +51,7 @@
         })();
     }
     window.__discoverRequestButtonBuild = DC_BUILD;
-    console.log('[Discover] request-button script loaded v1.4.0.5 build ' + DC_BUILD);
+    console.log('[Discover] request-button script loaded v1.4.0.6 build ' + DC_BUILD);
 
     var uiLanguage = 'nl';
     function text(dutch, english, german, norwegian) {
@@ -82,7 +82,7 @@
                     'color:#ffd666;background:rgba(0,0,0,.7);padding:4px 8px;border-radius:4px;pointer-events:none;white-space:pre-wrap;';
                 document.body.appendChild(el);
             }
-            el.textContent = 'Discover v1.4.0.5 | ' + msg;
+            el.textContent = 'Discover v1.4.0.6 | ' + msg;
         } catch (e) { }
     }
     var isAdmin = false;
@@ -332,7 +332,7 @@
             var bcs = btn ? getComputedStyle(btn) : null;
             var vv = window.visualViewport;
             el.textContent = [
-                'Discover v1.4.0.5 build ' + DC_BUILD + ' (' + (window.__discoverRequestButtonBuild || '?') + ')',
+                'Discover v1.4.0.6 build ' + DC_BUILD + ' (' + (window.__discoverRequestButtonBuild || '?') + ')',
                 'item page: ' + (document.querySelector('.itemDetailPage') ? 'ja' : 'nee') + ' body=' + document.body.className.split(/\s+/).filter(function (c) { return /^(dc|discover)/.test(c); }).join(' '),
                 'bar: ' + (info.bar ? describe(info.bar) + ' ' + rectText(info.bar) : 'niet gevonden') + ' h=' + info.measured,
                 'mode=' + info.mode + ' --dc-bottom-clear=' + (document.documentElement.style.getPropertyValue('--dc-bottom-clear') || '(leeg)'),
@@ -2512,6 +2512,17 @@
         return /^\/(configurationpage|dashboard|settings|mypreferences|user(?:edit|new|profiles?|library|parental|password)|device|dlna|livetv(?:status|guide|tuner|setup|guideprovider)|metadata|library(?:display|setup)?|encoding|playback|streaming|notification|scheduledtask|serveractivity|log|apikey|networking|branding|plugin|repositor|about|quickconnect|wizard)/.test(h);
     }
 
+    // Whitelist: onze knoppen/overlays mogen alleen op een echte itempagina (#!/item?id=...) of mappenlijst staan,
+    // en nooit boven Emby's nu-aan-het-afspelen-/afstandsbedieningsweergave van een sessie.
+    function isAllowedRoute() {
+        var h = (window.location.hash || '').toLowerCase();
+        if (!/^#!?\/(item\?|list(\/list\.html)?\?)/.test(h)) { return false; }
+        try {
+            if (document.querySelector('.nowPlayingPage:not(.hide), .remoteControlPage:not(.hide), .sessionsPage:not(.hide), .queuePage:not(.hide)')) { return false; }
+        } catch (e) { }
+        return true;
+    }
+
     function removeOurUi() {
         try {
             var nodes = document.querySelectorAll('.btnDiscoverRequest, .btnDiscoverRemove, .discover-season-info');
@@ -2525,6 +2536,7 @@
 
     function tick() {
         if (isIdleRoute()) { return; }
+        if (!isAllowedRoute()) { removeOurUi(); return; }
         var id = itemIdFromHash();
         if (!diagnosticsLoaded || id !== diagnosticsItemId) {
             diagnosticsItemId = id;
@@ -2626,7 +2638,8 @@
     }
     // Observer alleen op gewone pagina's; op instellingen/dashboard volledig uit (anders hapert de tv-remote).
     function applyRouteState() {
-        if (isIdleRoute()) { disconnectObserver(); removeOurUi(); }
+        if (!isAllowedRoute()) { removeOurUi(); }
+        if (isIdleRoute()) { disconnectObserver(); }
         else { connectObserver(); schedule(); }
     }
 
@@ -2678,6 +2691,7 @@
     function isPlaybackView() {
         var h = (window.location.hash || '').toLowerCase().replace(/^#!?/, '');
         if (/^\/(video|videoosd|nowplaying)/.test(h)) { return true; }
+        if (!isAllowedRoute()) { return true; }
         try {
             if (document.querySelector('.videoOsdPage:not(.hide), #videoOsdPage:not(.hide), [data-type="video-osd"]:not(.hide), .videoPlayerContainer')) { return true; }
             var v = document.querySelector('video.htmlvideoplayer, .htmlvideoplayer');
