@@ -85,18 +85,19 @@
 
                 <h3 id="hdgLook">Kleur en posters</h3>
                 <div class="selectContainer">
-                    <label class="selectLabel" for="selAccent" id="lbl_selAccent">Themakleur (knoppen, focus en accenten)</label>
-                    <select is="emby-select" id="selAccent">
-                        <option value="ffb400" id="optAccent0">Geel (standaard)</option>
-                        <option value="52b54b" id="optAccent1">Emby-groen</option>
-                        <option value="2f80ed" id="optAccent2">Blauw</option>
-                        <option value="14b8a6" id="optAccent3">Turquoise</option>
-                        <option value="8e5cf7" id="optAccent4">Paars</option>
-                        <option value="ec4899" id="optAccent5">Roze</option>
-                        <option value="e5484d" id="optAccent6">Rood</option>
-                        <option value="ff7a1a" id="optAccent7">Oranje</option>
-                        <option value="e9edf5" id="optAccent8">Wit</option>
-                    </select>
+                    <label class="selectLabel" id="lbl_selAccent" style="display:block">Themakleur (knoppen, focus en accenten)</label>
+                    <input type="hidden" id="selAccent" value="ffb400" />
+                    <div id="accentSwatches" style="display:flex;flex-wrap:wrap;gap:.5em;margin:.4em 0">
+                        <button type="button" class="dcAccentBtn" data-accent="ffb400" id="optAccent0" style="background:#ffb400;color:#111">Geel (standaard)</button>
+                        <button type="button" class="dcAccentBtn" data-accent="52b54b" id="optAccent1" style="background:#52b54b;color:#111">Emby-groen</button>
+                        <button type="button" class="dcAccentBtn" data-accent="2f80ed" id="optAccent2" style="background:#2f80ed;color:#fff">Blauw</button>
+                        <button type="button" class="dcAccentBtn" data-accent="14b8a6" id="optAccent3" style="background:#14b8a6;color:#111">Turquoise</button>
+                        <button type="button" class="dcAccentBtn" data-accent="8e5cf7" id="optAccent4" style="background:#8e5cf7;color:#fff">Paars</button>
+                        <button type="button" class="dcAccentBtn" data-accent="ec4899" id="optAccent5" style="background:#ec4899;color:#fff">Roze</button>
+                        <button type="button" class="dcAccentBtn" data-accent="e5484d" id="optAccent6" style="background:#e5484d;color:#fff">Rood</button>
+                        <button type="button" class="dcAccentBtn" data-accent="ff7a1a" id="optAccent7" style="background:#ff7a1a;color:#111">Oranje</button>
+                        <button type="button" class="dcAccentBtn" data-accent="e9edf5" id="optAccent8" style="background:#e9edf5;color:#111">Wit</button>
+                    </div>
                     <div class="fieldDescription" id="desc_selAccent">Geldt voor iedereen op deze server: de Discover-pagina, de popup en de rijen op Emby's eigen pagina's.</div>
                 </div>
                 <div class="checkboxContainer">
