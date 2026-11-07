@@ -3,14 +3,14 @@
  * Verbergt ook "Media informatie" op Discover/Trailers-detailpagina's. */
 (function () {
     'use strict';
-    if (window.__discoverRequestButtonVersion === '1.4.0.6') { return; }
+    if (window.__discoverRequestButtonVersion === '1.4.0.7') { return; }
     if (window.__discoverRequestButton) {
         console.warn('[Discover] oudere knopcode is nog actief; vernieuw de webclient om dubbele handlers te voorkomen.');
         return;
     }
-    var DC_BUILD = '1.4.0.6 2026-11-07';
+    var DC_BUILD = '1.4.0.7 2026-11-07';
     window.__discoverRequestButton = true;
-    window.__discoverRequestButtonVersion = '1.4.0.6';
+    window.__discoverRequestButtonVersion = '1.4.0.7';
 
     // Themakleur (instelling "Weergave"): CSS-variabelen op <html>, gebruikt door de Discover-pagina en de rijen en
     // knoppen op Emby's pagina's. Laatste waarde onthouden, zodat de kleur bij het openen niet eerst geel flitst.
@@ -51,7 +51,7 @@
         })();
     }
     window.__discoverRequestButtonBuild = DC_BUILD;
-    console.log('[Discover] request-button script loaded v1.4.0.6 build ' + DC_BUILD);
+    console.log('[Discover] request-button script loaded v1.4.0.7 build ' + DC_BUILD);
 
     var uiLanguage = 'nl';
     function text(dutch, english, german, norwegian) {
@@ -82,7 +82,7 @@
                     'color:#ffd666;background:rgba(0,0,0,.7);padding:4px 8px;border-radius:4px;pointer-events:none;white-space:pre-wrap;';
                 document.body.appendChild(el);
             }
-            el.textContent = 'Discover v1.4.0.6 | ' + msg;
+            el.textContent = 'Discover v1.4.0.7 | ' + msg;
         } catch (e) { }
     }
     var isAdmin = false;
@@ -332,7 +332,7 @@
             var bcs = btn ? getComputedStyle(btn) : null;
             var vv = window.visualViewport;
             el.textContent = [
-                'Discover v1.4.0.6 build ' + DC_BUILD + ' (' + (window.__discoverRequestButtonBuild || '?') + ')',
+                'Discover v1.4.0.7 build ' + DC_BUILD + ' (' + (window.__discoverRequestButtonBuild || '?') + ')',
                 'item page: ' + (document.querySelector('.itemDetailPage') ? 'ja' : 'nee') + ' body=' + document.body.className.split(/\s+/).filter(function (c) { return /^(dc|discover)/.test(c); }).join(' '),
                 'bar: ' + (info.bar ? describe(info.bar) + ' ' + rectText(info.bar) : 'niet gevonden') + ' h=' + info.measured,
                 'mode=' + info.mode + ' --dc-bottom-clear=' + (document.documentElement.style.getPropertyValue('--dc-bottom-clear') || '(leeg)'),
@@ -366,8 +366,27 @@
             }
             return null;
         }
+        function reset() {
+            if (!last && !document.querySelector('[data-dc-lift], .' + SCROLLER + ', .dc-clear-page')) { return; }
+            last = '';
+            var old = document.querySelectorAll('.' + SCROLLER + ', .dc-clear-page');
+            for (var o = 0; o < old.length; o++) { old[o].classList.remove(SCROLLER); old[o].classList.remove('dc-clear-page'); }
+            liftButtonBar(false, 0);
+            document.body.classList.remove(CLS);
+            document.documentElement.style.removeProperty('--dc-bottom-clear');
+        }
+        function tvDevice() {
+            return document.documentElement.classList.contains('layout-tv') || /Web0S|webOS|Tizen|SmartTV|NetCast/i.test(navigator.userAgent || '');
+        }
         function update() {
             if (!document.body) { return; }
+            // Only item/list pages and our own Discover root are measured; Emby's other views (now playing, dashboard) and TVs are left alone.
+            var ours = (window.__discoverRouteAllowed ? window.__discoverRouteAllowed() : false) || !!document.querySelector('.dcRoot');
+            if (!ours || tvDevice()) {
+                reset();
+                debugPanel({ bar: null, measured: 0, mode: tvDevice() ? 'tv-uit' : 'route-uit', scroller: null, lift: null });
+                return;
+            }
             var measured = Math.max(0, Math.ceil(window.innerHeight - barTop()));
             var bar = lastBar;
             var px = measured > 0 ? measured + 16 : 0;
@@ -2522,6 +2541,7 @@
         } catch (e) { }
         return true;
     }
+    window.__discoverRouteAllowed = isAllowedRoute;
 
     function removeOurUi() {
         try {

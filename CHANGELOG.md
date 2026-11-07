@@ -1,3 +1,7 @@
+## Version 1.4.0.7
+
+- Fix: the bottom-bar clearance logic (measuring fixed/sticky elements, `--dc-bottom-clear`, `dc-has-bottom-bar`, lifting our button bar) now runs only on item/folder pages and our own Discover root, and never on TVs (webOS/Tizen/`layout-tv`). On every other view (now playing, remote control, dashboard) nothing is measured or changed and any leftover state is removed.
+
 ## Version 1.4.0.6
 
 - Fix: our floating buttons/overlays (Request/Trailer etc.) are now shown on a whitelist only: a real item page (`#!/item?id=...`) or folder list. On every other route (now playing, remote control, sessions, dashboard, home) and whenever Emby's now-playing/remote-control view is open they are removed and hidden, also on hashchange/viewshow.
