@@ -3,14 +3,14 @@
  * Verbergt ook "Media informatie" op Discover/Trailers-detailpagina's. */
 (function () {
     'use strict';
-    if (window.__discoverRequestButtonVersion === '1.4.0.3') { return; }
+    if (window.__discoverRequestButtonVersion === '1.4.0.4') { return; }
     if (window.__discoverRequestButton) {
         console.warn('[Discover] oudere knopcode is nog actief; vernieuw de webclient om dubbele handlers te voorkomen.');
         return;
     }
-    var DC_BUILD = '1.4.0.3 2026-11-07';
+    var DC_BUILD = '1.4.0.4 2026-11-07';
     window.__discoverRequestButton = true;
-    window.__discoverRequestButtonVersion = '1.4.0.3';
+    window.__discoverRequestButtonVersion = '1.4.0.4';
 
     // Themakleur (instelling "Weergave"): CSS-variabelen op <html>, gebruikt door de Discover-pagina en de rijen en
     // knoppen op Emby's pagina's. Laatste waarde onthouden, zodat de kleur bij het openen niet eerst geel flitst.
@@ -51,7 +51,7 @@
         })();
     }
     window.__discoverRequestButtonBuild = DC_BUILD;
-    console.log('[Discover] request-button script loaded v1.4.0.3 build ' + DC_BUILD);
+    console.log('[Discover] request-button script loaded v1.4.0.4 build ' + DC_BUILD);
 
     var uiLanguage = 'nl';
     function text(dutch, english, german, norwegian) {
@@ -82,7 +82,7 @@
                     'color:#ffd666;background:rgba(0,0,0,.7);padding:4px 8px;border-radius:4px;pointer-events:none;white-space:pre-wrap;';
                 document.body.appendChild(el);
             }
-            el.textContent = 'Discover v1.4.0.3 | ' + msg;
+            el.textContent = 'Discover v1.4.0.4 | ' + msg;
         } catch (e) { }
     }
     var isAdmin = false;
@@ -130,6 +130,7 @@
             '.discover-season-request-card [class*="playedIndicator"], .discover-no-played [class*="playedIndicator"] { display: none !important; }',
             '.discover-channel-landscape-card .cardScalable { aspect-ratio: 16 / 9 !important; height: auto !important; padding: 0 !important; }',
             '.discover-season-request-card .cardScalable { aspect-ratio: 2 / 3 !important; height: auto !important; padding: 0 !important; }',
+            '.dc-playback .btnDiscoverFloating, .dc-playback .btnDiscoverRequest, .dc-playback .btnDiscoverRemove, .dc-playback .discover-season-info, .dc-playback .discover-toast, .dc-playback #dc-debug-panel, .dc-playback .discover-row-section { display: none !important; }',
             '.discover-season-info { box-sizing: border-box; margin-top: 14px; max-width: 640px; overflow: hidden; border: 1px solid rgba(255,255,255,.14); border-radius: 10px; background: rgba(10,16,28,.72); color: #e8edf6; font-size: 13px; line-height: 1.35; }',
             '.discover-season-info-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 14px; font-weight: 700; font-size: 14px; }',
             '.discover-season-info-rating { color: var(--dc-accent,#ffb400); white-space: nowrap; }',
@@ -331,7 +332,7 @@
             var bcs = btn ? getComputedStyle(btn) : null;
             var vv = window.visualViewport;
             el.textContent = [
-                'Discover v1.4.0.3 build ' + DC_BUILD + ' (' + (window.__discoverRequestButtonBuild || '?') + ')',
+                'Discover v1.4.0.4 build ' + DC_BUILD + ' (' + (window.__discoverRequestButtonBuild || '?') + ')',
                 'item page: ' + (document.querySelector('.itemDetailPage') ? 'ja' : 'nee') + ' body=' + document.body.className.split(/\s+/).filter(function (c) { return /^(dc|discover)/.test(c); }).join(' '),
                 'bar: ' + (info.bar ? describe(info.bar) + ' ' + rectText(info.bar) : 'niet gevonden') + ' h=' + info.measured,
                 'mode=' + info.mode + ' --dc-bottom-clear=' + (document.documentElement.style.getPropertyValue('--dc-bottom-clear') || '(leeg)'),
@@ -2673,11 +2674,31 @@
         }
     }
 
+    // In de videospeler (OSD) mogen onze zwevende knoppen en overlays er niet bovenop staan.
+    function isPlaybackView() {
+        var h = (window.location.hash || '').toLowerCase().replace(/^#!?/, '');
+        if (/^\/(video|videoosd|nowplaying)/.test(h)) { return true; }
+        try {
+            if (document.querySelector('.videoOsdPage:not(.hide), #videoOsdPage:not(.hide), [data-type="video-osd"]:not(.hide), .videoPlayerContainer')) { return true; }
+            var v = document.querySelector('video.htmlvideoplayer, .htmlvideoplayer');
+            if (v && !v.paused) { return true; }
+            var b = document.body;
+            if (b && b.classList && (b.classList.contains('withFullPlayer') || b.classList.contains('videoplayer'))) { return true; }
+        } catch (e) { }
+        return false;
+    }
+    function syncPlaybackClass() {
+        var de = document.documentElement; if (!de) { return; }
+        var on = isPlaybackView();
+        if (on !== de.classList.contains('dc-playback')) { de.classList.toggle('dc-playback', on); }
+    }
+
     function start() {
         // webOS/Tizen zetten niet altijd "layout-tv": dan zelf een klasse, zodat de tv-stijlen (focusrand, geen pijlen) gelden.
         try { if (rowIsTv() && document.documentElement) { document.documentElement.classList.add('discover-tv'); } } catch (e) { }
         applyRouteState();
-        window.addEventListener('hashchange', applyRouteState);
+        syncPlaybackClass();
+        window.addEventListener('hashchange', function () { applyRouteState(); syncPlaybackClass(); });
         // Na een klik op Afspelen/Aanvragen op de aanvraagpagina de status even later opnieuw ophalen.
         document.addEventListener('click', function (e) {
             var id = itemIdFromHash();
@@ -2686,7 +2707,8 @@
             if (!t) { return; }
             setTimeout(function () { delete lookups[id]; delete askStatus[id]; schedule(); }, 5000);
         }, true);
-        document.addEventListener('viewshow', applyRouteState, true);
+        document.addEventListener('viewshow', function () { applyRouteState(); syncPlaybackClass(); }, true);
+        setInterval(syncPlaybackClass, 700);
         document.addEventListener('command', onRowCommand, true);
         document.addEventListener('click', function () { if (!isIdleRoute()) { schedule(); } }, true);
         setInterval(function () { if (!isIdleRoute()) { schedule(); } }, 2000);

@@ -1,3 +1,8 @@
+## Version 1.4.0.4
+
+- Fix: the **Theme colour** buttons are now usable with a TV remote: large buttons, a clear white focus ring, a check mark on the chosen colour, Left/Right (Up/Down) moves and selects, OK/Enter selects.
+- Fix: our floating buttons and overlays (Request, Trailer, Cancel, toasts, season info, rows) are hidden while a video is playing (video OSD / player view detected by route, OSD element or playing video), also when the player opens while they already exist.
+
 ## Version 1.4.0.3
 
 - Fix: the **Theme colour** setting showed an empty box on some browsers/TVs (Emby's select list did not render) so no colour could be chosen and the pages stayed yellow. It is now a row of colour buttons (selected one outlined, Red included); the default stays yellow when nothing is chosen.
