@@ -20,18 +20,13 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             : languageCode(pluginLanguage);
     }
 
-    // Themakleur: knoppenrij met kleurstalen i.p.v. emby-select (die toonde op sommige browsers/tv's niets).
+    // Themakleur: gewone <select> (emby-select rendert op sommige browsers/tv's leeg) + kleurblokje.
     function setAccent(view, hex) {
-        el(view, 'selAccent').value = hex;
-        var btns = view.querySelectorAll('.dcAccentBtn');
-        for (var i = 0; i < btns.length; i++) {
-            var on = btns[i].getAttribute('data-accent') === hex;
-            btns[i].setAttribute('aria-pressed', on ? 'true' : 'false');
-            btns[i].setAttribute('role', 'radio');
-            btns[i].setAttribute('aria-checked', on ? 'true' : 'false');
-            btns[i].tabIndex = 0;
-            btns[i].style.fontWeight = on ? '800' : '400';
-        }
+        var sel = el(view, 'selAccent');
+        if (!sel.querySelector('option[value="' + hex + '"]')) { var o = document.createElement('option'); o.value = hex; o.textContent = '#' + hex; sel.appendChild(o); }
+        sel.value = hex;
+        var pv = el(view, 'accentPreview');
+        if (pv) { pv.style.background = '#' + hex; }
     }
 
     function updateAutoTmdbOption(view, state) {
@@ -917,18 +912,7 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             return false;
         });
 
-        view.querySelector('#accentSwatches').addEventListener('click', function (e) {
-            var b = e.target.closest ? e.target.closest('.dcAccentBtn') : null;
-            if (b) { e.preventDefault(); setAccent(view, b.getAttribute('data-accent')); }
-        });
-        view.querySelector('#accentSwatches').addEventListener('keydown', function (e) {
-            var k = e.key || '', b = e.target.closest ? e.target.closest('.dcAccentBtn') : null;
-            if (!b) { return; }
-            var all = Array.prototype.slice.call(view.querySelectorAll('.dcAccentBtn')), i = all.indexOf(b), n = -1;
-            if (k === 'ArrowRight' || k === 'ArrowDown') { n = (i + 1) % all.length; }
-            else if (k === 'ArrowLeft' || k === 'ArrowUp') { n = (i + all.length - 1) % all.length; }
-            if (n >= 0) { e.preventDefault(); e.stopPropagation(); all[n].focus(); setAccent(view, all[n].getAttribute('data-accent')); }
-        });
+        el(view, 'selAccent').addEventListener('change', function () { setAccent(view, this.value); });
         view.querySelector('.btnTestTmdb').addEventListener('click', function () {
             testTmdb(view, state);
         });
