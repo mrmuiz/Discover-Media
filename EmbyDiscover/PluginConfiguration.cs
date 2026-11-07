@@ -44,6 +44,17 @@ namespace Emby.Plugins.Discover
         public bool PosterShowYear { get; set; } = true;
         /// <summary>TMDB-score onder de posters.</summary>
         public bool PosterShowScore { get; set; } = true;
+        /// <summary>Score onder de posters: tmdb, imdb (IMDb-dataset) of none. Leeg = migratie vanuit PosterShowScore (aan = tmdb).</summary>
+        public string PosterScoreSource { get; set; } = "";
+        public string EffPosterScoreSource
+        {
+            get
+            {
+                var s = (PosterScoreSource ?? "").Trim().ToLowerInvariant();
+                if (s == "tmdb" || s == "imdb" || s == "none") return s;
+                return PosterShowScore ? "tmdb" : "none";
+            }
+        }
         /// <summary>Themakleur (knoppen, focus, accenten) als #rrggbb.</summary>
         public string AccentColor { get; set; } = "#ffb400";
         /// <summary>Rij "Onlangs toegevoegd" op de Discover-pagina.</summary>

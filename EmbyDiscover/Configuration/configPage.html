@@ -112,15 +112,14 @@
                         </span>
                     </label>
                 </div>
-                <div class="checkboxContainer">
-                    <label class="emby-checkbox-label">
-                        <input is="emby-checkbox" type="checkbox" id="chkPosterScore" />
-                        <span class="checkboxLabel" id="lbl_chkPosterScore">TMDB-score onder de posters</span>
-                        <span class="emby-checkbox-outline">
-                            <span class="emby-checkbox-on"><i class="md-icon">check</i></span>
-                            <span class="emby-checkbox-off"></span>
-                        </span>
-                    </label>
+                                <div class="selectContainer">
+                    <label class="selectLabel" id="lbl_selPosterScore" style="display:block">Score onder de posters</label>
+                    <select id="selPosterScore" style="background:#2b2b2b;color:#fff;border:2px solid #888;border-radius:.4em;font-size:1.2em;min-height:2.8em;padding:.4em .8em;min-width:14em;margin:.5em 0">
+                        <option value="tmdb" id="optScore0" style="background:#222;color:#fff">TMDB-score</option>
+                        <option value="imdb" id="optScore1" style="background:#222;color:#fff">IMDb-score</option>
+                        <option value="none" id="optScore2" style="background:#222;color:#fff">Geen score</option>
+                    </select>
+                    <div class="fieldDescription" id="desc_selPosterScore">IMDb-score komt uit de gratis IMDb-dataset (alleen voor niet-commercieel gebruik), geen API-sleutel nodig; de server downloadt die zelf en ververst wekelijks. Zonder IMDb-gegevens wordt de TMDB-score getoond.</div>
                 </div>
 
                 <h3 id="hdgExtraRows">Extra rijen op de Discover-pagina</h3>

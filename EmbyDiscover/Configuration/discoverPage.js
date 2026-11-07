@@ -32,8 +32,8 @@ define([], function () {
 
     // Load as an external script so Emby's Content-Security-Policy does not block inline execution.
     function loadButtonScript() {
-        if (window.__discoverRequestButtonVersion === '1.4.0.4') {
-            diag.load = text('script is al actief v1.4.0.4', 'script already active v1.4.0.4', 'Skript bereits aktiv v1.4.0.4');
+        if (window.__discoverRequestButtonVersion === '1.4.0.5') {
+            diag.load = text('script is al actief v1.4.0.5', 'script already active v1.4.0.5', 'Skript bereits aktiv v1.4.0.5');
             showDiag();
             return;
         }
@@ -51,7 +51,7 @@ define([], function () {
             script.src = u + (u.indexOf('?') === -1 ? '?' : '&') + '_=' + Date.now();
             script.async = true;
             script.onload = function () {
-                if (window.__discoverRequestButtonVersion === '1.4.0.4') {
+                if (window.__discoverRequestButtonVersion === '1.4.0.5') {
                     diag.load = text('OK via extern script ', 'OK via external script ', 'OK über externes Skript ') + u;
                     showDiag();
                 } else {
@@ -92,6 +92,7 @@ define([], function () {
         }
         try { var savedAccent = localStorage.getItem('dcAccent'); if (savedAccent) { applyAccent(savedAccent); } } catch (e) { }
         var omdbOn = false;
+        var scoreSource = 'tmdb';
         diagEl = view.querySelector('.dcDiag');
         diagEl.style.display = 'none';
         loadButtonScript();
@@ -103,6 +104,8 @@ define([], function () {
             document.documentElement.classList.toggle('dcNoYear', r.PosterShowYear === false);
             document.documentElement.classList.toggle('dcNoScore', r.PosterShowScore === false);
             omdbOn = !!r.OmdbRatings;
+            scoreSource = r.PosterScoreSource || (r.PosterShowScore === false ? 'none' : 'tmdb');
+            if (typeof scanPosterScores === 'function') { scanPosterScores(); }
             fourK = { movie: !!r.Seerr4kMovie, tv: !!r.Seerr4kTv };
             window.__discoverRequestService = r.RequestService || '';
             diag.status = 'v' + (r.PluginVersion || '?') + ' | ' + text('pluginresource: ', 'plugin resource: ', 'Pluginressource: ') + (r.ButtonScript || text('onbekend', 'unknown', 'unbekannt'));
@@ -411,7 +414,7 @@ define([], function () {
                 ? '<img loading="lazy" src="' + esc(i.Poster) + '" alt="" />'
                 : '<div class="dcNoPoster">' + esc(i.Title) + '</div>';
             var sub = [];
-            if (typeof i.Rating === 'number' && i.Rating > 0) { sub.push('<span class="dcStar">&#9733; ' + i.Rating.toFixed(1) + '</span>'); }
+            if (typeof i.Rating === 'number' && i.Rating > 0) { sub.push('<span class="dcStar"' + (i.TmdbId ? '' : '') + '>&#9733; ' + i.Rating.toFixed(1) + '</span>'); }
             if (i.Year) { sub.push('<span class="dcYear">' + i.Year + '</span>'); }
             // Persoonspagina: welke rol (personage of regie), op een eigen regel.
             var role = i.Role ? (i.Role === 'Director' ? text('Regie', 'Director', 'Regie', 'Regi') : i.Role) : '';
@@ -429,6 +432,55 @@ define([], function () {
                 capQueueHtml(i, mine === true) +
                 '</div></div>';
         }
+
+        // IMDb-score (lokale IMDb-dataset op de server) lazy voor zichtbare kaarten; geen data = TMDB-score blijft staan.
+        var imdbCache = {}, imdbQueue = [], imdbBusy = 0, scoreObs = null;
+        function fetchImdb(i, cb) {
+            var k = i.Type + ':' + i.TmdbId;
+            var c = imdbCache[k];
+            if (c && c.done) { cb(c.r); return; }
+            if (c) { c.cbs.push(cb); return; }
+            c = imdbCache[k] = { done: false, r: null, cbs: [cb] };
+            imdbQueue.push({ i: i, c: c });
+            pumpImdb();
+        }
+        function pumpImdb() {
+            while (imdbBusy < 3 && imdbQueue.length) {
+                (function (job) {
+                    imdbBusy++;
+                    function finish(r) { imdbBusy--; job.c.done = true; job.c.r = r; var l = job.c.cbs; job.c.cbs = []; for (var x = 0; x < l.length; x++) { l[x](r); } pumpImdb(); }
+                    api('GET', 'Discover/ImdbScore', { Type: job.i.Type, TmdbId: job.i.TmdbId }).then(finish, function () { finish(null); });
+                })(imdbQueue.shift());
+            }
+        }
+        function fillImdbScore(card) {
+            var i = items[card.getAttribute('data-key')];
+            if (!i || !i.TmdbId) { return; }
+            fetchImdb(i, function (r) {
+                if (!r || !r.Imdb) { return; }
+                var slot = card.querySelector('.dcCapSub .dcStar');
+                if (!slot) { var sub = card.querySelector('.dcCapSub'); if (!sub) { return; } slot = document.createElement('span'); slot.className = 'dcStar'; sub.insertBefore(slot, sub.firstChild); }
+                slot.className = 'dcStar dcImdb';
+                slot.innerHTML = '<b>IMDb</b> ' + esc(r.Imdb);
+                slot.title = 'IMDb' + (r.Votes ? ' \u00B7 ' + r.Votes : '');
+            });
+        }
+        function scanPosterScores() {
+            if (scoreSource !== 'imdb') { return; }
+            var cards = content.querySelectorAll('.dcCard:not([data-sc])');
+            for (var x = 0; x < cards.length; x++) {
+                var card = cards[x];
+                card.setAttribute('data-sc', '1');
+                if (typeof IntersectionObserver === 'undefined') { fillImdbScore(card); continue; }
+                if (!scoreObs) {
+                    scoreObs = new IntersectionObserver(function (es) {
+                        es.forEach(function (e) { if (e.isIntersecting) { scoreObs.unobserve(e.target); fillImdbScore(e.target); } });
+                    }, { rootMargin: '200px' });
+                }
+                scoreObs.observe(card);
+            }
+        }
+        if (typeof MutationObserver !== 'undefined') { new MutationObserver(function () { scanPosterScores(); }).observe(content, { childList: true, subtree: true }); }
 
         // Skeleton tijdens het laden (voelt sneller dan "Laden...").
         function skelCards(n) {
