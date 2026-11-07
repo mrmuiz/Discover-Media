@@ -239,10 +239,6 @@ define(['emby-button'], function () {
                     else if (/^(fout|webclient niet gevonden)/.test(wi)) { bad(lines, wiLabel + wi); }
                     else { info(lines, wiLabel + wi); }
                     info(lines, text('Kanaal opgevraagd door Emby: ', 'Channel requests by Emby: ', 'Kanalaufrufe durch Emby: ') + r.ChannelCalls + 'x; ' + text('aanvragen gelukt/mislukt: ', 'requests succeeded/failed: ', 'Anfragen erfolgreich/fehlgeschlagen: ') + (r.Requests - r.RequestErrors) + '/' + r.RequestErrors);
-                    info(lines, 'DLL: ' + (r.DllBuild || '?'));
-                    info(lines, text('Tegel-titel nu: ', 'Tile title now: ', 'Kachel-Titel jetzt: ') + (r.Spotlight || '-') + ' | ' + text('gekozen: ', 'chosen: ', 'gewählt: ') + (r.SpotlightChosen || '-'));
-                    info(lines, text('Tegel-achtergrond: ', 'Tile backdrop: ', 'Kachel-Hintergrund: ') + (r.SpotlightImage || '-') + ' | Backdrop ' + r.BackdropCalls + 'x (OK ' + r.BackdropOk + ', ' + text('mislukt ', 'failed ', 'fehlgeschlagen ') + r.BackdropFail + '), Primary/Thumb ' + r.PrimaryCalls + 'x, ' + text('ondersteunde plaatjes ', 'supported images ', 'unterstützte Bilder ') + r.SupportedImageCalls + 'x, ' + text('beschrijving ', 'description ', 'Beschreibung ') + r.DescCalls + 'x');
-                    info(lines, text('Tegel-plaatje (Primary/Thumb): ', 'Tile image (Primary/Thumb): ', 'Kachelbild (Primary/Thumb): ') + (r.PrimaryImage || '-'));
                 });
             });
         }).then(function () {

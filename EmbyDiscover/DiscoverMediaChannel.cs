@@ -63,87 +63,24 @@ namespace Emby.Plugins.Discover
 
         // ---------- IChannel ----------
         public string Name => "Discover Media";
-        public string Description
-        {
-            get
-            {
-                var basis = DiscoverLanguage.Text(
-                    "Ontdek films en series en vraag ze aan.",
-                    "Discover movies and series and request them.",
-                    "Entdecke Filme und Serien und fordere sie an.");
-                try
-                {
-                    DiscoverDiagnostics.DescCalls++; DiscoverDiagnostics.LastDescCallUtc = DateTime.UtcNow.ToString("u");
-                    TileSpotlight.Refresh(_tmdb);
-                    var l =  TileSpotlight.Label(TileSpotlight.Current);
-                    if (l != null) return DiscoverLanguage.Text("Nu: ", "Now: ", "Jetzt: ") + l + "\n" + basis;
-                }
-                catch { }
-                return basis;
-            }
-        }
+        public string Description => DiscoverLanguage.Text(
+            "Ontdek films en series en vraag ze aan.",
+            "Discover movies and series and request them.",
+            "Entdecke Filme und Serien und fordere sie an.");
         public string HomePageUrl => "";
 
         // Ophogen als Emby oude (bewaarde) kanaalinhoud blijft tonen.
         // De tegel-epoch verandert als de opruiming tegelplaatjes heeft verwijderd: dan vraagt Emby de mappen opnieuw op
         // en maakt de plugin de ontbrekende plaatjes opnieuw (anders verwijst Emby naar een bestand dat niet meer bestaat).
-        public string DataVersion => (Plugin.GetCurrentConfiguration().ShowTrailerTile ? "76" : "76-notrailer") + "-e" + CacheCleaner.TileEpoch + "-s" + TileSpotlight.CurrentSlot;
+        public string DataVersion => (Plugin.GetCurrentConfiguration().ShowTrailerTile ? "76" : "76-notrailer") + "-e" + CacheCleaner.TileEpoch;
         public ChannelParentalRating ParentalRating => ChannelParentalRating.GeneralAudience;
         public bool IsEnabledFor(string userId) => true;
 
-        public IEnumerable<ImageType> GetSupportedChannelImages()
-        {
-            DiscoverDiagnostics.SupportedImageCalls++;
-            return new[] { ImageType.Primary, ImageType.Thumb, ImageType.Backdrop };
-        }
+        public IEnumerable<ImageType> GetSupportedChannelImages() =>
+            new[] { ImageType.Primary, ImageType.Thumb };
 
-        public async Task<DynamicImageResponse> GetChannelImage(ImageType type, CancellationToken cancellationToken)
+        public Task<DynamicImageResponse> GetChannelImage(ImageType type, CancellationToken cancellationToken)
         {
-            if (type != ImageType.Backdrop)
-            {
-                DiscoverDiagnostics.PrimaryCalls++;
-                DiscoverDiagnostics.LastPrimaryUtc = DateTime.UtcNow.ToString("u");
-                try
-                {
-                    var file = await TileSpotlight.TileFileAsync(_tmdb).ConfigureAwait(false);
-                    if (!string.IsNullOrEmpty(file) && System.IO.File.Exists(file))
-                    {
-                        DiscoverDiagnostics.LastPrimaryResult = "spotlight-tegel " + System.IO.Path.GetFileName(file);
-                        return new DynamicImageResponse
-                        {
-                            Stream = new System.IO.MemoryStream(System.IO.File.ReadAllBytes(file)),
-                            Format = ImageFormat.Jpg
-                        };
-                    }
-                    DiscoverDiagnostics.LastPrimaryResult = "logo (spotlight-tegel niet gemaakt: geen titel/ffmpeg/tegeltekst uit)";
-                }
-                catch (Exception ex) { DiscoverDiagnostics.LastPrimaryResult = "logo (FOUT " + ex.Message + ")"; }
-            }
-            if (type == ImageType.Backdrop)
-            {
-                // Achtergrond van de titel van het moment (zelfde titel als in de kanaalbeschrijving en de eerste map).
-                DiscoverDiagnostics.BackdropCalls++;
-                DiscoverDiagnostics.LastBackdropUtc = DateTime.UtcNow.ToString("u");
-                try
-                {
-                    var bytes = await TileSpotlight.ImageAsync(_tmdb).ConfigureAwait(false);
-                    if (bytes != null && bytes.Length > 0)
-                    {
-                        DiscoverDiagnostics.BackdropOk++;
-                        DiscoverDiagnostics.LastBackdropResult = "OK " + bytes.Length + " B";
-                        return new DynamicImageResponse { Stream = new System.IO.MemoryStream(bytes), Format = ImageFormat.Jpg };
-                    }
-                    DiscoverDiagnostics.BackdropFail++;
-                    DiscoverDiagnostics.LastBackdropResult = "geen afbeelding (nog geen titel of TMDB-fout)";
-                }
-                catch (Exception ex)
-                {
-                    DiscoverDiagnostics.BackdropFail++;
-                    DiscoverDiagnostics.LastBackdropResult = "FOUT " + ex.Message;
-                    DiscoverDiagnostics.Add("kanaal-achtergrond mislukt: " + ex.Message);
-                }
-                return new DynamicImageResponse();
-            }
             var stream = GetType().Assembly.GetManifestResourceStream(
                 GetType().Namespace + ".Resources.discover.png");
             var response = new DynamicImageResponse();
@@ -152,7 +89,7 @@ namespace Emby.Plugins.Discover
                 response.Stream = stream;
                 response.Format = ImageFormat.Png;
             }
-            return response;
+            return Task.FromResult(response);
         }
 
         public ChannelFeatures Features => new ChannelFeatures
@@ -786,21 +723,6 @@ namespace Emby.Plugins.Discover
                 .ToArray();
 
             var items = new List<ChannelItemInfo>();
-            // Eerste item: de titel van het moment (dezelfde als de kanaalachtergrond); OK opent aanvragen/trailer.
-            try
-            {
-                var spot = await TileSpotlight.GetAsync(_tmdb, TimeSpan.FromSeconds(3)).ConfigureAwait(false);
-                if (spot != null)
-                {
-                    var f = Folder((spot.Tv ? AskTvItemPrefix : AskItemPrefix) + (spot.Tv ? "t:" : "m:") + spot.Id,
-                        DiscoverLanguage.Text("Nu: ", "Now: ", "Jetzt: ") + TileSpotlight.Label(spot),
-                        TileSpotlight.BackdropUrl(spot),
-                        DiscoverLanguage.Text("Open om deze titel te bekijken of aan te vragen.", "Open to view or request this title.", "Öffnen, um diesen Titel anzusehen oder anzufordern."));
-                    f.ForceUpdate = true;
-                    items.Add(f);
-                }
-            }
-            catch (Exception ex) { DiscoverDiagnostics.Add("tegel-titel overgeslagen: " + ex.Message); }
             for (int i = 0; i < displayOrder.Length; i++)
             {
                 var sp = displayOrder[i];

@@ -11,8 +11,6 @@ namespace Emby.Plugins.Discover
 
         public static readonly DateTime LoadedUtc = DateTime.UtcNow;
         public static int ChannelCalls;
-        public static int DescCalls, SupportedImageCalls, BackdropCalls, PrimaryCalls, BackdropOk, BackdropFail;
-        public static string LastBackdropUtc = "", LastBackdropResult = "", LastDescCallUtc = "", LastPrimaryUtc = "", LastPrimaryResult = "";
         public static string ClipPath = "";
         public static int Requests;
         public static int RequestErrors;
@@ -20,14 +18,6 @@ namespace Emby.Plugins.Discover
         public static string ButtonScript = "OK Emby-pluginresource; open Discover om het script in deze browser te laden.";
         /// <summary>Resultaat van het (optioneel) in de webclient-index.html zetten van de lader (tegel -> Discover).</summary>
         public static string WebInject = "uit";
-
-        public static string DllBuildInfo()
-        {
-            var a = typeof(DiscoverDiagnostics).Assembly;
-            string t = "";
-            try { t = " build " + System.IO.File.GetLastWriteTimeUtc(string.IsNullOrEmpty(a.Location) && Plugin.Instance != null ? Plugin.Instance.AssemblyFilePath : a.Location).ToString("u"); } catch { }
-            return a.GetName().Version + t;
-        }
 
         public static void Add(string text)
         {
