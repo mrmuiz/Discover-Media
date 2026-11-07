@@ -1,3 +1,7 @@
+## Version 1.4.0.3
+
+- Fix: the **Theme colour** setting showed an empty box on some browsers/TVs (Emby's select list did not render) so no colour could be chosen and the pages stayed yellow. It is now a row of colour buttons (selected one outlined, Red included); the default stays yellow when nothing is chosen.
+
 ## Unreleased
 
 - Fix: a title stayed on **Importing** after it was already in Emby. Radarr/Sonarr keep a finished download in their queue with state `imported` (for example while the torrent keeps seeding); that state is no longer treated as importing, so the label disappears once the import is done.

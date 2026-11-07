@@ -20,6 +20,19 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             : languageCode(pluginLanguage);
     }
 
+    // Themakleur: knoppenrij met kleurstalen i.p.v. emby-select (die toonde op sommige browsers/tv's niets).
+    function setAccent(view, hex) {
+        el(view, 'selAccent').value = hex;
+        var btns = view.querySelectorAll('.dcAccentBtn');
+        for (var i = 0; i < btns.length; i++) {
+            var on = btns[i].getAttribute('data-accent') === hex;
+            btns[i].setAttribute('aria-pressed', on ? 'true' : 'false');
+            btns[i].style.outline = on ? '3px solid #fff' : 'none';
+            btns[i].style.outlineOffset = on ? '2px' : '0';
+            btns[i].style.fontWeight = on ? '800' : '400';
+        }
+    }
+
     function updateAutoTmdbOption(view, state) {
         var option = el(view, 'selTmdbLang').options[0];
         if (!option) { return; }
@@ -658,9 +671,9 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             el(view, 'chkShowOmdb').checked = c.ShowOmdbRatings !== false;
             el(view, 'txtOmdbKey').value = c.OmdbApiKey || '';
             // Waarden in de keuzelijst zonder # (Emby's keuzelijst op de tv kan niet met # overweg).
-            var acc = String(c.AccentColor || '#ffb400').toLowerCase().replace('#', ''), accSel = el(view, 'selAccent');
-            if (!accSel.querySelector('option[value="' + acc + '"]')) { var o = document.createElement('option'); o.value = acc; o.textContent = acc; accSel.appendChild(o); }
-            accSel.value = acc;
+            var acc = String(c.AccentColor || '#ffb400').toLowerCase().replace('#', '');
+            if (!/^[0-9a-f]{6}$/.test(acc)) { acc = 'ffb400'; }
+            setAccent(view, acc);
             el(view, 'chkShowRecentlyAdded').checked = c.ShowRecentlyAdded !== false;
             el(view, 'chkShowRecentRequests').checked = c.ShowRecentRequests !== false;
             el(view, 'txtTmdbList').value = c.TmdbListId || '';
@@ -903,6 +916,10 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             return false;
         });
 
+        view.querySelector('#accentSwatches').addEventListener('click', function (e) {
+            var b = e.target.closest ? e.target.closest('.dcAccentBtn') : null;
+            if (b) { e.preventDefault(); setAccent(view, b.getAttribute('data-accent')); }
+        });
         view.querySelector('.btnTestTmdb').addEventListener('click', function () {
             testTmdb(view, state);
         });
