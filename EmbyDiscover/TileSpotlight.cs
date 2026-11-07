@@ -94,6 +94,15 @@ namespace Emby.Plugins.Discover
 
         public static string BackdropUrl(Pick p) { return p == null ? null : "https://image.tmdb.org/t/p/w1280" + p.BackdropPath; }
 
+        /// <summary>Liggende tegel (achtergrond + titeltekst) van de titel van het moment voor Primary/Thumb; null als dat niet lukt.</summary>
+        public static async Task<string> TileFileAsync(TmdbClient tmdb)
+        {
+            var p = await GetAsync(tmdb, TimeSpan.FromSeconds(6)).ConfigureAwait(false);
+            if (p == null) return null;
+            return await FolderTile.Create("spot", DiscoverLanguage.Text("Nu: ", "Now: ", "Jetzt: ") + Label(p), BackdropUrl(p),
+                CancellationToken.None, "202020", false).ConfigureAwait(false);
+        }
+
         /// <summary>De bytes van de achtergrond van de huidige keuze (per keuze eenmaal opgehaald).</summary>
         public static async Task<byte[]> ImageAsync(TmdbClient tmdb)
         {
