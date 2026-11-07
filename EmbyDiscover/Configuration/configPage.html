@@ -87,7 +87,7 @@
                 <div class="selectContainer">
                     <label class="selectLabel" id="lbl_selAccent" style="display:block">Themakleur (knoppen, focus en accenten)</label>
                     <input type="hidden" id="selAccent" value="ffb400" />
-                    <div id="accentSwatches" style="display:flex;flex-wrap:wrap;gap:.5em;margin:.4em 0">
+                    <style>#accentSwatches .dcAccentBtn{min-width:8em;min-height:3em;padding:.6em 1.2em;border:3px solid transparent;border-radius:.6em;font-size:1.15em;font-family:inherit;cursor:pointer}#accentSwatches .dcAccentBtn:focus,#accentSwatches .dcAccentBtn:focus-visible{outline:4px solid #fff!important;outline-offset:3px!important;transform:scale(1.08);box-shadow:0 0 0 7px rgba(0,0,0,.8)}#accentSwatches .dcAccentBtn[aria-pressed=true]::before{content:"\2713  "}</style>`n                    <div id="accentSwatches" role="radiogroup" style="display:flex;flex-wrap:wrap;gap:.9em;margin:.6em 0">
                         <button type="button" class="dcAccentBtn" data-accent="ffb400" id="optAccent0" style="background:#ffb400;color:#111">Geel (standaard)</button>
                         <button type="button" class="dcAccentBtn" data-accent="52b54b" id="optAccent1" style="background:#52b54b;color:#111">Emby-groen</button>
                         <button type="button" class="dcAccentBtn" data-accent="2f80ed" id="optAccent2" style="background:#2f80ed;color:#fff">Blauw</button>

@@ -27,8 +27,9 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         for (var i = 0; i < btns.length; i++) {
             var on = btns[i].getAttribute('data-accent') === hex;
             btns[i].setAttribute('aria-pressed', on ? 'true' : 'false');
-            btns[i].style.outline = on ? '3px solid #fff' : 'none';
-            btns[i].style.outlineOffset = on ? '2px' : '0';
+            btns[i].setAttribute('role', 'radio');
+            btns[i].setAttribute('aria-checked', on ? 'true' : 'false');
+            btns[i].tabIndex = 0;
             btns[i].style.fontWeight = on ? '800' : '400';
         }
     }
@@ -919,6 +920,14 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         view.querySelector('#accentSwatches').addEventListener('click', function (e) {
             var b = e.target.closest ? e.target.closest('.dcAccentBtn') : null;
             if (b) { e.preventDefault(); setAccent(view, b.getAttribute('data-accent')); }
+        });
+        view.querySelector('#accentSwatches').addEventListener('keydown', function (e) {
+            var k = e.key || '', b = e.target.closest ? e.target.closest('.dcAccentBtn') : null;
+            if (!b) { return; }
+            var all = Array.prototype.slice.call(view.querySelectorAll('.dcAccentBtn')), i = all.indexOf(b), n = -1;
+            if (k === 'ArrowRight' || k === 'ArrowDown') { n = (i + 1) % all.length; }
+            else if (k === 'ArrowLeft' || k === 'ArrowUp') { n = (i + all.length - 1) % all.length; }
+            if (n >= 0) { e.preventDefault(); e.stopPropagation(); all[n].focus(); setAccent(view, all[n].getAttribute('data-accent')); }
         });
         view.querySelector('.btnTestTmdb').addEventListener('click', function () {
             testTmdb(view, state);
