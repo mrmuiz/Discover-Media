@@ -197,6 +197,7 @@ namespace Emby.Plugins.Discover
         public string Spotlight { get; set; }
         public string SpotlightChosen { get; set; }
         public string SpotlightImage { get; set; }
+        public string PrimaryImage { get; set; }
         public int DescCalls { get; set; }
         public int SupportedImageCalls { get; set; }
         public int BackdropCalls { get; set; }
@@ -426,7 +427,7 @@ namespace Emby.Plugins.Discover
 
         private static string DllBuildTime()
         {
-            try { return System.IO.File.GetLastWriteTime(typeof(Plugin).Assembly.Location).ToString("yyyy-MM-dd HH:mm:ss"); }
+            try { return System.IO.File.GetLastWriteTime(string.IsNullOrEmpty(typeof(Plugin).Assembly.Location) && Plugin.Instance != null ? Plugin.Instance.AssemblyFilePath : typeof(Plugin).Assembly.Location).ToString("yyyy-MM-dd HH:mm:ss"); }
             catch { return "?"; }
         }
 
@@ -466,6 +467,7 @@ namespace Emby.Plugins.Discover
                 Spotlight = TileSpotlight.Label(TileSpotlight.Current) ?? "-",
                 SpotlightChosen = (TileSpotlight.LastChooseUtc == "" ? "-" : TileSpotlight.LastChooseUtc) + " " + TileSpotlight.LastChooseResult,
                 SpotlightImage = (DiscoverDiagnostics.LastBackdropUtc == "" ? "-" : DiscoverDiagnostics.LastBackdropUtc) + " " + DiscoverDiagnostics.LastBackdropResult,
+                PrimaryImage = (DiscoverDiagnostics.LastPrimaryUtc == "" ? "-" : DiscoverDiagnostics.LastPrimaryUtc) + " " + DiscoverDiagnostics.LastPrimaryResult,
                 DescCalls = DiscoverDiagnostics.DescCalls,
                 SupportedImageCalls = DiscoverDiagnostics.SupportedImageCalls,
                 BackdropCalls = DiscoverDiagnostics.BackdropCalls,

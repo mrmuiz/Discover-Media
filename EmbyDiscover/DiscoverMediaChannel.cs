@@ -99,7 +99,26 @@ namespace Emby.Plugins.Discover
 
         public async Task<DynamicImageResponse> GetChannelImage(ImageType type, CancellationToken cancellationToken)
         {
-            if (type != ImageType.Backdrop) DiscoverDiagnostics.PrimaryCalls++;
+            if (type != ImageType.Backdrop)
+            {
+                DiscoverDiagnostics.PrimaryCalls++;
+                DiscoverDiagnostics.LastPrimaryUtc = DateTime.UtcNow.ToString("u");
+                try
+                {
+                    var file = await TileSpotlight.TileFileAsync(_tmdb).ConfigureAwait(false);
+                    if (!string.IsNullOrEmpty(file) && System.IO.File.Exists(file))
+                    {
+                        DiscoverDiagnostics.LastPrimaryResult = "spotlight-tegel " + System.IO.Path.GetFileName(file);
+                        return new DynamicImageResponse
+                        {
+                            Stream = new System.IO.MemoryStream(System.IO.File.ReadAllBytes(file)),
+                            Format = ImageFormat.Jpg
+                        };
+                    }
+                    DiscoverDiagnostics.LastPrimaryResult = "logo (spotlight-tegel niet gemaakt: geen titel/ffmpeg/tegeltekst uit)";
+                }
+                catch (Exception ex) { DiscoverDiagnostics.LastPrimaryResult = "logo (FOUT " + ex.Message + ")"; }
+            }
             if (type == ImageType.Backdrop)
             {
                 // Achtergrond van de titel van het moment (zelfde titel als in de kanaalbeschrijving en de eerste map).

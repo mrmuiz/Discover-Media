@@ -242,6 +242,7 @@ define(['emby-button'], function () {
                     info(lines, 'DLL: ' + (r.DllBuild || '?'));
                     info(lines, text('Tegel-titel nu: ', 'Tile title now: ', 'Kachel-Titel jetzt: ') + (r.Spotlight || '-') + ' | ' + text('gekozen: ', 'chosen: ', 'gewählt: ') + (r.SpotlightChosen || '-'));
                     info(lines, text('Tegel-achtergrond: ', 'Tile backdrop: ', 'Kachel-Hintergrund: ') + (r.SpotlightImage || '-') + ' | Backdrop ' + r.BackdropCalls + 'x (OK ' + r.BackdropOk + ', ' + text('mislukt ', 'failed ', 'fehlgeschlagen ') + r.BackdropFail + '), Primary/Thumb ' + r.PrimaryCalls + 'x, ' + text('ondersteunde plaatjes ', 'supported images ', 'unterstützte Bilder ') + r.SupportedImageCalls + 'x, ' + text('beschrijving ', 'description ', 'Beschreibung ') + r.DescCalls + 'x');
+                    info(lines, text('Tegel-plaatje (Primary/Thumb): ', 'Tile image (Primary/Thumb): ', 'Kachelbild (Primary/Thumb): ') + (r.PrimaryImage || '-'));
                 });
             });
         }).then(function () {

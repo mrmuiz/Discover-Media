@@ -12,7 +12,7 @@ namespace Emby.Plugins.Discover
         public static readonly DateTime LoadedUtc = DateTime.UtcNow;
         public static int ChannelCalls;
         public static int DescCalls, SupportedImageCalls, BackdropCalls, PrimaryCalls, BackdropOk, BackdropFail;
-        public static string LastBackdropUtc = "", LastBackdropResult = "", LastDescCallUtc = "";
+        public static string LastBackdropUtc = "", LastBackdropResult = "", LastDescCallUtc = "", LastPrimaryUtc = "", LastPrimaryResult = "";
         public static string ClipPath = "";
         public static int Requests;
         public static int RequestErrors;
@@ -25,7 +25,7 @@ namespace Emby.Plugins.Discover
         {
             var a = typeof(DiscoverDiagnostics).Assembly;
             string t = "";
-            try { t = " build " + System.IO.File.GetLastWriteTimeUtc(a.Location).ToString("u"); } catch { }
+            try { t = " build " + System.IO.File.GetLastWriteTimeUtc(string.IsNullOrEmpty(a.Location) && Plugin.Instance != null ? Plugin.Instance.AssemblyFilePath : a.Location).ToString("u"); } catch { }
             return a.GetName().Version + t;
         }
 
