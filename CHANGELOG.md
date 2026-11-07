@@ -1,3 +1,7 @@
+## Version 1.4.0.8
+
+- Fix: on Emby's sessions / 'what is playing' views (dashboard, nowplaying, queue, remote control, devices) Emby's own now-playing footer bar (loose pause/stop buttons outside the session cards) is hidden. The buttons inside the session cards are untouched. Proven with Emby's real CSS from the webOS app: our script changes no session-card button.
+
 ## Version 1.4.0.7
 
 - Fix: the bottom-bar clearance logic (measuring fixed/sticky elements, `--dc-bottom-clear`, `dc-has-bottom-bar`, lifting our button bar) now runs only on item/folder pages and our own Discover root, and never on TVs (webOS/Tizen/`layout-tv`). On every other view (now playing, remote control, dashboard) nothing is measured or changed and any leftover state is removed.
