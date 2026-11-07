@@ -194,6 +194,16 @@ namespace Emby.Plugins.Discover
         public bool OmdbRatings { get; set; }
         public string LoadedAt { get; set; }
         public int ChannelCalls { get; set; }
+        public string Spotlight { get; set; }
+        public string SpotlightChosen { get; set; }
+        public string SpotlightImage { get; set; }
+        public int DescCalls { get; set; }
+        public int SupportedImageCalls { get; set; }
+        public int BackdropCalls { get; set; }
+        public int PrimaryCalls { get; set; }
+        public int BackdropOk { get; set; }
+        public int BackdropFail { get; set; }
+        public string DllBuild { get; set; }
         public int Requests { get; set; }
         public int RequestErrors { get; set; }
         public string ClipPath { get; set; }
@@ -453,6 +463,16 @@ namespace Emby.Plugins.Discover
                 OmdbRatings = cfg.ShowOmdbRatings && !string.IsNullOrWhiteSpace(cfg.OmdbApiKey),
                 LoadedAt = DiscoverDiagnostics.LoadedUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss"),
                 ChannelCalls = DiscoverDiagnostics.ChannelCalls,
+                Spotlight = TileSpotlight.Label(TileSpotlight.Current) ?? "-",
+                SpotlightChosen = (TileSpotlight.LastChooseUtc == "" ? "-" : TileSpotlight.LastChooseUtc) + " " + TileSpotlight.LastChooseResult,
+                SpotlightImage = (DiscoverDiagnostics.LastBackdropUtc == "" ? "-" : DiscoverDiagnostics.LastBackdropUtc) + " " + DiscoverDiagnostics.LastBackdropResult,
+                DescCalls = DiscoverDiagnostics.DescCalls,
+                SupportedImageCalls = DiscoverDiagnostics.SupportedImageCalls,
+                BackdropCalls = DiscoverDiagnostics.BackdropCalls,
+                PrimaryCalls = DiscoverDiagnostics.PrimaryCalls,
+                BackdropOk = DiscoverDiagnostics.BackdropOk,
+                BackdropFail = DiscoverDiagnostics.BackdropFail,
+                DllBuild = DiscoverDiagnostics.DllBuildInfo(),
                 Requests = DiscoverDiagnostics.Requests,
                 RequestErrors = DiscoverDiagnostics.RequestErrors,
                 ClipPath = clipPath,

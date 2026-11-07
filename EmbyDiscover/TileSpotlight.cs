@@ -33,6 +33,8 @@ namespace Emby.Plugins.Discover
         private static long SlotNow() { return (long)(DateTime.UtcNow - new DateTime(2020, 1, 1)).TotalHours; }
 
         public static Pick Current { get { return _current; } }
+        public static string LastChooseUtc = "", LastChooseResult = "";
+        public static long CurrentSlot { get { var c = _current; return c == null ? -1 : c.Slot; } }
 
         public static string Label(Pick p)
         {
@@ -52,7 +54,7 @@ namespace Emby.Plugins.Discover
             Task.Run(async () =>
             {
                 try { await Choose(tmdb, slot, lang).ConfigureAwait(false); }
-                catch (Exception ex) { DiscoverDiagnostics.Add("tegel-titel kiezen mislukt: " + ex.Message); }
+                catch (Exception ex) { LastChooseUtc = DateTime.UtcNow.ToString("u"); LastChooseResult = "FOUT: " + ex.Message; DiscoverDiagnostics.Add("tegel-titel kiezen mislukt: " + ex.Message); }
                 finally { lock (typeof(TileSpotlight)) { _busy = false; } }
             });
         }
@@ -72,7 +74,7 @@ namespace Emby.Plugins.Discover
             var page = await tmdb.GetList(tv ? "/trending/tv/week" : "/trending/movie/week", 1, CancellationToken.None).ConfigureAwait(false);
             var list = (page == null || page.results == null ? new List<TmdbItem>() : page.results)
                 .Where(x => !x.adult && !string.IsNullOrEmpty(x.backdrop_path)).ToList();
-            if (list.Count == 0) return;
+            if (list.Count == 0) { LastChooseUtc = DateTime.UtcNow.ToString("u"); LastChooseResult = "FOUT: TMDB gaf geen trending titels met backdrop (API-sleutel/netwerk?)"; return; }
             var it = list[(int)(((slot / 2) * 7) % list.Count)];
             var date = tv ? it.first_air_date : it.release_date;
             int y;
@@ -87,6 +89,7 @@ namespace Emby.Plugins.Discover
             };
             _lang = lang;
             _image = null; _imageSlot = -1;
+            LastChooseUtc = DateTime.UtcNow.ToString("u"); LastChooseResult = "OK";
         }
 
         public static string BackdropUrl(Pick p) { return p == null ? null : "https://image.tmdb.org/t/p/w1280" + p.BackdropPath; }
