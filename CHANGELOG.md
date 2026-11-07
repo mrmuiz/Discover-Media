@@ -1,34 +1,15 @@
-## Version 1.4.0.8
-
-- Fix: on Emby's sessions / 'what is playing' views (dashboard, nowplaying, queue, remote control, devices) Emby's own now-playing footer bar (loose pause/stop buttons outside the session cards) is hidden. The buttons inside the session cards are untouched. Proven with Emby's real CSS from the webOS app: our script changes no session-card button.
-
-## Version 1.4.0.7
-
-- Fix: the bottom-bar clearance logic (measuring fixed/sticky elements, `--dc-bottom-clear`, `dc-has-bottom-bar`, lifting our button bar) now runs only on item/folder pages and our own Discover root, and never on TVs (webOS/Tizen/`layout-tv`). On every other view (now playing, remote control, dashboard) nothing is measured or changed and any leftover state is removed.
-
-## Version 1.4.0.6
-
-- Fix: our floating buttons/overlays (Request/Trailer etc.) are now shown on a whitelist only: a real item page (`#!/item?id=...`) or folder list. On every other route (now playing, remote control, sessions, dashboard, home) and whenever Emby's now-playing/remote-control view is open they are removed and hidden, also on hashchange/viewshow.
-
-## Version 1.4.0.5
-
-- New: choose the **score below the posters**: TMDB, IMDb or none (setting 'Score below the posters'). The IMDb score comes from the free official IMDb dataset (`title.ratings.tsv.gz`, non-commercial use only): no API key or limit; the server downloads it into the plugin data folder, refreshes it weekly and keeps it compact in memory (~14 MB). IMDb scores are fetched lazily for visible posters only; without IMDb data the TMDB score stays. Existing 'TMDB score' setting migrates to TMDB (off = none). The popup (OMDb) is unchanged.
-
 ## Version 1.4.0.4
 
-- Fix: the **Theme colour** setting is a plain native dropdown again (large text, high contrast, all 9 colours incl. Red) with a colour preview block next to it; Emby's own select list rendered empty on some TV browsers. The saved value stays `#rrggbb`; default yellow.
-- Fix: our floating buttons and overlays (Request, Trailer, Cancel, toasts, season info, rows) are hidden while a video is playing (video OSD / player view detected by route, OSD element or playing video), also when the player opens while they already exist.
+- New: choose the **score below the posters**: TMDB, IMDb or none. The IMDb score comes from the free official IMDb dataset (`title.ratings.tsv.gz`, non-commercial use only): no API key or limit; downloaded weekly into the plugin data folder, ~14 MB in memory, fetched lazily for visible posters; without IMDb data the TMDB score stays. The existing TMDB-score setting migrates to TMDB. The popup (OMDb) is unchanged.
+- Fix: the **Theme colour** setting is a plain native dropdown with a colour swatch (large text, high contrast, 9 colours incl. Red, value `#rrggbb`, default yellow) instead of the button row of 1.4.0.3.
+- Fix: our floating buttons and overlays are hidden while a video is playing.
+- Fix: our floating buttons appear only on a real item page (`#!/item?id=...`), a folder list and our Discover page, and are removed everywhere else.
+- Fix: the bottom-bar logic runs only on item/Discover pages and never on TVs (webOS/Tizen/`layout-tv`).
+- Fix: Emby's own now-playing footer bar (loose pause/stop buttons) is hidden on the sessions / "what is playing" views; the buttons inside the session cards are untouched.
 
 ## Version 1.4.0.3
 
 - Fix: the **Theme colour** setting showed an empty box on some browsers/TVs (Emby's select list did not render) so no colour could be chosen and the pages stayed yellow. It is now a row of colour buttons (selected one outlined, Red included); the default stays yellow when nothing is chosen.
-
-## Unreleased
-
-- Fix: a title stayed on **Importing** after it was already in Emby. Radarr/Sonarr keep a finished download in their queue with state `imported` (for example while the torrent keeps seeding); that state is no longer treated as importing, so the label disappears once the import is done.
-- Fix: on TV the **popup could cut off the buttons** at the bottom with a long list (many seasons or downloads). The info part of the popup now scrolls, and the remote focus scrolls the selected season or button into view. Page name bumped (`discoverui1110`).
-- New: filter **Not requested yet** next to "Not in my library" in the Discover browse view; hides items that are already requested or available.
-- New: **endless scrolling** in the Discover browse view; the "Load more" button is gone and the next page loads automatically (the button returns only after a load error).
 
 ## Version 1.4.0.2
 
