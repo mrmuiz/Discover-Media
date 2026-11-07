@@ -58,6 +58,11 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         optAccent7: ['Oranje', 'Orange', 'Orange'],
         optAccent8: ['Wit', 'White', 'Weiß'],
         lbl_chkPosterYear: ['Jaar onder de posters', 'Year below the posters', 'Jahr unter den Postern'],
+        lbl_selPosterScore: ['Score onder de posters', 'Score below the posters', 'Bewertung unter den Postern'],
+        optScore0: ['TMDB-score', 'TMDB score', 'TMDB-Bewertung'],
+        optScore1: ['IMDb-score', 'IMDb score', 'IMDb-Bewertung'],
+        optScore2: ['Geen score', 'No score', 'Keine Bewertung'],
+        desc_selPosterScore: ['IMDb-score komt uit de gratis IMDb-dataset (alleen voor niet-commercieel gebruik), geen API-sleutel nodig; de server downloadt die zelf en ververst wekelijks. Zonder IMDb-gegevens wordt de TMDB-score getoond.', 'The IMDb score comes from the free IMDb dataset (non-commercial use only), no API key needed; the server downloads it itself and refreshes it weekly. Without IMDb data the TMDB score is shown.', 'Die IMDb-Bewertung stammt aus dem kostenlosen IMDb-Datensatz (nur nicht-kommerzielle Nutzung), kein API-Schlüssel nötig; der Server lädt ihn selbst herunter und aktualisiert wöchentlich. Ohne IMDb-Daten wird die TMDB-Bewertung gezeigt.'],
         lbl_chkPosterScore: ['TMDB-score onder de posters', 'TMDB score below the posters', 'TMDB-Bewertung unter den Postern'],
         hdgOmdb: ['OMDb (IMDb, Rotten Tomatoes, Metacritic)', 'OMDb (IMDb, Rotten Tomatoes, Metacritic)', 'OMDb (IMDb, Rotten Tomatoes, Metacritic)'],
         lbl_txtOmdbKey: ['OMDb API-sleutel (optioneel)', 'OMDb API key (optional)', 'OMDb-API-Schlüssel (optional)'],
@@ -663,7 +668,9 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             el(view, 'chkShowNewSeasons').checked = c.ShowNewSeasons !== false;
             el(view, 'chkShowMyRequests').checked = c.ShowMyRequests !== false;
             el(view, 'chkPosterYear').checked = c.PosterShowYear !== false;
-            el(view, 'chkPosterScore').checked = c.PosterShowScore !== false;
+            var ps = String(c.PosterScoreSource || '').toLowerCase();
+            if (ps !== 'tmdb' && ps !== 'imdb' && ps !== 'none') { ps = c.PosterShowScore === false ? 'none' : 'tmdb'; }
+            el(view, 'selPosterScore').value = ps;
             el(view, 'chkShowOmdb').checked = c.ShowOmdbRatings !== false;
             el(view, 'txtOmdbKey').value = c.OmdbApiKey || '';
             // Waarden in de keuzelijst zonder # (Emby's keuzelijst op de tv kan niet met # overweg).
@@ -744,7 +751,8 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             c.ShowNewSeasons = el(view, 'chkShowNewSeasons').checked;
             c.ShowMyRequests = el(view, 'chkShowMyRequests').checked;
             c.PosterShowYear = el(view, 'chkPosterYear').checked;
-            c.PosterShowScore = el(view, 'chkPosterScore').checked;
+            c.PosterScoreSource = el(view, 'selPosterScore').value || 'tmdb';
+            c.PosterShowScore = c.PosterScoreSource !== 'none';
             c.ShowOmdbRatings = el(view, 'chkShowOmdb').checked;
             c.OmdbApiKey = el(view, 'txtOmdbKey').value.trim();
             c.AccentColor = '#' + String(el(view, 'selAccent').value || 'ffb400').replace('#', '');

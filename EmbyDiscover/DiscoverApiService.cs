@@ -189,6 +189,7 @@ namespace Emby.Plugins.Discover
         /// <summary>Weergave: jaar / TMDB-score onder de posters, themakleur, OMDb-scores in de popup.</summary>
         public bool PosterShowYear { get; set; } = true;
         public bool PosterShowScore { get; set; } = true;
+        public string PosterScoreSource { get; set; }
         public string AccentColor { get; set; }
         public bool OmdbRatings { get; set; }
         public string LoadedAt { get; set; }
@@ -446,7 +447,8 @@ namespace Emby.Plugins.Discover
                 Seerr4kMovie = SeerrClient.Has4k(_json, false),
                 Seerr4kTv = SeerrClient.Has4k(_json, true),
                 PosterShowYear = cfg.PosterShowYear,
-                PosterShowScore = cfg.PosterShowScore,
+                PosterShowScore = cfg.EffPosterScoreSource != "none",
+                PosterScoreSource = cfg.EffPosterScoreSource,
                 AccentColor = AccentOf(cfg.AccentColor),
                 OmdbRatings = cfg.ShowOmdbRatings && !string.IsNullOrWhiteSpace(cfg.OmdbApiKey),
                 LoadedAt = DiscoverDiagnostics.LoadedUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss"),

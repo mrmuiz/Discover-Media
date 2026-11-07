@@ -66,6 +66,8 @@ html.dcPointer .dcRowWrap:hover .dcArrow { display:inline-flex; }
 .dcCapSub > * { margin-right:.5em; }
 .dcCapSub .dcStar { color:var(--dc-accent,#ffb400); }
 /* Weergave: jaar / score onder de posters uit te zetten in de instellingen */
+/* IMDb-score: gele IMDb-badge, de ster van TMDB valt weg */
+.dcCapSub .dcStar.dcImdb b { background:#f5c518; color:#000; font-size:.8em; font-weight:800; padding:.05em .35em; border-radius:.3em; }
 html.dcNoYear .dcCapSub .dcYear, html.dcNoScore .dcCapSub .dcStar { display:none; }
 .dcNoPoster { display:flex; align-items:center; justify-content:center; text-align:center; height:100%; padding:.8em; color:#aab; font-size:.95em; }
 /* skeleton tijdens laden */
