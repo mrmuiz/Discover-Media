@@ -79,7 +79,7 @@ define([], function() {
             document.head.appendChild(script)
         })()
     }
-    var UI_PAGE = "discoverui1130";
+    var UI_PAGE = "discoverui1131";
     return function(view, params) {
         var embedded = !!(params && params.embedded);
         if (embedded) {
@@ -2469,13 +2469,26 @@ define([], function() {
                     info.insertBefore(R, pick(".dcBtnRow"))
                 }
                 info.classList.add("dcCols");
-                [".dcOverview", ".dcGenres", ".dcSeasons", ".dcQueue"].forEach(function(sel) {
+                var body = info.parentNode;
+                if (body && body.classList) {
+                    body.classList.add("dcColsOn")
+                }
+                // Kop: titel(logo) met de knoppen ernaast; passen ze er niet naast, dan schuiven ze eronder.
+                var head = info.querySelector(".dcHeadRow");
+                if (!head) {
+                    head = document.createElement("div");
+                    head.className = "dcHeadRow";
+                    info.insertBefore(head, pick(".dcModalTitle"))
+                }
+                head.appendChild(pick(".dcModalTitle"));
+                head.appendChild(pick(".dcBtnRow"));
+                [".dcOverview", ".dcGenres", ".dcSeasons", ".dcQueue", ".dcCollection"].forEach(function(sel) {
                     var e = pick(sel);
                     if (e) {
                         L.appendChild(e)
                     }
                 });
-                [".dcInfo", ".dcCollection"].forEach(function(sel) {
+                [".dcInfo"].forEach(function(sel) {
                     var e = pick(sel);
                     if (e) {
                         R.appendChild(e)
@@ -2486,6 +2499,15 @@ define([], function() {
                     info.insertBefore(cw, pick(".dcBtnRow"))
                 }
             } else if (L) {
+                var hd = info.querySelector(".dcHeadRow");
+                if (hd) {
+                    info.insertBefore(pick(".dcModalTitle"), hd);
+                    info.appendChild(pick(".dcBtnRow"));
+                    info.removeChild(hd)
+                }
+                if (info.parentNode && info.parentNode.classList) {
+                    info.parentNode.classList.remove("dcColsOn")
+                }
                 var btnRow = pick(".dcBtnRow");
                 [".dcInfo", ".dcOverview", ".dcGenres", ".dcCastWrap", ".dcCollection", ".dcQueue", ".dcSeasons"].forEach(function(sel) {
                     var e = pick(sel);

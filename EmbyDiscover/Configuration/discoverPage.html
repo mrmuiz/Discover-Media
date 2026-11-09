@@ -1,4 +1,4 @@
-<!DOCTYPE html><html><head><meta charset="utf-8" /><title>Discover</title></head><body><div data-role="page" class="page type-interior discoverUiPage" data-controller="__plugin/discoveruijs1431"><style>
+<!DOCTYPE html><html><head><meta charset="utf-8" /><title>Discover</title></head><body><div data-role="page" class="page type-interior discoverUiPage" data-controller="__plugin/discoveruijs1432"><style>
  body.dcDiscoverActive .skinHeader .pageTitle,body.dcDiscoverActive .skinHeader .headerButton,body.dcDiscoverActive .skinHeader .headerButton .material-icons,body.dcDiscoverActive .skinHeader .headerButton .md-icon,body.dcDiscoverActive .skinHeader .headerButton i,body.dcDiscoverActive .skinHeader .headerUserButton,body.dcDiscoverActive .skinHeader .headerTabs .emby-tab-button{
     color:#fff !important
 }
@@ -1887,11 +1887,86 @@ html.dcPointer .dcCastWrap:hover .dcCastArr{
     margin-top:4px
 }
 .dcM .dcModalInfo.dcCols{
-    grid-template-areas:"title side" "meta side" "rate side" "btns side" "left side" "cast cast" !important;
-    grid-template-rows:auto auto auto auto 1fr auto
+    grid-template-areas:"title side" "meta side" "rate side" "left side" "cast cast" !important;
+    grid-template-rows:auto auto auto 1fr auto
+}
+.dcM .dcModal{
+    max-height:92vh
+}
+.dcM .dcModalBody.dcColsOn{
+    padding-top:min(36px,4vh)
 }
 .dcM .dcModalInfo.dcCols .dcColR{
-    margin-top:10px
+    margin-top:calc(min(64px,7vh) - min(36px,4vh) + 10px)
+}
+.dcM .dcHeadRow{
+    grid-area:title;
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:10px 20px;
+    margin-bottom:6px
+}
+.dcM .dcHeadRow .dcModalTitle{
+    margin:0
+}
+.dcM .dcHeadRow .dcModalTitle .dcTitleLogo{
+    max-width:300px;
+    max-height:90px
+}
+.dcM .dcHeadRow .dcBtnRow,.dcOverlay:not(.dcTv) .dcHeadRow .dcBtnRow{
+    position:static;
+    margin:0;
+    padding:0;
+    border:0;
+    background:none;
+    box-shadow:none
+}
+.dcM .dcColL{
+    display:flex;
+    flex-direction:column
+}
+.dcM .dcColL .dcCollection{
+    margin-top:auto;
+    padding-top:56px
+}
+.dcM .dcColL .dcColItem{
+    width:64px
+}
+.dcM .dcColL .dcColPoster{
+    width:64px;
+    height:96px
+}
+.dcM .dcColL .dcColWarn{
+    display:none
+}
+.dcM .dcColL .dcColHead:has(.dcColAll.confirm) + .dcColWarn{
+    display:block
+}
+.dcM .dcModalInfo.dcCols .dcCastWrap{
+    padding-top:30px
+}
+.dcM .dcColL .dcQRow{
+    flex-wrap:wrap;
+    padding:.5em 0 .3em
+}
+.dcM .dcColL .dcQName{
+    order:1;
+    font-weight:600
+}
+.dcM .dcColL .dcQPct{
+    order:2;
+    min-width:0
+}
+.dcM .dcColL .dcQBar{
+    order:3;
+    flex:1 0 100%;
+    height:16px;
+    border-radius:8px;
+    margin:7px 0 0
+}
+.dcM .dcColL .dcQBar i{
+    border-radius:8px
 }
 .dcM .dcModalInfo.dcCols .dcColR .dcInfo{
     margin-top:0
