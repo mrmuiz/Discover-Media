@@ -79,7 +79,7 @@ define([], function() {
             document.head.appendChild(script)
         })()
     }
-    var UI_PAGE = "discoverui1129";
+    var UI_PAGE = "discoverui1130";
     return function(view, params) {
         var embedded = !!(params && params.embedded);
         if (embedded) {

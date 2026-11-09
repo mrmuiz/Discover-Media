@@ -10,7 +10,7 @@
 - Change: the settings tab **TMDB** is now called **Sources**: it holds TMDB, MDBList, OMDb and fanart.tv.
 - New: small **Star** (GitHub) and **Ko-fi** buttons at the top right of the plugin settings page. Only administrators see that page; nothing is added for regular users.
 - Cleanup: removed build output (`obj/`) that had ended up in the repository.
-- Change: page names bumped (`discoverconfig1096`, `discoverconfigjs1375`, `discoverui1129`, `discoveruijs1430`, `discoverbuttonjs1417`).
+- Change: page names bumped (`discoverconfig1096`, `discoverconfigjs1375`, `discoverui1130`, `discoveruijs1431`, `discoverbuttonjs1417`).
 
 ## Version 1.4.0.6
 
