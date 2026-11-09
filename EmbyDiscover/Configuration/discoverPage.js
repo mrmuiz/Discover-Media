@@ -79,7 +79,7 @@ define([], function() {
             document.head.appendChild(script)
         })()
     }
-    var UI_PAGE = "discoverui1125";
+    var UI_PAGE = "discoverui1126";
     return function(view, params) {
         var embedded = !!(params && params.embedded);
         if (embedded) {
@@ -2058,6 +2058,12 @@ define([], function() {
             if (!rateEl) {
                 return
             }
+            // Met het nieuwe infoblok staan de scores bovenin dat blok, niet onder de titel.
+            var boxEl = overlay.querySelector(".dcInfo.dcTable .dcIScores");
+            rateEl.style.display = boxEl ? "none" : "";
+            if (boxEl) {
+                rateEl = boxEl
+            }
             var v = ratingState.votes;
             rateEl.innerHTML = (ratingState.tmdb ? '<span class="dcRate tmdb" title="TMDB' + (v ? " \xb7 " + esc(v) + " " + esc(text("stemmen", "votes", "Stimmen", "stemmer")) : "") + '"><b>TMDB</b>' + esc(ratingState.tmdb) + (v ? " <i>(" + esc(v) + ")</i>" : "") + "</span>" : "") + ratingState.omdb
         }
@@ -2151,7 +2157,89 @@ define([], function() {
             return isTvClient || !!window.matchMedia && window.matchMedia("(min-width:700px)").matches
         }
 
-        function renderInfoBox(i, infoEl, lines) {
+        var LINK_COLORS = {
+            "Emby": "#52b54b",
+            "TMDB": "#01b4e4",
+            "IMDb": "#f5c518",
+            "Trakt": "#ed1c24",
+            "Letterboxd": "#00c030",
+            "Rotten Tomatoes": "#fa320a",
+            "TVmaze": "#3c948b"
+        };
+        var INFO_ICONS = {
+            ticket: "\ud83c\udf9f\ufe0f",
+            cloud: "\u2601\ufe0f",
+            disc: "\ud83d\udcbf"
+        };
+
+        function addEmbyLink() {
+            var box = overlay.querySelector(".dcTLinks"),
+                ob = overlay.querySelector(".dcBtnOpen"),
+                id = ob && ob.getAttribute("data-id");
+            if (!box || !id || box.querySelector(".dcTLink.emby")) {
+                return
+            }
+            var a = document.createElement("a");
+            a.className = "dcTLink emby";
+            a.href = "#";
+            a.textContent = "Emby";
+            a.title = text("Openen in Emby", "Open in Emby", "In Emby \xf6ffnen");
+            a.style.background = LINK_COLORS.Emby;
+            a.addEventListener("click", function(e) {
+                e.preventDefault();
+                ob.click()
+            });
+            box.insertBefore(a, box.firstChild)
+        }
+
+        // Infoblok als tabel (zoals Seerr): scores bovenin, label links / waarde rechts, links onderaan.
+        // Lange lijsten (studio's) en een lange tabel klappen in achter "Meer tonen", zodat de popup past.
+        function renderInfoTable(i, infoEl, r) {
+            var MAX_ROWS = 7,
+                more = text("Meer tonen", "Show more", "Mehr anzeigen", "Vis mer"),
+                h = '<div class="dcIScores"></div>';
+            if (r.Tagline) {
+                h += '<div class="dcTTag">\u201c' + esc(r.Tagline) + '\u201d</div>'
+            }
+            (r.Rows || []).forEach(function(row, n) {
+                var items = row.Items || [],
+                    show = row.Show > 0 ? row.Show : items.length,
+                    v = items.map(function(it, k) {
+                        var pre = it.Flag ? '<img class="dcFlag" alt="" loading="lazy" src="https://flagcdn.com/w20/' + esc(it.Flag) + '.png">' : it.Icon && INFO_ICONS[it.Icon] ? '<span class="dcTIcon">' + INFO_ICONS[it.Icon] + "</span>" : "";
+                        return '<div class="dcTItem' + (k >= show ? " dcTExtra" : "") + '"' + (it.Hint ? ' title="' + esc(it.Hint) + '"' : "") + ">" + pre + esc(it.Text) + "</div>"
+                    }).join("");
+                if (items.length > show) {
+                    v += '<button type="button" class="dcTMore" tabindex="-1">' + esc(more) + " \u2304</button>"
+                }
+                h += '<div class="dcTRow' + (n >= MAX_ROWS ? " dcTHide" : "") + '"><div class="dcTK">' + esc(row.Label) + '</div><div class="dcTV">' + v + "</div></div>"
+            });
+            if ((r.Rows || []).length > MAX_ROWS) {
+                h += '<button type="button" class="dcTMoreRows" tabindex="-1">' + esc(more) + " \u2304</button>"
+            }
+            h += '<div class="dcTLinks">' + (r.Links || []).map(function(l) {
+                return '<a class="dcTLink" target="_blank" rel="noopener" href="' + esc(l.Url) + '" style="background:' + (LINK_COLORS[l.Name] || "#3a4660") + (l.Name === "IMDb" ? ";color:#000" : "") + '">' + esc(l.Name === "Rotten Tomatoes" ? "\ud83c\udf45 RT" : l.Name) + "</a>"
+            }).join("") + "</div>";
+            infoEl.innerHTML = h;
+            infoEl.classList.add("dcTable");
+            Array.prototype.forEach.call(infoEl.querySelectorAll(".dcTMore"), function(b) {
+                b.addEventListener("click", function() {
+                    b.parentNode.classList.add("open");
+                    b.parentNode.removeChild(b)
+                })
+            });
+            var mr = infoEl.querySelector(".dcTMoreRows");
+            if (mr) {
+                mr.addEventListener("click", function() {
+                    infoEl.classList.add("allRows");
+                    mr.parentNode.removeChild(mr)
+                })
+            }
+            addEmbyLink();
+            paintRatings()
+        }
+
+        function renderInfoBox(i, infoEl, lines, r) {
+            infoEl.classList.remove("dcTable", "allRows");
             var genres = "",
                 rows = "",
                 k, ln, m, vm, mt;
@@ -2187,6 +2275,10 @@ define([], function() {
             gEl.innerHTML = genres ? genres.split(/\s*,\s*/).map(function(g) {
                 return "<span>" + esc(g) + "</span>"
             }).join("") : "";
+            if (r && r.Rows && r.Rows.length) {
+                renderInfoTable(i, infoEl, r);
+                return
+            }
             rows += '<div class="dcIRow">ID: ' + esc(String(i.TmdbId)) + '</div><div class="dcISep"></div>';
             rows += '<a class="dcIProv" title="TMDB" href="https://www.themoviedb.org/' + (i.Type === "tv" ? "tv" : "movie") + "/" + esc(String(i.TmdbId)) + '" target="_blank" rel="noopener">' + DC_TMDB + "</a>";
             infoEl.innerHTML = rows
@@ -2465,6 +2557,7 @@ define([], function() {
             }, 0);
             var infoEl = overlay.querySelector(".dcInfo");
             infoEl.textContent = "";
+            infoEl.classList.remove("dcTable", "allRows");
             var g0 = overlay.querySelector(".dcGenres");
             if (g0) {
                 g0.innerHTML = ""
@@ -2491,14 +2584,14 @@ define([], function() {
                         h += '<span class="dcRate imdb" title="IMDb' + (r.ImdbVotes ? " \xb7 " + esc(r.ImdbVotes) + " " + esc(text("stemmen", "votes", "Stimmen", "stemmer")) : "") + '"><b>IMDb</b>' + esc(r.Imdb) + "</span>"
                     }
                     if (r.RottenTomatoes) {
-                        h += '<span class="dcRate rt" title="Rotten Tomatoes"><b>RT</b>' + esc(r.RottenTomatoes) + "</span>"
+                        h += '<span class="dcRate rt" title="Rotten Tomatoes"><b>\ud83c\udf45</b>' + esc(r.RottenTomatoes) + "</span>"
                     }
                     if (r.Metacritic) {
                         var mc = parseInt(r.Metacritic, 10);
                         h += '<span class="dcRate mc' + (mc < 40 ? " low" : mc < 61 ? " mid" : "") + '" title="Metacritic"><b>MC</b>' + esc(r.Metacritic) + "</span>"
                     }
                     if (r.Audience) {
-                        h += '<span class="dcRate pop" title="Rotten Tomatoes \xb7 ' + esc(text("publiek", "audience", "Publikum", "publikum")) + '"><b>POP</b>' + esc(r.Audience) + "</span>"
+                        h += '<span class="dcRate pop" title="Rotten Tomatoes \xb7 ' + esc(text("publiek", "audience", "Publikum", "publikum")) + '"><b>\ud83c\udf7f</b>' + esc(r.Audience) + "</span>"
                     }
                     if (r.Letterboxd) {
                         h += '<span class="dcRate lb" title="Letterboxd (/5)"><b>LB</b>' + esc(r.Letterboxd) + "</span>"
@@ -2529,7 +2622,7 @@ define([], function() {
                     if (isTvClient) {
                         infoEl.textContent = r.Lines.join("\n")
                     } else {
-                        renderInfoBox(i, infoEl, r.Lines)
+                        renderInfoBox(i, infoEl, r.Lines, r)
                     }
                 }
                 castEl.innerHTML = (r.Cast || []).map(function(p) {
@@ -2737,7 +2830,8 @@ define([], function() {
                     }
                     var ob = overlay.querySelector(".dcBtnOpen");
                     ob.setAttribute("data-id", libId);
-                    ob.classList.add("show")
+                    ob.classList.add("show");
+                    addEmbyLink()
                 });
                 return
             }
@@ -2758,7 +2852,8 @@ define([], function() {
             openModal(i);
             var ob = overlay.querySelector(".dcBtnOpen");
             ob.setAttribute("data-id", embyId);
-            ob.classList.add("show")
+            ob.classList.add("show");
+            addEmbyLink()
         }
 
         function openChannelItem(i) {
