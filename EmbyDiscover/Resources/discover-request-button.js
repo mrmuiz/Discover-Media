@@ -2013,7 +2013,7 @@
         var link = document.createElement('a');
         link.className = 'discover-row-poster';
         // Klik op de poster: de Discover-popup met info en trailer.
-        link.href = '#!/configurationpage?name=discoverui1129&openType=' + item.Type + '&openId=' + item.TmdbId;
+        link.href = '#!/configurationpage?name=discoverui1130&openType=' + item.Type + '&openId=' + item.TmdbId;
         link.setAttribute('aria-label', item.Title);   // geen title: dat gaf een tooltip-vakje over de poster
         // Gewone klik: de popup hier op de pagina openen (Ctrl/middenklik volgt de link naar Discover).
         link.addEventListener('click', function (e) {
@@ -2320,7 +2320,7 @@
     // ---- De Discover-popup boven de huidige pagina ----
     // Laadt de Discover-pagina één keer onzichtbaar (alleen de popup wordt gebruikt) met dezelfde controller
     // als de echte pagina, in "embedded"-modus. Zo is de popup overal gelijk: info, cast, seizoenen, trailer, aanvragen.
-    var DC_UI_PAGE = 'discoverui1129', DC_UI_JS = 'discoveruijs1430';
+    var DC_UI_PAGE = 'discoverui1130', DC_UI_JS = 'discoveruijs1431';
     var embedPromise = null;
     function pageText(c, name) {
         var url = c.getUrl('web/ConfigurationPage', { name: name });
