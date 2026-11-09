@@ -243,9 +243,9 @@ namespace Emby.Plugins.Discover
                 var r = new DiscoverInfoRow
                 {
                     Label = tv ? (names.Count == 1 ? T("Zender", "Network", "Sender", "Kanal") : T("Zenders", "Networks", "Sender", "Kanaler")) : T("Studio's", "Studios", "Studios", "Studioer"),
-                    Show = 3
+                    Show = 0
                 };
-                r.Items.AddRange(names.Take(10).Select(n => new DiscoverInfoItem { Text = n }));
+                r.Items.AddRange(names.Take(4).Select(n => new DiscoverInfoItem { Text = n }));
                 rows.Add(r);
             }
             return rows;
