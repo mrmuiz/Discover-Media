@@ -97,6 +97,16 @@ namespace Emby.Plugins.Discover
         }
 
         /// <summary>Regels (zonder lege) voor een titel. includeRating: TMDB-percentage toevoegen (de Emby-apps tonen hun eigen cijfer al).</summary>
+        internal static string StatusText(string status, bool tv)
+        {
+            if (string.IsNullOrWhiteSpace(status)) return null;
+            var map = tv
+                ? (DiscoverLanguage.IsDutch ? DutchTvStatus : DiscoverLanguage.IsGerman ? GermanTvStatus : EnglishTvStatus)
+                : (DiscoverLanguage.IsDutch ? DutchMovieStatus : DiscoverLanguage.IsGerman ? GermanMovieStatus : EnglishMovieStatus);
+            string st;
+            return map.TryGetValue(status.Trim(), out st) ? st : status.Trim();
+        }
+
         public static List<string> Lines(TmdbItem t, TmdbExtra x, bool tv, bool includeRating)
         {
             var lines = new List<string>();

@@ -1,4 +1,4 @@
-<!DOCTYPE html><html><head><meta charset="utf-8" /><title>Discover</title></head><body><div data-role="page" class="page type-interior discoverUiPage" data-controller="__plugin/discoveruijs1426"><style>
+<!DOCTYPE html><html><head><meta charset="utf-8" /><title>Discover</title></head><body><div data-role="page" class="page type-interior discoverUiPage" data-controller="__plugin/discoveruijs1427"><style>
  body.dcDiscoverActive .skinHeader .pageTitle,body.dcDiscoverActive .skinHeader .headerButton,body.dcDiscoverActive .skinHeader .headerButton .material-icons,body.dcDiscoverActive .skinHeader .headerButton .md-icon,body.dcDiscoverActive .skinHeader .headerButton i,body.dcDiscoverActive .skinHeader .headerUserButton,body.dcDiscoverActive .skinHeader .headerTabs .emby-tab-button{
     color:#fff !important
 }
@@ -2108,6 +2108,100 @@ html.dcPointer .dcCastWrap:hover .dcCastArr{
 .dcISep{
     border-top:1px solid rgba(255,255,255,.1);
     margin:12px 0
+}
+.dcInfo.dcTable{
+    padding:0 !important;
+    overflow:hidden;
+    font-size:12.5px
+}
+.dcIScores{
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:center;
+    gap:8px 14px;
+    padding:10px 12px;
+    border-bottom:1px solid rgba(255,255,255,.1)
+}
+.dcIScores:empty{
+    display:none
+}
+.dcTTag{
+    padding:9px 14px;
+    font-style:italic;
+    text-align:center;
+    color:rgba(255,255,255,.8);
+    border-bottom:1px solid rgba(255,255,255,.1)
+}
+.dcTRow{
+    display:flex;
+    justify-content:space-between;
+    gap:12px;
+    padding:7px 14px;
+    border-bottom:1px solid rgba(255,255,255,.1)
+}
+.dcTable:not(.allRows) .dcTRow.dcTHide{
+    display:none
+}
+.dcTK{
+    font-weight:600;
+    white-space:nowrap
+}
+.dcTV{
+    text-align:right;
+    color:rgba(255,255,255,.72);
+    font-weight:400;
+    min-width:0
+}
+.dcTItem{
+    line-height:1.5
+}
+.dcTV:not(.open) .dcTItem.dcTExtra{
+    display:none
+}
+.dcTIcon{
+    margin-right:6px
+}
+.dcFlag{
+    width:18px;
+    height:auto;
+    border-radius:2px;
+    margin-right:6px;
+    vertical-align:-1px
+}
+.dcTMore,.dcTMoreRows{
+    background:none;
+    border:0;
+    color:var(--dc-accent,#ffb400);
+    font:inherit;
+    font-size:12px;
+    padding:2px 0 0;
+    cursor:pointer
+}
+.dcTMoreRows{
+    display:block;
+    width:100%;
+    padding:7px 14px;
+    text-align:center;
+    border-bottom:1px solid rgba(255,255,255,.1)
+}
+.dcTLinks{
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:center;
+    gap:6px;
+    padding:10px 12px
+}
+.dcTLink{
+    font-size:11px;
+    font-weight:700;
+    padding:3px 7px;
+    border-radius:5px;
+    color:#fff;
+    text-decoration:none;
+    white-space:nowrap
+}
+.dcTLink:hover,.dcTLink:focus{
+    filter:brightness(1.15)
 }
 .dcIProv{
     display:flex;

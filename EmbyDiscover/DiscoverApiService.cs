@@ -89,6 +89,10 @@ namespace Emby.Plugins.Discover
         public string Logo { get; set; }
         /// <summary>Instelling "Titellogo in de popup": dan mag de browser ook het logo uit de eigen Emby-bibliotheek gebruiken.</summary>
         public bool TitleLogo { get; set; }
+        /// <summary>Infoblok als tabel (webclient); de tv-pagina gebruikt Lines.</summary>
+        public string Tagline { get; set; }
+        public List<DiscoverInfoRow> Rows { get; set; } = new List<DiscoverInfoRow>();
+        public List<DiscoverInfoLink> Links { get; set; } = new List<DiscoverInfoLink>();
     }
 
     [Route("/Discover/TrailerKey", "GET", Summary = "YouTube-sleutel van de trailer van een film of serie")]
@@ -890,16 +894,25 @@ namespace Emby.Plugins.Discover
                         "\u2713 Gedeeltelijk beschikbaar",
                         "\u2713 Partially available",
                         "\u2713 Teilweise verfügbar"));
-                if (tv && Plugin.GetCurrentConfiguration().ShowNextEpisode)
+                Tuple<string, DateTime?> next = null;
+                if (tv && Plugin.GetCurrentConfiguration().ShowNextEpisode && x.next_episode_to_air == null)
                 {
-                    try
-                    {
-                        var next = await NextEpisode.Line(_json, _tmdb, request.TmdbId, CancellationToken.None).ConfigureAwait(false);
-                        if (!string.IsNullOrEmpty(next)) res.Lines.Add(next);
-                    }
+                    // TMDB kent de volgende aflevering niet: dan TVmaze (geen sleutel nodig).
+                    try { next = await NextEpisode.Get(_json, _tmdb, request.TmdbId, CancellationToken.None).ConfigureAwait(false); }
                     catch (Exception ex) { if (ex is OperationCanceledException) throw; }
+                    if (next != null)
+                        res.Lines.Add(DiscoverLanguage.Text("Volgende aflevering: ", "Next episode: ", "Nächste Folge: ", "Neste episode: ") + next.Item1 +
+                                      (next.Item2.HasValue ? " \u00B7 " + InfoText.LongDate(next.Item2.Value) : ""));
                 }
                 res.Lines.AddRange(InfoText.Lines(null, x, tv, true));
+                try
+                {
+                    var tag = (x.tagline ?? "").Trim().Trim('"', '\'', '\u201C', '\u201D').Trim();
+                    res.Tagline = tag.Length > 0 ? tag : null;
+                    res.Rows = InfoRows.Build(x, tv, next);
+                    res.Links = InfoRows.Links(x, tv, request.TmdbId);
+                }
+                catch (Exception ex) { DiscoverDiagnostics.Add("infotabel " + request.TmdbId + ": " + ex.Message); }
                 if (x.credits != null && x.credits.cast != null)
                 {
                     res.Cast = x.credits.cast
