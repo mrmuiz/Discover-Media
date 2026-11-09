@@ -4,10 +4,12 @@
 - Fix: the name of the request clip in the apps ("Aangevraagd") now follows the plugin language too.
 - New: the popup shows the **title logo** instead of the title as text (Appearance tab, on by default). For a title that is already in the library, the logo Emby itself has for it is used first (the one chosen under Edit images). Otherwise the logo comes from TMDB in the plugin language, or English; when TMDB has none and an optional **fanart.tv API key** is set (Sources tab), fanart.tv is asked. Without a logo the title stays as text. The year moves to the line below the logo.
 - New: SABnzbd post-processing now shows its **progress per step**, not only for a script: "Extracting 2/5", "Repairing 41%", "Verifying 12/30" on the tile, in the popup and on the row buttons; the bar in the popup follows that step.
-- Change: the settings tab **TMDB** is now called **Sources**: it holds TMDB, OMDb and fanart.tv.
+- New: optional **MDBList** key (Sources tab, with a test button). The popup then shows the scores of **IMDb, Rotten Tomatoes (critics and audience), Metacritic, Letterboxd and Trakt** from one free key. MDBList comes before OMDb; OMDb stays the fallback.
+- New: for a running series the popup's info box shows the **next episode** with its date (e.g. "Next episode: S03E05 · November 13, 2026"), from **TVmaze** (free, no key). Setting on the Appearance tab, on by default.
+- Change: the settings tab **TMDB** is now called **Sources**: it holds TMDB, MDBList, OMDb and fanart.tv.
 - New: small **Star** (GitHub) and **Ko-fi** buttons at the top right of the plugin settings page. Only administrators see that page; nothing is added for regular users.
 - Cleanup: removed build output (`obj/`) that had ended up in the repository.
-- Change: page names bumped (`discoverconfig1095`, `discoverconfigjs1374`, `discoverui1124`, `discoveruijs1425`, `discoverbuttonjs1417`).
+- Change: page names bumped (`discoverconfig1096`, `discoverconfigjs1375`, `discoverui1125`, `discoveruijs1426`, `discoverbuttonjs1417`).
 
 ## Version 1.4.0.6
 

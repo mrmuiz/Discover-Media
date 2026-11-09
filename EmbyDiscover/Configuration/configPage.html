@@ -5,7 +5,7 @@
     <title>Discover</title>
 </head>
 <body>
-<div data-role="page" class="page type-interior pluginConfigurationPage discoverConfigPage" data-require="emby-input,emby-button,emby-select,emby-checkbox" data-controller="__plugin/discoverconfigjs1374">
+<div data-role="page" class="page type-interior pluginConfigurationPage discoverConfigPage" data-require="emby-input,emby-button,emby-select,emby-checkbox" data-controller="__plugin/discoverconfigjs1375">
     <style>
         .discoverConfigPage .keyWrap { position: relative; }
         .discoverConfigPage .keyWrap input { padding-right: 2.8em; }
@@ -143,6 +143,16 @@
                         </span>
                     </label>
                 </div>
+                <div class="checkboxContainer">
+                    <label class="emby-checkbox-label">
+                        <input is="emby-checkbox" type="checkbox" id="chkShowNextEpisode" />
+                        <span class="checkboxLabel" id="lbl_chkShowNextEpisode">Volgende aflevering van lopende series in de popup (via TVmaze)</span>
+                        <span class="emby-checkbox-outline">
+                            <span class="emby-checkbox-on"><i class="md-icon">check</i></span>
+                            <span class="emby-checkbox-off"></span>
+                        </span>
+                    </label>
+                </div>
                                 <div class="selectContainer">
                     <label class="selectLabel" id="lbl_selPosterScore" style="display:block">Score onder de posters</label>
                     <select id="selPosterScore" style="background:#2b2b2b;color:#fff;border:2px solid #888;border-radius:.4em;font-size:1.2em;min-height:2.8em;padding:.4em .8em;min-width:14em;margin:.5em 0">
@@ -242,6 +252,17 @@
                 <div>
                     <button is="emby-button" type="button" class="raised btnTestTmdb"><span>Test TMDB-key</span></button>
                     <div class="fieldDescription testStatus" id="statusTmdb" style="margin-top:.5em;"></div>
+                </div>
+                <h3 id="hdgMdblist">MDBList</h3>
+                <div class="inputContainer keyWrap">
+                    <label class="inputLabel inputLabelUnfocused" for="txtMdblistKey" id="lbl_txtMdblistKey">MDBList API-sleutel (optioneel)</label>
+                    <input is="emby-input" type="password" id="txtMdblistKey" autocomplete="new-password" spellcheck="false" />
+                    <button is="emby-button" type="button" class="paper-icon-button-light btnToggleKey" data-target="txtMdblistKey" title="Tonen" aria-label="Tonen"><i class="md-icon">visibility</i></button>
+                </div>
+                <div class="fieldDescription" id="desc_txtMdblistKey">Gratis op mdblist.com (Preferences, API Access). Geeft in de popup de scores van IMDb, Rotten Tomatoes (critici en publiek), Metacritic, Letterboxd en Trakt. Staat hier een sleutel, dan gaat MDBList voor OMDb; OMDb blijft de reserve.</div>
+                <div>
+                    <button is="emby-button" type="button" class="raised btnTestMdblist"><span id="btnTestMdblistText">Test MDBList</span></button>
+                    <div class="fieldDescription testStatus" id="statusMdblist" style="margin-top:.5em;"></div>
                 </div>
                 <h3 id="hdgOmdb">OMDb (IMDb, Rotten Tomatoes, Metacritic)</h3>
                 <div class="inputContainer keyWrap">

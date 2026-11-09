@@ -460,7 +460,7 @@ namespace Emby.Plugins.Discover
                 PosterShowScore = cfg.EffPosterScoreSource != "none",
                 PosterScoreSource = cfg.EffPosterScoreSource,
                 AccentColor = AccentOf(cfg.AccentColor),
-                OmdbRatings = cfg.ShowOmdbRatings && !string.IsNullOrWhiteSpace(cfg.OmdbApiKey),
+                OmdbRatings = cfg.ShowOmdbRatings && (!string.IsNullOrWhiteSpace(cfg.OmdbApiKey) || !string.IsNullOrWhiteSpace(cfg.MdblistApiKey)),
                 LoadedAt = DiscoverDiagnostics.LoadedUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss"),
                 ChannelCalls = DiscoverDiagnostics.ChannelCalls,
                 Requests = DiscoverDiagnostics.Requests,
@@ -890,6 +890,15 @@ namespace Emby.Plugins.Discover
                         "\u2713 Gedeeltelijk beschikbaar",
                         "\u2713 Partially available",
                         "\u2713 Teilweise verfügbar"));
+                if (tv && Plugin.GetCurrentConfiguration().ShowNextEpisode)
+                {
+                    try
+                    {
+                        var next = await NextEpisode.Line(_json, _tmdb, request.TmdbId, CancellationToken.None).ConfigureAwait(false);
+                        if (!string.IsNullOrEmpty(next)) res.Lines.Add(next);
+                    }
+                    catch (Exception ex) { if (ex is OperationCanceledException) throw; }
+                }
                 res.Lines.AddRange(InfoText.Lines(null, x, tv, true));
                 if (x.credits != null && x.credits.cast != null)
                 {
