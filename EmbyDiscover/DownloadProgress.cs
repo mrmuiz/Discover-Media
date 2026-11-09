@@ -34,6 +34,8 @@ namespace Emby.Plugins.Discover
         public string errorMessage { get; set; }
         public string downloadClient { get; set; }
         public string indexer { get; set; }
+        /// <summary>ID van de download in de downloader (bij SABnzbd het nzo_id).</summary>
+        public string downloadId { get; set; }
         public List<ArrQueueMessage> statusMessages { get; set; }
         public ArrQueueMovieRef movie { get; set; }
         public ArrQueueSeriesRef series { get; set; }
@@ -51,14 +53,34 @@ namespace Emby.Plugins.Discover
         /// <summary>Titel van de aflevering (zonder releasenaam).</summary>
         public string Name { get; set; }
         public int Progress { get; set; }
-        /// <summary>downloading, paused, queued, importing, stalled</summary>
+        /// <summary>downloading, queued, paused, processing (SABnzbd-fase, zie Stage), importwait, importing, importblocked, stalled (probleem)</summary>
         public string State { get; set; }
+        /// <summary>Alleen bij State = processing: verifying, repairing, extracting, moving, script, waiting.</summary>
+        public string Stage { get; set; }
+        /// <summary>Alleen bij Stage = script: de laatste uitvoerregel van het script in SABnzbd.</summary>
+        public string Action { get; set; }
         /// <summary>Resterende tijd in seconden, -1 = onbekend.</summary>
         public int TimeLeft { get; set; }
-        /// <summary>Alleen voor beheerders: releasenaam.</summary>
+        /// <summary>Totale grootte en wat nog moet in bytes (0 = onbekend).</summary>
+        public double Size { get; set; }
+        public double SizeLeft { get; set; }
+        /// <summary>Downloadsnelheid in bytes per seconde (alleen met SABnzbd), 0 = onbekend.</summary>
+        public double Speed { get; set; }
+        /// <summary>Voor iedereen: waarom een import geblokkeerd is of wat het probleem is.</summary>
+        public string Reason { get; set; }
+        /// <summary>Alleen voor beheerders: releasenaam, downloadclient en indexer.</summary>
         public string Release { get; set; }
-        /// <summary>Alleen voor beheerders: downloadclient, indexer en een eventuele foutmelding.</summary>
+        public string Client { get; set; }
+        public string Indexer { get; set; }
+        /// <summary>Alleen voor beheerders: downloadclient, indexer en een eventuele foutmelding (oudere schermen).</summary>
         public string Detail { get; set; }
+        /// <summary>Gekoppeld aan een download in SABnzbd.</summary>
+        public bool Sab { get; set; }
+        /// <summary>Naam van de downloader waaraan deze download is gekoppeld (SABnzbd, NZBGet, qBittorrent, Transmission), anders leeg.</summary>
+        public string Via { get; set; }
+        /// <summary>Seeders en ratio (torrents), -1 = onbekend.</summary>
+        public int Seeds { get; set; } = -1;
+        public double Ratio { get; set; } = -1;
     }
 
     /// <summary>Alle downloads van één film of serie samen.</summary>
@@ -69,7 +91,13 @@ namespace Emby.Plugins.Discover
         public string Title { get; set; }
         public int Progress { get; set; }
         public string State { get; set; }
+        public string Stage { get; set; }
+        public string Action { get; set; }
         public int TimeLeft { get; set; }
+        public double Size { get; set; }
+        public double SizeLeft { get; set; }
+        public double Speed { get; set; }
+        public string Reason { get; set; }
         public int Count { get; set; }
         public List<QueuePartDto> Parts { get; set; } = new List<QueuePartDto>();
     }
@@ -77,6 +105,8 @@ namespace Emby.Plugins.Discover
     public class QueueResultDto
     {
         public List<QueueEntryDto> Items { get; set; } = new List<QueueEntryDto>();
+        /// <summary>Algemene toestand van SABnzbd; null als SABnzbd niet is ingesteld of niet bereikbaar was.</summary>
+        public SabInfoDto Sab { get; set; }
     }
 
     internal class RawPart
@@ -84,15 +114,20 @@ namespace Emby.Plugins.Discover
         public string Type; public int TmdbId; public string Title; public string Label; public string Name;
         public double Size; public double SizeLeft; public string State; public int TimeLeft; public string Release; public string Detail;
         public int Season; public int Episode;
+        public string DownloadId, Stage, Reason, Client, Indexer, Via, Action;
+        public double Speed;
+        public bool Sab;
+        public int Seeds = -1;
+        public double Ratio = -1;
     }
 
     /// <summary>
-    /// Leest de wachtrijen van Radarr en Sonarr. Het resultaat wordt 8 seconden bewaard, zodat veel
+    /// Leest de wachtrijen van Radarr en Sonarr. Het resultaat wordt 2 seconden bewaard, zodat veel
     /// browsers die tegelijk de voortgang verversen samen maar één keer per wachtrij vragen.
     /// </summary>
     internal static class DownloadQueue
     {
-        private static readonly TimeSpan Ttl = TimeSpan.FromSeconds(8);
+        private static readonly TimeSpan Ttl = TimeSpan.FromSeconds(2);
         private static readonly SemaphoreSlim Lock = new SemaphoreSlim(1, 1);
         private static List<RawPart> _cache;
         private static DateTime _cacheAt;
@@ -113,39 +148,197 @@ namespace Emby.Plugins.Discover
                     var seerrParts = SeerrClient.Configured
                         ? await SeerrClient.GetQueueParts(json, ct).ConfigureAwait(false)
                         : new List<RawPart>();
+                    if (Plugin.GetCurrentConfiguration().SeerrArrStatus && (RadarrSet || SonarrSet))
+                    {
+                        try { MergeArr(seerrParts, await ArrParts(json, ct).ConfigureAwait(false)); }
+                        catch (Exception ex)
+                        {
+                            if (ex is OperationCanceledException) throw;
+                            DiscoverDiagnostics.Add("FOUT wachtrij Radarr/Sonarr naast Seerr: " + ex.Message);
+                        }
+                    }
+                    if (Plugin.GetCurrentConfiguration().SeerrArrStatus) NudgeArr(json, seerrParts);
+                    await WithSab(seerrParts, json, ct).ConfigureAwait(false);
                     _cache = seerrParts;
                     _cacheAt = DateTime.UtcNow;
                     return seerrParts;
                 }
-                var list = new List<RawPart>();
-                var movies = ArrClient.RadarrConfigured ? ReadSafe(json, false, ct) : Task.FromResult(new List<ArrQueueFullItemDto>());
-                var series = ArrClient.SonarrConfigured ? ReadSafe(json, true, ct) : Task.FromResult(new List<ArrQueueFullItemDto>());
-                await Task.WhenAll(movies, series).ConfigureAwait(false);
-                foreach (var r in movies.Result)
-                {
-                    if (r.movie == null || r.movie.tmdbId <= 0 || IsImported(r)) continue;
-                    list.Add(ToPart(r, "movie", r.movie.tmdbId, r.movie.title, 0, 0, null));
-                }
-                foreach (var r in series.Result)
-                {
-                    if (r.series == null || r.series.tmdbId <= 0 || IsImported(r)) continue;
-                    var ep = r.episode ?? (r.episodes != null && r.episodes.Count > 0 ? r.episodes[0] : null);
-                    int season = ep != null ? ep.seasonNumber : r.seasonNumber;
-                    int number = ep != null ? ep.episodeNumber : 0;
-                    // Een seizoenspakket bevat meer afleveringen; dan staat er "S03E01-E08".
-                    string label = season > 0 || number > 0 ? "S" + season.ToString("00") + (number > 0 ? "E" + number.ToString("00") : "") : "";
-                    if (r.episodes != null && r.episodes.Count > 1)
-                    {
-                        var last = r.episodes.OrderBy(e => e.episodeNumber).Last();
-                        if (last.episodeNumber > number) label += "-E" + last.episodeNumber.ToString("00");
-                    }
-                    list.Add(ToPart(r, "tv", r.series.tmdbId, r.series.title, season, number, label, ep != null ? ep.title : null));
-                }
+                var list = await ArrParts(json, ct).ConfigureAwait(false);
+                NudgeArr(json, list);
+                await WithSab(list, json, ct).ConfigureAwait(false);
                 _cache = list;
                 _cacheAt = DateTime.UtcNow;
                 return list;
             }
             finally { Lock.Release(); }
+        }
+
+        private static readonly TimeSpan NudgeEvery = TimeSpan.FromSeconds(10);
+        private static readonly TimeSpan NudgeWindow = TimeSpan.FromMinutes(15);
+        private static DateTime _nudgeMovieAt = DateTime.MinValue, _nudgeTvAt = DateTime.MinValue;
+
+        /// <summary>
+        /// Radarr/Sonarr verversen hun wachtrij maar eens per minuut. Een net aangevraagde titel die al bij SABnzbd e.d.
+        /// binnenkomt, verscheen daardoor pas na ~1 minuut (bij een snelle lijn al op 30-40%). Zolang een aanvraag van de
+        /// laatste 15 minuten nog niet in de wachtrij staat, vragen we Radarr/Sonarr (hooguit elke 10 s) om de downloads
+        /// meteen te verversen (commando RefreshMonitoredDownloads). Gaat op de achtergrond; fouten worden alleen gelogd.
+        /// </summary>
+        private static void NudgeArr(IJsonSerializer json, List<RawPart> parts)
+        {
+            try
+            {
+                var now = DateTime.UtcNow;
+                bool doMovie = RadarrSet && now - _nudgeMovieAt >= NudgeEvery;
+                bool doTv = SonarrSet && now - _nudgeTvAt >= NudgeEvery;
+                if (!doMovie && !doTv) return;
+                bool wantMovie = false, wantTv = false;
+                foreach (var r in RequestStore.All(json))
+                {
+                    DateTime added;
+                    if (!DateTime.TryParse(r.Added, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out added)) continue;
+                    if (now - added.ToUniversalTime() > NudgeWindow) continue;
+                    if (parts.Any(p => p.Type == r.Type && p.TmdbId == r.TmdbId)) continue;
+                    if (r.Type == "tv") wantTv = true; else wantMovie = true;
+                }
+                if (doMovie && wantMovie) { _nudgeMovieAt = now; Refresh(false); }
+                if (doTv && wantTv) { _nudgeTvAt = now; Refresh(true); }
+            }
+            catch (Exception ex) { DiscoverDiagnostics.Add("FOUT wachtrij verversen: " + ex.Message); }
+        }
+
+        private static readonly TimeSpan PendingWindow = TimeSpan.FromHours(6);
+
+        /// <summary>Aanvragen van de laatste 6 uur die niet in de wachtrij van Radarr/Sonarr/Seerr staan (één per titel).</summary>
+        private static List<StoredRequest> PendingRequests(IJsonSerializer json, List<RawPart> parts)
+        {
+            var res = new List<StoredRequest>();
+            try
+            {
+                var now = DateTime.UtcNow;
+                foreach (var r in RequestStore.All(json))
+                {
+                    DateTime added;
+                    if (!DateTime.TryParse(r.Added, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out added)) continue;
+                    if (now - added.ToUniversalTime() > PendingWindow) continue;
+                    if (parts.Any(p => p.Type == r.Type && p.TmdbId == r.TmdbId)) continue;
+                    if (res.Any(x => x.Type == r.Type && x.TmdbId == r.TmdbId)) continue;
+                    res.Add(r);
+                }
+            }
+            catch (Exception ex) { DiscoverDiagnostics.Add("FOUT recente aanvragen lezen: " + ex.Message); }
+            return res;
+        }
+
+        private static void Refresh(bool sonarr)
+        {
+            Task.Run(async () =>
+            {
+                try
+                {
+                    await ArrClient.PostRaw(sonarr, "/api/v3/command", "{\"name\":\"RefreshMonitoredDownloads\"}", CancellationToken.None).ConfigureAwait(false);
+                    Invalidate();
+                }
+                catch (Exception ex) { DiscoverDiagnostics.Add("FOUT " + (sonarr ? "Sonarr" : "Radarr") + " RefreshMonitoredDownloads: " + ex.Message); }
+            });
+        }
+
+        // Echte instellingen van Radarr en Sonarr (ArrClient.RadarrConfigured telt in de Seerr-modus Seerr mee).
+        private static bool RadarrSet { get { var c = Plugin.GetCurrentConfiguration(); return !string.IsNullOrWhiteSpace(c.RadarrUrl) && !string.IsNullOrWhiteSpace(c.RadarrApiKey); } }
+        private static bool SonarrSet { get { var c = Plugin.GetCurrentConfiguration(); return !string.IsNullOrWhiteSpace(c.SonarrUrl) && !string.IsNullOrWhiteSpace(c.SonarrApiKey); } }
+
+        /// <summary>De wachtrij van Radarr en Sonarr als lijst downloads.</summary>
+        private static async Task<List<RawPart>> ArrParts(IJsonSerializer json, CancellationToken ct)
+        {
+            var list = new List<RawPart>();
+            var movies = RadarrSet ? ReadSafe(json, false, ct) : Task.FromResult(new List<ArrQueueFullItemDto>());
+            var series = SonarrSet ? ReadSafe(json, true, ct) : Task.FromResult(new List<ArrQueueFullItemDto>());
+            await Task.WhenAll(movies, series).ConfigureAwait(false);
+            foreach (var r in movies.Result)
+            {
+                if (r.movie == null || r.movie.tmdbId <= 0 || IsImported(r)) continue;
+                list.Add(ToPart(r, "movie", r.movie.tmdbId, r.movie.title, 0, 0, null));
+            }
+            foreach (var r in series.Result)
+            {
+                if (r.series == null || r.series.tmdbId <= 0 || IsImported(r)) continue;
+                var ep = r.episode ?? (r.episodes != null && r.episodes.Count > 0 ? r.episodes[0] : null);
+                int season = ep != null ? ep.seasonNumber : r.seasonNumber;
+                int number = ep != null ? ep.episodeNumber : 0;
+                // Een seizoenspakket bevat meer afleveringen; dan staat er "S03E01-E08".
+                string label = season > 0 || number > 0 ? "S" + season.ToString("00") + (number > 0 ? "E" + number.ToString("00") : "") : "";
+                if (r.episodes != null && r.episodes.Count > 1)
+                {
+                    var last = r.episodes.OrderBy(e => e.episodeNumber).Last();
+                    if (last.episodeNumber > number) label += "-E" + last.episodeNumber.ToString("00");
+                }
+                list.Add(ToPart(r, "tv", r.series.tmdbId, r.series.title, season, number, label, ep != null ? ep.title : null));
+            }
+            return list;
+        }
+
+        /// <summary>
+        /// Seerr-modus met Radarr/Sonarr erbij: de downloads van Seerr krijgen de status uit Radarr/Sonarr (importfases,
+        /// reden bij een probleem, downloadclient en indexer). Koppeling via download-ID, anders via de releasenaam;
+        /// bij een film (één download) volstaat de titel.
+        /// </summary>
+        private static void MergeArr(List<RawPart> seerr, List<RawPart> arr)
+        {
+            foreach (var p in seerr)
+            {
+                RawPart m = null;
+                if (!string.IsNullOrEmpty(p.DownloadId))
+                    m = arr.FirstOrDefault(a => a.Type == p.Type && a.TmdbId == p.TmdbId && string.Equals(a.DownloadId, p.DownloadId, StringComparison.OrdinalIgnoreCase));
+                if (m == null)
+                {
+                    var n = SabClient.Norm(p.Release);
+                    if (n.Length > 0) m = arr.FirstOrDefault(a => a.Type == p.Type && a.TmdbId == p.TmdbId && SabClient.Norm(a.Release) == n);
+                }
+                if (m == null && p.Type == "movie") m = arr.FirstOrDefault(a => a.Type == "movie" && a.TmdbId == p.TmdbId);
+                if (m == null) continue;
+                p.State = m.State;
+                p.Reason = m.Reason;
+                p.Client = m.Client;
+                p.Indexer = m.Indexer;
+                p.Detail = m.Detail;
+                if (!string.IsNullOrEmpty(m.Title)) p.Title = m.Title;
+                if (!string.IsNullOrEmpty(m.Name)) p.Name = m.Name;
+                if (!string.IsNullOrEmpty(m.Release) && string.IsNullOrEmpty(p.Release)) p.Release = m.Release;
+                if (string.IsNullOrEmpty(p.DownloadId)) p.DownloadId = m.DownloadId;
+                if (m.Size > 0) { p.Size = m.Size; p.SizeLeft = m.SizeLeft; }
+                if (m.TimeLeft >= 0) p.TimeLeft = m.TimeLeft;
+            }
+        }
+
+        /// <summary>
+        /// Vult de downloads aan met wat de ingestelde downloaders weten (SABnzbd, NZBGet, qBittorrent, Transmission):
+        /// snelheid, fases na 100%, seeders en ratio. Een fout bij één downloader houdt de rest niet tegen.
+        /// </summary>
+        private static async Task WithSab(List<RawPart> parts, IJsonSerializer json, CancellationToken ct)
+        {
+            SabClient.Last = null;
+            var pending = PendingRequests(json, parts);
+            if (parts.Count == 0 && pending.Count == 0) return;
+            var fetchers = new List<Tuple<string, Func<Task<SabSnapshot>>>>();
+            if (SabClient.Configured) fetchers.Add(Tuple.Create<string, Func<Task<SabSnapshot>>>("SABnzbd", () => SabClient.Fetch(json, ct)));
+            if (NzbgetClient.Configured) fetchers.Add(Tuple.Create<string, Func<Task<SabSnapshot>>>("NZBGet", () => NzbgetClient.Fetch(json, ct)));
+            if (QbitClient.Configured) fetchers.Add(Tuple.Create<string, Func<Task<SabSnapshot>>>("qBittorrent", () => QbitClient.Fetch(json, ct)));
+            if (TransmissionClient.Configured) fetchers.Add(Tuple.Create<string, Func<Task<SabSnapshot>>>("Transmission", () => TransmissionClient.Fetch(json, ct)));
+            foreach (var f in fetchers)
+            {
+                try
+                {
+                    var snap = await f.Item2().ConfigureAwait(false);
+                    if (snap == null) continue;
+                    SabClient.Apply(snap, parts);
+                    SabClient.AddMissing(snap, parts, pending);
+                    if (snap.HasGlobal && SabClient.Last == null) SabClient.Last = snap;
+                }
+                catch (Exception ex)
+                {
+                    if (ex is OperationCanceledException) throw;
+                    DiscoverDiagnostics.Add("FOUT " + f.Item1 + " lezen: " + ex.Message);
+                }
+            }
         }
 
         private static async Task<List<ArrQueueFullItemDto>> ReadSafe(IJsonSerializer json, bool sonarr, CancellationToken ct)
@@ -169,20 +362,27 @@ namespace Emby.Plugins.Discover
 
         private static RawPart ToPart(ArrQueueFullItemDto r, string type, int tmdbId, string title, int season, int number, string label, string epTitle = null)
         {
-            var detail = new List<string>();
-            if (!string.IsNullOrWhiteSpace(r.downloadClient)) detail.Add(r.downloadClient);
-            if (!string.IsNullOrWhiteSpace(r.indexer)) detail.Add(r.indexer);
-            if (!string.IsNullOrWhiteSpace(r.errorMessage)) detail.Add(r.errorMessage);
+            // De reden (foutmelding of statusberichten van Radarr/Sonarr) is voor iedereen; client en indexer alleen voor beheerders.
+            var why = new List<string>();
+            if (!string.IsNullOrWhiteSpace(r.errorMessage)) why.Add(r.errorMessage.Trim());
             if (r.statusMessages != null)
                 foreach (var m in r.statusMessages)
                     if (m != null && m.messages != null)
                         foreach (var s in m.messages)
-                            if (!string.IsNullOrWhiteSpace(s) && !detail.Contains(s)) detail.Add(s);
+                            if (!string.IsNullOrWhiteSpace(s) && !why.Contains(s.Trim())) why.Add(s.Trim());
+            var detail = new List<string>();
+            if (!string.IsNullOrWhiteSpace(r.downloadClient)) detail.Add(r.downloadClient);
+            if (!string.IsNullOrWhiteSpace(r.indexer)) detail.Add(r.indexer);
+            detail.AddRange(why);
             return new RawPart
             {
                 Type = type, TmdbId = tmdbId, Title = title, Label = label ?? "", Name = epTitle,
                 Size = r.size, SizeLeft = r.sizeleft, State = MapState(r), TimeLeft = ParseTime(r.timeleft),
                 Release = r.title, Detail = detail.Count > 0 ? string.Join(" · ", detail) : null,
+                Reason = why.Count > 0 ? string.Join(" · ", why) : null,
+                Client = string.IsNullOrWhiteSpace(r.downloadClient) ? null : r.downloadClient,
+                Indexer = string.IsNullOrWhiteSpace(r.indexer) ? null : r.indexer,
+                DownloadId = r.downloadId,
                 Season = season, Episode = number
             };
         }
@@ -201,9 +401,13 @@ namespace Emby.Plugins.Discover
         {
             var tracked = (r.trackedDownloadState ?? "").ToLowerInvariant();
             var status = (r.status ?? "").ToLowerInvariant();
-            if (tracked.StartsWith("import", StringComparison.Ordinal) || status == "completed") return "importing";
+            // Importfases uit elkaar: een geblokkeerde import mag er niet uitzien als een lopende import.
+            if (tracked == "importblocked" || tracked == "importfailed") return "importblocked";
+            if (tracked == "importpending") return "importwait";
+            if (tracked == "importing") return "importing";
             if (tracked.StartsWith("failed", StringComparison.Ordinal) || status == "failed" || status == "warning" ||
                 status == "downloadclientunavailable" || string.Equals(r.trackedDownloadStatus, "error", StringComparison.OrdinalIgnoreCase)) return "stalled";
+            if (tracked.StartsWith("import", StringComparison.Ordinal) || status == "completed") return "importing";
             if (status == "paused") return "paused";
             if (status == "queued" || status == "delay" || status == "fallback") return "queued";
             if (status == "downloading") return "downloading";
@@ -226,6 +430,24 @@ namespace Emby.Plugins.Discover
             return Math.Max(0, Math.Min(100, p));
         }
 
+        /// <summary>
+        /// Toestand van een hele film of serie. Downloaden gaat voor; daarna nabewerking en import. Een geblokkeerde import
+        /// of een probleem staat boven wachten en pauze, zodat het niet onder een rustige status verdwijnt.
+        /// </summary>
+        private static string EntryState(List<RawPart> list)
+        {
+            Func<string, bool> any = s => list.Any(p => p.State == s);
+            if (any("downloading")) return "downloading";
+            if (any("processing")) return "processing";
+            if (any("importing")) return "importing";
+            if (any("importblocked")) return "importblocked";
+            if (any("stalled")) return "stalled";
+            if (any("importwait")) return "importwait";
+            if (list.All(p => p.State == "paused")) return "paused";
+            if (any("paused") && !any("queued")) return "paused";
+            return "queued";
+        }
+
         /// <summary>Per film/serie samengevoegd. admin = releasenaam en details meesturen.</summary>
         internal static List<QueueEntryDto> Group(List<RawPart> parts, bool admin)
         {
@@ -243,13 +465,15 @@ namespace Emby.Plugins.Discover
                     Count = list.Count,
                     Progress = Pct(size, left),
                     TimeLeft = list.Any(p => p.TimeLeft >= 0) ? list.Where(p => p.TimeLeft >= 0).Max(p => p.TimeLeft) : -1,
-                    State = list.Any(p => p.State == "downloading") ? "downloading"
-                        : list.All(p => p.State == "importing") ? "importing"
-                        : list.All(p => p.State == "paused") ? "paused"
-                        : list.Any(p => p.State == "stalled") && list.All(p => p.State == "stalled" || p.State == "paused") ? "stalled"
-                        : list.Any(p => p.State == "paused") && !list.Any(p => p.State == "queued") ? "paused"
-                        : "queued"
+                    State = EntryState(list),
+                    Size = size,
+                    SizeLeft = left,
+                    Speed = list.Max(p => p.Speed)
                 };
+                var processing = list.FirstOrDefault(p => p.State == "processing");
+                if (processing != null) { entry.Stage = processing.Stage; entry.Action = processing.Action; }
+                var problem = list.FirstOrDefault(p => (p.State == "importblocked" || p.State == "stalled") && !string.IsNullOrWhiteSpace(p.Reason));
+                if (problem != null) entry.Reason = problem.Reason;
                 foreach (var p in list)
                 {
                     entry.Parts.Add(new QueuePartDto
@@ -258,8 +482,20 @@ namespace Emby.Plugins.Discover
                         Name = p.Name,
                         Progress = Pct(p.Size, p.SizeLeft),
                         State = p.State,
+                        Stage = p.Stage,
+                        Action = p.Action,
                         TimeLeft = p.TimeLeft,
+                        Size = p.Size,
+                        SizeLeft = p.SizeLeft,
+                        Speed = p.Speed,
+                        Reason = p.Reason,
+                        Sab = p.Sab,
+                        Via = p.Via,
+                        Seeds = p.Seeds,
+                        Ratio = p.Ratio,
                         Release = admin ? p.Release : null,
+                        Client = admin ? p.Client : null,
+                        Indexer = admin ? p.Indexer : null,
                         Detail = admin ? p.Detail : null
                     });
                 }
@@ -481,6 +717,7 @@ namespace Emby.Plugins.Discover
             {
                 var parts = await DownloadQueue.GetParts(_json, CancellationToken.None).ConfigureAwait(false);
                 res.Items = DownloadQueue.Group(parts, admin);
+                res.Sab = SabClient.Info();
             }
             catch (Exception ex) { DiscoverDiagnostics.Add("FOUT wachtrij: " + ex.Message); }
             return res;

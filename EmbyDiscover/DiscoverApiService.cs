@@ -25,6 +25,8 @@ namespace Emby.Plugins.Discover
         public int Genre { get; set; }
         /// <summary>Alleen Populaire films/series: "popular" (standaard), "new" (nieuwste) of "top" (best beoordeeld).</summary>
         public string Sort { get; set; }
+        /// <summary>Jaarfilter (0 = alle): popular/upcoming-rijen. Aankomend: exact dat jaar; populair: dat jaar en nieuwer.</summary>
+        public int Year { get; set; }
     }
 
     [Route("/Discover/Search", "GET", Summary = "Zoek films en series")]
@@ -188,6 +190,7 @@ namespace Emby.Plugins.Discover
         public bool Seerr4kTv { get; set; }
         /// <summary>Weergave: jaar / TMDB-score onder de posters, themakleur, OMDb-scores in de popup.</summary>
         public bool PosterShowYear { get; set; } = true;
+        public bool ShowSpecials { get; set; } = true;
         public bool PosterShowScore { get; set; } = true;
         public string PosterScoreSource { get; set; }
         public string AccentColor { get; set; }
@@ -242,6 +245,8 @@ namespace Emby.Plugins.Discover
         public string Kind { get; set; }
         public int Id { get; set; }
         public int Page { get; set; }
+        /// <summary>Jaarfilter (0 = alle): alleen titels van dit jaar en nieuwer.</summary>
+        public int Year { get; set; }
     }
 
     public class DiscoverRow
@@ -447,6 +452,7 @@ namespace Emby.Plugins.Discover
                 Seerr4kMovie = SeerrClient.Has4k(_json, false),
                 Seerr4kTv = SeerrClient.Has4k(_json, true),
                 PosterShowYear = cfg.PosterShowYear,
+                ShowSpecials = cfg.ShowSpecials,
                 PosterShowScore = cfg.EffPosterScoreSource != "none",
                 PosterScoreSource = cfg.EffPosterScoreSource,
                 AccentColor = AccentOf(cfg.AccentColor),
@@ -570,12 +576,14 @@ namespace Emby.Plugins.Discover
                 var ts = SafeStates(true);
                 bool popular = def.Key == "popular_movie" || def.Key == "popular_tv";
                 var sort = (request.Sort ?? "").Trim().ToLowerInvariant();
+                int year = ValidYear(request.Year);
                 Task<List<TmdbItem>> itemsTask;
-                if (popular && (request.Genre > 0 || sort == "new" || sort == "top"))
+                if (popular && (request.Genre > 0 || year > 0 || sort == "new" || sort == "top"))
                 {
                     // Populair binnen een genre en/of anders gesorteerd: via /discover van TMDB.
                     var today = DateTime.UtcNow.ToString("yyyy-MM-dd");
                     string sortBy = "popularity.desc", filter = request.Genre > 0 ? "&with_genres=" + request.Genre : "";
+                    if (year > 0) filter += (def.Tv ? "&first_air_date.gte=" : "&primary_release_date.gte=") + year + "-01-01";
                     if (sort == "new")
                     {
                         sortBy = def.Tv ? "first_air_date.desc" : "primary_release_date.desc";
@@ -590,7 +598,7 @@ namespace Emby.Plugins.Discover
                 }
                 else
                 {
-                    itemsTask = _tmdb.GetListPages(def.Path, request.Page, request.Page, CancellationToken.None);
+                    itemsTask = _tmdb.GetListPages(def.Path, request.Page, request.Page, CancellationToken.None, year);
                 }
                 await Task.WhenAll(ms, ts, itemsTask).ConfigureAwait(false);
                 row.Items = ToDtos(itemsTask.Result, def, ms.Result, ts.Result);
@@ -620,6 +628,8 @@ namespace Emby.Plugins.Discover
                     case "network": tv = true; filter = "&with_networks=" + request.Id; break;
                     default: return row;
                 }
+                int byear = ValidYear(request.Year);
+                if (byear > 0) filter += (tv ? "&first_air_date.gte=" : "&primary_release_date.gte=") + byear + "-01-01";
                 var states = SafeStates(tv);
                 var itemsTask = _tmdb.BrowsePages(tv, filter, page, page + 1, CancellationToken.None);
                 await Task.WhenAll(states, itemsTask).ConfigureAwait(false);
@@ -1358,6 +1368,8 @@ namespace Emby.Plugins.Discover
                 Status = status
             };
         }
+
+        private static int ValidYear(int y) => y >= 1900 && y <= 2100 ? y : 0;
 
         private static int YearOf(string date) =>
             !string.IsNullOrEmpty(date) && date.Length >= 4 && int.TryParse(date.Substring(0, 4), out var y) ? y : 0;

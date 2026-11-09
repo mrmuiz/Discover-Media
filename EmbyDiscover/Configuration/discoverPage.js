@@ -37,15 +37,15 @@ define([], function() {
     }
 
     function loadButtonScript() {
-        if (window.__discoverRequestButtonVersion === "1.4.0.5") {
-            diag.load = text("script is al actief v1.4.0.5", "script already active v1.4.0.5", "Skript bereits aktiv v1.4.0.5");
+        if (window.__discoverRequestButtonVersion === "1.4.0.6") {
+            diag.load = text("script is al actief v1.4.0.6", "script already active v1.4.0.6", "Skript bereits aktiv v1.4.0.6");
             showDiag();
             return
         }
         var urls = [ApiClient.getUrl("web/ConfigurationPage", {
-            name: "discoverbuttonjs1411"
+            name: "discoverbuttonjs1415"
         }), ApiClient.getUrl("web/configurationpage", {
-            name: "discoverbuttonjs1411"
+            name: "discoverbuttonjs1415"
         }), ApiClient.getUrl("Plugins/Discover/Script")];
         var n = 0;
         (function next() {
@@ -60,7 +60,7 @@ define([], function() {
             script.src = u + (u.indexOf("?") === -1 ? "?" : "&") + "_=" + Date.now();
             script.async = true;
             script.onload = function() {
-                if (window.__discoverRequestButtonVersion === "1.4.0.5") {
+                if (window.__discoverRequestButtonVersion === "1.4.0.6") {
                     diag.load = text("OK via extern script ", "OK via external script ", "OK \xfcber externes Skript ") + u;
                     showDiag()
                 } else {
@@ -79,7 +79,7 @@ define([], function() {
             document.head.appendChild(script)
         })()
     }
-    var UI_PAGE = "discoverui1113";
+    var UI_PAGE = "discoverui1120";
     return function(view, params) {
         var embedded = !!(params && params.embedded);
         if (embedded) {
@@ -120,6 +120,7 @@ define([], function() {
         api("GET", "Discover/Status").then(function(r) {
             diagEl.style.display = r.ShowDiagnostics ? "" : "none";
             showTrailer = r.ShowTrailerTile !== false;
+            showSpecials = r.ShowSpecials !== false;
             applyAccent(r.AccentColor);
             document.documentElement.classList.toggle("dcNoYear", r.PosterShowYear === false);
             document.documentElement.classList.toggle("dcNoScore", r.PosterShowScore === false);
@@ -151,6 +152,7 @@ define([], function() {
         var loaded = false;
         var isAdmin = false;
         var showTrailer = true;
+        var showSpecials = true;
         var fourK = {
             movie: false,
             tv: false
@@ -170,13 +172,72 @@ define([], function() {
             return st === 2 ? "&#10003;" : st === 1 ? "&#9203;" : ""
         }
         var queue = {};
+        var sabInfo = null;
         var queueTimer = null,
             queueBusy = false,
             pollUntil = 0;
-        var QUEUE_POLL = 15e3;
+        var QUEUE_POLL = 3e3,
+            QUEUE_IDLE = 15e3;
 
-        function stateLabel(st) {
-            return st === "downloading" ? text("Downloaden", "Downloading", "L\xe4dt herunter", "Laster ned") : st === "paused" ? text("Gepauzeerd", "Paused", "Pausiert", "Pauset") : st === "importing" ? text("Wordt toegevoegd", "Importing", "Wird importiert", "Importeres") : st === "stalled" ? text("Wacht op download", "Waiting for download", "Wartet auf Download", "Venter") : text("In wachtrij", "Queued", "In Warteschlange", "I k\xf8")
+        function stageLabel(stage) {
+            return stage === "verifying" ? text("Verifi\xebren", "Verifying", "\xdcberpr\xfcfen", "Verifiserer") : stage === "repairing" ? text("Repareren", "Repairing", "Reparieren", "Reparerer") : stage === "extracting" ? text("Uitpakken", "Extracting", "Entpacken", "Pakker ut") : stage === "moving" ? text("Verplaatsen", "Moving", "Verschieben", "Flytter") : stage === "script" ? text("Script draaien", "Running script", "Skript l\xe4uft", "Kj\xf8rer skript") : text("Wacht op verwerking", "Waiting for processing", "Wartet auf Verarbeitung", "Venter p\xe5 behandling")
+        }
+
+        function stateLabel(st, stage) {
+            return st === "downloading" ? text("Downloaden", "Downloading", "L\xe4dt herunter", "Laster ned") : st === "paused" ? text("Gepauzeerd", "Paused", "Pausiert", "Pauset") : st === "processing" ? stageLabel(stage) : st === "importwait" ? text("Wacht op import", "Waiting to import", "Wartet auf Import", "Venter p\xe5 import") : st === "importing" ? text("Importeren", "Importing", "Wird importiert", "Importerer") : st === "importblocked" ? text("Import geblokkeerd", "Import blocked", "Import blockiert", "Import blokkert") : st === "stalled" ? text("Probleem", "Problem", "Problem", "Problem") : text("In wachtrij", "Queued", "In Warteschlange", "I k\xf8")
+        }
+
+        // Tekst op de balk: "Downloaden 73%"; bij importeren e.d. alleen de status (de balk is dan vol).
+        function statusText(st, stage, progress, action) {
+            if (st === "processing" && stage === "script" && action) {
+                return action
+            }
+            return stateLabel(st, stage) + ((st === "downloading" || st === "paused" || st === "stalled") && progress > 0 ? " " + progress + "%" : "")
+        }
+
+        function fullBar(st) {
+            return st === "processing" || st === "importwait" || st === "importing" || st === "importblocked"
+        }
+
+        function decimal(v) {
+            return String(v).replace(".", text(",", ".", ",", ","))
+        }
+
+        function rateText(bps) {
+            if (!(bps > 0)) {
+                return ""
+            }
+            var u = ["KB/s", "MB/s", "GB/s"],
+                i = 0,
+                v = bps / 1024;
+            while (v >= 1024 && i < 2) {
+                v /= 1024;
+                i++
+            }
+            return decimal(v >= 100 ? Math.round(v) : Math.round(v * 10) / 10) + " " + u[i]
+        }
+
+        function sizeText(p) {
+            var total = p.Size;
+            if (!(total > 0)) {
+                return ""
+            }
+            var u = ["B", "KB", "MB", "GB", "TB"],
+                i = 0,
+                t = total;
+            while (t >= 1024 && i < 4) {
+                t /= 1024;
+                i++
+            }
+            var div = Math.pow(1024, i);
+
+            function f(x) {
+                var v = x / div;
+                return decimal(v >= 100 || i === 0 ? Math.round(v) : Math.round(v * 10) / 10)
+            }
+            var done = total - (p.SizeLeft || 0);
+            var partial = (p.State === "downloading" || p.State === "paused" || p.State === "queued" || p.State === "stalled") && p.SizeLeft > 0 && done > 0;
+            return partial ? f(done) + text(" van ", " of ", " von ", " av ") + f(total) + " " + u[i] : f(total) + " " + u[i]
         }
 
         function timeLeft(sec) {
@@ -200,24 +261,39 @@ define([], function() {
             return h > 0 ? h + text("u ", "h ", "h ", "t ") + m + "m" : m + " min"
         }
 
-        function queueLine(e) {
-            var parts = [];
-            if (e.Type === "tv" && e.Count > 1) {
-                parts.push(e.Count + " " + text("afl.", "eps.", "Folgen", "ep."))
+        // Serie met meer afleveringen in de wachtrij: toon alleen de aflevering die nu aan de beurt is.
+        var PART_ORDER = ["downloading", "processing", "importing", "importwait", "importblocked", "stalled", "paused", "queued"];
+
+        function curPart(e) {
+            if (!e || e.Type !== "tv" || !e.Parts || e.Parts.length < 2) {
+                return null
             }
-            if (e.State === "downloading") {
-                parts.push("↓ " + e.Progress + "%");
-                var t = timeLeft(e.TimeLeft);
+            for (var o = 0; o < PART_ORDER.length; o++) {
+                for (var k = 0; k < e.Parts.length; k++) {
+                    if (e.Parts[k].State === PART_ORDER[o]) {
+                        return e.Parts[k]
+                    }
+                }
+            }
+            return e.Parts[0]
+        }
+
+        function queueLine(e) {
+            var cp = curPart(e);
+            var src = cp || e;
+            var parts = [];
+            if (cp && cp.Label) {
+                parts.push(cp.Label)
+            }
+            parts.push(statusText(src.State, src.Stage, src.Progress, src.Action));
+            if (src.State === "downloading") {
+                var t = timeLeft(src.TimeLeft);
                 if (t) {
                     parts.push(t)
                 }
-            } else if (e.State === "paused") {
-                parts.push(stateLabel(e.State));
-                parts.push(e.Progress + "%")
-            } else {
-                parts.push(stateLabel(e.State));
-                if (e.Progress > 0 && e.State !== "importing") {
-                    parts.push(e.Progress + "%")
+                var sp = rateText(src.Speed);
+                if (sp) {
+                    parts.push(sp)
                 }
             }
             return parts.join(" \xb7 ")
@@ -228,13 +304,15 @@ define([], function() {
             if (!e) {
                 return ""
             }
-            return '<div class="dcProg ' + esc(e.State) + '"><i style="width:' + e.Progress + '%"></i></div>'
+            var src = curPart(e) || e;
+            return '<div class="dcProg ' + esc(src.State) + '"><i style="width:' + (fullBar(src.State) ? 100 : src.Progress) + '%"></i></div>'
         }
 
         function capQueueHtml(i, mine) {
             var e = queue[key(i)];
             if (e) {
-                return '<div class="dcCapQ ' + esc(e.State) + '" style="--p:' + (e.Progress || 0) + '%">' + esc(queueLine(e)) + "</div>"
+                var src = curPart(e) || e;
+                return '<div class="dcCapQ ' + esc(src.State) + '" style="--p:' + (fullBar(src.State) ? 100 : src.Progress || 0) + '%">' + esc(queueLine(e)) + "</div>"
             }
             if (!mine) {
                 return ""
@@ -287,7 +365,7 @@ define([], function() {
                 return
             }
             if (document.hidden) {
-                scheduleQueue(QUEUE_POLL);
+                scheduleQueue(QUEUE_IDLE);
                 return
             }
             queueBusy = true;
@@ -295,6 +373,7 @@ define([], function() {
                 queueBusy = false;
                 var next = {},
                     gone = false;
+                sabInfo = r && r.Sab || null;
                 (r && r.Items || []).forEach(function(e) {
                     next[e.Type + ":" + e.TmdbId] = e
                 });
@@ -314,14 +393,12 @@ define([], function() {
                 if (gone) {
                     loadMyRequests()
                 }
-                if (Object.keys(queue).length || Date.now() < pollUntil) {
-                    scheduleQueue(QUEUE_POLL)
-                }
+                // Snel verversen zolang er iets downloadt of de popup open staat; anders rustig blijven kijken,
+                // zodat een download die elders is gestart vanzelf verschijnt.
+                scheduleQueue(Object.keys(queue).length || overlay.classList.contains("open") || Date.now() < pollUntil ? QUEUE_POLL : QUEUE_IDLE)
             }, function() {
                 queueBusy = false;
-                if (Date.now() < pollUntil) {
-                    scheduleQueue(QUEUE_POLL * 2)
-                }
+                scheduleQueue(QUEUE_POLL * 3)
             })
         }
 
@@ -329,6 +406,34 @@ define([], function() {
             pollUntil = Date.now() + 5 * 60 * 1e3;
             scheduleQueue(5e3);
             loadMyRequests()
+        }
+
+        // Algemene toestand van SABnzbd, alleen als deze download via SABnzbd loopt.
+        function sabLine(e) {
+            if (!sabInfo) {
+                return ""
+            }
+            var viaSab = false;
+            for (var k = 0; k < e.Parts.length; k++) {
+                if (e.Parts[k].Via && e.Parts[k].Via === sabInfo.Name) {
+                    viaSab = true
+                }
+            }
+            if (!viaSab) {
+                return ""
+            }
+            var out = [sabInfo.Name || "SABnzbd"];
+            if (sabInfo.Paused) {
+                out.push(text("gepauzeerd", "paused", "pausiert", "pauset"))
+            } else if (sabInfo.Speed > 0) {
+                out.push(rateText(sabInfo.Speed))
+            }
+            if (sabInfo.LimitBps > 0) {
+                out.push(text("limiet ", "limit ", "Limit ", "grense ") + rateText(sabInfo.LimitBps))
+            } else if (sabInfo.LimitPct > 0) {
+                out.push(text("limiet ", "limit ", "Limit ", "grense ") + sabInfo.LimitPct + "%")
+            }
+            return out.length > 1 ? out.join(" \xb7 ") : ""
         }
 
         function renderQueueInfo(i) {
@@ -343,17 +448,56 @@ define([], function() {
                 return
             }
             var max = isTvClient ? 3 : 8;
-            var html = '<div class="dcQHead">' + esc(stateLabel(e.State)) + (e.Count > 1 ? " \xb7 " + e.Count + " " + text("downloads", "downloads", "Downloads", "nedlastinger") : "") + "</div>";
-            e.Parts.slice(0, max).forEach(function(p) {
+            var shown = e.Parts;
+            if (e.Type === "tv" && e.Parts.length > 1) {
+                var dl = e.Parts.filter(function(p) {
+                    return p.State === "downloading"
+                });
+                shown = dl.length ? dl : [curPart(e)]
+            }
+            var html = '<div class="dcQHead">' + esc(stateLabel(e.State, e.Stage)) + (e.Count > 1 ? " \xb7 " + e.Count + " " + text("downloads", "downloads", "Downloads", "nedlastinger") : "") + "</div>";
+            var sab = sabLine(e);
+            if (sab) {
+                html += '<div class="dcQSab">' + esc(sab) + "</div>"
+            }
+            shown.slice(0, max).forEach(function(p) {
                 var name = p.Label ? p.Label + (p.Name ? " \xb7 " + p.Name : "") : i.Title;
-                var right = p.State === "downloading" ? p.Progress + "%" + (timeLeft(p.TimeLeft) ? " \xb7 " + timeLeft(p.TimeLeft) : "") : stateLabel(p.State) + (p.Progress > 0 && p.State !== "importing" ? " \xb7 " + p.Progress + "%" : "");
-                html += '<div class="dcQRow"><span class="dcQName">' + esc(name) + "</span>" + '<span class="dcQBar ' + esc(p.State) + '"><i style="width:' + p.Progress + '%"></i></span>' + '<span class="dcQPct">' + esc(right) + "</span></div>";
-                if (p.Release || p.Detail) {
-                    html += '<div class="dcQRel">' + esc(p.Release || "") + (p.Release && p.Detail ? " \xb7 " : "") + esc(p.Detail || "") + "</div>"
+                var right = statusText(p.State, p.Stage, p.Progress, p.Action);
+                if (p.State === "downloading") {
+                    var tl = timeLeft(p.TimeLeft),
+                        sp = rateText(p.Speed);
+                    right += (tl ? " \xb7 " + tl : "") + (sp ? " \xb7 " + sp : "")
+                }
+                html += '<div class="dcQRow"><span class="dcQName">' + esc(name) + "</span>" + '<span class="dcQBar ' + esc(p.State) + '"><i style="width:' + (fullBar(p.State) ? 100 : p.Progress) + '%"></i></span>' + '<span class="dcQPct ' + esc(p.State) + '">' + esc(right) + "</span></div>";
+                if (p.Release) {
+                    html += '<div class="dcQRel">' + esc(p.Release) + "</div>"
+                }
+                var meta = [];
+                var sz = sizeText(p);
+                if (sz) {
+                    meta.push(sz)
+                }
+                if (p.State === "downloading" && p.Seeds >= 0) {
+                    meta.push(p.Seeds + " seeders")
+                }
+                if (p.Ratio > 0) {
+                    meta.push("ratio " + decimal(Math.round(p.Ratio * 100) / 100))
+                }
+                if (p.Client) {
+                    meta.push(p.Client)
+                }
+                if (p.Indexer) {
+                    meta.push(p.Indexer)
+                }
+                if (meta.length) {
+                    html += '<div class="dcQMeta">' + esc(meta.join(" \xb7 ")) + "</div>"
+                }
+                if (p.Reason && (p.State === "importblocked" || p.State === "stalled")) {
+                    html += '<div class="dcQWhy">' + esc(p.Reason) + "</div>"
                 }
             });
-            if (e.Parts.length > max) {
-                html += '<div class="dcQMore">' + text("en nog ", "and ", "und ", "og ") + (e.Parts.length - max) + text(" meer", " more", " weitere", " til") + "</div>"
+            if (e.Parts.length > Math.min(max, shown.length)) {
+                html += '<div class="dcQMore">' + text("en nog ", "and ", "und ", "og ") + (e.Parts.length - Math.min(max, shown.length)) + text(" meer", " more", " weitere", " til") + "</div>"
             }
             box.innerHTML = html;
             box.classList.add("show")
@@ -969,7 +1113,7 @@ define([], function() {
         }
 
         function passes(i, f) {
-            if (f.year && (!i.Year || i.Year < f.year)) {
+            if (f.year && (!i.Year || (f.yearExact ? i.Year !== f.year : i.Year < f.year))) {
                 return false
             }
             if (f.score && (!i.Rating || i.Rating < f.score)) {
@@ -1025,9 +1169,15 @@ define([], function() {
             var bar = content.querySelector(".dcFilters");
             var gSel = bar.querySelector(".dcFGenre"),
                 sSel = bar.querySelector(".dcFSort");
-            if (gSel && sSel && (parseInt(gSel.value, 10) !== (b.genre || 0) || sSel.value !== (b.sort || "popular"))) {
-                b.genre = parseInt(gSel.value, 10) || 0;
-                b.sort = sSel.value || "popular";
+            var yNew = parseInt(bar.querySelector(".dcFYear").value, 10) || 0;
+            var gsChanged = !!(gSel && sSel && (parseInt(gSel.value, 10) !== (b.genre || 0) || sSel.value !== (b.sort || "popular")));
+            var yChanged = !!(b.srvYear && yNew !== (b.year || 0));
+            if (gsChanged || yChanged) {
+                if (gsChanged) {
+                    b.genre = parseInt(gSel.value, 10) || 0;
+                    b.sort = sSel.value || "popular"
+                }
+                b.year = b.srvYear ? yNew : 0;
                 b.next = 1;
                 b.done = false;
                 b.seen = {};
@@ -1049,7 +1199,8 @@ define([], function() {
                 loadBrowse()
             }
             b.filter = {
-                year: parseInt(bar.querySelector(".dcFYear").value, 10) || 0,
+                year: yNew,
+                yearExact: !!b.upcoming,
                 score: parseFloat(bar.querySelector(".dcFScore").value) || 0,
                 lang: bar.querySelector(".dcFLang").value || "",
                 hideOwned: !!bar.querySelector(".dcFOwned").checked,
@@ -1420,9 +1571,13 @@ define([], function() {
                     hideRequested: false
                 },
                 genre: 0,
-                sort: "popular"
+                sort: "popular",
+                year: 0,
+                upcoming: rowKey === "upcoming_movie" || rowKey === "upcoming_tv",
+                srvYear: !rowKey || rowKey === "popular_movie" || rowKey === "popular_tv" || rowKey === "upcoming_movie" || rowKey === "upcoming_tv"
             };
-            var years = [0, 2025, 2020, 2015, 2010, 2e3, 1990];
+            var thisYear = new Date().getFullYear();
+            var years = browse.upcoming ? [0, thisYear, thisYear + 1] : [0, 2025, 2020, 2015, 2010, 2e3, 1990];
             var popular = rowKey === "popular_movie" || rowKey === "popular_tv";
             var serverFilters = "";
             if (popular) {
@@ -1432,7 +1587,7 @@ define([], function() {
                 }).join("") + "</select></label>" + "<label>" + text("Sorteren", "Sort", "Sortieren") + ' <select class="dcFSort">' + '<option value="popular">' + text("Populair", "Popular", "Beliebt") + "</option>" + '<option value="new">' + text("Nieuwste", "Newest", "Neueste") + "</option>" + '<option value="top">' + text("Best beoordeeld", "Top rated", "Bestbewertet") + "</option></select></label>"
             }
             content.innerHTML = '<div class="dcBrowseHead"><button type="button" class="dcBack">&#10094; ' + text("Terug", "Back", "Zur\xfcck") + "</button>" + '<span class="dcBrowseTitle">' + esc(name) + "</span></div>" + '<div class="dcFilters">' + serverFilters + "<label>" + text("Jaar", "Year", "Jahr") + ' <select class="dcFYear">' + years.map(function(y) {
-                return '<option value="' + y + '">' + (y ? y + "+" : text("alle", "all", "alle")) + "</option>"
+                return '<option value="' + y + '">' + (y ? y + (browse.upcoming ? "" : "+") : text("alle", "all", "alle")) + "</option>"
             }).join("") + "</select></label>" + "<label>" + text("Score", "Score", "Bewertung") + ' <select class="dcFScore"><option value="0">' + text("alle", "all", "alle") + '</option><option value="6">6+</option><option value="7">7+</option><option value="8">8+</option></select></label>' + "<label>" + text("Taal", "Language", "Sprache") + ' <select class="dcFLang"><option value="">' + text("alle", "all", "alle") + "</option></select></label>" + '<label class="dcFCheck"><input type="checkbox" class="dcFOwned" /> ' + text("Niet in mijn bibliotheek", "Not in my library", "Nicht in meiner Bibliothek") + "</label>" + '<label class="dcFCheck"><input type="checkbox" class="dcFRequested" /> ' + text("Nog niet aangevraagd", "Not requested yet", "Noch nicht angefordert") + "</label>" + '<span class="dcFCount"></span>' + "</div>" + '<div class="dcGrid dcBrowseGrid"></div>' + '<div class="dcMore"><button type="button" class="dcBtn dcMoreBtn">' + text("Meer laden", "Load more", "Mehr laden") + "</button></div>";
             var root = view.querySelector(".dcRoot");
             if (root) {
@@ -1480,11 +1635,13 @@ define([], function() {
                 Key: b.row,
                 Page: b.next,
                 Genre: b.genre || 0,
-                Sort: b.sort || ""
+                Sort: b.sort || "",
+                Year: b.year || 0
             }) : api("GET", "Discover/Browse", {
                 Kind: b.kind,
                 Id: b.id,
-                Page: b.next
+                Page: b.next,
+                Year: b.year || 0
             });
             var reqNo = b.req || 0;
             call.then(function(r) {
@@ -1734,9 +1891,6 @@ define([], function() {
             if (current.Status === 2) {
                 b.textContent = text("Beschikbaar", "Available", "Verf\xfcgbar");
                 b.disabled = true
-            } else if (current.Status === 1 && queue[key(current)]) {
-                b.textContent = queueLine(queue[key(current)]);
-                b.disabled = true
             } else if (current.Status === 1) {
                 b.textContent = text("Aangevraagd", "Requested", "Angefordert");
                 b.disabled = true
@@ -1813,12 +1967,20 @@ define([], function() {
             }
         }
 
+        function seasonName(n) {
+            return n === 0 ? text("Specials", "Specials", "Specials") : text("Seizoen ", "Season ", "Staffel ") + n
+        }
+
+        function seasonUsable(s) {
+            return s.Number > 0 || (s.Number === 0 && showSpecials && s.EpisodeCount > 0)
+        }
+
         function renderSeasonButtons(i, seasons) {
             var box = overlay.querySelector(".dcSeasons");
             placeTrailer(false);
             box.textContent = "";
             var list = (seasons || []).filter(function(s) {
-                return s.Number > 0
+                return seasonUsable(s)
             });
             if (i.Type !== "tv" || list.length === 0) {
                 box.classList.remove("show");
@@ -1848,7 +2010,7 @@ define([], function() {
                 var ym0 = String(s.AirDate || "").match(/\d{4}/);
                 b.setAttribute("data-year", ym0 ? ym0[0] : "");
                 b.setAttribute("data-season", s.Number);
-                b.textContent = text("Seizoen ", "Season ", "Staffel ") + s.Number + (ym0 ? " (" + ym0[0] + ")" : "");
+                b.textContent = seasonName(s.Number) + (ym0 ? " (" + ym0[0] + ")" : "");
                 b.title = s.EpisodeCount ? s.EpisodeCount + " " + text("afl.", "eps.", "Folgen") : "";
                 if (s.Upcoming) {
                     b.classList.add("dcSoon");
@@ -1887,7 +2049,7 @@ define([], function() {
             for (var k = 0; k < btns.length; k++) {
                 var n = parseInt(btns[k].getAttribute("data-season"), 10);
                 var yr = btns[k].getAttribute("data-year");
-                var base = text("Seizoen ", "Season ", "Staffel ") + n + (yr ? " (" + yr + ")" : "");
+                var base = seasonName(n) + (yr ? " (" + yr + ")" : "");
                 if (have[n]) {
                     btns[k].textContent = "✓ " + base;
                     btns[k].disabled = false;
@@ -2031,7 +2193,7 @@ define([], function() {
             var rows = list.map(function(s) {
                 var ym = String(s.AirDate || "").match(/\d{4}/);
                 var tag = s.Upcoming ? text("binnenkort", "coming soon", "demn\xe4chst", "snart") : have[s.Number] ? text("In bibliotheek", "In library", "In Bibliothek") : "";
-                return '<label class="dcPkOpt"><input type="checkbox" class="dcPkRow" value="' + s.Number + '"><span class="dcPkChk"></span><span class="dcPkLbl"><span>' + esc(text("Seizoen ", "Season ", "Staffel ") + s.Number) + "</span>" + ((ym || s.EpisodeCount) ? '<span class="dcPkEp">' + (ym ? ym[0] : "") + (ym && s.EpisodeCount ? " \xb7 " : "") + (s.EpisodeCount ? s.EpisodeCount + " " + esc(text("afl.", "eps.", "Folgen")) : "") + "</span>" : "") + "</span>" + (tag ? '<span class="dcPkTag">' + esc(tag) + "</span>" : "") + "</label>"
+                return '<label class="dcPkOpt"><input type="checkbox" class="dcPkRow" value="' + s.Number + '"><span class="dcPkChk"></span><span class="dcPkLbl"><span>' + esc(seasonName(s.Number)) + "</span>" + ((ym || s.EpisodeCount) ? '<span class="dcPkEp">' + (ym ? ym[0] : "") + (ym && s.EpisodeCount ? " \xb7 " : "") + (s.EpisodeCount ? s.EpisodeCount + " " + esc(text("afl.", "eps.", "Folgen")) : "") + "</span>" : "") + "</span>" + (tag ? '<span class="dcPkTag">' + esc(tag) + "</span>" : "") + "</label>"
             }).join("");
             var root = document.createElement("div");
             root.className = "dcPk";
@@ -2044,14 +2206,22 @@ define([], function() {
 
             function sync() {
                 var n = 0,
+                    r = 0,
+                    rt = 0,
                     k;
                 for (k = 0; k < boxes.length; k++) {
                     boxes[k].parentNode.classList.toggle("on", boxes[k].checked);
+                    if (parseInt(boxes[k].value, 10) > 0) {
+                        rt++;
+                        if (boxes[k].checked) {
+                            r++
+                        }
+                    }
                     if (boxes[k].checked) {
                         n++
                     }
                 }
-                allBox.checked = n === boxes.length;
+                allBox.checked = rt > 0 && r === rt;
                 allBox.parentNode.classList.toggle("on", allBox.checked);
                 go.disabled = n === 0;
                 go.textContent = gt + (n ? " (" + n + ")" : "")
@@ -2059,7 +2229,9 @@ define([], function() {
             allBox.addEventListener("change", function() {
                 var k;
                 for (k = 0; k < boxes.length; k++) {
-                    boxes[k].checked = allBox.checked
+                    if (parseInt(boxes[k].value, 10) > 0) {
+                        boxes[k].checked = allBox.checked
+                    }
                 }
                 sync()
             });
@@ -2078,8 +2250,15 @@ define([], function() {
                         nums.push(parseInt(boxes[k].value, 10))
                     }
                 }
+                var specialsOn = nums.indexOf(0) >= 0,
+                    regularTotal = 0;
+                for (k = 0; k < boxes.length; k++) {
+                    if (parseInt(boxes[k].value, 10) > 0) {
+                        regularTotal++
+                    }
+                }
                 closeSeasonPicker();
-                requestSeasons(i, nums.length === boxes.length ? null : nums, reqBtn, is4k)
+                requestSeasons(i, !specialsOn && nums.length === regularTotal ? null : nums, reqBtn, is4k)
             });
             document.addEventListener("keydown", pickerKey, true)
         }
@@ -2090,7 +2269,7 @@ define([], function() {
             }
             var is4k = b.classList.contains("dcBtn4k");
             var list = (seasonCache[current.TmdbId] || []).filter(function(s) {
-                return s.Number > 0
+                return seasonUsable(s)
             });
             if (!list.length) {
                 if (seasonCache[current.TmdbId]) {
@@ -2105,7 +2284,7 @@ define([], function() {
                     var s = r && r.Seasons || [];
                     seasonCache[cur.TmdbId] = s;
                     var l2 = s.filter(function(x) {
-                        return x.Number > 0
+                        return seasonUsable(x)
                     });
                     if (current !== cur) {
                         return
@@ -2125,8 +2304,70 @@ define([], function() {
             openSeasonPicker(current, list, b, is4k)
         }, true);
 
+        var dcColMq = window.matchMedia ? window.matchMedia("(min-width:700px)") : null;
+        // Brede popup: links beschrijving, genres, seizoenen, downloadstatus en cast; rechts infoblok en collectie.
+        // Zo wordt de lege ruimte onder het infoblok gebruikt en hoeft de kaart niet te scrollen. Smal (en op TV) blijft de oude volgorde.
+        function arrangeModalCols() {
+            var info = overlay.querySelector(".dcModalInfo");
+            if (!info) {
+                return
+            }
+            var wide = !isTvClient && !!(dcColMq && dcColMq.matches);
+            var L = info.querySelector(".dcColL"), R = info.querySelector(".dcColR");
+            var pick = function(sel) {
+                return info.querySelector(sel)
+            };
+            if (wide) {
+                if (!L) {
+                    L = document.createElement("div");
+                    L.className = "dcColL";
+                    R = document.createElement("div");
+                    R.className = "dcColR";
+                    info.insertBefore(L, pick(".dcBtnRow"));
+                    info.insertBefore(R, pick(".dcBtnRow"))
+                }
+                [".dcOverview", ".dcGenres", ".dcSeasons", ".dcQueue", ".dcCastWrap"].forEach(function(sel) {
+                    var e = pick(sel);
+                    if (e) {
+                        L.appendChild(e)
+                    }
+                });
+                [".dcInfo", ".dcCollection"].forEach(function(sel) {
+                    var e = pick(sel);
+                    if (e) {
+                        R.appendChild(e)
+                    }
+                })
+            } else if (L) {
+                var btnRow = pick(".dcBtnRow");
+                [".dcInfo", ".dcOverview", ".dcGenres", ".dcCastWrap", ".dcCollection", ".dcQueue", ".dcSeasons"].forEach(function(sel) {
+                    var e = pick(sel);
+                    if (e) {
+                        info.insertBefore(e, btnRow)
+                    }
+                });
+                info.removeChild(L);
+                info.removeChild(R)
+            }
+        }
+        if (dcColMq) {
+            var dcColChange = function() {
+                arrangeModalCols();
+                if (overlay.classList.contains("open")) {
+                    updateCastArrows()
+                }
+            };
+            if (dcColMq.addEventListener) {
+                dcColMq.addEventListener("change", dcColChange)
+            } else if (dcColMq.addListener) {
+                dcColMq.addListener(dcColChange)
+            }
+        }
+
         function openModal(i) {
             current = i;
+            arrangeModalCols();
+            scheduleQueue(0);
             overlay.querySelector(".dcModalBack").style.backgroundImage = i.Backdrop ? "url(" + i.Backdrop + ")" : "none";
             var img = overlay.querySelector(".dcModalPoster");
             img.src = i.Poster || "";
@@ -2404,7 +2645,7 @@ define([], function() {
                 return
             }
             findLibraryItem(i).then(function(libId) {
-                if (libId && i.Type === "tv") {
+                if (libId && (i.Type === "tv" || isAdmin)) {
                     openModalWithEmbyLink(i, libId);
                     return
                 }
@@ -2426,7 +2667,7 @@ define([], function() {
         function openChannelItem(i) {
             buildEmbyMap().then(function(map) {
                 var id = lookup(map, i);
-                if (id && i.Type === "tv") {
+                if (id && (i.Type === "tv" || isAdmin)) {
                     openModalWithEmbyLink(i, id);
                     return
                 }
@@ -2698,6 +2939,11 @@ define([], function() {
             }
             var card = e.target.closest ? e.target.closest(".dcCard") : null;
             if (card && card.getAttribute("data-emby")) {
+                var embyItem = items[card.getAttribute("data-key")];
+                if (isAdmin && embyItem) {
+                    openModalWithEmbyLink(embyItem, card.getAttribute("data-emby"));
+                    return
+                }
                 goToEmbyItem(card.getAttribute("data-emby"));
                 return
             }
@@ -2997,7 +3243,10 @@ define([], function() {
             }
             var max = c.scrollWidth - c.clientWidth;
             l.classList.toggle("dcHide", c.scrollLeft <= 8);
-            r.classList.toggle("dcHide", c.scrollLeft >= max - 8)
+            r.classList.toggle("dcHide", c.scrollLeft >= max - 8);
+            // Zachte rand waar nog meer cast staat, zodat de rij niet "achter" de rechterkolom lijkt te verdwijnen.
+            c.classList.toggle("dcFadeL", c.scrollLeft > 8);
+            c.classList.toggle("dcFadeR", c.scrollLeft < max - 8)
         }(function() {
             var c = overlay.querySelector(".dcCast");
             var wrap = overlay.querySelector(".dcCastWrap");

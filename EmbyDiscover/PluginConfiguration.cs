@@ -24,8 +24,24 @@ namespace Emby.Plugins.Discover
 
         /// <summary>Waarheen aanvragen gaan: "arr" = rechtstreeks naar Radarr en Sonarr (standaard), "seerr" = via Seerr.</summary>
         public string RequestService { get; set; } = "arr";
+        /// <summary>Alleen bij Seerr: ook de wachtrij van Radarr en Sonarr lezen voor de echte importfases en de reden bij een probleem.</summary>
+        public bool SeerrArrStatus { get; set; } = false;
         public string SeerrUrl { get; set; } = "";
         public string SeerrApiKey { get; set; } = "";
+
+        /// <summary>Optioneel: SABnzbd voor snelheid en de fases na 100% (verifiëren, repareren, uitpakken, verplaatsen, script).</summary>
+        public string SabUrl { get; set; } = "";
+        public string SabApiKey { get; set; } = "";
+        /// <summary>Optioneel: andere downloaders (snelheid, fases, seeders, ratio). Gebruikersnaam en wachtwoord zijn van de webinterface van de downloader.</summary>
+        public string QbitUrl { get; set; } = "";
+        public string QbitUser { get; set; } = "";
+        public string QbitPassword { get; set; } = "";
+        public string NzbgetUrl { get; set; } = "";
+        public string NzbgetUser { get; set; } = "";
+        public string NzbgetPassword { get; set; } = "";
+        public string TransmissionUrl { get; set; } = "";
+        public string TransmissionUser { get; set; } = "";
+        public string TransmissionPassword { get; set; } = "";
 
         /// <summary>Maximaal aantal aanvragen per gebruiker binnen RequestLimitDays (0 = geen limiet). Beheerders tellen niet mee. In de Seerr-modus regelt Seerr dit.</summary>
         public int RequestLimit { get; set; } = 0;
@@ -42,6 +58,8 @@ namespace Emby.Plugins.Discover
         public bool ShowOmdbRatings { get; set; } = true;
         /// <summary>Jaar onder de posters.</summary>
         public bool PosterShowYear { get; set; } = true;
+        /// <summary>Specials (seizoen 0) als keuze bij de seizoenen van een serie.</summary>
+        public bool ShowSpecials { get; set; } = true;
         /// <summary>TMDB-score onder de posters.</summary>
         public bool PosterShowScore { get; set; } = true;
         /// <summary>Score onder de posters: tmdb, imdb (IMDb-dataset) of none. Leeg = migratie vanuit PosterShowScore (aan = tmdb).</summary>

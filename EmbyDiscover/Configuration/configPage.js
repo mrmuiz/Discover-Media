@@ -58,6 +58,7 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         optAccent7: ['Oranje', 'Orange', 'Orange'],
         optAccent8: ['Wit', 'White', 'Weiß'],
         lbl_chkPosterYear: ['Jaar onder de posters', 'Year below the posters', 'Jahr unter den Postern'],
+        lbl_chkShowSpecials: ['Specials tonen bij de seizoenkeuze', 'Show Specials in the season choice', 'Specials bei der Staffelauswahl anzeigen'],
         lbl_selPosterScore: ['Score onder de posters', 'Score below the posters', 'Bewertung unter den Postern'],
         optScore0: ['TMDB-score', 'TMDB score', 'TMDB-Bewertung'],
         optScore1: ['IMDb-score', 'IMDb score', 'IMDb-Bewertung'],
@@ -104,6 +105,20 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             'Create an app on trakt.tv under Settings > Your API Apps (redirect: urn:ietf:wg:oauth:2.0:oob) and paste the Client ID here. Your watchlist must be public. Empty = no row.',
             'Erstelle auf trakt.tv unter Settings > Your API Apps eine App (Redirect: urn:ietf:wg:oauth:2.0:oob) und füge die Client-ID hier ein. Deine Merkliste muss öffentlich sein. Leer = keine Reihe.'],
         btnTestTraktText: ['Test Trakt', 'Test Trakt', 'Trakt testen'],
+        hdgSab: ['SABnzbd (optioneel)', 'SABnzbd (optional)', 'SABnzbd (optional)'],
+        desc_sab: [
+            'Met een downloader (SABnzbd, NZBGet, qBittorrent, Transmission) toont de voortgang ook de snelheid en de fases na 100% (verifiëren, repareren, uitpakken, verplaatsen, script); bij NZBGet en SABnzbd ook of de downloader gepauzeerd is of een limiet heeft, bij torrents ook seeders en ratio. Stel alleen in wat je gebruikt; leeg = alleen wat Radarr/Sonarr doorgeven.',
+            'With a downloader (SABnzbd, NZBGet, qBittorrent, Transmission) the progress also shows the speed and the stages after 100% (verifying, repairing, unpacking, moving, script); with SABnzbd and NZBGet also whether it is paused or has a limit, with torrents also seeders and ratio. Only set up what you use; empty = only what Radarr/Sonarr report.',
+            'Mit einem Downloader (SABnzbd, NZBGet, qBittorrent, Transmission) zeigt der Fortschritt auch Geschwindigkeit und die Phasen nach 100 % (Überprüfen, Reparieren, Entpacken, Verschieben, Skript); bei SABnzbd und NZBGet auch ob pausiert oder begrenzt, bei Torrents auch Seeder und Ratio. Nur einrichten, was du nutzt; leer = nur was Radarr/Sonarr melden.',
+            'With SABnzbd the progress also shows the download speed and the stages after 100% (verifying, repairing, unpacking, moving, script), and whether SABnzbd is paused or has a speed limit. Leave empty = only what Radarr/Sonarr report.',
+            'Mit SABnzbd zeigt der Fortschritt auch die Downloadgeschwindigkeit und die Phasen nach 100 % (Überprüfen, Reparieren, Entpacken, Verschieben, Skript) sowie ob SABnzbd pausiert ist oder ein Geschwindigkeitslimit hat. Leer lassen = nur was Radarr/Sonarr melden.'],
+        desc_sabKey: ['Te vinden in SABnzbd onder Config > General > Security (de gewone API key, niet de NZB key).', 'Found in SABnzbd under Config > General > Security (the normal API key, not the NZB key).', 'Zu finden in SABnzbd unter Config > General > Security (der normale API-Schlüssel, nicht der NZB-Schlüssel).'],
+        hdgQbit: ['qBittorrent (optioneel)', 'qBittorrent (optional)', 'qBittorrent (optional)'],
+        desc_qbit: ['Gebruikersnaam en wachtwoord van de qBittorrent-webinterface. Staat in qBittorrent de toegang zonder wachtwoord aan voor dit adres, dan mogen ze leeg blijven.', 'Username and password of the qBittorrent web interface. If qBittorrent allows access without a password for this address, they can stay empty.', 'Benutzername und Passwort der qBittorrent-Weboberfläche. Erlaubt qBittorrent für diese Adresse den Zugriff ohne Passwort, können sie leer bleiben.'],
+        hdgNzbget: ['NZBGet (optioneel)', 'NZBGet (optional)', 'NZBGet (optional)'],
+        desc_nzbget: ['Gebruikersnaam en wachtwoord van NZBGet (Instellingen > Security, ControlUsername en ControlPassword).', 'Username and password of NZBGet (Settings > Security, ControlUsername and ControlPassword).', 'Benutzername und Passwort von NZBGet (Einstellungen > Security, ControlUsername und ControlPassword).'],
+        hdgTrans: ['Transmission (optioneel)', 'Transmission (optional)', 'Transmission (optional)'],
+        desc_trans: ['Gebruikersnaam en wachtwoord van Transmission; leeg laten als de webinterface geen wachtwoord vraagt.', 'Username and password of Transmission; leave empty if the web interface asks for none.', 'Benutzername und Passwort von Transmission; leer lassen, wenn die Weboberfläche keines verlangt.'],
         hdgLimit: ['Limiet per gebruiker', 'Limit per user', 'Limit pro Benutzer'],
         lbl_numRequestLimit: ['Maximaal aantal aanvragen (0 = geen limiet)', 'Maximum number of requests (0 = no limit)', 'Maximale Anzahl Anfragen (0 = kein Limit)'],
         lbl_numRequestLimitDays: ['Per aantal dagen', 'Per number of days', 'Pro Anzahl Tage'],
@@ -156,9 +171,31 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         label('selRequestService', 'Aanvragen via', 'Send requests to', 'Anfragen senden an');
         label('txtSeerrUrl', 'URL (bijv. http://192.168.1.10:5055)', 'URL (e.g. http://192.168.1.10:5055)', 'URL (z. B. http://192.168.1.10:5055)');
         label('txtSeerrKey', 'API key', 'API key', 'API-Schlüssel');
+        label('txtSabUrl', 'URL (bijv. http://192.168.1.10:8080)', 'URL (e.g. http://192.168.1.10:8080)', 'URL (z. B. http://192.168.1.10:8080)');
+        label('txtSabKey', 'API key', 'API key', 'API-Schlüssel');
+        label('txtQbitUrl', 'URL (bijv. http://192.168.1.10:8080)', 'URL (e.g. http://192.168.1.10:8080)', 'URL (z. B. http://192.168.1.10:8080)');
+        label('txtQbitUser', 'Gebruikersnaam', 'Username', 'Benutzername');
+        label('txtQbitPass', 'Wachtwoord', 'Password', 'Passwort');
+        var qbitTest = view.querySelector('.btnTestQbit span');
+        if (qbitTest) { qbitTest.textContent = languageText('Test verbinding', 'Test connection', 'Verbindung testen'); }
+        label('txtNzbgetUrl', 'URL (bijv. http://192.168.1.10:6789)', 'URL (e.g. http://192.168.1.10:6789)', 'URL (z. B. http://192.168.1.10:6789)');
+        label('txtNzbgetUser', 'Gebruikersnaam', 'Username', 'Benutzername');
+        label('txtNzbgetPass', 'Wachtwoord', 'Password', 'Passwort');
+        var nzbgetTest = view.querySelector('.btnTestNzbget span');
+        if (nzbgetTest) { nzbgetTest.textContent = languageText('Test verbinding', 'Test connection', 'Verbindung testen'); }
+        label('txtTransUrl', 'URL (bijv. http://192.168.1.10:9091)', 'URL (e.g. http://192.168.1.10:9091)', 'URL (z. B. http://192.168.1.10:9091)');
+        label('txtTransUser', 'Gebruikersnaam', 'Username', 'Benutzername');
+        label('txtTransPass', 'Wachtwoord', 'Password', 'Passwort');
+        var transTest = view.querySelector('.btnTestTrans span');
+        if (transTest) { transTest.textContent = languageText('Test verbinding', 'Test connection', 'Verbindung testen'); }
+        var sabTest = view.querySelector('.btnTestSab span');
+        if (sabTest) { sabTest.textContent = languageText('Test verbinding', 'Test connection', 'Verbindung testen'); }
         var serviceSelect = el(view, 'selRequestService');
         if (serviceSelect && serviceSelect.options.length > 1) {
             serviceSelect.options[0].textContent = languageText('Radarr & Sonarr (rechtstreeks)', 'Radarr & Sonarr (directly)', 'Radarr & Sonarr (direkt)');
+        }
+        if (serviceSelect && serviceSelect.options.length > 2) {
+            serviceSelect.options[2].textContent = languageText('Seerr + Radarr & Sonarr (voor de status)', 'Seerr + Radarr & Sonarr (for the status)', 'Seerr + Radarr & Sonarr (für den Status)');
         }
         var seerrTest = view.querySelector('.btnTestSeerr span');
         if (seerrTest) { seerrTest.textContent = languageText('Test verbinding', 'Test connection', 'Verbindung testen'); }
@@ -374,9 +411,20 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
 
     // ---- Aanvragen via Radarr & Sonarr of via Seerr ----
     function updateServiceView(view) {
-        var seerr = el(view, 'selRequestService').value === 'seerr';
+        var mode = el(view, 'selRequestService').value;
+        var seerr = mode === 'seerr' || mode === 'seerr-arr';
         el(view, 'seerrFields').style.display = seerr ? '' : 'none';
-        el(view, 'arrFields').style.display = seerr ? 'none' : '';
+        el(view, 'arrFields').style.display = (!seerr || mode === 'seerr-arr') ? '' : 'none';
+        var desc = el(view, 'desc_requestService');
+        if (desc && mode !== 'seerr-arr' && TEXTS.desc_requestService) {
+            desc.textContent = languageText(TEXTS.desc_requestService[0], TEXTS.desc_requestService[1], TEXTS.desc_requestService[2]);
+        }
+        if (desc && mode === 'seerr-arr') {
+            desc.textContent = languageText(
+                'Aanvragen gaan naar Seerr (met goedkeuring en limieten uit Seerr). Radarr en Sonarr worden alleen gelezen, voor de echte status in de wachtrij: wachten op import, importeren, een geblokkeerde import en de reden bij een probleem.',
+                'Requests go to Seerr (with approval and limits from Seerr). Radarr and Sonarr are only read, for the real status in the queue: waiting to import, importing, a blocked import and the reason for a problem.',
+                'Anfragen gehen an Seerr (mit Freigabe und Limits aus Seerr). Radarr und Sonarr werden nur gelesen, für den echten Status in der Warteschlange: wartet auf Import, wird importiert, blockierter Import und der Grund bei einem Problem.');
+        }
     }
 
     function testSeerr(view) {
@@ -415,6 +463,63 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             status.textContent = msg;
         }, function (err) {
             console.error('Discover: Seerr-test mislukt', err);
+            status.style.color = '#e53935';
+            status.textContent = languageText('Mislukt: ', 'Failed: ', 'Fehlgeschlagen: ') + ajaxErrorMessage(err);
+        });
+    }
+
+    function testDownloader(view, type, name, urlId, userId, passId, statusId) {
+        var status = el(view, statusId);
+        status.style.color = '';
+        status.textContent = languageText('Testen...', 'Testing...', 'Verbindung wird getestet...');
+        ApiClient.ajax({
+            type: 'POST',
+            url: ApiClient.getUrl('Discover/TestConnection'),
+            data: JSON.stringify({ Type: type, Url: el(view, urlId).value.trim(), Username: el(view, userId).value.trim(), Password: el(view, passId).value }),
+            contentType: 'application/json',
+            dataType: 'json'
+        }).then(function (r) {
+            if (!r || !r.Success) {
+                status.style.color = '#e53935';
+                status.textContent = languageText('Mislukt: ', 'Failed: ', 'Fehlgeschlagen: ') +
+                    ((r && r.Error) || languageText('onbekende fout', 'unknown error', 'unbekannter Fehler'));
+                return;
+            }
+            status.style.color = '#43a047';
+            status.textContent = languageText('Verbonden met ', 'Connected to ', 'Verbunden mit ') + name + (r.Version ? ' ' + r.Version : '') + '.';
+        }, function (err) {
+            console.error('Discover: ' + name + '-test mislukt', err);
+            status.style.color = '#e53935';
+            status.textContent = languageText('Mislukt: ', 'Failed: ', 'Fehlgeschlagen: ') + ajaxErrorMessage(err);
+        });
+    }
+    function testQbit(view) { testDownloader(view, 'Qbittorrent', 'qBittorrent', 'txtQbitUrl', 'txtQbitUser', 'txtQbitPass', 'statusQbit'); }
+    function testNzbget(view) { testDownloader(view, 'Nzbget', 'NZBGet', 'txtNzbgetUrl', 'txtNzbgetUser', 'txtNzbgetPass', 'statusNzbget'); }
+    function testTrans(view) { testDownloader(view, 'Transmission', 'Transmission', 'txtTransUrl', 'txtTransUser', 'txtTransPass', 'statusTrans'); }
+
+    function testSab(view) {
+        var status = el(view, 'statusSab');
+        var url = el(view, 'txtSabUrl').value.trim();
+        var key = el(view, 'txtSabKey').value.trim();
+        status.style.color = '';
+        status.textContent = languageText('Testen...', 'Testing...', 'Verbindung wird getestet...');
+        ApiClient.ajax({
+            type: 'POST',
+            url: ApiClient.getUrl('Discover/TestConnection'),
+            data: JSON.stringify({ Type: 'Sabnzbd', Url: url, ApiKey: key }),
+            contentType: 'application/json',
+            dataType: 'json'
+        }).then(function (r) {
+            if (!r || !r.Success) {
+                status.style.color = '#e53935';
+                status.textContent = languageText('Mislukt: ', 'Failed: ', 'Fehlgeschlagen: ') +
+                    ((r && r.Error) || languageText('onbekende fout', 'unknown error', 'unbekannter Fehler'));
+                return;
+            }
+            status.style.color = '#43a047';
+            status.textContent = languageText('Verbonden met SABnzbd', 'Connected to SABnzbd', 'Verbunden mit SABnzbd') + (r.Version ? ' ' + r.Version : '') + '.';
+        }, function (err) {
+            console.error('Discover: SABnzbd-test mislukt', err);
             status.style.color = '#e53935';
             status.textContent = languageText('Mislukt: ', 'Failed: ', 'Fehlgeschlagen: ') + ajaxErrorMessage(err);
         });
@@ -668,6 +773,7 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             el(view, 'chkShowNewSeasons').checked = c.ShowNewSeasons !== false;
             el(view, 'chkShowMyRequests').checked = c.ShowMyRequests !== false;
             el(view, 'chkPosterYear').checked = c.PosterShowYear !== false;
+            el(view, 'chkShowSpecials').checked = c.ShowSpecials !== false;
             var ps = String(c.PosterScoreSource || '').toLowerCase();
             if (ps !== 'tmdb' && ps !== 'imdb' && ps !== 'none') { ps = c.PosterShowScore === false ? 'none' : 'tmdb'; }
             el(view, 'selPosterScore').value = ps;
@@ -707,9 +813,20 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             }, function (err) {
                 console.error('Discover: Emby-taal ophalen mislukt', err);
             });
-            el(view, 'selRequestService').value = c.RequestService === 'seerr' ? 'seerr' : 'arr';
+            el(view, 'selRequestService').value = c.RequestService === 'seerr' ? (c.SeerrArrStatus ? 'seerr-arr' : 'seerr') : 'arr';
             el(view, 'txtSeerrUrl').value = c.SeerrUrl || '';
             el(view, 'txtSeerrKey').value = c.SeerrApiKey || '';
+            el(view, 'txtSabUrl').value = c.SabUrl || '';
+            el(view, 'txtSabKey').value = c.SabApiKey || '';
+            el(view, 'txtQbitUrl').value = c.QbitUrl || '';
+            el(view, 'txtQbitUser').value = c.QbitUser || '';
+            el(view, 'txtQbitPass').value = c.QbitPassword || '';
+            el(view, 'txtNzbgetUrl').value = c.NzbgetUrl || '';
+            el(view, 'txtNzbgetUser').value = c.NzbgetUser || '';
+            el(view, 'txtNzbgetPass').value = c.NzbgetPassword || '';
+            el(view, 'txtTransUrl').value = c.TransmissionUrl || '';
+            el(view, 'txtTransUser').value = c.TransmissionUser || '';
+            el(view, 'txtTransPass').value = c.TransmissionPassword || '';
             updateServiceView(view);
             el(view, 'txtRadarrUrl').value = c.RadarrUrl || '';
             el(view, 'txtRadarrKey').value = c.RadarrApiKey || '';
@@ -751,6 +868,7 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             c.ShowNewSeasons = el(view, 'chkShowNewSeasons').checked;
             c.ShowMyRequests = el(view, 'chkShowMyRequests').checked;
             c.PosterShowYear = el(view, 'chkPosterYear').checked;
+            c.ShowSpecials = el(view, 'chkShowSpecials').checked;
             c.PosterScoreSource = el(view, 'selPosterScore').value || 'tmdb';
             c.PosterShowScore = c.PosterScoreSource !== 'none';
             c.ShowOmdbRatings = el(view, 'chkShowOmdb').checked;
@@ -766,9 +884,22 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             if (state.usersLoaded) { c.BlockedUserIds = blockedFromList(view); }
             c.TmdbLanguageMode = tmdbLanguage === 'auto' ? 'auto' : 'manual';
             if (tmdbLanguage !== 'auto') { c.TmdbLanguage = tmdbLanguage; }
-            c.RequestService = el(view, 'selRequestService').value === 'seerr' ? 'seerr' : 'arr';
+            var svc = el(view, 'selRequestService').value;
+            c.RequestService = svc === 'seerr' || svc === 'seerr-arr' ? 'seerr' : 'arr';
+            c.SeerrArrStatus = svc === 'seerr-arr';
             c.SeerrUrl = el(view, 'txtSeerrUrl').value.trim();
             c.SeerrApiKey = el(view, 'txtSeerrKey').value.trim();
+            c.SabUrl = el(view, 'txtSabUrl').value.trim();
+            c.SabApiKey = el(view, 'txtSabKey').value.trim();
+            c.QbitUrl = el(view, 'txtQbitUrl').value.trim();
+            c.QbitUser = el(view, 'txtQbitUser').value.trim();
+            c.QbitPassword = el(view, 'txtQbitPass').value;
+            c.NzbgetUrl = el(view, 'txtNzbgetUrl').value.trim();
+            c.NzbgetUser = el(view, 'txtNzbgetUser').value.trim();
+            c.NzbgetPassword = el(view, 'txtNzbgetPass').value;
+            c.TransmissionUrl = el(view, 'txtTransUrl').value.trim();
+            c.TransmissionUser = el(view, 'txtTransUser').value.trim();
+            c.TransmissionPassword = el(view, 'txtTransPass').value;
             c.RadarrUrl = el(view, 'txtRadarrUrl').value.trim();
             c.RadarrApiKey = el(view, 'txtRadarrKey').value.trim();
             c.RadarrQualityProfileId = parseInt(el(view, 'selRadarrProfile').value, 10) || 0;
@@ -932,6 +1063,18 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         });
         view.querySelector('.btnTestSeerr').addEventListener('click', function () {
             testSeerr(view);
+        });
+        view.querySelector('.btnTestSab').addEventListener('click', function () {
+            testSab(view);
+        });
+        view.querySelector('.btnTestQbit').addEventListener('click', function () {
+            testQbit(view);
+        });
+        view.querySelector('.btnTestNzbget').addEventListener('click', function () {
+            testNzbget(view);
+        });
+        view.querySelector('.btnTestTrans').addEventListener('click', function () {
+            testTrans(view);
         });
         el(view, 'selRequestService').addEventListener('change', function () {
             updateServiceView(view);

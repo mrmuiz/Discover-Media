@@ -17,6 +17,9 @@ namespace Emby.Plugins.Discover
         public string Type { get; set; }
         public string Url { get; set; }
         public string ApiKey { get; set; }
+        /// <summary>Alleen voor qBittorrent, NZBGet en Transmission.</summary>
+        public string Username { get; set; }
+        public string Password { get; set; }
     }
 
     public class TmdbLanguageOption
@@ -108,6 +111,38 @@ namespace Emby.Plugins.Discover
 
                     result.Success = true;
                     result.AppName = "TMDB";
+                    return result;
+                }
+
+                if (string.Equals(request.Type, "Qbittorrent", StringComparison.OrdinalIgnoreCase))
+                {
+                    result.Version = await QbitClient.Test(_json, request.Url, request.Username, request.Password, System.Threading.CancellationToken.None).ConfigureAwait(false);
+                    result.AppName = "qBittorrent";
+                    result.Success = true;
+                    return result;
+                }
+
+                if (string.Equals(request.Type, "Nzbget", StringComparison.OrdinalIgnoreCase))
+                {
+                    result.Version = await NzbgetClient.Test(_json, request.Url, request.Username, request.Password, System.Threading.CancellationToken.None).ConfigureAwait(false);
+                    result.AppName = "NZBGet";
+                    result.Success = true;
+                    return result;
+                }
+
+                if (string.Equals(request.Type, "Transmission", StringComparison.OrdinalIgnoreCase))
+                {
+                    result.Version = await TransmissionClient.Test(_json, request.Url, request.Username, request.Password, System.Threading.CancellationToken.None).ConfigureAwait(false);
+                    result.AppName = "Transmission";
+                    result.Success = true;
+                    return result;
+                }
+
+                if (string.Equals(request.Type, "Sabnzbd", StringComparison.OrdinalIgnoreCase))
+                {
+                    result.Version = await SabClient.Test(_json, request.Url, request.ApiKey, System.Threading.CancellationToken.None).ConfigureAwait(false);
+                    result.AppName = "SABnzbd";
+                    result.Success = true;
                     return result;
                 }
 

@@ -12,7 +12,7 @@ namespace Emby.Plugins.Discover
 {
     public class ArrIdDto { public int id { get; set; } }
     public class ArrRootDto { public string path { get; set; } }
-    public class RadarrMovieDto { public int id { get; set; } public int tmdbId { get; set; } public bool hasFile { get; set; } public string added { get; set; } }
+    public class RadarrMovieDto { public int id { get; set; } public int tmdbId { get; set; } public bool hasFile { get; set; } public bool monitored { get; set; } public string added { get; set; } }
     public class SonarrStatsDto { public int episodeFileCount { get; set; } public int episodeCount { get; set; } }
     public class SonarrSeasonDto { public int seasonNumber { get; set; } public bool monitored { get; set; } public SonarrStatsDto statistics { get; set; } }
     public class SonarrSeriesDto { public int id { get; set; } public int tmdbId { get; set; } public int tvdbId { get; set; } public bool monitored { get; set; } public string added { get; set; } public SonarrStatsDto statistics { get; set; } public List<SonarrSeasonDto> seasons { get; set; } }
@@ -55,6 +55,14 @@ namespace Emby.Plugins.Discover
             return sonarr
                 ? Send(HttpMethod.Get, cfg.SonarrUrl, cfg.SonarrApiKey, path, null, ct)
                 : Send(HttpMethod.Get, cfg.RadarrUrl, cfg.RadarrApiKey, path, null, ct);
+        }
+
+        internal static Task<string> PostRaw(bool sonarr, string path, string body, CancellationToken ct)
+        {
+            var cfg = Plugin.GetCurrentConfiguration();
+            return sonarr
+                ? Send(HttpMethod.Post, cfg.SonarrUrl, cfg.SonarrApiKey, path, body, ct)
+                : Send(HttpMethod.Post, cfg.RadarrUrl, cfg.RadarrApiKey, path, body, ct);
         }
 
         /// <summary>In de Seerr-modus: true als Seerr is ingesteld (Seerr regelt dan zowel films als series).</summary>
@@ -304,12 +312,20 @@ namespace Emby.Plugins.Discover
         /// <returns>true = nieuw toegevoegd, false = stond al in Radarr.</returns>
         public async Task<bool> AddMovie(int tmdbId, string title, int year, CancellationToken ct, object embyUserId = null)
         {
-            if (SeerrClient.Enabled) return await SeerrClient.Request(_json, false, tmdbId, 0, null, embyUserId, ct).ConfigureAwait(false);
+            if (SeerrClient.Enabled)
+            {
+                if (await SeerrClient.Request(_json, false, tmdbId, 0, null, embyUserId, ct).ConfigureAwait(false)) return true;
+                // Stond al in Seerr: een mislukte aanvraag opnieuw proberen en, als Radarr ook is ingesteld, de film daar
+                // op gemonitord zetten en laten zoeken (Seerr zoekt zelf niet opnieuw).
+                bool retried = await SeerrClient.RetryFailed(_json, false, tmdbId, ct).ConfigureAwait(false);
+                bool searched = RadarrConfigured && await ExtendExistingMovie(tmdbId, title, ct).ConfigureAwait(false);
+                return retried || searched;
+            }
             if (!RadarrConfigured) throw new InvalidOperationException("Radarr is niet ingesteld.");
             var cfg = Plugin.GetCurrentConfiguration();
 
             var states = await GetMovieStates(ct).ConfigureAwait(false);
-            if (states.ContainsKey(tmdbId)) return false;
+            if (states.ContainsKey(tmdbId)) return await ExtendExistingMovie(tmdbId, title, ct).ConfigureAwait(false);
 
             var profile = await ResolveProfile(cfg.RadarrUrl, cfg.RadarrApiKey, cfg.RadarrQualityProfileId, ct).ConfigureAwait(false);
             var root = await ResolveRoot(cfg.RadarrUrl, cfg.RadarrApiKey, cfg.RadarrRootFolder, ct).ConfigureAwait(false);
@@ -325,6 +341,60 @@ namespace Emby.Plugins.Discover
         }
 
         /// <summary>
+        /// De film staat al in Radarr (eerder aangevraagd). Heeft hij nog geen bestand, dan wordt hij op gemonitord gezet en
+        /// start Radarr een zoekopdracht; anders bleef hij eeuwig op "aangevraagd" staan zonder dat er iets werd gedownload.
+        /// </summary>
+        /// <returns>true = gemonitord gezet of zoekopdracht gestart, false = niets te doen (al beschikbaar of niet in Radarr).</returns>
+        private async Task<bool> ExtendExistingMovie(int tmdbId, string title, CancellationToken ct)
+        {
+            var cfg = Plugin.GetCurrentConfiguration();
+            RadarrMovieDto movie = null;
+            try
+            {
+                var body = await Send(HttpMethod.Get, cfg.RadarrUrl, cfg.RadarrApiKey, "/api/v3/movie?tmdbId=" + tmdbId, null, ct).ConfigureAwait(false);
+                var list = _json.DeserializeFromString<List<RadarrMovieDto>>(body);
+                movie = list == null ? null : list.FirstOrDefault(m => m.tmdbId == tmdbId);
+            }
+            catch (Exception ex)
+            {
+                if (ex is OperationCanceledException) throw;
+                DiscoverDiagnostics.Add("Radarr film opzoeken (" + title + "): " + ex.Message);
+            }
+            if (movie == null || movie.id <= 0) { InvalidateCaches(); return false; }
+            if (movie.hasFile) return false;
+
+            bool changed = false;
+            if (!movie.monitored)
+            {
+                try
+                {
+                    await Send(HttpMethod.Put, cfg.RadarrUrl, cfg.RadarrApiKey, "/api/v3/movie/editor",
+                        "{\"movieIds\":[" + movie.id + "],\"monitored\":true}", ct).ConfigureAwait(false);
+                    changed = true;
+                }
+                catch (Exception ex)
+                {
+                    if (ex is OperationCanceledException) throw;
+                    DiscoverDiagnostics.Add("Radarr film monitoren (" + title + "): " + ex.Message);
+                }
+            }
+            try
+            {
+                await Send(HttpMethod.Post, cfg.RadarrUrl, cfg.RadarrApiKey, "/api/v3/command",
+                    "{\"name\":\"MoviesSearch\",\"movieIds\":[" + movie.id + "]}", ct).ConfigureAwait(false);
+                changed = true;
+            }
+            catch (Exception ex)
+            {
+                if (ex is OperationCanceledException) throw;
+                DiscoverDiagnostics.Add("Radarr zoeken (" + title + "): " + ex.Message);
+            }
+            if (changed) InvalidateCaches();
+            DiscoverDiagnostics.Add("Radarr " + title + " (stond al in Radarr, geen bestand): " + (movie.monitored ? "al gemonitord" : "nu gemonitord") + ", zoekopdracht gestart");
+            return changed;
+        }
+
+        /// <summary>
         /// Voegt een serie toe. seasons = null of leeg → alle seizoenen (monitor all).
         /// Anders alleen de opgegeven seizoensnummers (0 = specials).
         /// </summary>
@@ -335,7 +405,15 @@ namespace Emby.Plugins.Discover
         /// <returns>true = nieuw toegevoegd of bij een bestaande serie iets aangezet/gezocht, false = er was niets te doen.</returns>
         public async Task<bool> AddSeries(int tmdbId, int tvdbId, string title, int[] seasons, CancellationToken ct, object embyUserId = null)
         {
-            if (SeerrClient.Enabled) return await SeerrClient.Request(_json, true, tmdbId, tvdbId, seasons, embyUserId, ct).ConfigureAwait(false);
+            if (SeerrClient.Enabled)
+            {
+                if (await SeerrClient.Request(_json, true, tmdbId, tvdbId, seasons, embyUserId, ct).ConfigureAwait(false)) return true;
+                // Stond al in Seerr: mislukte aanvraag opnieuw proberen en, als Sonarr ook is ingesteld, de seizoenen daar
+                // op gemonitord zetten en ontbrekende afleveringen laten zoeken.
+                bool retried = await SeerrClient.RetryFailed(_json, true, tmdbId, ct).ConfigureAwait(false);
+                bool searched = SonarrConfigured && await ExtendExistingSeries(tmdbId, tvdbId, title, seasons, ct).ConfigureAwait(false);
+                return retried || searched;
+            }
             if (!SonarrConfigured) throw new InvalidOperationException("Sonarr is niet ingesteld.");
             var cfg = Plugin.GetCurrentConfiguration();
 

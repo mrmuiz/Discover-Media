@@ -304,7 +304,7 @@ namespace Emby.Plugins.Discover
                 if (long.TryParse(raw, out internalId)) item = _library.GetItemById(internalId);
                 else if (Guid.TryParse(raw, out guid)) item = _library.GetItemById(guid);
                 if (item == null) return res;
-                res.Folder = item.IsFolder;
+                res.Folder = item.IsDisplayedAsFolder;
                 res.Ours = OurExternalId(item.ExternalId);
                 if (!res.Ours)
                 {
@@ -572,7 +572,10 @@ namespace Emby.Plugins.Discover
                             Name = string.IsNullOrWhiteSpace(s.name)
                                 ? DiscoverLanguage.Text("Seizoen ", "Season ", "Staffel ") + s.season_number
                                 : s.name,
-                            EpisodeCount = s.episode_count
+                            EpisodeCount = s.episode_count,
+                            AirDate = s.air_date,
+                            Upcoming = s.season_number > 0 && (string.IsNullOrEmpty(s.air_date) ||
+                                string.CompareOrdinal(s.air_date, DateTime.UtcNow.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture)) > 0)
                         })
                         .ToList();
                 }

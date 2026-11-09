@@ -421,23 +421,39 @@ namespace Emby.Plugins.Discover
         /// "Binnenkort" gebruikt /discover/movie op populariteit (zoals Seerr). /movie/upcoming met region
         /// geeft maar ~30 titels, inclusief concertfilms en heruitgaven.
         /// </summary>
-        private static string ListExtra(string path, int page, out string realPath)
+        /// <summary>Aankomend: vandaag t/m een jaar vooruit; met een jaar gekozen alleen dat kalenderjaar binnen die periode.</summary>
+        private static void UpcomingWindow(int year, out string from, out string to)
+        {
+            var start = DateTime.UtcNow.Date;
+            var end = start.AddYears(1);
+            if (year >= start.Year && year <= end.Year)
+            {
+                var ys = new DateTime(year, 1, 1);
+                var ye = new DateTime(year, 12, 31);
+                if (ys > start) start = ys;
+                if (ye < end) end = ye;
+            }
+            from = start.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+            to = end.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        }
+
+        private static string ListExtra(string path, int page, out string realPath, int year = 0)
         {
             realPath = path;
             var extra = "&page=" + page;
             if (path == "/movie/upcoming")
             {
                 realPath = "/discover/movie";
-                var from = DateTime.UtcNow.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
-                var to = DateTime.UtcNow.Date.AddYears(1).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+                string from, to;
+                UpcomingWindow(year, out from, out to);
                 extra += "&sort_by=popularity.desc&include_video=false&primary_release_date.gte=" + from +
                          "&primary_release_date.lte=" + to;
             }
             else if (path == "/tv/upcoming")
             {
                 realPath = "/discover/tv";
-                var from = DateTime.UtcNow.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
-                var to = DateTime.UtcNow.Date.AddYears(1).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+                string from, to;
+                UpcomingWindow(year, out from, out to);
                 extra += "&sort_by=popularity.desc&first_air_date.gte=" + from + "&first_air_date.lte=" + to;
             }
             return extra;
@@ -452,13 +468,13 @@ namespace Emby.Plugins.Discover
         }
 
         /// <summary>Meerdere pagina's tegelijk, ontdubbeld. Gebruikt door de Discover-pagina.</summary>
-        public async Task<List<TmdbItem>> GetListPages(string path, int firstPage, int lastPage, CancellationToken ct)
+        public async Task<List<TmdbItem>> GetListPages(string path, int firstPage, int lastPage, CancellationToken ct, int year = 0)
         {
             var tasks = new List<Task<TmdbPage>>();
             for (int p = firstPage; p <= lastPage; p++)
             {
                 string real;
-                var extra = ListExtra(path, p, out real);
+                var extra = ListExtra(path, p, out real, year);
                 tasks.Add(p == firstPage ? GetMergedCached(real, extra, ct) : GetMergedSafe(real, extra, ct, true));
             }
             await Task.WhenAll(tasks).ConfigureAwait(false);

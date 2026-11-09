@@ -5,7 +5,7 @@
     <title>Discover</title>
 </head>
 <body>
-<div data-role="page" class="page type-interior pluginConfigurationPage discoverConfigPage" data-require="emby-input,emby-button,emby-select,emby-checkbox" data-controller="__plugin/discoverconfigjs1369">
+<div data-role="page" class="page type-interior pluginConfigurationPage discoverConfigPage" data-require="emby-input,emby-button,emby-select,emby-checkbox" data-controller="__plugin/discoverconfigjs1372">
     <style>
         .discoverConfigPage .keyWrap { position: relative; }
         .discoverConfigPage .keyWrap input { padding-right: 2.8em; }
@@ -106,6 +106,16 @@
                     <label class="emby-checkbox-label">
                         <input is="emby-checkbox" type="checkbox" id="chkPosterYear" />
                         <span class="checkboxLabel" id="lbl_chkPosterYear">Jaar onder de posters</span>
+                        <span class="emby-checkbox-outline">
+                            <span class="emby-checkbox-on"><i class="md-icon">check</i></span>
+                            <span class="emby-checkbox-off"></span>
+                        </span>
+                    </label>
+                </div>
+                <div class="checkboxContainer">
+                    <label class="emby-checkbox-label">
+                        <input is="emby-checkbox" type="checkbox" id="chkShowSpecials" />
+                        <span class="checkboxLabel" id="lbl_chkShowSpecials">Specials tonen bij de seizoenkeuze</span>
                         <span class="emby-checkbox-outline">
                             <span class="emby-checkbox-on"><i class="md-icon">check</i></span>
                             <span class="emby-checkbox-off"></span>
@@ -245,6 +255,7 @@
                     <select is="emby-select" id="selRequestService">
                         <option value="arr">Radarr &amp; Sonarr (rechtstreeks)</option>
                         <option value="seerr">Seerr</option>
+                        <option value="seerr-arr">Seerr + Radarr &amp; Sonarr (voor de status)</option>
                     </select>
                     <div class="fieldDescription" id="desc_requestService">Met Seerr gaan aanvragen naar Seerr, en Seerr stuurt ze door naar zijn eigen Radarr en Sonarr. Radarr en Sonarr hoef je hier dan niet in te stellen.</div>
                 </div>
@@ -316,6 +327,84 @@
                     <label class="selectLabel" for="selSonarrRoot">Root folder</label>
                     <select is="emby-select" id="selSonarrRoot"></select>
                 </div>
+                </div>
+
+                <!-- SABnzbd (optioneel, naast Radarr/Sonarr of Seerr) -->
+                <h3 id="hdgSab">SABnzbd (optioneel)</h3>
+                <div class="fieldDescription" id="desc_sab" style="margin:0 0 1em;">Met een downloader (SABnzbd, NZBGet, qBittorrent, Transmission) toont de voortgang ook de snelheid en de fases na 100% (verifiëren, repareren, uitpakken, verplaatsen, script); bij NZBGet en SABnzbd ook of de downloader gepauzeerd is of een limiet heeft, bij torrents ook seeders en ratio. Stel alleen in wat je gebruikt; leeg = alleen wat Radarr/Sonarr doorgeven.</div>
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused" for="txtSabUrl">URL (bijv. http://192.168.1.10:8080)</label>
+                    <input is="emby-input" type="text" id="txtSabUrl" />
+                </div>
+                <div class="inputContainer keyWrap">
+                    <label class="inputLabel inputLabelUnfocused" for="txtSabKey">API key</label>
+                    <input is="emby-input" type="password" id="txtSabKey" autocomplete="new-password" spellcheck="false" />
+                    <button is="emby-button" type="button" class="paper-icon-button-light btnToggleKey" data-target="txtSabKey" title="Tonen" aria-label="Tonen"><i class="md-icon">visibility</i></button>
+                </div>
+                <div class="fieldDescription" id="desc_sabKey" style="margin:-1em 0 1.5em;">Te vinden in SABnzbd onder Config &gt; General &gt; Security (de gewone API key, niet de NZB key).</div>
+                <div>
+                    <button is="emby-button" type="button" class="raised btnTestSab"><span>Test verbinding</span></button>
+                    <div class="fieldDescription testStatus" id="statusSab" style="margin-top:.5em;"></div>
+                </div>
+
+                <h3 id="hdgQbit">qBittorrent (optioneel)</h3>
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused" for="txtQbitUrl">URL (bijv. http://192.168.1.10:8080)</label>
+                    <input is="emby-input" type="text" id="txtQbitUrl" />
+                </div>
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused" for="txtQbitUser">Gebruikersnaam</label>
+                    <input is="emby-input" type="text" id="txtQbitUser" autocomplete="off" spellcheck="false" />
+                </div>
+                <div class="inputContainer keyWrap">
+                    <label class="inputLabel inputLabelUnfocused" for="txtQbitPass">Wachtwoord</label>
+                    <input is="emby-input" type="password" id="txtQbitPass" autocomplete="new-password" spellcheck="false" />
+                    <button is="emby-button" type="button" class="paper-icon-button-light btnToggleKey" data-target="txtQbitPass" title="Tonen" aria-label="Tonen"><i class="md-icon">visibility</i></button>
+                </div>
+                <div class="fieldDescription" id="desc_qbit" style="margin:-1em 0 1.5em;">Gebruikersnaam en wachtwoord van de qBittorrent-webinterface. Staat in qBittorrent de toegang zonder wachtwoord aan voor dit adres, dan mogen ze leeg blijven.</div>
+                <div>
+                    <button is="emby-button" type="button" class="raised btnTestQbit"><span>Test verbinding</span></button>
+                    <div class="fieldDescription testStatus" id="statusQbit" style="margin-top:.5em;"></div>
+                </div>
+
+                <h3 id="hdgNzbget">NZBGet (optioneel)</h3>
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused" for="txtNzbgetUrl">URL (bijv. http://192.168.1.10:6789)</label>
+                    <input is="emby-input" type="text" id="txtNzbgetUrl" />
+                </div>
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused" for="txtNzbgetUser">Gebruikersnaam</label>
+                    <input is="emby-input" type="text" id="txtNzbgetUser" autocomplete="off" spellcheck="false" />
+                </div>
+                <div class="inputContainer keyWrap">
+                    <label class="inputLabel inputLabelUnfocused" for="txtNzbgetPass">Wachtwoord</label>
+                    <input is="emby-input" type="password" id="txtNzbgetPass" autocomplete="new-password" spellcheck="false" />
+                    <button is="emby-button" type="button" class="paper-icon-button-light btnToggleKey" data-target="txtNzbgetPass" title="Tonen" aria-label="Tonen"><i class="md-icon">visibility</i></button>
+                </div>
+                <div class="fieldDescription" id="desc_nzbget" style="margin:-1em 0 1.5em;">Gebruikersnaam en wachtwoord van NZBGet (Instellingen > Security, ControlUsername en ControlPassword).</div>
+                <div>
+                    <button is="emby-button" type="button" class="raised btnTestNzbget"><span>Test verbinding</span></button>
+                    <div class="fieldDescription testStatus" id="statusNzbget" style="margin-top:.5em;"></div>
+                </div>
+
+                <h3 id="hdgTrans">Transmission (optioneel)</h3>
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused" for="txtTransUrl">URL (bijv. http://192.168.1.10:9091)</label>
+                    <input is="emby-input" type="text" id="txtTransUrl" />
+                </div>
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused" for="txtTransUser">Gebruikersnaam</label>
+                    <input is="emby-input" type="text" id="txtTransUser" autocomplete="off" spellcheck="false" />
+                </div>
+                <div class="inputContainer keyWrap">
+                    <label class="inputLabel inputLabelUnfocused" for="txtTransPass">Wachtwoord</label>
+                    <input is="emby-input" type="password" id="txtTransPass" autocomplete="new-password" spellcheck="false" />
+                    <button is="emby-button" type="button" class="paper-icon-button-light btnToggleKey" data-target="txtTransPass" title="Tonen" aria-label="Tonen"><i class="md-icon">visibility</i></button>
+                </div>
+                <div class="fieldDescription" id="desc_trans" style="margin:-1em 0 1.5em;">Gebruikersnaam en wachtwoord van Transmission; leeg laten als de webinterface geen wachtwoord vraagt.</div>
+                <div>
+                    <button is="emby-button" type="button" class="raised btnTestTrans"><span>Test verbinding</span></button>
+                    <div class="fieldDescription testStatus" id="statusTrans" style="margin-top:.5em;"></div>
                 </div>
 
                 </div>

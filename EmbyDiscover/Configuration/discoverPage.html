@@ -1,4 +1,4 @@
-<!DOCTYPE html><html><head><meta charset="utf-8" /><title>Discover</title></head><body><div data-role="page" class="page type-interior discoverUiPage" data-controller="__plugin/discoveruijs1412"><style>
+<!DOCTYPE html><html><head><meta charset="utf-8" /><title>Discover</title></head><body><div data-role="page" class="page type-interior discoverUiPage" data-controller="__plugin/discoveruijs1421"><style>
  body.dcDiscoverActive .skinHeader .pageTitle,body.dcDiscoverActive .skinHeader .headerButton,body.dcDiscoverActive .skinHeader .headerButton .material-icons,body.dcDiscoverActive .skinHeader .headerButton .md-icon,body.dcDiscoverActive .skinHeader .headerButton i,body.dcDiscoverActive .skinHeader .headerUserButton,body.dcDiscoverActive .skinHeader .headerTabs .emby-tab-button{
     color:#fff !important
 }
@@ -1424,8 +1424,14 @@ html.dcPointer .dcCastWrap:hover .dcCastArr{
     background:var(--dc-accent,#ffb400);
     transition:width .6s
 }
-.dcProg.paused i,.dcProg.stalled i{
+.dcProg.paused i,.dcProg.queued i{
     background:#9aa5b8
+}
+.dcProg.importwait i,.dcProg.importing i,.dcProg.processing i{
+    background:#4da3ff
+}
+.dcProg.importblocked i,.dcProg.stalled i{
+    background:#ff5a5f
 }
 .dcCard.dcWide{
     width:22em;
@@ -1515,13 +1521,13 @@ html.dcPointer .dcCastWrap:hover .dcCastArr{
     font-size:.8em;
     box-sizing:border-box
 }
-.dcWide .dcCapQ.req,.dcWide .dcCapQ.paused,.dcWide .dcCapQ.stalled{
+.dcWide .dcCapQ.req,.dcWide .dcCapQ.paused,.dcWide .dcCapQ.queued{
     background:rgba(255,255,255,.12)
 }
 .dcWide .dcCapQ.avail{
     background:rgba(34,165,89,.25)
 }
-.dcWide .dcCapQ.downloading,.dcWide .dcCapQ.paused,.dcWide .dcCapQ.stalled{
+.dcWide .dcCapQ.downloading,.dcWide .dcCapQ.paused,.dcWide .dcCapQ.stalled,.dcWide .dcCapQ.importwait,.dcWide .dcCapQ.importing,.dcWide .dcCapQ.processing,.dcWide .dcCapQ.importblocked{
     display:block;
     position:relative;
     isolation:isolate;
@@ -1536,7 +1542,7 @@ html.dcPointer .dcCastWrap:hover .dcCastArr{
     text-shadow:0 1px 3px rgba(0,0,0,.85);
     background:rgba(255,255,255,.16)
 }
-.dcWide .dcCapQ.downloading::before,.dcWide .dcCapQ.paused::before,.dcWide .dcCapQ.stalled::before{
+.dcWide .dcCapQ.downloading::before,.dcWide .dcCapQ.paused::before,.dcWide .dcCapQ.stalled::before,.dcWide .dcCapQ.importwait::before,.dcWide .dcCapQ.importing::before,.dcWide .dcCapQ.processing::before,.dcWide .dcCapQ.importblocked::before{
     content:"";
     position:absolute;
     z-index:-1;
@@ -1547,8 +1553,14 @@ html.dcPointer .dcCastWrap:hover .dcCastArr{
     background:rgba(var(--dc-accent-rgb,255,180,0),.8);
     transition:width .6s
 }
-.dcWide .dcCapQ.paused::before,.dcWide .dcCapQ.stalled::before{
+.dcWide .dcCapQ.paused::before{
     background:rgba(154,165,184,.7)
+}
+.dcWide .dcCapQ.importwait::before,.dcWide .dcCapQ.importing::before,.dcWide .dcCapQ.processing::before{
+    background:rgba(77,163,255,.75)
+}
+.dcWide .dcCapQ.importblocked::before,.dcWide .dcCapQ.stalled::before{
+    background:rgba(255,90,95,.75)
 }
 .dcCard.dcWide:hover,.dcCard.dcWide:focus-visible,.dcTvPage .dcCard.dcWide:focus{
     border-color:var(--dc-accent,#ffb400);
@@ -1569,8 +1581,14 @@ html.dcPointer .dcCastWrap:hover .dcCastArr{
     overflow:hidden;
     text-overflow:ellipsis
 }
-.dcCapQ.paused,.dcCapQ.stalled,.dcCapQ.req{
+.dcCapQ.paused,.dcCapQ.queued,.dcCapQ.req{
     color:#c9d2ea
+}
+.dcCapQ.importwait,.dcCapQ.importing,.dcCapQ.processing{
+    color:#7fbcff
+}
+.dcCapQ.importblocked,.dcCapQ.stalled{
+    color:#ff8a8e
 }
 .dcCapQ.avail{
     color:#5fd38d
@@ -1619,8 +1637,42 @@ html.dcPointer .dcCastWrap:hover .dcCastArr{
     height:100%;
     background:var(--dc-accent,#ffb400)
 }
-.dcQBar.paused i,.dcQBar.stalled i{
+.dcQBar.paused i,.dcQBar.queued i{
     background:#9aa5b8
+}
+.dcQBar.importwait i,.dcQBar.importing i,.dcQBar.processing i{
+    background:#4da3ff
+}
+.dcQBar.importblocked i,.dcQBar.stalled i{
+    background:#ff5a5f
+}
+.dcQPct.paused,.dcQPct.queued{
+    color:#b8c0d4
+}
+.dcQPct.downloading{
+    color:var(--dc-accent,#ffb400)
+}
+.dcQPct.importwait,.dcQPct.importing,.dcQPct.processing{
+    color:#7fbcff
+}
+.dcQPct.importblocked,.dcQPct.stalled{
+    color:#ff8a8e
+}
+.dcQSab{
+    font-size:.8em;
+    color:#8a96ad;
+    margin:-.1em 0 .4em
+}
+.dcQMeta{
+    font-size:.75em;
+    color:#8a96ad;
+    padding:0 0 .25em
+}
+.dcQWhy{
+    font-size:.78em;
+    color:#ff8a8e;
+    padding:0 0 .35em;
+    word-break:break-word
 }
 .dcQPct{
     flex:0 0 auto;
@@ -1799,13 +1851,40 @@ html.dcPointer .dcCastWrap:hover .dcCastArr{
     position:relative;
     z-index:1;
     margin-top:0;
-    padding:min(150px,15vh) 24px 20px;
+    padding:min(64px,7vh) 24px 20px;
+    box-sizing:border-box;
     max-height:inherit;
     overflow-y:auto;
     scrollbar-width:none
 }
 .dcM .dcModalBody::-webkit-scrollbar{
     display:none
+}
+.dcM .dcColL{
+    grid-area:left;
+    min-width:0
+}
+.dcM .dcColR{
+    grid-area:side;
+    min-width:0
+}
+.dcM .dcColR .dcCollection{
+    margin-top:4px
+}
+.dcM .dcColL .dcCast.dcFadeR{
+    -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 72px),transparent);
+    mask-image:linear-gradient(90deg,#000 calc(100% - 72px),transparent)
+}
+.dcM .dcColL .dcCast.dcFadeL{
+    -webkit-mask-image:linear-gradient(90deg,transparent,#000 72px);
+    mask-image:linear-gradient(90deg,transparent,#000 72px)
+}
+.dcM .dcColL .dcCast.dcFadeL.dcFadeR{
+    -webkit-mask-image:linear-gradient(90deg,transparent,#000 72px,#000 calc(100% - 72px),transparent);
+    mask-image:linear-gradient(90deg,transparent,#000 72px,#000 calc(100% - 72px),transparent)
+}
+.dcM .dcColL{
+    padding-right:8px
 }
 .dcTvPage .dcM .dcSeasons,.dcTvPage .dcM .dcSeasonLabel,.dcTvPage .dcM .dcBtnSeason{
     font-size:14px
@@ -1820,7 +1899,7 @@ html.dcPointer .dcCastWrap:hover .dcCastArr{
     display:grid;
     grid-template-columns:minmax(0,1fr) min(280px,34%);
     column-gap:28px;
-    grid-template-areas:"title title" "meta meta" "rate rate" "btns btns" "over info" "gen info" "seas info" "coll info" "queue info" "cast cast";
+    grid-template-areas:"title title" "meta meta" "rate rate" "btns btns" "over info" "gen info" "seas info" "coll info" "queue info" "cast cast" "left side";
     align-items:start
 }
 .dcM .dcModalTitle{

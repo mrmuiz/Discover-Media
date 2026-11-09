@@ -3,14 +3,14 @@
  * Verbergt ook "Media informatie" op Discover/Trailers-detailpagina's. */
 (function () {
     'use strict';
-    if (window.__discoverRequestButtonVersion === '1.4.0.5') { return; }
+    if (window.__discoverRequestButtonVersion === '1.4.0.6') { return; }
     if (window.__discoverRequestButton) {
         console.warn('[Discover] oudere knopcode is nog actief; vernieuw de webclient om dubbele handlers te voorkomen.');
         return;
     }
-    var DC_BUILD = '1.4.0.5 2026-11-07';
+    var DC_BUILD = '1.4.0.6 2026-11-09';
     window.__discoverRequestButton = true;
-    window.__discoverRequestButtonVersion = '1.4.0.5';
+    window.__discoverRequestButtonVersion = '1.4.0.6';
 
     // Themakleur (instelling "Weergave"): CSS-variabelen op <html>, gebruikt door de Discover-pagina en de rijen en
     // knoppen op Emby's pagina's. Laatste waarde onthouden, zodat de kleur bij het openen niet eerst geel flitst.
@@ -51,7 +51,7 @@
         })();
     }
     window.__discoverRequestButtonBuild = DC_BUILD;
-    console.log('[Discover] request-button script loaded v1.4.0.5 build ' + DC_BUILD);
+    console.log('[Discover] request-button script loaded v1.4.0.6 build ' + DC_BUILD);
 
     var uiLanguage = 'nl';
     function text(dutch, english, german, norwegian) {
@@ -82,7 +82,7 @@
                     'color:#ffd666;background:rgba(0,0,0,.7);padding:4px 8px;border-radius:4px;pointer-events:none;white-space:pre-wrap;';
                 document.body.appendChild(el);
             }
-            el.textContent = 'Discover v1.4.0.5 | ' + msg;
+            el.textContent = 'Discover v1.4.0.6 | ' + msg;
         } catch (e) { }
     }
     var isAdmin = false;
@@ -212,7 +212,9 @@
             '.discover-row-prog { position: absolute; left: 0; right: 0; bottom: 0; height: 10px; background: rgba(0,0,0,.65); }',
             'html.layout-tv .discover-row-prog, html.discover-tv .discover-row-prog { height: 12px; }',
             '.discover-row-prog i { display: block; height: 100%; width: 0; background: var(--dc-accent,#ffb400); transition: width .6s; }',
-            '.discover-row-prog.paused i, .discover-row-prog.stalled i { background: #9aa5b8; }',
+            '.discover-row-prog.paused i, .discover-row-prog.queued i { background: #9aa5b8; }',
+            '.discover-row-prog.importwait i, .discover-row-prog.importing i, .discover-row-prog.processing i { background: #4da3ff; }',
+            '.discover-row-prog.importblocked i, .discover-row-prog.stalled i { background: #ff5a5f; }',
             '.discover-row-name { margin-top: .5em; font-size: .9em; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }',
             '.discover-row-meta { font-size: .8em; opacity: .65; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }',
             '.discover-row-btn { display: block; width: 100%; box-sizing: border-box; margin-top: .5em; padding: .45em .6em; border: none;',
@@ -223,7 +225,9 @@
             '.discover-row-btn:disabled { cursor: default; }',
             '.discover-row-btn.is-requested { background: #555; color: #fff; }',
             '.discover-row-btn.is-progress { background: #26304a; color: #ffd666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }',
-            '.discover-row-btn.is-progress.paused, .discover-row-btn.is-progress.stalled { color: #d0d6e4; }',
+            '.discover-row-btn.is-progress.paused, .discover-row-btn.is-progress.queued { color: #d0d6e4; }',
+            '.discover-row-btn.is-progress.importwait, .discover-row-btn.is-progress.importing, .discover-row-btn.is-progress.processing { color: #7fbcff; }',
+            '.discover-row-btn.is-progress.importblocked, .discover-row-btn.is-progress.stalled { color: #ff8a8e; }',
             '.discover-row-btn.is-available { background: #22a559; color: #fff; }',
             '.discover-film-req { cursor: pointer; }',
             '.discover-film-req .discover-film-badge { display:inline-block; margin-left:.6em; padding:0 .5em; border-radius:1em; background:var(--dc-accent,#ffb400); color:var(--dc-accent-text,#111); font-size:.8em; font-weight:700; vertical-align:middle; }',
@@ -332,7 +336,7 @@
             var bcs = btn ? getComputedStyle(btn) : null;
             var vv = window.visualViewport;
             el.textContent = [
-                'Discover v1.4.0.5 build ' + DC_BUILD + ' (' + (window.__discoverRequestButtonBuild || '?') + ')',
+                'Discover v1.4.0.6 build ' + DC_BUILD + ' (' + (window.__discoverRequestButtonBuild || '?') + ')',
                 'item page: ' + (document.querySelector('.itemDetailPage') ? 'ja' : 'nee') + ' body=' + document.body.className.split(/\s+/).filter(function (c) { return /^(dc|discover)/.test(c); }).join(' '),
                 'bar: ' + (info.bar ? describe(info.bar) + ' ' + rectText(info.bar) : 'niet gevonden') + ' h=' + info.measured,
                 'mode=' + info.mode + ' --dc-bottom-clear=' + (document.documentElement.style.getPropertyValue('--dc-bottom-clear') || '(leeg)'),
@@ -439,6 +443,7 @@
         client.ajax({ type: 'GET', url: client.getUrl('Discover/Status'), dataType: 'json' }).then(function (status) {
             diagnosticsEnabled = !!(status && status.ShowDiagnostics);
             window.__discoverRequestService = (status && status.RequestService) || '';
+            window.__discoverShowSpecials = !(status && status.ShowSpecials === false);
             if (status && status.AccentColor && window.__dcApplyAccent) { window.__dcApplyAccent(status.AccentColor); }
             // Weergave: jaar / score onder de posters verbergen (klassen op <html>, ook voor de Discover-pagina).
             if (status) {
@@ -766,7 +771,7 @@
     }
 
     function showSeasonPicker(info, onConfirm) {
-        var seasons = (info.Seasons || []).filter(function (s) { return s.Number > 0 || s.EpisodeCount > 0; });
+        var seasons = (info.Seasons || []).filter(function (s) { return s.Number > 0 || (s.EpisodeCount > 0 && window.__discoverShowSpecials !== false); });
         if (seasons.length === 0) {
             toast(text('Seizoensgegevens niet beschikbaar; er is niets aangevraagd.',
                 'Season data is unavailable; nothing was requested.',
@@ -1852,17 +1857,31 @@
     // ---- Downloadvoortgang (Radarr/Sonarr-wachtrij) voor de rijen ----
     var rowQueue = {};           // 'movie:123' -> wachtrij-item
     var rowQueueTimer = null, rowQueueBusy = false, rowQueueUntil = 0;
-    function rowStateLabel(st) {
+    function rowStageLabel(stage) {
+        return stage === 'verifying' ? text('Verifiëren', 'Verifying', 'Überprüfen', 'Verifiserer') :
+            stage === 'repairing' ? text('Repareren', 'Repairing', 'Reparieren', 'Reparerer') :
+            stage === 'extracting' ? text('Uitpakken', 'Extracting', 'Entpacken', 'Pakker ut') :
+            stage === 'moving' ? text('Verplaatsen', 'Moving', 'Verschieben', 'Flytter') :
+            stage === 'script' ? text('Script draaien', 'Running script', 'Skript läuft', 'Kjører skript') :
+            text('Wacht op verwerking', 'Waiting for processing', 'Wartet auf Verarbeitung', 'Venter på behandling');
+    }
+    function rowStateLabel(st, stage) {
         return st === 'downloading' ? text('Downloaden', 'Downloading', 'Lädt herunter', 'Laster ned') :
             st === 'paused' ? text('Gepauzeerd', 'Paused', 'Pausiert', 'Pauset') :
-            st === 'importing' ? text('Wordt toegevoegd', 'Importing', 'Wird importiert', 'Importeres') :
-            st === 'stalled' ? text('Wacht op download', 'Waiting for download', 'Wartet auf Download', 'Venter') :
+            st === 'processing' ? rowStageLabel(stage) :
+            st === 'importwait' ? text('Wacht op import', 'Waiting to import', 'Wartet auf Import', 'Venter på import') :
+            st === 'importing' ? text('Importeren', 'Importing', 'Wird importiert', 'Importerer') :
+            st === 'importblocked' ? text('Import geblokkeerd', 'Import blocked', 'Import blockiert', 'Import blokkert') :
+            st === 'stalled' ? text('Probleem', 'Problem', 'Problem', 'Problem') :
             text('In wachtrij', 'Queued', 'In Warteschlange', 'I kø');
     }
     function rowQueueText(e) {
-        if (e.State === 'downloading') { return '\u2193 ' + e.Progress + '%'; }
-        if (e.State === 'paused') { return rowStateLabel(e.State) + ' \u00B7 ' + e.Progress + '%'; }
-        return rowStateLabel(e.State);
+        if (e.State === 'processing' && e.Stage === 'script' && e.Action) { return e.Action; }
+        var pct = (e.State === 'downloading' || e.State === 'paused' || e.State === 'stalled') && e.Progress > 0 ? ' ' + e.Progress + '%' : '';
+        return rowStateLabel(e.State, e.Stage) + pct;
+    }
+    function rowFullBar(st) {
+        return st === 'processing' || st === 'importwait' || st === 'importing' || st === 'importblocked';
     }
     function applyRowProgress(card, item) {
         var poster = card.querySelector('.discover-row-poster');
@@ -1872,7 +1891,7 @@
         if (!e) { if (bar) { poster.removeChild(bar); } return; }
         if (!bar) { bar = document.createElement('div'); bar.appendChild(document.createElement('i')); poster.appendChild(bar); }
         bar.className = 'discover-row-prog ' + e.State;
-        bar.firstChild.style.width = e.Progress + '%';
+        bar.firstChild.style.width = (rowFullBar(e.State) ? 100 : e.Progress) + '%';
     }
     function loadRowQueue() {
         rowQueueTimer = null;
@@ -1890,10 +1909,11 @@
             // Alleen blijven verversen zolang er iets van deze rijen in de wachtrij staat (of net is aangevraagd).
             var any = false;
             for (var j = 0; j < bs.length && !any; j++) { if (bs[j]._item && rowQueue[bs[j]._item.Type + ':' + bs[j]._item.TmdbId]) { any = true; } }
-            if (any || Date.now() < rowQueueUntil) { rowQueueTimer = setTimeout(loadRowQueue, 15000); }
+            // Snel verversen zolang er iets downloadt; anders rustig blijven kijken voor nieuwe downloads.
+            rowQueueTimer = setTimeout(loadRowQueue, any || Date.now() < rowQueueUntil ? 3000 : 15000);
         }, function () {
             rowQueueBusy = false;
-            if (Date.now() < rowQueueUntil) { rowQueueTimer = setTimeout(loadRowQueue, 30000); }
+            rowQueueTimer = setTimeout(loadRowQueue, 10000);
         });
     }
     function startRowQueue(delay) {
@@ -1989,7 +2009,7 @@
         var link = document.createElement('a');
         link.className = 'discover-row-poster';
         // Klik op de poster: de Discover-popup met info en trailer.
-        link.href = '#!/configurationpage?name=discoverui1113&openType=' + item.Type + '&openId=' + item.TmdbId;
+        link.href = '#!/configurationpage?name=discoverui1120&openType=' + item.Type + '&openId=' + item.TmdbId;
         link.setAttribute('aria-label', item.Title);   // geen title: dat gaf een tooltip-vakje over de poster
         // Gewone klik: de popup hier op de pagina openen (Ctrl/middenklik volgt de link naar Discover).
         link.addEventListener('click', function (e) {
@@ -2296,7 +2316,7 @@
     // ---- De Discover-popup boven de huidige pagina ----
     // Laadt de Discover-pagina één keer onzichtbaar (alleen de popup wordt gebruikt) met dezelfde controller
     // als de echte pagina, in "embedded"-modus. Zo is de popup overal gelijk: info, cast, seizoenen, trailer, aanvragen.
-    var DC_UI_PAGE = 'discoverui1113', DC_UI_JS = 'discoveruijs1412';
+    var DC_UI_PAGE = 'discoverui1120', DC_UI_JS = 'discoveruijs1421';
     var embedPromise = null;
     function pageText(c, name) {
         var url = c.getUrl('web/ConfigurationPage', { name: name });

@@ -23,8 +23,12 @@ namespace Emby.Plugins.Discover
         public string status { get; set; }
         public string timeLeft { get; set; }
         public string title { get; set; }
+        /// <summary>ID van de download in de downloader; niet elke Seerr-versie stuurt dit mee (dan koppelen we op releasenaam).</summary>
+        public string downloadId { get; set; }
         public SeerrEpisodeRef episode { get; set; }
     }
+
+    public class SeerrRequestRef { public int id { get; set; } public int status { get; set; } }
 
     public class SeerrMediaDto
     {
@@ -37,6 +41,8 @@ namespace Emby.Plugins.Discover
         public string createdAt { get; set; }
         public List<SeerrSeasonDto> seasons { get; set; }
         public List<SeerrDownloadDto> downloadStatus { get; set; }
+        /// <summary>Aanvragen bij deze titel (status 1 wacht op goedkeuring, 2 goedgekeurd, 3 afgewezen, 4 mislukt).</summary>
+        public List<SeerrRequestRef> requests { get; set; }
     }
 
     public class SeerrPageInfo { public int pages { get; set; } public int page { get; set; } public int results { get; set; } }
@@ -336,7 +342,7 @@ namespace Emby.Plugins.Discover
             {
                 var s = seasons == null || seasons.Length == 0
                     ? "\"all\""
-                    : "[" + string.Join(",", seasons.Where(n => n > 0).Distinct().OrderBy(n => n)) + "]";
+                    : "[" + string.Join(",", seasons.Where(n => n >= 0).Distinct().OrderBy(n => n)) + "]";
                 body = "{\"mediaType\":\"tv\",\"mediaId\":" + tmdbId + (tvdbId > 0 ? ",\"tvdbId\":" + tvdbId : "") + ",\"seasons\":" + s + (is4k ? ",\"is4k\":true" : "") + "}";
             }
             else
@@ -368,6 +374,34 @@ namespace Emby.Plugins.Discover
             DiscoverDiagnostics.Add("Seerr " + (tv ? "serie " : "film ") + tmdbId + " aangevraagd" + (asUser.HasValue ? " als Seerr-gebruiker " + asUser.Value : "") +
                 (pending ? " (wacht op goedkeuring)" : ""));
             return true;
+        }
+
+        /// <summary>
+        /// De titel stond al in Seerr: een mislukte aanvraag (status 4) opnieuw laten versturen. Een goedgekeurde aanvraag die
+        /// niets oplevert zoekt Seerr zelf niet opnieuw; dat doet de plugin dan via Radarr/Sonarr (zie ArrClient).
+        /// </summary>
+        /// <returns>true = minstens één mislukte aanvraag opnieuw verstuurd.</returns>
+        internal static async Task<bool> RetryFailed(IJsonSerializer json, bool tv, int tmdbId, CancellationToken ct)
+        {
+            if (!Configured) return false;
+            SeerrMediaDto media = null;
+            try { media = await FindMedia(json, tv, tmdbId, ct).ConfigureAwait(false); }
+            catch (Exception ex)
+            {
+                if (ex is OperationCanceledException) throw;
+                DiscoverDiagnostics.Add("Seerr aanvraag opzoeken (" + (tv ? "serie " : "film ") + tmdbId + "): " + ex.Message);
+            }
+            if (media == null || media.requests == null) return false;
+            bool any = false;
+            foreach (var rq in media.requests.Where(x => x != null && x.status == 4).ToList())
+            {
+                var r = await Call(HttpMethod.Post, "/request/" + rq.id + "/retry", "{}", ct).ConfigureAwait(false);
+                bool ok = r.Code >= 200 && r.Code <= 299;
+                if (ok) any = true;
+                DiscoverDiagnostics.Add("Seerr aanvraag " + rq.id + " opnieuw proberen: " + (ok ? "gelukt" : "mislukt (" + MessageOf(json, r) + ")"));
+            }
+            if (any) { Invalidate(); DownloadQueue.Invalidate(); }
+            return any;
         }
 
         // ---------- Verwijderen / annuleren ----------
@@ -458,7 +492,9 @@ namespace Emby.Plugins.Discover
                             State = DownloadQueue.MapState(new ArrQueueFullItemDto { status = d.status }),
                             TimeLeft = DownloadQueue.ParseTime(d.timeLeft),
                             Release = d.title,
+                            DownloadId = d.downloadId,
                             Detail = "Seerr",
+                            Client = "Seerr",
                             Season = season,
                             Episode = number
                         });

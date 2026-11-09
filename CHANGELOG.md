@@ -1,3 +1,39 @@
+## Version 1.4.0.6
+
+- Fix: the **download progress now updates live** in the popup and on the posters/rows. With SABnzbd configured, progress, size done and time left come from SABnzbd itself (Radarr/Sonarr/Seerr only refresh their queue about once a minute, so the percentage used to stand still).
+- Change: the queue is refreshed every **3 seconds** while something is downloading or the popup is open (was 15 s), and the server cache is 2 s (was 8 s). When nothing is downloading it keeps checking every 15 s, so a download started elsewhere shows up by itself.
+- Fix: opening the popup always starts the refresh, also when nothing was in the queue yet.
+- New: while SABnzbd runs a **post-processing script**, the last line the script prints (e.g. "Script uitvoeren: [###  ] 16%") is shown on the tile, in the popup and on the row buttons, instead of only "Running script".
+- Change: the Request button in the popup no longer repeats the download status; it stays on "Requested" and the status is shown in the progress block below it.
+- Fix: when SABnzbd has finished a download but Radarr/Sonarr/Seerr still report "downloading", the status now switches to **Importing** instead of staying on "Downloading 100%".
+- New: third choice in **Requests → Request through**: **Seerr + Radarr & Sonarr (for the status)**. Requests still go to Seerr (approval and limits from Seerr), and the plugin also reads the Radarr and Sonarr queues to give each Seerr download the real status: waiting to import, importing, import blocked, the reason for a problem, and (administrators) release, download client and indexer. A download is matched by download ID, else by release name (a movie by title). Existing settings keep working unchanged.
+- Change: for a series with several episodes in the queue, the tile and the popup now show **only the episode that is downloading now** (e.g. "S02E05 · Downloading 40% · 2 min · 42 MB/s") with its own progress bar, instead of a combined bar or a long list.
+
+- New: the **status is written on the progress bar** and in the popup: "Downloading 73%", "Queued", "Paused", "Importing", "Problem". Time left and (with SABnzbd) speed follow after it.
+- Change: the **import phases are separated**. Before, waiting to import, importing and import blocked were all "importing", so a blocked import looked like a running one. Now: "Waiting to import", "Importing" and "Import blocked" (Radarr/Sonarr `importPending`, `importing`, `importBlocked`/`importFailed`). Download failures and warnings show as "Problem" instead of "Waiting for download".
+- Change: the **reason** (Radarr/Sonarr error or status message) is now shown to every user under a blocked import or a problem, not only to administrators. Release name, download client and indexer stay administrator-only.
+- Change: **colours per status** on the poster bar, the wide cards, the popup and the Request buttons in the rows on Emby's pages: yellow (theme colour) downloading, blue importing (incl. waiting to import and the SABnzbd stages), red problem / import blocked, grey paused and queued.
+- Change: in the popup the **size** (e.g. 8.2 of 11.2 GB), download client and indexer are on one line under each download.
+- New: optional **SABnzbd connection** (Requests tab: URL and API key, with a test button). Adds, only when set:
+  - the download **speed** (e.g. 42 MB/s),
+  - the **stages after 100%**: verifying, repairing, extracting, moving and running a script (a download no longer looks stuck at 100% while SABnzbd unpacks),
+  - SABnzbd's **overall state** in the popup: paused or a speed limit.
+  A download is matched to SABnzbd by its download ID (Radarr/Sonarr). With Seerr the ID is used when Seerr sends it, otherwise the match is made on the release name.
+- New: optional connections to **NZBGet**, **qBittorrent** and **Transmission** (Requests tab: URL, username and password, each with a test button). Per download: the speed, the stages after 100% (NZBGet: verifying, repairing, unpacking, moving, script; torrents: verifying and moving), and for torrents the number of **seeders** and the **ratio**. NZBGet also reports its overall state (paused, speed limit) like SABnzbd. Matching uses the download ID from Radarr/Sonarr (torrent hash, NZBGet ID) and falls back to the release name. qBittorrent waits a few minutes after a failed login so a wrong password does not get the server's IP banned.
+
+- Fix: a **movie that was requested before** stayed on "Requested" and never downloaded. If the movie is already in Radarr without a file, requesting it again now sets it to monitored and starts a search in Radarr (`MoviesSearch`); the message is "Requested" instead of "Already in Radarr". Series already worked this way (since 1.3.5.1).
+- Fix: with **Seerr**, requesting a title that is already in Seerr now retries a failed request (`POST /request/{id}/retry`) and, when Radarr / Sonarr are also set up in the plugin, monitors the title there and searches for missing releases. A request that is still waiting for approval is left alone.
+- Fix: the **year** now shows in the season choice (popup and the season buttons on TV): `/Discover/Seasons` did not send the air date. Seasons that have not started yet get the "coming soon" tag there too.
+- New: **Specials** (season 0) as a choice in the season picker and the season buttons, with a setting to switch them off (Appearance tab: "Show Specials in the season choice", on by default). "All seasons" still means all regular seasons; tick Specials separately. With Seerr, Specials only work when Seerr itself allows requesting them.
+
+- Change: the popup has less empty space above the title (top padding `min(150px,15vh)` → `min(64px,7vh)`), so a movie without download info no longer has to scroll.
+- Change: on a wide screen the popup uses both columns: description, genres, seasons, download status and cast on the left, the info box and the collection on the right (in the empty space under the info box). The popup no longer has to scroll for a movie with a collection. On a phone and on TV the order stays as it was.
+- Change: the cast row in the popup fades out at the edge where more actors follow (and at the start once scrolled), so it no longer looks like the actors slide behind the info column.
+- Fix: a new download showed up late (only after about a minute, at 30-40% on a fast line), because Radarr and Sonarr refresh their queue only once a minute. While a request from the last 15 minutes is not in the queue yet, the plugin now asks Radarr/Sonarr (at most every 10 s) to refresh their downloads right away (`RefreshMonitoredDownloads`).
+- Fix: a request that is already downloading or being post-processed in the downloader, but is not (or no longer) in the Radarr/Sonarr/Seerr queue, is now shown anyway: requests from the last 6 hours are matched to the SABnzbd queue and history by name (title + year for a movie, title + SxxEyy for a series). Before, the status only appeared after Radarr's next refresh and vanished again while SABnzbd ran a post-processing script.
+
+- Change: page names bumped (`discoverconfig1092`, `discoverconfigjs1372`, `discoverui1120`, `discoveruijs1421`, `discoverbuttonjs1415`).
+
 ## Version 1.4.0.4
 
 - New: choose the **score below the posters**: TMDB, IMDb or none. The IMDb score comes from the free official IMDb dataset (`title.ratings.tsv.gz`, non-commercial use only): no API key or limit; downloaded weekly into the plugin data folder, ~14 MB in memory, fetched lazily for visible posters; without IMDb data the TMDB score stays. The existing TMDB-score setting migrates to TMDB. The popup (OMDb) is unchanged.
@@ -27,7 +63,6 @@
 - Change: Emby's **back arrow on the Discover start** now does Emby's normal back (it did nothing there); inside Discover it still goes one step back.
 - Fix: the **theme colour** could not be chosen on TV (empty selection, stayed yellow): the option values no longer contain `#`.
 - Change: version strings in the scripts updated.
-- Change: page names bumped (`discoverconfig1089`, `discoverconfigjs1369`, `discoverui1109`, `discoveruijs1404`, `discoverbuttonjs1411`).
 
 ## Version 1.4.0.1
 
@@ -43,7 +78,6 @@
 - Fix: a removed TMDB list (or another extra row) stayed on the Discover page until a full reload; extra rows are now fetched again on every visit.
 - Fix: the tile → Discover redirect did not work in browsers without the Navigation API (e.g. LG webOS 6 / Chrome 79, Firefox), because Emby navigates with pushState. The loader now also checks the route every second there.
 - Change: own apps can set `window.__discoverAlwaysTile = true` before the loader so the tile always opens Discover, regardless of the browser setting.
-- Change: page names bumped (`discoverconfig1087`, `discoverconfigjs1367`, `discoverui1101`, `discoveruijs1396`, `discoverbuttonjs1405`).
 
 ## Version 1.4.0.0
 
@@ -88,7 +122,6 @@
 - Fix: text in the Discover popup no longer runs off the right edge for titles with a long cast row.
 - Change: on a request page of something that is already requested (⏳) the button says **Request again**.
 - Change: channel DataVersion 76.
-- Change: page names bumped (`discoverconfig1083`, `discoverconfigjs1363`, `discoverui1092`, `discoveruijs1389`, `discoverbuttonjs1393`, `discoverstatusjs1103`).
 
 ## Version 1.3.5.6
 
@@ -103,7 +136,6 @@
 - Change: the **Channel tiles** button on the Discover page is gone. The channel folders are still reachable through Emby's own channel view.
 - New: **backdrop for the "Discover Media" tile on the Emby home screen**, like Emby does for the other libraries: hovering or selecting the tile shows a random backdrop of a currently trending movie or series full screen (TMDB trending, `GET /Discover/Backdrops`, cached 6 hours). Only when *Enable backdrops* is on in the user's Emby display settings; the image goes into Emby's own backdrop layer so Emby's dimming applies. Web client only (browser and apps that load the server's web client); needs the web loader in index.html.
 - New: **backdrops inside the Discover channel** (same setting and web-client conditions): the channel root and the row/genre folders show a random trending backdrop; a title folder ("Request" / "Trailer"), the "Request: <series>" season list, a season item and the trailer item show the backdrop of that title. Hovering a title in a channel list switches to its backdrop, like in an Emby library. New endpoint `GET /Discover/ItemBackdrop?Id=<Emby item id>` (recognises channel items by their external id, cached).
-- Change: page names bumped (`discoverui1082`, `discoveruijs1376`, `discoverbuttonjs1375`, `discoverconfigjs1358`, `discoverstatusjs1101`) so browsers load the new scripts.
 - After updating, restart Emby once and hard-refresh the browser (Ctrl+F5).
 
 ## Version 1.3.5.5
@@ -122,7 +154,6 @@
 - Change: with plugin language "Automatic" the rows and the Discover page follow the language of the Emby app (`html lang`) instead of the server language.
 - Fix: **broken images on the channel tiles** (Movie Genres, Studios, Popular Movies, …), e.g. in the Windows app. The cleanup removed tile images older than the retention period even while Emby still pointed to them ("The file '/data/discover-tiles/…jpg' could not be found"); browsers often still showed them from their own cache. Folder tiles (lists, genres, studios, networks) are no longer cleaned up, a tile that is still used keeps a fresh date, and when the cleanup does remove tiles the channel DataVersion changes so Emby asks for the folders again and the plugin recreates the images. DataVersion bumped to 73 so missing images are recreated right after updating.
 - Fix: the **"Request" and "Trailer" text** on the two tiles of a title is back. Since 1.3.5.0 it was only made with "Pre-create cards and tiles" on; now it is made when a user opens the title (not during "Refresh Internet Channels").
-- Change: page names bumped (`discoverui1081`, `discoveruijs1373`, `discoverbuttonjs1373`) so browsers load the new scripts.
 - After updating, restart Emby once and hard-refresh the browser (Ctrl+F5).
 
 ## Version 1.3.5.4

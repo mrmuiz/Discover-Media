@@ -8,7 +8,7 @@
   Browse movies and series from TMDB in Emby, watch trailers, and send requests to Radarr or Sonarr.
 </p>
 
-> **Status: stable.** The current version is **1.4.0.5**, built against the Emby SDK package `MediaBrowser.Server.Core` 4.10.0.1-beta so that one dll runs on both Emby Server 4.10.2 and 4.11 (beta). It has been installed on both; other Emby versions may work but have not been individually tested. Please report problems through [Issues](../../issues) and include the relevant diagnostics (see [Troubleshooting](#troubleshooting)).
+> **Status: stable.** The current version is **1.4.0.6**, built against the Emby SDK package `MediaBrowser.Server.Core` 4.10.0.1-beta so that one dll runs on both Emby Server 4.10.2 and 4.11 (beta). It has been installed on both; other Emby versions may work but have not been individually tested. Please report problems through [Issues](../../issues) and include the relevant diagnostics (see [Troubleshooting](#troubleshooting)).
 
 ## Screenshots
 
@@ -162,6 +162,8 @@ The settings are split over tabs: **General**, **Appearance**, **TMDB**, **Reque
 | OMDb API key | TMDB | Optional. Shows IMDb, Rotten Tomatoes and Metacritic scores in the popup (can be switched off). Cached 24 hours per title. |
 | Request through | Requests | Radarr/Sonarr directly, or a Seerr server (URL and API key). |
 | Radarr / Sonarr URL and API key | Requests | Sends movie requests to Radarr and series requests to Sonarr. |
+| SABnzbd URL and API key (optional) | Requests | Adds the download speed, the stages after 100% (verifying, repairing, extracting, moving, script) and SABnzbd's paused/speed-limit state to the download progress. |
+| NZBGet, qBittorrent, Transmission URL, username and password (optional) | Requests | Same for these downloaders; torrents also show seeders and ratio. |
 | Quality profile and root folder | Requests | Selects the destination settings used for requests. Choose values returned by **Test connection**. |
 | Request limit | Users | At most N requests per X days per user (0 = no limit). Administrators are exempt. Also shows the overview of all requests. |
 | Storage | Storage | How long confirmation clips and tile images are kept, and the maximum cache size. |
