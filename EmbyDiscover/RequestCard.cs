@@ -392,10 +392,20 @@ namespace Emby.Plugins.Discover
             }
         }
 
+        /// <summary>De ffmpeg die Emby zelf gebruikt (IMediaEncoder.EncoderPath), gezet door het kanaal bij het laden.</summary>
+        internal static volatile string EmbyFfmpeg;
+
         internal static string FindFfmpeg()
         {
             var configured = Plugin.GetCurrentConfiguration().FfmpegPath;
             if (!string.IsNullOrWhiteSpace(configured) && File.Exists(configured.Trim())) return configured.Trim();
+            // Eerst de ffmpeg van Emby zelf: die bestaat altijd, ook bij installaties waar hij op een ongewone plek staat.
+            try
+            {
+                var emby = EmbyFfmpeg;
+                if (!string.IsNullOrWhiteSpace(emby) && File.Exists(emby.Trim())) return emby.Trim();
+            }
+            catch { }
 
             bool win = Environment.OSVersion.Platform == PlatformID.Win32NT;
             string exe = win ? "ffmpeg.exe" : "ffmpeg";

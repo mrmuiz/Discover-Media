@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using MediaBrowser.Controller.Channels;
+using MediaBrowser.Controller.MediaEncoding;
 using MediaBrowser.Model.Channels;
 using MediaBrowser.Model.Drawing;
 using MediaBrowser.Model.Dto;
@@ -53,10 +54,13 @@ namespace Emby.Plugins.Discover
         private readonly ArrClient _arr;
         private readonly ILogger _logger;
 
-        public DiscoverMediaChannel(ILogManager logManager, IJsonSerializer json)
+        public DiscoverMediaChannel(ILogManager logManager, IJsonSerializer json, IMediaEncoder mediaEncoder)
         {
             _logger = logManager.GetLogger("Discover");
             _logger.Info("Discover: kanaal geladen (naam: {0})", Name);
+            try { RequestCard.EmbyFfmpeg = mediaEncoder != null ? mediaEncoder.EncoderPath : null; }
+            catch (Exception ex) { _logger.Info("[DM-CARD] Could not read Emby's ffmpeg path: {0}", ex.Message); }
+            try { _logger.Info("[DM-CARD] ffmpeg for request cards: {0}", RequestCard.FindFfmpeg() ?? "NOT FOUND"); } catch { }
             _tmdb = new TmdbClient(json);
             _arr = new ArrClient(json);
         }
@@ -1140,10 +1144,11 @@ namespace Emby.Plugins.Discover
                         // Emby heeft het verzoek zelf afgebroken (bv. detailpagina gesloten): geen vaste clip teruggeven,
                         // de kaart wordt op de achtergrond afgemaakt en staat bij de volgende keer klaar.
                         ct.ThrowIfCancellationRequested();
-                        throw new TimeoutException("kaart nog niet klaar");
+                        throw new TimeoutException("kaart nog niet klaar / card not ready within 60 s");
                     }
                     var card = await cardTask.ConfigureAwait(false);
                     DiscoverDiagnostics.Add("kaartclip: " + card);
+                    _logger.Info("[DM-CARD] Request card ready for {0}: {1}", id, card);
                     return new List<MediaSourceInfo>
                     {
                         new MediaSourceInfo
@@ -1163,7 +1168,10 @@ namespace Emby.Plugins.Discover
                 catch (Exception ex)
                 {
                     if (ex is OperationCanceledException) throw;
-                    _logger.Error("Discover: kaartclip mislukt voor {0}: {1}", id, ex.Message);
+                    string ff = null;
+                    try { ff = RequestCard.FindFfmpeg(); } catch { }
+                    _logger.Error("[DM-CARD] Request card failed for {0}, the fallback clip is played instead. ffmpeg: {1}. Error ({2}): {3}",
+                        id, ff ?? "NOT FOUND", ex.GetType().Name, ex.Message);
                     DiscoverDiagnostics.Add("kaartclip " + id + ": " + ex.Message + " (vaste clip gebruikt)");
                 }
             }
