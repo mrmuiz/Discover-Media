@@ -1149,7 +1149,7 @@ namespace Emby.Plugins.Discover
                         new MediaSourceInfo
                         {
                             Id = "discover-requested-" + (tv ? "t" : "m") + tmdbId,
-                            Name = "Aangevraagd",
+                            Name = DiscoverLanguage.Text("Aangevraagd", "Requested", "Angefragt", "Forespurt"),
                             Path = card,
                             Protocol = MediaProtocol.File,
                             Container = "mp4",
@@ -1230,7 +1230,7 @@ namespace Emby.Plugins.Discover
                 new MediaSourceInfo
                 {
                     Id = "discover-requested",
-                    Name = "Aangevraagd",
+                    Name = DiscoverLanguage.Text("Aangevraagd", "Requested", "Angefragt", "Forespurt"),
                     Path = clip,
                     Protocol = MediaProtocol.File,
                     Container = "mp4",

@@ -37,15 +37,15 @@ define([], function() {
     }
 
     function loadButtonScript() {
-        if (window.__discoverRequestButtonVersion === "1.4.0.6") {
-            diag.load = text("script is al actief v1.4.0.6", "script already active v1.4.0.6", "Skript bereits aktiv v1.4.0.6");
+        if (window.__discoverRequestButtonVersion === "1.4.0.7") {
+            diag.load = text("script is al actief v1.4.0.7", "script already active v1.4.0.7", "Skript bereits aktiv v1.4.0.7");
             showDiag();
             return
         }
         var urls = [ApiClient.getUrl("web/ConfigurationPage", {
-            name: "discoverbuttonjs1415"
+            name: "discoverbuttonjs1416"
         }), ApiClient.getUrl("web/configurationpage", {
-            name: "discoverbuttonjs1415"
+            name: "discoverbuttonjs1416"
         }), ApiClient.getUrl("Plugins/Discover/Script")];
         var n = 0;
         (function next() {
@@ -60,7 +60,7 @@ define([], function() {
             script.src = u + (u.indexOf("?") === -1 ? "?" : "&") + "_=" + Date.now();
             script.async = true;
             script.onload = function() {
-                if (window.__discoverRequestButtonVersion === "1.4.0.6") {
+                if (window.__discoverRequestButtonVersion === "1.4.0.7") {
                     diag.load = text("OK via extern script ", "OK via external script ", "OK \xfcber externes Skript ") + u;
                     showDiag()
                 } else {
@@ -79,7 +79,7 @@ define([], function() {
             document.head.appendChild(script)
         })()
     }
-    var UI_PAGE = "discoverui1120";
+    var UI_PAGE = "discoverui1121";
     return function(view, params) {
         var embedded = !!(params && params.embedded);
         if (embedded) {

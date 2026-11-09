@@ -28,7 +28,7 @@ namespace Emby.Plugins.Discover
             get
             {
                 try { return typeof(Plugin).Assembly.GetName().Version.ToString(); }
-                catch { return "1.4.0.6"; }
+                catch { return "1.4.0.7"; }
             }
         }
 
@@ -130,7 +130,7 @@ namespace Emby.Plugins.Discover
                 },
                 new PluginPageInfo
                 {
-                    Name = "discoverui1120",
+                    Name = "discoverui1121",
                     DisplayName = "Discover",
                     EmbeddedResourcePath = GetType().Namespace + ".Configuration.discoverPage.html",
                     EnableInMainMenu = true,
@@ -139,12 +139,12 @@ namespace Emby.Plugins.Discover
                 },
                 new PluginPageInfo
                 {
-                    Name = "discoveruijs1421",
+                    Name = "discoveruijs1422",
                     EmbeddedResourcePath = GetType().Namespace + ".Configuration.discoverPage.js"
                 },
                 new PluginPageInfo
                 {
-                    Name = "discoverbuttonjs1415",
+                    Name = "discoverbuttonjs1416",
                     EmbeddedResourcePath = GetType().Namespace + ".Resources.discover-request-button.js"
                 },
                 new PluginPageInfo
@@ -201,6 +201,12 @@ namespace Emby.Plugins.Discover
         /// Probeert meerdere mappen, want niet elke Emby-installatie (Docker, Linux-gebruiker,
         /// Windows-service) mag overal schrijven. Elke mislukte poging staat op de statuspagina.
         /// </summary>
+        private static string ClipResourceName()
+        {
+            var lang = DiscoverLanguage.IsDutch ? "nl" : DiscoverLanguage.IsGerman ? "de" : DiscoverLanguage.IsNorwegian ? "nb" : "en";
+            return "request-ok-" + lang + ".mp4";
+        }
+
         public string EnsureClip()
         {
             var dirs = new List<string>();
@@ -216,11 +222,13 @@ namespace Emby.Plugins.Discover
                 try
                 {
                     Directory.CreateDirectory(dir);
-                    var target = Path.Combine(dir, "discover-request-ok.mp4");
+                    // Eén bevestigingsclip per taal (nl, en, de, nb), in de taal van de plugin.
+                    var res = GetType().Namespace + ".Resources." + ClipResourceName();
+                    var target = Path.Combine(dir, "discover-" + ClipResourceName());
                     long embeddedLen = -1;
                     try
                     {
-                        using (var probe = GetType().Assembly.GetManifestResourceStream(GetType().Namespace + ".Resources.request-ok.mp4"))
+                        using (var probe = GetType().Assembly.GetManifestResourceStream(res))
                             if (probe != null) embeddedLen = probe.Length;
                     }
                     catch { }
@@ -229,8 +237,7 @@ namespace Emby.Plugins.Discover
                         (embeddedLen > 0 && new FileInfo(target).Length != embeddedLen))
                     {
                         var tmp = target + "." + Guid.NewGuid().ToString("N") + ".tmp";
-                        using (var src = GetType().Assembly.GetManifestResourceStream(
-                            GetType().Namespace + ".Resources.request-ok.mp4"))
+                        using (var src = GetType().Assembly.GetManifestResourceStream(res))
                         {
                             if (src == null) throw new InvalidOperationException("Clip ontbreekt in de DLL.");
                             using (var dst = File.Create(tmp)) { src.CopyTo(dst); }

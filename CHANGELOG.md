@@ -1,3 +1,10 @@
+## Version 1.4.0.7
+
+- Fix: the **"Requested" confirmation clip** was always in Dutch ("Aangevraagd ... verstuurd naar Radarr of Sonarr"), also on an English server. Apps that play the clip themselves (for example the Emby iOS app) show it when the request card could not be made. The clip now exists in **English, Dutch, German and Norwegian** and follows the plugin language. The text no longer mentions Radarr/Sonarr (it was wrong in Seerr mode).
+- Fix: the name of the request clip in the apps ("Aangevraagd") now follows the plugin language too.
+- Cleanup: removed build output (`obj/`) that had ended up in the repository.
+- Change: page names bumped (`discoverui1121`, `discoveruijs1422`, `discoverbuttonjs1416`).
+
 ## Version 1.4.0.6
 
 - Fix: the **download progress now updates live** in the popup and on the posters/rows. With SABnzbd configured, progress, size done and time left come from SABnzbd itself (Radarr/Sonarr/Seerr only refresh their queue about once a minute, so the percentage used to stand still).

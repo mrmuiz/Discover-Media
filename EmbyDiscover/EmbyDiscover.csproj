@@ -6,7 +6,7 @@
     <RootNamespace>Emby.Plugins.Discover</RootNamespace>
     <LangVersion>latest</LangVersion>
     <Nullable>disable</Nullable>
-    <Version>1.4.0.6</Version>
+    <Version>1.4.0.7</Version>
     <Description>Discover movies and series (TMDB) in Emby and request them through Radarr and Sonarr.</Description>
   </PropertyGroup>
 
@@ -21,7 +21,10 @@
     <EmbeddedResource Include="Configuration\discoverPage.js" />
     <EmbeddedResource Include="Configuration\statusPage.html" />
     <EmbeddedResource Include="Configuration\statusPage.js" />
-    <EmbeddedResource Include="Resources\request-ok.mp4" />
+    <EmbeddedResource Include="Resources\request-ok-nl.mp4" />
+    <EmbeddedResource Include="Resources\request-ok-en.mp4" />
+    <EmbeddedResource Include="Resources\request-ok-de.mp4" />
+    <EmbeddedResource Include="Resources\request-ok-nb.mp4" />
     <EmbeddedResource Include="Resources\Poppins-Bold.ttf" />
     <EmbeddedResource Include="Resources\Poppins-Regular.ttf" />
     <EmbeddedResource Include="Resources\card-grad.png" />
