@@ -79,7 +79,7 @@ define([], function() {
             document.head.appendChild(script)
         })()
     }
-    var UI_PAGE = "discoverui1127";
+    var UI_PAGE = "discoverui1128";
     return function(view, params) {
         var embedded = !!(params && params.embedded);
         if (embedded) {
@@ -2181,7 +2181,7 @@ define([], function() {
             "Rotten Tomatoes": "#fa320a",
             "TVmaze": "#3c948b"
         };
-        // Het eigen icoontje (favicon) van elke website, opgehaald bij die site via de favicondienst van DuckDuckGo.
+        // Het eigen icoontje (favicon) van elke website, via de favicondienst van Google.
         var SITE_DOMAINS = {
             "Emby": "emby.media",
             "TMDB": "themoviedb.org",
@@ -2195,7 +2195,7 @@ define([], function() {
 
         function favImg(name) {
             var d = SITE_DOMAINS[name];
-            return d ? '<img class="dcFav" alt="" loading="lazy" src="https://icons.duckduckgo.com/ip3/' + d + '.ico">' : ""
+            return d ? '<img class="dcFav" alt="" loading="lazy" src="https://www.google.com/s2/favicons?sz=64&domain=' + d + '">' : ""
         }
         var INFO_ICONS = {
             ticket: "\ud83c\udf9f\ufe0f",
@@ -2225,7 +2225,7 @@ define([], function() {
         // Infoblok als tabel (zoals Seerr): scores bovenin, label links / waarde rechts, links onderaan.
         // Lange lijsten (studio's) en een lange tabel klappen in achter "Meer tonen", zodat de popup past.
         function renderInfoTable(i, infoEl, r) {
-            var MAX_ROWS = 5,
+            var MAX_ROWS = 999,
                 more = text("Meer tonen", "Show more", "Mehr anzeigen", "Vis mer"),
                 h = '<div class="dcIScores"></div>';
             if (r.Tagline) {
