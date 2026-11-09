@@ -1,397 +1,2206 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8" />
-    <title>Discover</title>
-</head>
-<body>
-<div data-role="page" class="page type-interior discoverUiPage" data-controller="__plugin/discoveruijs1406">
-<style>
-/* Header on the Discover page only (body.dcDiscoverActive is set while this page is the active route): white text and icons on the dark page. The side drawer is deliberately left alone. */
-body.dcDiscoverActive .skinHeader .pageTitle,
-body.dcDiscoverActive .skinHeader .headerButton,
-body.dcDiscoverActive .skinHeader .headerButton .material-icons,
-body.dcDiscoverActive .skinHeader .headerButton .md-icon,
-body.dcDiscoverActive .skinHeader .headerButton i,
-body.dcDiscoverActive .skinHeader .headerUserButton,
-body.dcDiscoverActive .skinHeader .headerTabs .emby-tab-button { color:#fff !important; }
-body.dcDiscoverActive .skinHeader .headerButton:hover,
-body.dcDiscoverActive .skinHeader .headerButton:focus,
-body.dcDiscoverActive .skinHeader .headerButton:hover .material-icons,
-body.dcDiscoverActive .skinHeader .headerButton:focus .material-icons { color:#fff !important; background:rgba(255,255,255,.18); }
-body.dcDiscoverActive .skinHeader .headerButton svg { fill:#fff; }
-.dcRoot { padding: 5.5em 3% 4em; color: #fff; background:#0b1426; height:100vh; overflow-y:auto; box-sizing:border-box; }
-@media (max-width: 800px) { .dcRoot { height:100vh; height:100dvh; padding-bottom: calc(7em + env(safe-area-inset-bottom, 0px)); } }
-.dcModal, .dcModal h2, .dcModal .dcOverview { color:#fff; }
-.dcHomeBtn { display:flex; align-items:center; justify-content:center; background:none; border:0; border-right:1px solid rgba(255,255,255,.18); color:inherit; cursor:pointer; padding:.35em .7em .35em 0; margin-right:.7em; font-size:1.25em; line-height:1; }
-.dcHomeBtn:hover, .dcHomeBtn:focus-visible { color:var(--dc-accent,#ffb400); outline:none; }
-.dcSearch { display:flex; align-items:center; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.15); border-radius:2em; padding:0 1.2em; margin-bottom:1.5em; }
-.dcSearch input { flex:1; background:none; border:0; outline:0; color:#fff; font-size:1.1em; padding:.9em .5em; }
-.dcRowTitle { font-size:1.5em; font-weight:600; margin:1.2em 0 .5em; }
-.dcReqAll { font-size:.55em; font-weight:500; margin-left:.8em; vertical-align:middle; padding:.35em .9em; border-radius:2em; border:1px solid rgba(255,255,255,.3); background:rgba(255,255,255,.08); color:inherit; cursor:pointer; }
-.dcReqAll:hover, .dcReqAll:focus { background:#00a4dc; border-color:#00a4dc; outline:none; }
-.dcReqAll:disabled { opacity:.6; cursor:default; }
-.dcRowLink { display:inline-flex; align-items:center; gap:.4em; cursor:pointer; border-radius:.4em; transition:color .15s; }
-.dcRowLink .dcRowGo { width:1em; height:1em; opacity:.8; transition:transform .15s, opacity .15s; }
-.dcRowLink:hover, .dcRowLink:focus-visible { color:var(--dc-accent,#ffb400); outline:0; }
-.dcRowLink:hover .dcRowGo, .dcRowLink:focus-visible .dcRowGo { opacity:1; transform:translateX(.15em); }
-.dcTvPage .dcRowLink:focus { color:var(--dc-accent,#ffb400); outline:0; }
-.dcRow { display:flex; overflow-x:auto; padding:.5em .3em 1em; scrollbar-width:none; -ms-overflow-style:none; }
-.dcRow::-webkit-scrollbar { display:none; }
-.dcRowWrap { position:relative; }
-/* Korte rijen bovenaan (Mijn aanvragen, Nieuwe seizoenen, watchlists) naast elkaar zolang ze passen. */
-.dcTop { display:flex; flex-wrap:wrap; column-gap:3em; align-items:flex-start; }
-.dcTop > .dcMine, .dcTop > .dcExtra { flex:0 1 auto; min-width:0; max-width:100%; }
-/* Pijlknoppen zoals Emby's eigen rijen: rond en wit, zichtbaar als de muis boven de rij hangt, weg aan het begin/eind. */
-.dcArrow { position:absolute; top:calc(50% - .9em); transform:translateY(-50%); z-index:3; width:3.55em; height:3.55em; padding:0; border:0; border-radius:100em; background:#fff; color:#000; cursor:pointer; display:none; align-items:center; justify-content:center; box-shadow:0 4px 5px 0 rgba(0,0,0,.14), 0 1px 10px 0 rgba(0,0,0,.12), 0 2px 4px -1px rgba(0,0,0,.4); transition:transform 250ms cubic-bezier(.175,.885,.32,1.15); }
-.dcArrow svg { width:2.2em; height:2.2em; fill:currentColor; }
-.dcArrow:hover { transform:translateY(-50%) scale(1.1); }
-@media (pointer: fine) { .dcRowWrap:hover .dcArrow { display:inline-flex; } }
-/* Aanwijzer in gebruik (muis, LG Magic Remote): pijlen bij het aanwijzen, ook op tv's die geen "fijne aanwijzer" melden. */
-html.dcPointer .dcRowWrap:hover .dcArrow { display:inline-flex; }
-.dcRowWrap .dcArrow.dcHide { display:none !important; }
-.dcArrow.left { left:.3em; }
-.dcArrow.right { right:.3em; }
-.dcGrid { display:flex; flex-wrap:wrap; }
-.dcRow > * { margin-right:.9em; }
-.dcGrid > * { margin:0 .9em .9em 0; }
-.dcCard { position:relative; flex:0 0 auto; width:170px; background:none; border:0; cursor:pointer; outline:0; }
-/* vaste hoogte i.p.v. aspect-ratio: aspect-ratio werkt niet op webOS 6/Chromium 79 */
-.dcPoster { position:relative; width:100%; height:255px; border-radius:.7em; overflow:hidden; background:#10192b; border:2px solid transparent; transition:transform .15s, border-color .15s, box-shadow .15s; }
-.dcCard:hover .dcPoster { transform:scale(1.04); border-color:var(--dc-accent,#ffb400); }
-.dcCard img { width:100%; height:100%; object-fit:cover; display:block; }
-.dcCap { padding:.5em .15em 0; }
-.dcCapT { font-size:.92em; font-weight:600; line-height:1.2; color:#eef2fb; overflow:hidden; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; }
-.dcCapSub { margin-top:.2em; color:#9fb0cc; font-size:.8em; display:flex; align-items:center; }
-.dcCapSub > * { margin-right:.5em; }
-.dcCapSub .dcStar { color:var(--dc-accent,#ffb400); }
-/* Weergave: jaar / score onder de posters uit te zetten in de instellingen */
-/* IMDb-score: gele IMDb-badge, de ster van TMDB valt weg */
-.dcCapSub .dcStar.dcImdb b { background:#f5c518; color:#000; font-size:.8em; font-weight:800; padding:.05em .35em; border-radius:.3em; }
-html.dcNoYear .dcCapSub .dcYear, html.dcNoScore .dcCapSub .dcStar { display:none; }
-.dcNoPoster { display:flex; align-items:center; justify-content:center; text-align:center; height:100%; padding:.8em; color:#aab; font-size:.95em; }
-/* skeleton tijdens laden */
-.dcSkelRow { display:flex; overflow:hidden; padding:.3em 0 1em; }
-.dcSkelRow > * { margin-right:.9em; }
-.dcSkel { flex:0 0 auto; width:170px; }
-.dcSkelP { width:100%; height:255px; border-radius:.7em; background:linear-gradient(90deg,#10192b 25%,#16223a 37%,#10192b 63%); background-size:400% 100%; animation:dcShimmer 1.4s ease infinite; }
-.dcSkelT { height:.75em; margin:.6em .15em 0; border-radius:.3em; background:#16223a; width:85%; }
-@keyframes dcShimmer { 0%{background-position:100% 0} 100%{background-position:0 0} }
-.dcBadge { position:absolute; top:.5em; left:.5em; font-size:.7em; font-weight:700; padding:.2em .6em; border-radius:1em; background:#6d28d9; }
-.dcBadge.movie { background:#2563eb; }
-.dcStatus { position:absolute; top:.45em; right:.45em; width:1.6em; height:1.6em; border-radius:50%; display:none; align-items:center; justify-content:center; font-size:.8em; }
-.dcStatus.s1 { display:flex; background:#d99a00; }
-.dcStatus.s2 { display:flex; background:#22a559; }
-.dcOverlay { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,.75); z-index:100000; display:none; align-items:center; justify-content:center; padding:1em; box-sizing:border-box; }
-.dcOverlay.open { display:flex; }
-/* Popup zacht in en uit: de achtergrond vervaagt, de popup komt licht inzoomend binnen. */
-.dcModal { position:relative; width:900px; max-width:100%; width:min(900px,100%); max-height:92vh; overflow:auto; -webkit-overflow-scrolling:touch; background:#0b1426; border:1px solid rgba(255,255,255,.15); border-radius:1em; }
-.dcModalBack { height:220px; background-size:cover; background-position:center top; border-radius:1em 1em 0 0; position:relative; }
-.dcModalBack:after { content:""; position:absolute; top:0; left:0; right:0; bottom:0; background:linear-gradient(transparent,#0b1426); }
-.dcModalBody { display:flex; padding:0 1.6em 1.6em; margin-top:-90px; position:relative; z-index:1; }
-.dcModalInfo { flex:1 1 auto; min-width:0; } /* anders wordt het info-deel zo breed als de castrij en loopt de tekst rechts weg */
-.dcModalBody img { width:180px; height:270px; object-fit:cover; border-radius:.7em; flex:0 0 auto; background:#10192b; }
-.dcModalInfo h2 { margin:.2em 0 .2em; font-size:1.8em; }
-.dcMeta { color:#b8c0d4; margin-bottom:.8em; }
-.dcInfo { color:#b8c0d4; font-size:.92em; line-height:1.55; margin-bottom:1em; white-space:pre-line; }
-.dcOverview { line-height:1.5; color:#dfe4f1; margin-bottom:1.2em; }
-.dcBtn { background:var(--dc-accent,#ffb400); color:var(--dc-accent-text,#111); border:0; border-radius:2em; padding:.8em 2em; font-weight:700; font-size:1em; cursor:pointer; }
-.dcBtnRow { display:flex; flex-wrap:wrap; align-items:center; }
-.dcBtnRow > * { margin:0 .7em .7em 0; }
-.dcModalBody > img { margin-right:1.4em; }
-/* Telefoon: de popup blijft boven Emby's onderbalk. Staat bewust NA de basisregel van .dcModal (en met .dcOverlay ervoor),
-   anders wint max-height:92vh en valt de onderkant van de popup (met de Trailer-knop) achter de onderbalk. */
-@media (max-width: 900px), (pointer: coarse) {
-  .dcOverlay { padding-bottom: calc(1em + var(--dc-bottom-clear, calc(88px + env(safe-area-inset-bottom, 0px)))); }
-  .dcOverlay .dcModal { max-height: calc(100vh - 2em - var(--dc-bottom-clear, 88px)); max-height: calc(100dvh - 2em - var(--dc-bottom-clear, 88px)); }
+<!DOCTYPE html><html><head><meta charset="utf-8" /><title>Discover</title></head><body><div data-role="page" class="page type-interior discoverUiPage" data-controller="__plugin/discoveruijs1412"><style>
+ body.dcDiscoverActive .skinHeader .pageTitle,body.dcDiscoverActive .skinHeader .headerButton,body.dcDiscoverActive .skinHeader .headerButton .material-icons,body.dcDiscoverActive .skinHeader .headerButton .md-icon,body.dcDiscoverActive .skinHeader .headerButton i,body.dcDiscoverActive .skinHeader .headerUserButton,body.dcDiscoverActive .skinHeader .headerTabs .emby-tab-button{
+    color:#fff !important
 }
-/* ---- TV (Android TV, Fire TV, webOS, Tizen): compacte popup die altijd binnen beeld blijft ----
-   Tv's snijden de randen af (overscan) en Emby maakt de tekst in TV-modus groter; daarom maten in vh/vw,
-   ruime marges en ingekorte tekst, zodat de knoppen onderaan altijd zichtbaar zijn. */
-.dcOverlay.dcTv { padding:6vh 7vw; box-sizing:border-box; }
-.dcOverlay.dcTv .dcModal { font-size:.75em; width:100%; max-width:100%; max-height:88vh; overflow:hidden; display:flex; flex-direction:column; }
-.dcOverlay.dcTv .dcModalBack { position:absolute; top:0; left:0; right:0; bottom:0; height:auto; border-radius:1em; opacity:.45; }
-.dcOverlay.dcTv .dcModalBack:after { background:linear-gradient(90deg,#0b1426 25%,rgba(11,20,38,.75) 60%,rgba(11,20,38,.45)); }
-.dcOverlay.dcTv .dcModalBody { margin-top:0; padding:5vh 3vw 4vh; align-items:flex-start; min-height:0; max-height:88vh; box-sizing:border-box; }
-.dcOverlay.dcTv .dcModalBody img { width:30vh; height:45vh; flex:0 0 auto; }
-.dcOverlay.dcTv .dcModalBody > img { margin-right:2.5vw; }
-.dcOverlay.dcTv .dcModalInfo { display:flex; flex-direction:column; min-width:0; flex:1 1 auto; max-height:79vh; }
-/* Lange inhoud (veel seizoenen, lange downloadlijst): de info scrolt, zodat de knoppen onderaan bereikbaar blijven.
-   De focusEl()-navigatie scrolt het gefocuste element zelf in beeld (scrollIntoView). */
-.dcOverlay.dcTv .dcModalInfo { overflow-y:auto; overflow-x:hidden; padding-right:.6em; scroll-padding:1em 0; }
-.dcOverlay.dcTv .dcModalInfo::-webkit-scrollbar { width:.35em; }
-.dcOverlay.dcTv .dcModalInfo::-webkit-scrollbar-thumb { background:rgba(255,255,255,.35); border-radius:.2em; }
-.dcOverlay.dcTv .dcModalInfo h2 { font-size:1.6em; overflow:hidden; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; }
-.dcOverlay.dcTv .dcInfo { overflow:hidden; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:4; flex:0 0 auto; margin-bottom:.6em; }
-.dcOverlay.dcTv .dcOverview { overflow-x:hidden; overflow-y:auto; flex:0 1 auto; min-height:3em; margin-bottom:.8em; padding-right:.6em; scroll-behavior:smooth; }
-.dcOverlay.dcTv .dcOverview::-webkit-scrollbar { width:.35em; }
-.dcOverlay.dcTv .dcOverview::-webkit-scrollbar-thumb { background:rgba(255,255,255,.35); border-radius:.2em; }
-.dcOverlay.dcTv .dcOverview.dcMoreBelow { -webkit-mask-image:linear-gradient(180deg,#000 75%,transparent); mask-image:linear-gradient(180deg,#000 75%,transparent); }
-.dcOverlay.dcTv .dcBtnRow { flex:0 0 auto; }
-.dcOverlay.dcTv .dcClose { top:2vh; right:1.5vw; }
-.dcTvPage .dcArrow { display:none; }
-.dcBack { display:none !important; } /* overal verborgen: Emby's pijl linksboven (en de terugtoets op tv) doet dit al */
-.dcTvPage .dcToast { bottom:auto; top:7vh; }
-/* Op tv is Emby's kop (.skinHeader, 9.125em met de paginatitel "Discover Media") hoger dan de
-   5.5em die .dcRoot standaard vrijhoudt; daardoor viel de titel over de zoekbalk. Extra ruimte boven. */
-.dcTvPage .dcRoot { padding-left:5%; padding-right:5%; padding-top:9.75em; }
-.dcSeasons { display:none; flex-wrap:wrap; align-items:center; margin-bottom:.4em; }
-.dcSeasons.show { display:flex; }
-.dcSeasons > * { margin:0 .5em .5em 0; }
-.dcSeasonLabel { width:100%; color:#b8c0d4; font-size:.85em; margin-bottom:.4em; }
-.dcBtnSeason { background:rgba(255,255,255,.12); color:#fff; border:1px solid rgba(255,255,255,.3); border-radius:2em; padding:.55em 1.1em; font-weight:700; font-size:.95em; cursor:pointer; }
-.dcBtnSeason:hover { background:var(--dc-accent,#ffb400); color:var(--dc-accent-text,#111); }
-.dcBtnSeason.all { background:var(--dc-accent,#ffb400); color:var(--dc-accent-text,#111); border-color:var(--dc-accent,#ffb400); }
-.dcBtnSeason:disabled { opacity:.5; cursor:default; }
-.dcBtnSeason:focus { outline:0; }
-.dcBtnSeason:focus-visible { box-shadow:0 0 0 3px var(--dc-accent,#ffb400); transform:scale(1.04); }
-.dcTvPage .dcBtnSeason:focus { box-shadow:0 0 0 3px var(--dc-accent,#ffb400); transform:scale(1.04); }
-/* Telefoon: seizoenknoppen in 3 kolommen; "Alle seizoenen" gaat over de volle breedte. */
-@media (max-width: 600px) {
-  .dcSeasons.show { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:.5em; align-items:stretch; width:100%; }
-  .dcSeasons > * { margin:0; }
-  .dcBtnSeason { padding:.55em .3em; font-size:.9em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:center; }
-  .dcBtnSeason.all { grid-column:1 / -1; }
-  /* Knoppen (Aanvragen, Trailer, Openen in Emby, Verwijderen) over de volle breedte en vastgepind onderaan de popup,
-     zodat Trailer ook bij een serie met veel seizoenen altijd in beeld is. */
-  .dcModalInfo { width:100%; min-width:0; }
-  .dcOverlay:not(.dcTv) .dcBtnRow { position:sticky; bottom:-1px; border-radius:0 0 1em 1em; z-index:3; display:flex; flex-wrap:wrap; gap:.5em; margin:.4em -1.6em 0; padding:.7em 1.6em; background:#0b1426; border-top:1px solid rgba(255,255,255,.12); box-shadow:0 -8px 12px -6px rgba(0,0,0,.6); }
-  .dcOverlay:not(.dcTv) .dcBtnRow > * { margin:0; flex:1 1 calc(50% - .5em); min-width:0; padding:.75em .5em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:center; box-sizing:border-box; }
-  .dcOverlay:not(.dcTv) .dcBtnRow > .dcBtn { flex-basis:100%; }
+body.dcDiscoverActive .skinHeader .headerButton:hover,body.dcDiscoverActive .skinHeader .headerButton:focus,body.dcDiscoverActive .skinHeader .headerButton:hover .material-icons,body.dcDiscoverActive .skinHeader .headerButton:focus .material-icons{
+    color:#fff !important;
+    background:rgba(255,255,255,.18)
 }
-.dcBtnDel { background:#c62828; color:#fff; border:0; border-radius:2em; padding:.8em 1.6em; font-weight:700; font-size:1em; cursor:pointer; display:none; }
-.dcBtnDel.show { display:inline-block; }
-.dcBtnTrailer, .dcBtnOpen { background:rgba(255,255,255,.12); color:#fff; border:1px solid rgba(255,255,255,.3); border-radius:2em; padding:.8em 1.6em; font-weight:700; font-size:1em; cursor:pointer; display:none; }
-.dcBtnTrailer.show, .dcBtnOpen.show { display:inline-block; }
-.dcBtnTrailer { background:#1e6fd9; border-color:#1e6fd9; }
-.dcBtn4k { background:transparent; color:var(--dc-accent,#ffb400); border:2px solid var(--dc-accent,#ffb400); border-radius:2em; padding:.7em 1.4em; font-weight:800; font-size:1em; cursor:pointer; display:none; }
-.dcBtn4k.show { display:inline-block; }
-.dcBtn4k:hover { background:var(--dc-accent,#ffb400); color:var(--dc-accent-text,#111); }
-.dcBtn4k[disabled] { opacity:.5; cursor:default; }
-.dcBtnOpen { background:#52b54b; border-color:#52b54b; }
-/* Alle knoppen lichten op bij mouse-over */
-.dcBtn, .dcBtn4k, .dcBtnTrailer, .dcBtnOpen, .dcBtnDel, .dcColAll, .dcBtnSeason, .dcReqAll, .dcClose, .dcTrailerClose { transition:filter .15s, transform .15s, box-shadow .15s, background .15s; }
-.dcBtn:not([disabled]):hover, .dcBtn4k:not([disabled]):hover, .dcBtnTrailer:hover, .dcBtnOpen:hover, .dcBtnDel:not([disabled]):hover, .dcColAll:not([disabled]):hover, .dcBtnSeason:not([disabled]):hover, .dcReqAll:not([disabled]):hover { filter:brightness(1.18); transform:scale(1.05); box-shadow:0 0 0 2px rgba(255,255,255,.35), 0 .3em 1em rgba(0,0,0,.45); }
-.dcClose:hover, .dcTrailerClose:hover { background:rgba(255,255,255,.22); transform:scale(1.1); }
-.dcBioMore:hover, .dcTrailerLink:hover { filter:brightness(1.3); text-decoration:underline; }
-.dcSeasons .dcBtnTrailer { padding:.55em 1.1em; font-size:.95em; }
-.dcTrailerOverlay { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,.9); z-index:100002; display:none; flex-direction:column; align-items:center; justify-content:center; padding:1em; }
-.dcTrailerOverlay.open { display:flex; }
-/* Popup of trailer open: Emby's kopbalk (die boven de pagina ligt) mag het kruisje en de klik naast de popup niet afvangen. */
-body.dcModalOpen .skinHeader, body.dcModalOpen .skinHeader * { pointer-events:none !important; }
-body.dcModalOpen .skinHeader { opacity:0 !important; transition:opacity .15s; }
-.dcTrailerFrame { width:960px; max-width:100%; height:540px; max-height:56vw; width:min(960px,100%); border:0; border-radius:.7em; background:#000; }
-.dcTrailerLink { margin-top:1em; color:#ffd666; }
-.dcBtnDel[disabled] { opacity:.6; cursor:default; }
-.dcBtn[disabled] { background:#33415c; color:#cdd; cursor:default; }
-.dcClose { position:absolute; top:.6em; right:.9em; z-index:2; background:rgba(0,0,0,.55); color:#fff; border:0; border-radius:50%; width:2.2em; height:2.2em; font-size:1.1em; cursor:pointer; }
-.dcToast { position:fixed; bottom:2em; left:50%; transform:translateX(-50%); background:#22a559; color:#fff; padding:.8em 1.6em; border-radius:2em; z-index:100003; display:none; }
-.dcToast.err { background:#d32f2f; }
-.dcTileRow { }
-.dcTile { flex:0 0 auto; width:190px; height:84px; border-radius:.7em; display:flex; align-items:center; justify-content:center; text-align:center; padding:.5em 1em; box-sizing:border-box; font-weight:700; font-size:1.05em; color:#fff; cursor:pointer; border:1px solid rgba(255,255,255,.12); transition:transform .15s, border-color .15s; overflow:hidden; }
-.dcTile:hover { transform:scale(1.04); border-color:var(--dc-accent,#ffb400); }
-.dcTile.logo { width:170px; height:94px; padding:.8em 1.2em; }
-.dcTile.photo { width:220px; height:110px; font-size:1.2em; text-shadow:0 1px 4px rgba(0,0,0,.85), 0 0 2px rgba(0,0,0,.6); }
-.dcTileLogo { max-width:100%; max-height:100%; object-fit:contain; filter:brightness(0) invert(1); }
-/* Logo dat wit gemaakt een dichte vlek zou worden (bv. letters in een gevulde cirkel): eigen kleuren met een dun randje. */
-.dcTileLogo.dcOrig { filter:drop-shadow(0 0 1px rgba(255,255,255,.75)); }
-.dcBrowseHead { display:flex; align-items:center; margin:1em 0 .8em; }
-.dcBrowseTitle { font-size:1.6em; font-weight:600; }
-.dcBrowseHead > * { margin-right:1em; }
-.dcPerson { flex:0 0 auto; width:120px; text-align:center; cursor:pointer; border-radius:.7em; padding:.3em; transition:transform .15s; }
-.dcPerson:hover, .dcPerson:focus-visible { transform:scale(1.05); outline:0; }
-.dcPersonPhoto { width:110px; height:110px; margin:0 auto .4em; border-radius:50%; background:#1c2640 center/cover no-repeat; border:2px solid rgba(255,255,255,.15); }
-.dcPerson:hover .dcPersonPhoto, .dcPerson:focus-visible .dcPersonPhoto, .dcTvPage .dcPerson:focus .dcPersonPhoto { border-color:var(--dc-accent,#ffb400); }
-.dcPersonName { font-weight:600; font-size:.95em; }
-.dcPersonDep { font-size:.8em; opacity:.65; }
-/* Cast in de popup: ronde fotootjes, horizontaal scrollen */
-.dcCast { display:flex; gap:.8em; overflow-x:auto; padding:.2em 0 .6em; margin:.2em 0 .6em; scrollbar-width:thin; }
-.dcCast:empty { display:none; }
-/* Scores van IMDb, Rotten Tomatoes en Metacritic (via OMDb) in de popup */
-/* Collectie (filmreeks) in de popup: alle films, per film of in één keer aan te vragen */
-.dcCollection { margin:.2em 0 .8em; }
-.dcCollection:empty { display:none; }
-.dcColHead { display:flex; flex-wrap:wrap; align-items:center; gap:.5em .8em; margin-bottom:.5em; }
-.dcColTitle { font-weight:700; font-size:.95em; opacity:.9; }
-.dcColAll { background:var(--dc-accent,#ffb400); color:var(--dc-accent-text,#111); border:0; border-radius:2em; padding:.35em 1em; font-weight:700; font-size:.85em; cursor:pointer; }
-.dcColAll:disabled { opacity:.5; cursor:default; }
-.dcColRow { display:flex; gap:.7em; overflow-x:auto; padding:.2em .1em .5em; scrollbar-width:thin; }
-.dcColItem { flex:0 0 auto; width:84px; display:flex; flex-direction:column; align-items:stretch; gap:.3em; }
-.dcColPoster { width:84px; height:126px; border-radius:.45em; background:#1c2640 center/cover no-repeat; border:2px solid transparent; cursor:pointer; padding:0; position:relative; }
-.dcColPoster:hover, .dcColPoster:focus-visible, .dcTvPage .dcColPoster:focus { border-color:var(--dc-accent,#ffb400); outline:0; }
-.dcColItem.cur .dcColPoster { box-shadow:0 0 0 2px var(--dc-accent,#ffb400); cursor:default; }
-.dcColName { font-size:.72em; line-height:1.15; opacity:.85; overflow:hidden; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; }
-.dcColBadge { position:absolute; top:.3em; right:.3em; min-width:1.5em; height:1.5em; border-radius:1em; display:flex; align-items:center; justify-content:center; font-size:.75em; font-weight:800; box-shadow:0 1px 4px rgba(0,0,0,.6); }
-.dcColBadge.have { background:#22a559; color:#fff; }
-.dcColBadge.req { background:#26304a; color:#ffd666; }
-.dcColItem { position:relative; }
-.dcColAdd { position:absolute; top:94px; right:.3em; width:1.9em; height:1.9em; border-radius:50%; border:2px solid rgba(255,255,255,.85); background:var(--dc-accent,#ffb400); color:var(--dc-accent-text,#111); font-size:1em; font-weight:800; line-height:1; padding:0; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,.6); transition:filter .15s, transform .15s; }
-.dcColAdd:hover, .dcColAdd:focus-visible, .dcTvPage .dcColAdd:focus { filter:brightness(1.18); transform:scale(1.15); outline:0; box-shadow:0 0 0 3px #fff, 0 2px 6px rgba(0,0,0,.6); }
-/* TV: groter rondje (makkelijker raak met de Magic Remote) en duidelijk focuskader bij de pijltoetsen */
-.dcOverlay.dcTv .dcColAdd, .dcTvPage .dcColAdd { width:2.4em; height:2.4em; top:84px; font-size:1.05em; }
-.dcOverlay.dcTv .dcColAdd:focus, .dcOverlay.dcTv .dcColPoster:focus { outline:0; }
-.dcOverlay.dcTv .dcColAdd:focus { transform:scale(1.2); box-shadow:0 0 0 3px #fff, 0 0 0 6px var(--dc-accent,#ffb400); }
-.dcOverlay.dcTv .dcColPoster:focus { border-color:var(--dc-accent,#ffb400); }
-.dcColAdd:disabled { opacity:.6; cursor:default; transform:none; }
-.dcColCur { font-size:.68em; font-weight:700; color:var(--dc-accent,#ffb400); }
-.dcColWarn { font-size:.78em; color:#e9c46a; opacity:.9; margin:-.2em 0 .6em; max-width:46em; line-height:1.35; }
-.dcColAll.confirm { background:#e5484d; color:#fff; }
-.dcRatings { display:flex; flex-wrap:wrap; gap:.4em; margin:.1em 0 .6em; }
-.dcRatings:empty { display:none; }
-.dcRate { display:inline-flex; align-items:center; gap:.35em; padding:.18em .6em; border-radius:.45em; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.14); font-size:.85em; font-weight:700; white-space:nowrap; }
-.dcRate b { font-size:.78em; font-weight:800; padding:.05em .35em; border-radius:.3em; letter-spacing:.02em; }
-.dcRate.imdb b { background:#f5c518; color:#000; }
-.dcRate.rt b { background:#fa320a; color:#fff; }
-.dcRate.mc b { background:#66cc33; color:#000; }
-.dcRate.mc.mid b { background:#ffcc33; } .dcRate.mc.low b { background:#ff0000; color:#fff; }
-/* Pijlen bij de cast in de popup: bij het aanwijzen (muis / Magic Remote), niet bij bediening met de pijltoetsen. */
-.dcCastWrap { position:relative; }
-.dcCastArr { position:absolute; top:calc(34px + .4em - 1.6em); z-index:3; width:3.2em; height:3.2em; padding:0; border:0; border-radius:50%; background:#fff; color:#000; cursor:pointer; display:none; align-items:center; justify-content:center; box-shadow:0 4px 5px 0 rgba(0,0,0,.14), 0 1px 10px 0 rgba(0,0,0,.12), 0 2px 4px -1px rgba(0,0,0,.4), 0 0 0 3px rgba(11,20,38,.6); transition:transform 200ms; }
-.dcCastArr:hover { transform:scale(1.1); }
-.dcCastArr.left { left:-.6em; } .dcCastArr.right { right:-.6em; }
-.dcCastArr svg { width:2.1em; height:2.1em; fill:currentColor; }
-@media (pointer: fine) { .dcCastWrap:hover .dcCastArr { display:inline-flex; } }
-html.dcPointer .dcCastWrap:hover .dcCastArr { display:inline-flex; }
-.dcCastWrap .dcCastArr.dcHide { display:none !important; }
-.dcCastP { flex:0 0 auto; width:78px; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; text-align:center; cursor:pointer; background:none; border:0; color:inherit; padding:.2em; border-radius:.5em; font:inherit; }
-.dcCastPh { flex:0 0 auto; width:64px; height:64px; margin:0 auto .3em; border-radius:50%; background:#1c2640 center/cover no-repeat; border:2px solid rgba(255,255,255,.15); display:flex; align-items:center; justify-content:center; font-weight:600; opacity:.95; }
-.dcCastP:hover .dcCastPh, .dcCastP:focus .dcCastPh { border-color:var(--dc-accent,#ffb400); }
-.dcCastP:focus { outline:0; }
-.dcCastN { font-size:.75em; font-weight:600; line-height:1.2; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
-.dcCastR { font-size:.68em; opacity:.6; line-height:1.2; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; margin-top:.15em; }
-/* Persoonspagina */
-.dcPersonHead { display:flex; gap:1.6em; align-items:flex-start; margin:.5em 0 1em; }
-.dcPersonBig { flex:0 0 auto; width:180px; height:270px; border-radius:.6em; background:#1c2640 center/cover no-repeat; box-shadow:0 6px 20px rgba(0,0,0,.45); }
-.dcPersonText { min-width:0; max-width:60em; }
-.dcPersonTitle { margin:0 0 .4em; font-size:2em; }
-.dcPersonMeta { opacity:.8; font-size:.9em; line-height:1.5; margin-bottom:.7em; }
-.dcBioText { line-height:1.5; display:-webkit-box; -webkit-line-clamp:5; -webkit-box-orient:vertical; overflow:hidden; white-space:pre-line; }
-.dcPersonBio.open .dcBioText { display:block; -webkit-line-clamp:unset; }
-.dcBioMore { margin-top:.4em; background:none; border:0; color:#00a4dc; cursor:pointer; padding:0; font:inherit; }
-.dcSoonTag { display:inline-block; margin-left:.45em; padding:.05em .45em; border-radius:1em; font-size:.72em; font-weight:600; background:#7c4dff; color:#fff; vertical-align:middle; }
-.dcRole { margin-top:.15em; color:#9fb0cc; font-size:.8em; font-style:italic; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.dcRowCount { font-size:.6em; opacity:.55; font-weight:400; margin-left:.3em; }
-@media (max-width:600px) { .dcPersonHead { flex-direction:column; align-items:center; text-align:center; } .dcPersonBig { width:140px; height:210px; } }
-.dcMore.dcAuto { min-height:2px; }
-.dcMore.dcAuto .dcMoreBtn { display:none; }
-.dcFilters { display:flex; flex-wrap:wrap; align-items:center; gap:.6em 1.2em; margin:0 0 1em; font-size:.95em; }
-.dcFilters label { display:inline-flex; align-items:center; gap:.4em; opacity:.9; }
-.dcFilters select { background:rgba(255,255,255,.08); color:#fff; border:1px solid rgba(255,255,255,.2); border-radius:.5em; padding:.35em .5em; font:inherit; }
-.dcFilters select option { background:#13203a; color:#fff; }
-.dcFilters .dcFCheck input { width:1.1em; height:1.1em; accent-color:var(--dc-accent,#ffb400); }
-.dcFCount { opacity:.6; font-size:.9em; }
-.dcBack { background:rgba(255,255,255,.1); color:#fff; border:1px solid rgba(255,255,255,.2); border-radius:2em; padding:.5em 1.2em; font-size:1em; cursor:pointer; }
-.dcBack:hover { background:var(--dc-accent,#ffb400); color:var(--dc-accent-text,#111); }
-.dcMore { text-align:center; margin:1.5em 0; }
-.dcMsg { padding:2em; color:#b8c0d4; }
-/* Focusrand: alleen bij navigeren met toetsenbord of afstandsbediening (:focus-visible), niet na een muisklik.
-   Op tv altijd (.dcTvPage), want oudere tv-browsers (webOS 6, Chromium 79) kennen :focus-visible niet. */
-.dcTile:focus, .dcBtn:focus, .dcBack:focus, .dcArrow:focus, .dcClose:focus, .dcBtnTrailer:focus, .dcBtnOpen:focus, .dcBtnDel:focus { outline:0; }
-.dcTile:focus-visible, .dcBtn:focus-visible, .dcBack:focus-visible, .dcArrow:focus-visible, .dcClose:focus-visible, .dcBtnTrailer:focus-visible, .dcBtnOpen:focus-visible, .dcBtnDel:focus-visible { box-shadow:0 0 0 3px var(--dc-accent,#ffb400); transform:scale(1.04); z-index:2; }
-.dcTvPage .dcTile:focus, .dcTvPage .dcBtn:focus, .dcTvPage .dcBack:focus, .dcTvPage .dcClose:focus, .dcTvPage .dcBtnTrailer:focus, .dcTvPage .dcBtnOpen:focus, .dcTvPage .dcBtnDel:focus { box-shadow:0 0 0 3px var(--dc-accent,#ffb400); transform:scale(1.04); z-index:2; }
-/* Geselecteerde poster: dunne gele rand, 5% groter en een zachte schaduw. */
-.dcCard:focus-visible .dcPoster { transform:scale(1.05); border-color:var(--dc-accent,#ffb400); box-shadow:0 .5em 1.4em rgba(0,0,0,.5), 0 0 0 3px var(--dc-accent,#ffb400); }
-.dcCard:focus-visible .dcCapT { color:var(--dc-accent,#ffb400); }
-.dcTvPage .dcCard:focus .dcPoster { transform:scale(1.05); border-color:var(--dc-accent,#ffb400); box-shadow:0 .5em 1.4em rgba(0,0,0,.5), 0 0 0 3px var(--dc-accent,#ffb400); }
-.dcTvPage .dcCard:focus .dcCapT { color:var(--dc-accent,#ffb400); }
-/* Downloadvoortgang (Radarr/Sonarr-wachtrij) */
-.dcProg { position:absolute; left:0; right:0; bottom:0; height:10px; background:rgba(0,0,0,.65); z-index:1; }
-.dcTvPage .dcProg { height:12px; }
-.dcProg i { display:block; height:100%; width:0; background:var(--dc-accent,#ffb400); transition:width .6s; }
-.dcProg.paused i, .dcProg.stalled i { background:#9aa5b8; }
-/* Brede kaarten in de korte rijen bovenaan (Mijn aanvragen, Nieuwe seizoenen, watchlist/lijst):
-   achtergrond + kleine poster + titel + status; badge en status in de hoek, voortgang over de hele breedte. */
-.dcCard.dcWide { width:22em; max-width:calc(100% - 1em); height:9.6em; display:flex; align-items:flex-end; border-radius:.8em; overflow:hidden; background:#16223a; box-shadow:0 .3em 1em rgba(0,0,0,.45); border:2px solid transparent; transition:border-color .15s, box-shadow .15s, transform .15s; }
-.dcWide .dcWideBg { position:absolute; top:0; left:0; right:0; bottom:0; background-size:cover; background-position:center 25%; }
-.dcWide .dcWideBg.blur { filter:blur(14px) brightness(.7); transform:scale(1.2); }
-.dcWide .dcWideShade { position:absolute; top:0; left:0; right:0; bottom:0; background:linear-gradient(90deg, rgba(10,16,30,.95) 28%, rgba(10,16,30,.55) 70%, rgba(10,16,30,.35)); }
-.dcWide .dcPoster { position:static; flex:none; width:5.2em; height:7.8em; margin:0 .9em .8em; border-radius:.45em; border:0; box-shadow:0 0 0 2px rgba(255,255,255,.18), 0 .3em .8em rgba(0,0,0,.5); transform:none !important; }
-.dcWide .dcPoster img, .dcWide .dcPoster .dcNoPoster { position:relative; border-radius:.45em; }
-.dcWide .dcPoster .dcNoPoster { font-size:.7em; padding:.4em; }
-.dcWide .dcBadge { z-index:2; top:auto; left:auto; position:static; display:inline-block; margin-bottom:.5em; }
-.dcWide .dcStatus { z-index:2; }
-.dcWide .dcProg { height:6px; z-index:2; }
-.dcWide .dcCap { position:relative; flex:1; min-width:0; padding:0 1em .9em 0; }
-.dcWide .dcCapT { font-size:1.1em; font-weight:700; -webkit-line-clamp:2; }
-.dcWide .dcCapQ { display:inline-block; max-width:100%; margin-top:.45em; padding:.2em .7em; border-radius:1em; background:rgba(var(--dc-accent-rgb,255,180,0),.2); font-size:.8em; box-sizing:border-box; }
-.dcWide .dcCapQ.req, .dcWide .dcCapQ.paused, .dcWide .dcCapQ.stalled { background:rgba(255,255,255,.12); }
-.dcWide .dcCapQ.avail { background:rgba(34,165,89,.25); }
-.dcCard.dcWide:hover, .dcCard.dcWide:focus-visible, .dcTvPage .dcCard.dcWide:focus { border-color:var(--dc-accent,#ffb400); box-shadow:0 .5em 1.4em rgba(0,0,0,.5), 0 0 0 1px var(--dc-accent,#ffb400); }
-.dcTvPage .dcCard.dcWide:focus { transform:scale(1.03); }
-.dcCard.dcWide:focus-visible .dcPoster, .dcTvPage .dcCard.dcWide:focus .dcPoster { box-shadow:0 0 0 2px rgba(255,255,255,.18); }
-.dcCapQ { margin-top:.3em; font-size:.86em; font-weight:600; color:var(--dc-accent,#ffb400); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.dcCapQ.paused, .dcCapQ.stalled, .dcCapQ.req { color:#c9d2ea; }
-.dcCapQ.avail { color:#5fd38d; }
-.dcQueue { display:none; margin:0 0 1em; }
-.dcQueue.show { display:block; }
-.dcQHead { font-size:.85em; color:#b8c0d4; margin-bottom:.3em; }
-.dcQRow { display:flex; align-items:center; padding:.35em 0; font-size:.88em; border-top:1px solid rgba(255,255,255,.08); }
-.dcQRow > * { margin-right:.7em; }
-.dcQRow > *:last-child { margin-right:0; }
-.dcQName { flex:1 1 auto; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.dcQBar { flex:0 0 7em; height:6px; border-radius:3px; background:rgba(255,255,255,.12); overflow:hidden; }
-.dcQBar i { display:block; height:100%; background:var(--dc-accent,#ffb400); }
-.dcQBar.paused i, .dcQBar.stalled i { background:#9aa5b8; }
-.dcQPct { flex:0 0 auto; min-width:7.5em; text-align:right; color:#b8c0d4; white-space:nowrap; }
-.dcQRel { font-size:.75em; color:#8a96ad; word-break:break-all; padding:0 0 .35em; }
-.dcQMore { font-size:.8em; color:#8a96ad; padding-top:.3em; }
-@media (max-width:600px) { .dcQBar { flex-basis:3.5em; } .dcQPct { min-width:0; } }
-@media (max-width:600px){ .dcCard{width:130px;} .dcPoster{height:195px;} .dcSkel{width:130px;} .dcSkelP{height:195px;} .dcModalBody{flex-direction:column; align-items:center;} }
-@media (prefers-reduced-motion: reduce){ .dcSkelP{animation:none} }
-/* Snelmenu (rechtsklik of lang indrukken op een poster) */
-.dcQuick { position:fixed; z-index:100001; min-width:13em; background:#13203a; border:1px solid rgba(255,255,255,.18); border-radius:.7em; box-shadow:0 10px 30px rgba(0,0,0,.6); padding:.35em; display:none; }
-.dcQuick.open { display:block; }
-.dcQuickTitle { padding:.45em .8em .35em; font-size:.85em; opacity:.7; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:18em; }
-.dcQuick button { display:block; width:100%; text-align:left; background:none; border:0; color:#fff; font:inherit; padding:.6em .8em; border-radius:.45em; cursor:pointer; }
-.dcQuick button:hover, .dcQuick button:focus-visible { background:rgba(255,255,255,.12); outline:0; }
-.dcQuick button.req { color:var(--dc-accent,#ffb400); font-weight:700; }
-.dcQuick button[disabled] { opacity:.45; cursor:default; }
-/* Achtergrond van de geselecteerde titel over de hele pagina (zoals Emby's achtergronden) */
-.dcRoot { position:relative; isolation:isolate; }
-.dcRoot > .dcDiag, .dcRoot > .dcSearch, .dcRoot > .dcContent { position:relative; z-index:1; }
-.dcPageBd { position:fixed; top:0; left:0; right:0; bottom:0; z-index:0; pointer-events:none; }
-.dcPageBdImg { position:absolute; top:0; left:0; right:0; bottom:0; background-size:cover; background-position:center top; opacity:0; transition:opacity .7s ease; }
-.dcPageBdImg.on { opacity:1; }
-.dcPageBdShade { position:absolute; top:0; left:0; right:0; bottom:0; background:linear-gradient(180deg, rgba(11,20,38,.62) 0%, rgba(11,20,38,.82) 45%, rgba(11,20,38,.93) 100%); }
-</style>
-    <div class="dcRoot">
-        <div class="dcPageBd" aria-hidden="true"><div class="dcPageBdImg"></div><div class="dcPageBdImg"></div><div class="dcPageBdShade"></div></div>
-        <div class="dcDiag" style="margin:0 0 1em;font-size:.85em;opacity:.8;white-space:pre-wrap;color:#ffd666;"></div>
-        <div class="dcSearch">
-            <button type="button" class="dcHomeBtn focusable" title="Discover"><i class="md-icon">explore</i></button>
-            <span>&#128269;</span>
-            <input type="text" class="dcSearchInput" placeholder="Films en series zoeken" autocomplete="off" />
-        </div>
-        <div class="dcContent"><div class="dcMsg">Laden...</div></div>
-    </div>
+body.dcDiscoverActive .skinHeader .headerButton svg{
+    fill:#fff
+}
+.dcRoot{
+    padding:5.5em 3% 4em;
+    color:#fff;
+    background:#0b1426;
+    height:100vh;
+    overflow-y:auto;
+    box-sizing:border-box
+}
+@media (max-width:800px){
+    .dcRoot{
+    height:100vh;
+    height:100dvh;
+    padding-bottom:calc(7em + env(safe-area-inset-bottom,0px))
+}
 
-    <div class="dcOverlay">
-        <div class="dcModal">
-            <button type="button" class="dcClose">&#10005;</button>
-            <div class="dcModalBack"></div>
-            <div class="dcModalBody">
-                <img class="dcModalPoster" alt="" />
-                <div class="dcModalInfo">
-                    <h2 class="dcModalTitle"></h2>
-                    <div class="dcMeta"></div>
-                    <div class="dcRatings"></div>
-                    <div class="dcInfo"></div>
-                    <div class="dcOverview"></div>
-                    <div class="dcCastWrap"><button type="button" class="dcCastArr left dcHide" tabindex="-1" data-dir="-1" aria-label="&lt;"></button><div class="dcCast"></div><button type="button" class="dcCastArr right dcHide" tabindex="-1" data-dir="1" aria-label="&gt;"></button></div>
-                    <div class="dcCollection"></div>
-                    <div class="dcQueue"></div>
-                    <div class="dcSeasons"></div>
-                    <div class="dcBtnRow"><button type="button" class="dcBtn"></button><button type="button" class="dcBtn4k"></button><button type="button" class="dcBtnTrailer"></button><button type="button" class="dcBtnOpen"></button><button type="button" class="dcBtnDel"></button></div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="dcTrailerOverlay">
-        <button type="button" class="dcClose dcTrailerClose">&#10005;</button>
-        <iframe class="dcTrailerFrame" referrerpolicy="strict-origin-when-cross-origin" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>
-        <a class="dcTrailerLink" target="_blank" rel="noopener"></a>
-    </div>
-    <div class="dcToast"></div>
-</div>
-</body>
-</html>
+}
+.dcModal,.dcModal h2,.dcModal .dcOverview{
+    color:#fff
+}
+.dcHomeBtn{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:none;
+    border:0;
+    border-right:1px solid rgba(255,255,255,.18);
+    color:inherit;
+    cursor:pointer;
+    padding:.35em .7em .35em 0;
+    margin-right:.7em;
+    font-size:1.25em;
+    line-height:1
+}
+.dcHomeBtn:hover,.dcHomeBtn:focus-visible{
+    color:var(--dc-accent,#ffb400);
+    outline:none
+}
+.dcSearch{
+    display:flex;
+    align-items:center;
+    background:rgba(255,255,255,.08);
+    border:1px solid rgba(255,255,255,.15);
+    border-radius:2em;
+    padding:0 1.2em;
+    margin-bottom:1.5em
+}
+.dcSearch input{
+    flex:1;
+    background:none;
+    border:0;
+    outline:0;
+    color:#fff;
+    font-size:1.1em;
+    padding:.9em .5em
+}
+.dcRowTitle{
+    font-size:1.5em;
+    font-weight:600;
+    margin:1.2em 0 .5em
+}
+.dcReqAll{
+    font-size:.55em;
+    font-weight:500;
+    margin-left:.8em;
+    vertical-align:middle;
+    padding:.35em .9em;
+    border-radius:2em;
+    border:1px solid rgba(255,255,255,.3);
+    background:rgba(255,255,255,.08);
+    color:inherit;
+    cursor:pointer
+}
+.dcReqAll:hover,.dcReqAll:focus{
+    background:#00a4dc;
+    border-color:#00a4dc;
+    outline:none
+}
+.dcReqAll:disabled{
+    opacity:.6;
+    cursor:default
+}
+.dcRowLink{
+    display:inline-flex;
+    align-items:center;
+    gap:.4em;
+    cursor:pointer;
+    border-radius:.4em;
+    transition:color .15s
+}
+.dcRowLink .dcRowGo{
+    width:1em;
+    height:1em;
+    opacity:.8;
+    transition:transform .15s,opacity .15s
+}
+.dcRowLink:hover,.dcRowLink:focus-visible{
+    color:var(--dc-accent,#ffb400);
+    outline:0
+}
+.dcRowLink:hover .dcRowGo,.dcRowLink:focus-visible .dcRowGo{
+    opacity:1;
+    transform:translateX(.15em)
+}
+.dcTvPage .dcRowLink:focus{
+    color:var(--dc-accent,#ffb400);
+    outline:0
+}
+.dcRow{
+    display:flex;
+    overflow-x:auto;
+    padding:.5em .3em 1em;
+    scrollbar-width:none;
+    -ms-overflow-style:none
+}
+.dcRow::-webkit-scrollbar{
+    display:none
+}
+.dcRowWrap{
+    position:relative
+}
+.dcTop{
+    display:flex;
+    flex-wrap:wrap;
+    column-gap:3em;
+    align-items:flex-start
+}
+.dcTop > .dcMine,.dcTop > .dcExtra{
+    flex:0 1 auto;
+    min-width:0;
+    max-width:100%
+}
+.dcArrow{
+    position:absolute;
+    top:calc(50% - .9em);
+    transform:translateY(-50%);
+    z-index:3;
+    width:3.55em;
+    height:3.55em;
+    padding:0;
+    border:0;
+    border-radius:100em;
+    background:#fff;
+    color:#000;
+    cursor:pointer;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    box-shadow:0 4px 5px 0 rgba(0,0,0,.14),0 1px 10px 0 rgba(0,0,0,.12),0 2px 4px -1px rgba(0,0,0,.4);
+    transition:transform 250ms cubic-bezier(.175,.885,.32,1.15)
+}
+.dcArrow svg{
+    width:2.2em;
+    height:2.2em;
+    fill:currentColor
+}
+.dcArrow:hover{
+    transform:translateY(-50%) scale(1.1)
+}
+@media (pointer:fine){
+    .dcRowWrap:hover .dcArrow{
+    display:inline-flex
+}
+
+}
+html.dcPointer .dcRowWrap:hover .dcArrow{
+    display:inline-flex
+}
+.dcRowWrap .dcArrow.dcHide{
+    display:none !important
+}
+.dcArrow.left{
+    left:.3em
+}
+.dcArrow.right{
+    right:.3em
+}
+.dcGrid{
+    display:flex;
+    flex-wrap:wrap
+}
+.dcRow > *{
+    margin-right:.9em
+}
+.dcGrid > *{
+    margin:0 .9em .9em 0
+}
+.dcCard{
+    position:relative;
+    flex:0 0 auto;
+    width:170px;
+    background:none;
+    border:0;
+    cursor:pointer;
+    outline:0
+}
+.dcPoster{
+    position:relative;
+    width:100%;
+    height:255px;
+    border-radius:.7em;
+    overflow:hidden;
+    background:#10192b;
+    border:2px solid transparent;
+    transition:transform .15s,border-color .15s,box-shadow .15s
+}
+.dcCard:hover .dcPoster{
+    transform:scale(1.04);
+    border-color:var(--dc-accent,#ffb400)
+}
+.dcCard img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    display:block
+}
+.dcCap{
+    padding:.5em .15em 0
+}
+.dcCapT{
+    font-size:.92em;
+    font-weight:600;
+    line-height:1.2;
+    color:#eef2fb;
+    overflow:hidden;
+    display:-webkit-box;
+    -webkit-box-orient:vertical;
+    -webkit-line-clamp:2
+}
+.dcCapSub{
+    margin-top:.2em;
+    color:#9fb0cc;
+    font-size:.8em;
+    display:flex;
+    align-items:center
+}
+.dcCapSub > *{
+    margin-right:.5em
+}
+.dcCapSub .dcStar{
+    color:var(--dc-accent,#ffb400)
+}
+.dcCapSub .dcStar.dcImdb b{
+    background:#f5c518;
+    color:#000;
+    font-size:.8em;
+    font-weight:800;
+    padding:.05em .35em;
+    border-radius:.3em
+}
+html.dcNoYear .dcCapSub .dcYear,html.dcNoScore .dcCapSub .dcStar{
+    display:none
+}
+.dcNoPoster{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    height:100%;
+    padding:.8em;
+    color:#aab;
+    font-size:.95em
+}
+.dcSkelRow{
+    display:flex;
+    overflow:hidden;
+    padding:.3em 0 1em
+}
+.dcSkelRow > *{
+    margin-right:.9em
+}
+.dcSkel{
+    flex:0 0 auto;
+    width:170px
+}
+.dcSkelP{
+    width:100%;
+    height:255px;
+    border-radius:.7em;
+    background:linear-gradient(90deg,#10192b 25%,#16223a 37%,#10192b 63%);
+    background-size:400% 100%;
+    animation:dcShimmer 1.4s ease infinite
+}
+.dcSkelT{
+    height:.75em;
+    margin:.6em .15em 0;
+    border-radius:.3em;
+    background:#16223a;
+    width:85%
+}
+@keyframes dcShimmer{
+    0%{
+    background-position:100% 0
+}
+100%{
+    background-position:0 0
+}
+
+}
+.dcBadge{
+    position:absolute;
+    top:.5em;
+    left:.5em;
+    font-size:.7em;
+    font-weight:700;
+    padding:.2em .6em;
+    border-radius:1em;
+    background:#6d28d9
+}
+.dcBadge.movie{
+    background:#2563eb
+}
+.dcStatus{
+    position:absolute;
+    top:.45em;
+    right:.45em;
+    width:1.6em;
+    height:1.6em;
+    border-radius:50%;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    font-size:.8em
+}
+.dcStatus.s1{
+    display:flex;
+    background:#d99a00
+}
+.dcStatus.s2{
+    display:flex;
+    background:#22a559
+}
+.dcOverlay{
+    position:fixed;
+    top:0;
+    left:0;
+    right:0;
+    bottom:0;
+    background:rgba(0,0,0,.75);
+    z-index:100000;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding:1em;
+    box-sizing:border-box
+}
+.dcOverlay.open{
+    display:flex
+}
+.dcModal{
+    position:relative;
+    width:900px;
+    max-width:100%;
+    width:min(900px,100%);
+    max-height:92vh;
+    overflow:auto;
+    -webkit-overflow-scrolling:touch;
+    background:#0b1426;
+    border:1px solid rgba(255,255,255,.15);
+    border-radius:1em
+}
+.dcModalBack{
+    height:220px;
+    background-size:cover;
+    background-position:center top;
+    border-radius:1em 1em 0 0;
+    position:relative
+}
+.dcModalBack:after{
+    content:"";
+    position:absolute;
+    top:0;
+    left:0;
+    right:0;
+    bottom:0;
+    background:linear-gradient(transparent,#0b1426)
+}
+.dcModalBody{
+    display:flex;
+    padding:0 1.6em 1.6em;
+    margin-top:-90px;
+    position:relative;
+    z-index:1
+}
+.dcModalInfo{
+    flex:1 1 auto;
+    min-width:0
+}
+.dcModalBody img{
+    width:180px;
+    height:270px;
+    object-fit:cover;
+    border-radius:.7em;
+    flex:0 0 auto;
+    background:#10192b
+}
+.dcModalInfo h2{
+    margin:.2em 0 .2em;
+    font-size:1.8em
+}
+.dcMeta{
+    color:#b8c0d4;
+    margin-bottom:.8em
+}
+.dcInfo{
+    color:#b8c0d4;
+    font-size:.92em;
+    line-height:1.55;
+    margin-bottom:1em;
+    white-space:pre-line
+}
+.dcOverview{
+    line-height:1.5;
+    color:#dfe4f1;
+    margin-bottom:1.2em
+}
+.dcBtn{
+    background:var(--dc-accent,#ffb400);
+    color:var(--dc-accent-text,#111);
+    border:0;
+    border-radius:2em;
+    padding:.8em 2em;
+    font-weight:700;
+    font-size:1em;
+    cursor:pointer
+}
+.dcBtnRow{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center
+}
+.dcBtnRow > *{
+    margin:0 .7em .7em 0
+}
+.dcModalBody > img{
+    margin-right:1.4em
+}
+@media (max-width:900px),(pointer:coarse){
+    .dcOverlay{
+    padding-bottom:calc(1em + var(--dc-bottom-clear,calc(88px + env(safe-area-inset-bottom,0px))))
+}
+.dcOverlay .dcModal{
+    max-height:calc(100vh - 2em - var(--dc-bottom-clear,88px));
+    max-height:calc(100dvh - 2em - var(--dc-bottom-clear,88px))
+}
+
+}
+.dcTvPage .dcM .dcModal{
+    width:76%;
+    max-width:900px;
+    max-height:92vh;
+    border-radius:16px
+}
+.dcTvPage .dcM .dcModalBody{
+    padding:min(84px,11vh) 20px 14px
+}
+.dcTvPage .dcM .dcModalInfo{
+    grid-template-columns:minmax(0,1fr) min(210px,31%);
+    column-gap:20px
+}
+.dcTvPage .dcM .dcModalTitle{
+    font-size:22px;
+    margin:0 0 4px
+}
+.dcTvPage .dcM .dcMeta{
+    font-size:11px;
+    margin:0 0 6px
+}
+.dcTvPage .dcM .dcRatings{
+    gap:12px;
+    margin:0 0 8px
+}
+.dcTvPage .dcM .dcRate{
+    font-size:12px
+}
+.dcTvPage .dcM .dcBtnRow{
+    gap:10px;
+    margin:0 0 4px
+}
+.dcTvPage .dcM .dcBtn,.dcTvPage .dcM .dcBtn4k,.dcTvPage .dcM .dcBtnTrailer,.dcTvPage .dcM .dcBtnOpen,.dcTvPage .dcM .dcBtnDel{
+    min-height:30px;
+    padding:4px 16px;
+    font-size:12px
+}
+.dcTvPage .dcM .dcBtn{
+    padding:5px 24px
+}
+.dcTvPage .dcM .dcOverview{
+    font-size:12px;
+    line-height:1.5;
+    margin:8px 0
+}
+.dcTvPage .dcM .dcInfo{
+    font-size:10px;
+    padding:8px 12px;
+    margin:8px 0
+}
+.dcTvPage .dcM .dcSeasons.show{
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:6px
+}
+.dcTvPage .dcM .dcSeasons,.dcTvPage .dcM .dcSeasonLabel,.dcTvPage .dcM .dcBtnSeason{
+    font-size:11px!important
+}
+.dcTvPage .dcM .dcBtnSeason{
+    padding:4px 6px!important
+}
+.dcTvPage .dcM .dcCastP,.dcTvPage .dcM .dcCastPh{
+    width:72px
+}
+.dcTvPage .dcM .dcCastPh{
+    height:72px
+}
+.dcTvPage .dcM .dcCastN,.dcTvPage .dcM .dcCastR{
+    font-size:11px
+}
+.dcTvPage .dcM .dcClose{
+    width:34px;
+    height:34px;
+    top:10px;
+    right:10px
+}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         .dcTvPage .dcArrow{
+    display:none
+}
+.dcBack{
+    display:none !important
+}
+.dcTvPage .dcToast{
+    bottom:auto;
+    top:7vh
+}
+.dcTvPage .dcRoot{
+    padding-left:5%;
+    padding-right:5%;
+    padding-top:9.75em
+}
+.dcSeasons{
+    display:none;
+    flex-wrap:wrap;
+    align-items:center;
+    margin-bottom:.4em
+}
+.dcSeasons.show{
+    display:flex
+}
+.dcSeasons > *{
+    margin:0 .5em .5em 0
+}
+.dcSeasonLabel{
+    width:100%;
+    color:#b8c0d4;
+    font-size:.85em;
+    margin-bottom:.4em
+}
+.dcBtnSeason{
+    background:rgba(255,255,255,.12);
+    color:#fff;
+    border:1px solid rgba(255,255,255,.3);
+    border-radius:2em;
+    padding:.55em 1.1em;
+    font-weight:700;
+    font-size:.95em;
+    cursor:pointer
+}
+.dcBtnSeason:hover{
+    background:var(--dc-accent,#ffb400);
+    color:var(--dc-accent-text,#111)
+}
+.dcBtnSeason.all{
+    background:var(--dc-accent,#ffb400);
+    color:var(--dc-accent-text,#111);
+    border-color:var(--dc-accent,#ffb400)
+}
+.dcBtnSeason:disabled{
+    opacity:.5;
+    cursor:default
+}
+.dcBtnSeason:focus{
+    outline:0
+}
+.dcBtnSeason:focus-visible{
+    box-shadow:0 0 0 3px var(--dc-accent,#ffb400);
+    transform:scale(1.04)
+}
+.dcTvPage .dcBtnSeason:focus{
+    box-shadow:0 0 0 3px var(--dc-accent,#ffb400);
+    transform:scale(1.04)
+}
+@media (max-width:600px){
+    .dcSeasons.show{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:.5em;
+    align-items:stretch;
+    width:100%
+}
+.dcSeasons > *{
+    margin:0
+}
+.dcBtnSeason{
+    padding:.55em .3em;
+    font-size:.9em;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    text-align:center
+}
+.dcBtnSeason.all{
+    grid-column:1 / -1
+}
+.dcModalInfo{
+    width:100%;
+    min-width:0
+}
+.dcOverlay:not(.dcTv) .dcBtnRow{
+    position:sticky;
+    bottom:-1px;
+    border-radius:0 0 1em 1em;
+    z-index:3;
+    display:flex;
+    flex-wrap:wrap;
+    gap:.5em;
+    margin:.4em -1.6em 0;
+    padding:.7em 1.6em;
+    background:#0b1426;
+    border-top:1px solid rgba(255,255,255,.12);
+    box-shadow:0 -8px 12px -6px rgba(0,0,0,.6)
+}
+.dcOverlay:not(.dcTv) .dcBtnRow > *{
+    margin:0;
+    flex:1 1 calc(50% - .5em);
+    min-width:0;
+    padding:.75em .5em;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    text-align:center;
+    box-sizing:border-box
+}
+.dcOverlay:not(.dcTv) .dcBtnRow > .dcBtn{
+    flex-basis:100%
+}
+
+}
+.dcBtnDel{
+    background:#c62828;
+    color:#fff;
+    border:0;
+    border-radius:2em;
+    padding:.8em 1.6em;
+    font-weight:700;
+    font-size:1em;
+    cursor:pointer;
+    display:none
+}
+.dcBtnDel.show{
+    display:inline-block
+}
+.dcBtnTrailer,.dcBtnOpen{
+    background:rgba(255,255,255,.12);
+    color:#fff;
+    border:1px solid rgba(255,255,255,.3);
+    border-radius:2em;
+    padding:.8em 1.6em;
+    font-weight:700;
+    font-size:1em;
+    cursor:pointer;
+    display:none
+}
+.dcBtnTrailer.show,.dcBtnOpen.show{
+    display:inline-block
+}
+.dcBtnTrailer{
+    background:#1e6fd9;
+    border-color:#1e6fd9
+}
+.dcBtn4k{
+    background:transparent;
+    color:var(--dc-accent,#ffb400);
+    border:2px solid var(--dc-accent,#ffb400);
+    border-radius:2em;
+    padding:.7em 1.4em;
+    font-weight:800;
+    font-size:1em;
+    cursor:pointer;
+    display:none
+}
+.dcBtn4k.show{
+    display:inline-block
+}
+.dcBtn4k:hover{
+    background:var(--dc-accent,#ffb400);
+    color:var(--dc-accent-text,#111)
+}
+.dcBtn4k[disabled]{
+    opacity:.5;
+    cursor:default
+}
+.dcBtnOpen{
+    background:#52b54b;
+    border-color:#52b54b
+}
+.dcBtn,.dcBtn4k,.dcBtnTrailer,.dcBtnOpen,.dcBtnDel,.dcColAll,.dcBtnSeason,.dcReqAll,.dcClose,.dcTrailerClose{
+    transition:filter .15s,transform .15s,box-shadow .15s,background .15s
+}
+.dcBtn:not([disabled]):hover,.dcBtn4k:not([disabled]):hover,.dcBtnTrailer:hover,.dcBtnOpen:hover,.dcBtnDel:not([disabled]):hover,.dcColAll:not([disabled]):hover,.dcBtnSeason:not([disabled]):hover,.dcReqAll:not([disabled]):hover{
+    filter:brightness(1.18);
+    transform:scale(1.05);
+    box-shadow:0 0 0 2px rgba(255,255,255,.35),0 .3em 1em rgba(0,0,0,.45)
+}
+.dcClose:hover,.dcTrailerClose:hover{
+    background:rgba(255,255,255,.22);
+    transform:scale(1.1)
+}
+.dcBioMore:hover,.dcTrailerLink:hover{
+    filter:brightness(1.3);
+    text-decoration:underline
+}
+.dcSeasons .dcBtnTrailer{
+    padding:.55em 1.1em;
+    font-size:.95em
+}
+.dcTrailerOverlay{
+    position:fixed;
+    top:0;
+    left:0;
+    right:0;
+    bottom:0;
+    background:rgba(0,0,0,.9);
+    z-index:100002;
+    display:none;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding:1em
+}
+.dcTrailerOverlay.open{
+    display:flex
+}
+body.dcModalOpen .skinHeader,body.dcModalOpen .skinHeader *{
+    pointer-events:none !important
+}
+body.dcModalOpen .skinHeader{
+    opacity:0 !important;
+    transition:opacity .15s
+}
+.dcTrailerFrame{
+    width:960px;
+    max-width:100%;
+    height:540px;
+    max-height:56vw;
+    width:min(960px,100%);
+    border:0;
+    border-radius:.7em;
+    background:#000
+}
+.dcTrailerLink{
+    margin-top:1em;
+    color:#ffd666
+}
+.dcBtnDel[disabled]{
+    opacity:.6;
+    cursor:default
+}
+.dcBtn[disabled]{
+    background:#33415c;
+    color:#cdd;
+    cursor:default
+}
+.dcClose{
+    position:absolute;
+    top:.6em;
+    right:.9em;
+    z-index:2;
+    background:rgba(0,0,0,.55);
+    color:#fff;
+    border:0;
+    border-radius:50%;
+    width:2.2em;
+    height:2.2em;
+    font-size:1.1em;
+    cursor:pointer
+}
+.dcToast{
+    position:fixed;
+    bottom:2em;
+    left:50%;
+    transform:translateX(-50%);
+    background:#22a559;
+    color:#fff;
+    padding:.8em 1.6em;
+    border-radius:2em;
+    z-index:100003;
+    display:none
+}
+.dcToast.err{
+    background:#d32f2f
+}
+.dcTileRow{
+    
+}
+.dcTile{
+    flex:0 0 auto;
+    width:190px;
+    height:84px;
+    border-radius:.7em;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    padding:.5em 1em;
+    box-sizing:border-box;
+    font-weight:700;
+    font-size:1.05em;
+    color:#fff;
+    cursor:pointer;
+    border:1px solid rgba(255,255,255,.12);
+    transition:transform .15s,border-color .15s;
+    overflow:hidden
+}
+.dcTile:hover{
+    transform:scale(1.04);
+    border-color:var(--dc-accent,#ffb400)
+}
+.dcTile.logo{
+    width:170px;
+    height:94px;
+    padding:.8em 1.2em
+}
+.dcTile.photo{
+    width:220px;
+    height:110px;
+    font-size:1.2em;
+    text-shadow:0 1px 4px rgba(0,0,0,.85),0 0 2px rgba(0,0,0,.6)
+}
+.dcTileLogo{
+    max-width:100%;
+    max-height:100%;
+    object-fit:contain;
+    filter:brightness(0) invert(1)
+}
+.dcTileLogo.dcOrig{
+    filter:drop-shadow(0 0 1px rgba(255,255,255,.75))
+}
+.dcBrowseHead{
+    display:flex;
+    align-items:center;
+    margin:1em 0 .8em
+}
+.dcBrowseTitle{
+    font-size:1.6em;
+    font-weight:600
+}
+.dcBrowseHead > *{
+    margin-right:1em
+}
+.dcPerson{
+    flex:0 0 auto;
+    width:120px;
+    text-align:center;
+    cursor:pointer;
+    border-radius:.7em;
+    padding:.3em;
+    transition:transform .15s
+}
+.dcPerson:hover,.dcPerson:focus-visible{
+    transform:scale(1.05);
+    outline:0
+}
+.dcPersonPhoto{
+    width:110px;
+    height:110px;
+    margin:0 auto .4em;
+    border-radius:50%;
+    background:#1c2640 center/cover no-repeat;
+    border:2px solid rgba(255,255,255,.15)
+}
+.dcPerson:hover .dcPersonPhoto,.dcPerson:focus-visible .dcPersonPhoto,.dcTvPage .dcPerson:focus .dcPersonPhoto{
+    border-color:var(--dc-accent,#ffb400)
+}
+.dcPersonName{
+    font-weight:600;
+    font-size:.95em
+}
+.dcPersonDep{
+    font-size:.8em;
+    opacity:.65
+}
+.dcCast{
+    display:flex;
+    gap:.8em;
+    overflow-x:auto;
+    padding:.2em 0 .6em;
+    margin:.2em 0 .6em;
+    scrollbar-width:thin
+}
+.dcCast:empty{
+    display:none
+}
+.dcCollection{
+    margin:.2em 0 .8em
+}
+.dcCollection:empty{
+    display:none
+}
+.dcColHead{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:.5em .8em;
+    margin-bottom:.5em
+}
+.dcColTitle{
+    font-weight:700;
+    font-size:.95em;
+    opacity:.9
+}
+.dcColAll{
+    background:var(--dc-accent,#ffb400);
+    color:var(--dc-accent-text,#111);
+    border:0;
+    border-radius:2em;
+    padding:.35em 1em;
+    font-weight:700;
+    font-size:.85em;
+    cursor:pointer
+}
+.dcColAll:disabled{
+    opacity:.5;
+    cursor:default
+}
+.dcColRow{
+    display:flex;
+    gap:.7em;
+    overflow-x:auto;
+    padding:.2em .1em .5em;
+    scrollbar-width:thin
+}
+.dcColItem{
+    flex:0 0 auto;
+    width:84px;
+    display:flex;
+    flex-direction:column;
+    align-items:stretch;
+    gap:.3em
+}
+.dcColPoster{
+    width:84px;
+    height:126px;
+    border-radius:.45em;
+    background:#1c2640 center/cover no-repeat;
+    border:2px solid transparent;
+    cursor:pointer;
+    padding:0;
+    position:relative
+}
+.dcColPoster:hover,.dcColPoster:focus-visible,.dcTvPage .dcColPoster:focus{
+    border-color:var(--dc-accent,#ffb400);
+    outline:0
+}
+.dcColItem.cur .dcColPoster{
+    box-shadow:0 0 0 2px var(--dc-accent,#ffb400);
+    cursor:default
+}
+.dcColName{
+    font-size:.72em;
+    line-height:1.15;
+    opacity:.85;
+    overflow:hidden;
+    display:-webkit-box;
+    -webkit-box-orient:vertical;
+    -webkit-line-clamp:2
+}
+.dcColBadge{
+    position:absolute;
+    top:.3em;
+    right:.3em;
+    min-width:1.5em;
+    height:1.5em;
+    border-radius:1em;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:.75em;
+    font-weight:800;
+    box-shadow:0 1px 4px rgba(0,0,0,.6)
+}
+.dcColBadge.have{
+    background:#22a559;
+    color:#fff
+}
+.dcColBadge.req{
+    background:#26304a;
+    color:#ffd666
+}
+.dcColItem{
+    position:relative
+}
+.dcColAdd{
+    position:absolute;
+    top:94px;
+    right:.3em;
+    width:1.9em;
+    height:1.9em;
+    border-radius:50%;
+    border:2px solid rgba(255,255,255,.85);
+    background:var(--dc-accent,#ffb400);
+    color:var(--dc-accent-text,#111);
+    font-size:1em;
+    font-weight:800;
+    line-height:1;
+    padding:0;
+    cursor:pointer;
+    box-shadow:0 2px 6px rgba(0,0,0,.6);
+    transition:filter .15s,transform .15s
+}
+.dcColAdd:hover,.dcColAdd:focus-visible,.dcTvPage .dcColAdd:focus{
+    filter:brightness(1.18);
+    transform:scale(1.15);
+    outline:0;
+    box-shadow:0 0 0 3px #fff,0 2px 6px rgba(0,0,0,.6)
+}
+.dcOverlay.dcTv .dcColAdd,.dcTvPage .dcColAdd{
+    width:2.4em;
+    height:2.4em;
+    top:84px;
+    font-size:1.05em
+}
+.dcOverlay.dcTv .dcColAdd:focus,.dcOverlay.dcTv .dcColPoster:focus{
+    outline:0
+}
+.dcOverlay.dcTv .dcColAdd:focus{
+    transform:scale(1.2);
+    box-shadow:0 0 0 3px #fff,0 0 0 6px var(--dc-accent,#ffb400)
+}
+.dcOverlay.dcTv .dcColPoster:focus{
+    border-color:var(--dc-accent,#ffb400)
+}
+.dcColAdd:disabled{
+    opacity:.6;
+    cursor:default;
+    transform:none
+}
+.dcColCur{
+    font-size:.68em;
+    font-weight:700;
+    color:var(--dc-accent,#ffb400)
+}
+.dcColWarn{
+    font-size:.78em;
+    color:#e9c46a;
+    opacity:.9;
+    margin:-.2em 0 .6em;
+    max-width:46em;
+    line-height:1.35
+}
+.dcColAll.confirm{
+    background:#e5484d;
+    color:#fff
+}
+.dcRatings{
+    display:flex;
+    flex-wrap:wrap;
+    gap:.4em;
+    margin:.1em 0 .6em
+}
+.dcRatings:empty{
+    display:none
+}
+.dcRate{
+    display:inline-flex;
+    align-items:center;
+    gap:.35em;
+    padding:.18em .6em;
+    border-radius:.45em;
+    background:rgba(255,255,255,.08);
+    border:1px solid rgba(255,255,255,.14);
+    font-size:.85em;
+    font-weight:700;
+    white-space:nowrap
+}
+.dcRate b{
+    font-size:.78em;
+    font-weight:800;
+    padding:.05em .35em;
+    border-radius:.3em;
+    letter-spacing:.02em
+}
+.dcRate.imdb b{
+    background:#f5c518;
+    color:#000
+}
+.dcRate.rt b{
+    background:#fa320a;
+    color:#fff
+}
+.dcRate.mc b{
+    background:#66cc33;
+    color:#000
+}
+.dcRate.mc.mid b{
+    background:#ffcc33
+}
+.dcRate.mc.low b{
+    background:#ff0000;
+    color:#fff
+}
+.dcRate i{
+    font-style:normal;
+    font-weight:400;
+    color:rgba(255,255,255,.6)
+}
+.dcRate.tmdb b{
+    background:linear-gradient(90deg,#90cea1,#01b4e4);
+    color:#032541
+}
+.dcCastWrap{
+    position:relative
+}
+.dcCastArr{
+    position:absolute;
+    top:calc(34px + .4em - 1.6em);
+    z-index:3;
+    width:3.2em;
+    height:3.2em;
+    padding:0;
+    border:0;
+    border-radius:50%;
+    background:#fff;
+    color:#000;
+    cursor:pointer;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    box-shadow:0 4px 5px 0 rgba(0,0,0,.14),0 1px 10px 0 rgba(0,0,0,.12),0 2px 4px -1px rgba(0,0,0,.4),0 0 0 3px rgba(11,20,38,.6);
+    transition:transform 200ms
+}
+.dcCastArr:hover{
+    transform:scale(1.1)
+}
+.dcCastArr.left{
+    left:-.6em
+}
+.dcCastArr.right{
+    right:-.6em
+}
+.dcCastArr svg{
+    width:2.1em;
+    height:2.1em;
+    fill:currentColor
+}
+@media (pointer:fine){
+    .dcCastWrap:hover .dcCastArr{
+    display:inline-flex
+}
+
+}
+html.dcPointer .dcCastWrap:hover .dcCastArr{
+    display:inline-flex
+}
+.dcCastWrap .dcCastArr.dcHide{
+    display:none !important
+}
+.dcCastP{
+    flex:0 0 auto;
+    width:78px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:flex-start;
+    text-align:center;
+    cursor:pointer;
+    background:none;
+    border:0;
+    color:inherit;
+    padding:.2em;
+    border-radius:.5em;
+    font:inherit
+}
+.dcCastPh{
+    flex:0 0 auto;
+    width:64px;
+    height:64px;
+    margin:0 auto .3em;
+    border-radius:50%;
+    background:#1c2640 center/cover no-repeat;
+    border:2px solid rgba(255,255,255,.15);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-weight:600;
+    opacity:.95
+}
+.dcCastP:hover .dcCastPh,.dcCastP:focus .dcCastPh{
+    border-color:var(--dc-accent,#ffb400)
+}
+.dcCastP:focus{
+    outline:0
+}
+.dcCastN{
+    font-size:.75em;
+    font-weight:600;
+    line-height:1.2;
+    overflow:hidden;
+    display:-webkit-box;
+    -webkit-line-clamp:2;
+    -webkit-box-orient:vertical
+}
+.dcCastR{
+    font-size:.68em;
+    opacity:.6;
+    line-height:1.2;
+    overflow:hidden;
+    display:-webkit-box;
+    -webkit-line-clamp:2;
+    -webkit-box-orient:vertical;
+    margin-top:.15em
+}
+.dcPersonHead{
+    display:flex;
+    gap:1.6em;
+    align-items:flex-start;
+    margin:.5em 0 1em
+}
+.dcPersonBig{
+    flex:0 0 auto;
+    width:180px;
+    height:270px;
+    border-radius:.6em;
+    background:#1c2640 center/cover no-repeat;
+    box-shadow:0 6px 20px rgba(0,0,0,.45)
+}
+.dcPersonText{
+    min-width:0;
+    max-width:60em
+}
+.dcPersonTitle{
+    margin:0 0 .4em;
+    font-size:2em
+}
+.dcPersonMeta{
+    opacity:.8;
+    font-size:.9em;
+    line-height:1.5;
+    margin-bottom:.7em
+}
+.dcBioText{
+    line-height:1.5;
+    display:-webkit-box;
+    -webkit-line-clamp:5;
+    -webkit-box-orient:vertical;
+    overflow:hidden;
+    white-space:pre-line
+}
+.dcPersonBio.open .dcBioText{
+    display:block;
+    -webkit-line-clamp:unset
+}
+.dcBioMore{
+    margin-top:.4em;
+    background:none;
+    border:0;
+    color:#00a4dc;
+    cursor:pointer;
+    padding:0;
+    font:inherit
+}
+.dcSoonTag{
+    display:inline-block;
+    margin-left:.45em;
+    padding:.05em .45em;
+    border-radius:1em;
+    font-size:.72em;
+    font-weight:600;
+    background:#7c4dff;
+    color:#fff;
+    vertical-align:middle
+}
+.dcRole{
+    margin-top:.15em;
+    color:#9fb0cc;
+    font-size:.8em;
+    font-style:italic;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap
+}
+.dcRowCount{
+    font-size:.6em;
+    opacity:.55;
+    font-weight:400;
+    margin-left:.3em
+}
+@media (max-width:600px){
+    .dcPersonHead{
+    flex-direction:column;
+    align-items:center;
+    text-align:center
+}
+.dcPersonBig{
+    width:140px;
+    height:210px
+}
+
+}
+.dcMore.dcAuto{
+    min-height:2px
+}
+.dcMore.dcAuto .dcMoreBtn{
+    display:none
+}
+.dcFilters{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:.6em 1.2em;
+    margin:0 0 1em;
+    font-size:.95em
+}
+.dcFilters label{
+    display:inline-flex;
+    align-items:center;
+    gap:.4em;
+    opacity:.9
+}
+.dcFilters select{
+    background:rgba(255,255,255,.08);
+    color:#fff;
+    border:1px solid rgba(255,255,255,.2);
+    border-radius:.5em;
+    padding:.35em .5em;
+    font:inherit
+}
+.dcFilters select option{
+    background:#13203a;
+    color:#fff
+}
+.dcFilters .dcFCheck input{
+    width:1.1em;
+    height:1.1em;
+    accent-color:var(--dc-accent,#ffb400)
+}
+.dcFCount{
+    opacity:.6;
+    font-size:.9em
+}
+.dcBack{
+    background:rgba(255,255,255,.1);
+    color:#fff;
+    border:1px solid rgba(255,255,255,.2);
+    border-radius:2em;
+    padding:.5em 1.2em;
+    font-size:1em;
+    cursor:pointer
+}
+.dcBack:hover{
+    background:var(--dc-accent,#ffb400);
+    color:var(--dc-accent-text,#111)
+}
+.dcMore{
+    text-align:center;
+    margin:1.5em 0
+}
+.dcMsg{
+    padding:2em;
+    color:#b8c0d4
+}
+.dcTile:focus,.dcBtn:focus,.dcBack:focus,.dcArrow:focus,.dcClose:focus,.dcBtnTrailer:focus,.dcBtnOpen:focus,.dcBtnDel:focus{
+    outline:0
+}
+.dcTile:focus-visible,.dcBtn:focus-visible,.dcBack:focus-visible,.dcArrow:focus-visible,.dcClose:focus-visible,.dcBtnTrailer:focus-visible,.dcBtnOpen:focus-visible,.dcBtnDel:focus-visible{
+    box-shadow:0 0 0 3px var(--dc-accent,#ffb400);
+    transform:scale(1.04);
+    z-index:2
+}
+.dcTvPage .dcTile:focus,.dcTvPage .dcBtn:focus,.dcTvPage .dcBack:focus,.dcTvPage .dcClose:focus,.dcTvPage .dcBtnTrailer:focus,.dcTvPage .dcBtnOpen:focus,.dcTvPage .dcBtnDel:focus{
+    box-shadow:0 0 0 3px var(--dc-accent,#ffb400);
+    transform:scale(1.04);
+    z-index:2
+}
+.dcCard:focus-visible .dcPoster{
+    transform:scale(1.05);
+    border-color:var(--dc-accent,#ffb400);
+    box-shadow:0 .5em 1.4em rgba(0,0,0,.5),0 0 0 3px var(--dc-accent,#ffb400)
+}
+.dcCard:focus-visible .dcCapT{
+    color:var(--dc-accent,#ffb400)
+}
+.dcTvPage .dcCard:focus .dcPoster{
+    transform:scale(1.05);
+    border-color:var(--dc-accent,#ffb400);
+    box-shadow:0 .5em 1.4em rgba(0,0,0,.5),0 0 0 3px var(--dc-accent,#ffb400)
+}
+.dcTvPage .dcCard:focus .dcCapT{
+    color:var(--dc-accent,#ffb400)
+}
+.dcProg{
+    position:absolute;
+    left:0;
+    right:0;
+    bottom:0;
+    height:10px;
+    background:rgba(0,0,0,.65);
+    z-index:1
+}
+.dcTvPage .dcProg{
+    height:12px
+}
+.dcProg i{
+    display:block;
+    height:100%;
+    width:0;
+    background:var(--dc-accent,#ffb400);
+    transition:width .6s
+}
+.dcProg.paused i,.dcProg.stalled i{
+    background:#9aa5b8
+}
+.dcCard.dcWide{
+    width:22em;
+    max-width:calc(100% - 1em);
+    height:9.6em;
+    display:flex;
+    align-items:flex-end;
+    border-radius:.8em;
+    overflow:hidden;
+    background:#16223a;
+    box-shadow:0 .3em 1em rgba(0,0,0,.45);
+    border:2px solid transparent;
+    transition:border-color .15s,box-shadow .15s,transform .15s
+}
+.dcWide .dcWideBg{
+    position:absolute;
+    top:0;
+    left:0;
+    right:0;
+    bottom:0;
+    background-size:cover;
+    background-position:center 25%
+}
+.dcWide .dcWideBg.blur{
+    filter:blur(14px) brightness(.7);
+    transform:scale(1.2)
+}
+.dcWide .dcWideShade{
+    position:absolute;
+    top:0;
+    left:0;
+    right:0;
+    bottom:0;
+    background:linear-gradient(90deg,rgba(10,16,30,.95) 28%,rgba(10,16,30,.55) 70%,rgba(10,16,30,.35))
+}
+.dcWide .dcPoster{
+    position:static;
+    flex:none;
+    width:5.2em;
+    height:7.8em;
+    margin:0 .9em .8em;
+    border-radius:.45em;
+    border:0;
+    box-shadow:0 0 0 2px rgba(255,255,255,.18),0 .3em .8em rgba(0,0,0,.5);
+    transform:none !important
+}
+.dcWide .dcPoster img,.dcWide .dcPoster .dcNoPoster{
+    position:relative;
+    border-radius:.45em
+}
+.dcWide .dcPoster .dcNoPoster{
+    font-size:.7em;
+    padding:.4em
+}
+.dcWide .dcBadge{
+    z-index:2;
+    top:auto;
+    left:auto;
+    position:static;
+    display:inline-block;
+    margin-bottom:.5em
+}
+.dcWide .dcStatus{
+    z-index:2
+}
+.dcWide .dcProg{
+    display:none
+}
+.dcWide .dcCap{
+    position:relative;
+    flex:1;
+    min-width:0;
+    padding:0 1em .9em 0
+}
+.dcWide .dcCapT{
+    font-size:1.1em;
+    font-weight:700;
+    -webkit-line-clamp:2
+}
+.dcWide .dcCapQ{
+    display:inline-block;
+    max-width:100%;
+    margin-top:.45em;
+    padding:.2em .7em;
+    border-radius:1em;
+    background:rgba(var(--dc-accent-rgb,255,180,0),.2);
+    font-size:.8em;
+    box-sizing:border-box
+}
+.dcWide .dcCapQ.req,.dcWide .dcCapQ.paused,.dcWide .dcCapQ.stalled{
+    background:rgba(255,255,255,.12)
+}
+.dcWide .dcCapQ.avail{
+    background:rgba(34,165,89,.25)
+}
+.dcWide .dcCapQ.downloading,.dcWide .dcCapQ.paused,.dcWide .dcCapQ.stalled{
+    display:block;
+    position:relative;
+    isolation:isolate;
+    overflow:hidden;
+    width:100%;
+    margin-top:.5em;
+    padding:.4em .9em;
+    border-radius:.5em;
+    font-size:.9em;
+    font-weight:700;
+    color:#fff;
+    text-shadow:0 1px 3px rgba(0,0,0,.85);
+    background:rgba(255,255,255,.16)
+}
+.dcWide .dcCapQ.downloading::before,.dcWide .dcCapQ.paused::before,.dcWide .dcCapQ.stalled::before{
+    content:"";
+    position:absolute;
+    z-index:-1;
+    left:0;
+    top:0;
+    bottom:0;
+    width:var(--p,0%);
+    background:rgba(var(--dc-accent-rgb,255,180,0),.8);
+    transition:width .6s
+}
+.dcWide .dcCapQ.paused::before,.dcWide .dcCapQ.stalled::before{
+    background:rgba(154,165,184,.7)
+}
+.dcCard.dcWide:hover,.dcCard.dcWide:focus-visible,.dcTvPage .dcCard.dcWide:focus{
+    border-color:var(--dc-accent,#ffb400);
+    box-shadow:0 .5em 1.4em rgba(0,0,0,.5),0 0 0 1px var(--dc-accent,#ffb400)
+}
+.dcTvPage .dcCard.dcWide:focus{
+    transform:scale(1.03)
+}
+.dcCard.dcWide:focus-visible .dcPoster,.dcTvPage .dcCard.dcWide:focus .dcPoster{
+    box-shadow:0 0 0 2px rgba(255,255,255,.18)
+}
+.dcCapQ{
+    margin-top:.3em;
+    font-size:.86em;
+    font-weight:600;
+    color:var(--dc-accent,#ffb400);
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis
+}
+.dcCapQ.paused,.dcCapQ.stalled,.dcCapQ.req{
+    color:#c9d2ea
+}
+.dcCapQ.avail{
+    color:#5fd38d
+}
+.dcQueue{
+    display:none;
+    margin:0 0 1em
+}
+.dcQueue.show{
+    display:block
+}
+.dcQHead{
+    font-size:.85em;
+    color:#b8c0d4;
+    margin-bottom:.3em
+}
+.dcQRow{
+    display:flex;
+    align-items:center;
+    padding:.35em 0;
+    font-size:.88em;
+    border-top:1px solid rgba(255,255,255,.08)
+}
+.dcQRow > *{
+    margin-right:.7em
+}
+.dcQRow > *:last-child{
+    margin-right:0
+}
+.dcQName{
+    flex:1 1 auto;
+    min-width:0;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis
+}
+.dcQBar{
+    flex:0 0 7em;
+    height:6px;
+    border-radius:3px;
+    background:rgba(255,255,255,.12);
+    overflow:hidden
+}
+.dcQBar i{
+    display:block;
+    height:100%;
+    background:var(--dc-accent,#ffb400)
+}
+.dcQBar.paused i,.dcQBar.stalled i{
+    background:#9aa5b8
+}
+.dcQPct{
+    flex:0 0 auto;
+    min-width:7.5em;
+    text-align:right;
+    color:#b8c0d4;
+    white-space:nowrap
+}
+.dcQRel{
+    font-size:.75em;
+    color:#8a96ad;
+    word-break:break-all;
+    padding:0 0 .35em
+}
+.dcQMore{
+    font-size:.8em;
+    color:#8a96ad;
+    padding-top:.3em
+}
+@media (max-width:600px){
+    .dcQBar{
+    flex-basis:3.5em
+}
+.dcQPct{
+    min-width:0
+}
+
+}
+@media (max-width:600px){
+    .dcCard{
+    width:130px
+}
+.dcPoster{
+    height:195px
+}
+.dcSkel{
+    width:130px
+}
+.dcSkelP{
+    height:195px
+}
+.dcModalBody{
+    flex-direction:column;
+    align-items:center
+}
+
+}
+@media (prefers-reduced-motion:reduce){
+    .dcSkelP{
+    animation:none
+}
+
+}
+.dcQuick{
+    position:fixed;
+    z-index:100001;
+    min-width:13em;
+    background:#13203a;
+    border:1px solid rgba(255,255,255,.18);
+    border-radius:.7em;
+    box-shadow:0 10px 30px rgba(0,0,0,.6);
+    padding:.35em;
+    display:none
+}
+.dcQuick.open{
+    display:block
+}
+.dcQuickTitle{
+    padding:.45em .8em .35em;
+    font-size:.85em;
+    opacity:.7;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    max-width:18em
+}
+.dcQuick button{
+    display:block;
+    width:100%;
+    text-align:left;
+    background:none;
+    border:0;
+    color:#fff;
+    font:inherit;
+    padding:.6em .8em;
+    border-radius:.45em;
+    cursor:pointer
+}
+.dcQuick button:hover,.dcQuick button:focus-visible{
+    background:rgba(255,255,255,.12);
+    outline:0
+}
+.dcQuick button.req{
+    color:var(--dc-accent,#ffb400);
+    font-weight:700
+}
+.dcQuick button[disabled]{
+    opacity:.45;
+    cursor:default
+}
+.dcRoot{
+    position:relative;
+    isolation:isolate
+}
+.dcRoot > .dcDiag,.dcRoot > .dcSearch,.dcRoot > .dcContent{
+    position:relative;
+    z-index:1
+}
+.dcPageBd{
+    position:fixed;
+    top:0;
+    left:0;
+    right:0;
+    bottom:0;
+    z-index:0;
+    pointer-events:none
+}
+.dcPageBdImg{
+    position:absolute;
+    top:0;
+    left:0;
+    right:0;
+    bottom:0;
+    background-size:cover;
+    background-position:center top;
+    opacity:0;
+    transition:opacity .7s ease
+}
+.dcPageBdImg.on{
+    opacity:1
+}
+.dcPageBdShade{
+    position:absolute;
+    top:0;
+    left:0;
+    right:0;
+    bottom:0;
+    background:linear-gradient(180deg,rgba(11,20,38,.62) 0%,rgba(11,20,38,.82) 45%,rgba(11,20,38,.93) 100%)
+}
+@media (min-width:700px){
+    .dcM{
+    background:rgba(0,0,0,.9)
+}
+.dcM .dcModal{
+    width:64%;
+    max-width:1000px;
+    height:auto;
+    max-height:88vh;
+    background:#0b1426;
+    border:0;
+    border-radius:24px;
+    box-shadow:0 10px 40px rgba(0,0,0,.45);
+    overflow:hidden
+}
+.dcM .dcModal::-webkit-scrollbar{
+    display:none
+}
+.dcM .dcModalBack{
+    position:absolute;
+    top:0;
+    left:0;
+    right:0;
+    bottom:0;
+    height:auto;
+    border-radius:0;
+    background-size:cover;
+    background-position:center top;
+    -webkit-mask-image:none;
+    mask-image:none
+}
+.dcM .dcModalBack:after{
+    background:linear-gradient(90deg,rgba(11,20,38,.93) 12%,rgba(11,20,38,.68) 52%,rgba(11,20,38,.3)),linear-gradient(0deg,rgba(11,20,38,.9),transparent 38%)
+}
+.dcM .dcModalBody{
+    display:block;
+    position:relative;
+    z-index:1;
+    margin-top:0;
+    padding:min(150px,15vh) 24px 20px;
+    max-height:inherit;
+    overflow-y:auto;
+    scrollbar-width:none
+}
+.dcM .dcModalBody::-webkit-scrollbar{
+    display:none
+}
+.dcTvPage .dcM .dcSeasons,.dcTvPage .dcM .dcSeasonLabel,.dcTvPage .dcM .dcBtnSeason{
+    font-size:14px
+}
+.dcTvPage .dcM .dcBtnSeason{
+    padding:6px 16px
+}
+.dcM .dcModalBody>img{
+    display:none
+}
+.dcM .dcModalInfo{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) min(280px,34%);
+    column-gap:28px;
+    grid-template-areas:"title title" "meta meta" "rate rate" "btns btns" "over info" "gen info" "seas info" "coll info" "queue info" "cast cast";
+    align-items:start
+}
+.dcM .dcModalTitle{
+    grid-area:title;
+    font-size:30px;
+    font-weight:700;
+    line-height:1.15;
+    margin:0 0 8px;
+     text-shadow:0 2px 16px rgba(0,0,0,.8)
+}
+.dcM .dcMeta{
+    grid-area:meta;
+    margin:0 0 10px;
+    font-size:14px;
+    color:rgba(255,255,255,.6)
+}
+.dcM .dcRatings{
+    grid-area:rate
+}
+.dcM .dcBtnRow{
+    grid-area:btns;
+    margin:0 0 6px;
+    gap:16px
+}
+ .dcM .dcBtnRow>*{
+    margin:0
+}
+.dcM .dcBtn,.dcM .dcBtn4k,.dcM .dcBtnTrailer,.dcM .dcBtnOpen,.dcM .dcBtnDel{
+    min-height:42px;
+    padding:6px 20px;
+    border:1px solid #373737;
+    border-radius:8px;
+    background:#1d1d1d;
+    color:#fff;
+    font-size:14px;
+    font-weight:400
+}
+.dcM .dcBtn{
+    padding:8px 32px;
+    border:0;
+    background:#005499;
+    font-weight:600
+}
+.dcM .dcBtn:hover:not(:disabled){
+    background:#0077da
+}
+.dcM .dcBtn4k:hover,.dcM .dcBtnTrailer:hover,.dcM .dcBtnOpen:hover,.dcM .dcBtnDel:hover{
+    background:#373737
+}
+.dcM .dcBtn:disabled,.dcM .dcBtn4k:disabled{
+    opacity:.6
+}
+.dcM .dcOverview{
+    grid-area:over;
+    margin:12px 0 10px;
+    font-size:15px;
+    line-height:1.65;
+    color:#fff
+}
+.dcM .dcGenres{
+    grid-area:gen
+}
+.dcM .dcSeasons{
+    grid-area:seas
+}
+.dcM .dcCollection{
+    grid-area:coll
+}
+.dcM .dcQueue{
+    grid-area:queue
+}
+.dcM .dcInfo{
+    grid-area:info;
+    margin:12px 0 10px;
+    padding:12px 16px;
+    font-size:12px;
+    font-weight:500;
+    line-height:1.3;
+    color:#fff;
+    background:rgba(255,255,255,.05);
+    border:1px solid rgba(255,255,255,.1);
+    border-radius:8px
+}
+.dcM .dcInfo:empty{
+    display:none
+}
+.dcM .dcCastWrap{
+    grid-area:cast;
+    padding-top:14px
+}
+.dcM .dcCast{
+    gap:16px;
+    scrollbar-width:none
+}
+.dcM .dcCast::-webkit-scrollbar{
+    display:none
+}
+.dcM .dcCastP{
+    width:96px;
+     padding:0
+}
+.dcM .dcCastPh{
+    width:96px;
+    height:96px;
+    border:0;
+    margin-bottom:6px
+}
+  .dcM .dcCastN{
+    font-size:14px;
+    font-weight:500;
+    color:#fff;
+    width:100%;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap
+}
+.dcM .dcCastR{
+    font-size:14px;
+    color:rgba(255,255,255,.6);
+    width:100%;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap
+}
+.dcM .dcClose{
+    top:16px;
+    right:16px;
+    z-index:50;
+    width:44px;
+    height:44px;
+    border-radius:50%;
+    background:#000;
+    color:rgba(255,255,255,.55)
+}
+.dcM .dcRatings{
+    gap:16px;
+    margin:0 0 12px
+}
+.dcM .dcRate{
+    background:none;
+    border:0;
+    padding:0;
+    font-size:15px;
+    gap:.45em
+}
+@media (max-width:900px),(pointer:coarse){
+    .dcM .dcModal{
+    width:88%;
+    height:auto;
+    max-height:calc(100vh - 2em - var(--dc-bottom-clear,88px));
+    max-height:calc(100dvh - 2em - var(--dc-bottom-clear,88px))
+}
+
+}
+
+}
+.dcGenres{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    margin:0 0 16px
+}
+.dcGenres:empty{
+    display:none
+}
+.dcGenres span{
+    padding:6px 14px;
+    border:1px solid rgba(255,255,255,.1);
+    border-radius:9999px;
+    background:rgba(255,255,255,.08);
+    color:#fff;
+    font-size:13px
+}
+.dcIRow{
+    margin:0 0 6px
+}
+.dcISep{
+    border-top:1px solid rgba(255,255,255,.1);
+    margin:12px 0
+}
+.dcIProv{
+    display:flex;
+    width:32px;
+    height:32px;
+    border-radius:6px;
+    background:#0d253f;
+    color:#fff;
+    align-items:center;
+    justify-content:center
+}
+.dcIProv svg{
+    width:20px;
+    height:20px
+}
+.dcPk{
+    position:fixed;
+    top:0;
+    left:0;
+    right:0;
+    bottom:0;
+    z-index:100002;
+    display:flex;
+    align-items:center;
+    justify-content:center
+}
+.dcPkBack{
+    position:absolute;
+    top:0;
+    left:0;
+    right:0;
+    bottom:0;
+    background:rgba(5,9,18,.72);
+    -webkit-backdrop-filter:blur(6px);
+    backdrop-filter:blur(6px)
+}
+.dcPkPanel{
+    position:relative;
+    width:92%;
+    max-width:560px;
+    max-height:82vh;
+    border-radius:22px;
+    background:linear-gradient(160deg,#18264a,#0b1426 55%);
+    border:1px solid rgba(255,255,255,.1);
+    box-shadow:0 24px 60px rgba(0,0,0,.6);
+    overflow:hidden;
+    display:flex;
+    flex-direction:column;
+    color:#fff
+}
+.dcPkPanel:before{
+    content:"";
+    height:4px;
+    flex:0 0 auto;
+    background:var(--dc-accent,#ffb400)
+}
+.dcPkHead{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:18px 22px 6px
+}
+.dcPkHead h3{
+    margin:0;
+    font-size:19px;
+    font-weight:700;
+    color:#fff
+}
+.dcPkX{
+    border:0;
+    background:rgba(255,255,255,.08);
+    color:rgba(255,255,255,.75);
+    cursor:pointer;
+    width:32px;
+    height:32px;
+    border-radius:50%;
+    font-size:14px;
+    line-height:1
+}
+.dcPkX:hover{
+    background:rgba(255,255,255,.18);
+    color:#fff
+}
+.dcPkList{
+    overflow-y:auto;
+    padding:12px 22px 14px;
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:10px
+}
+.dcPkOpt{
+    position:relative;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:11px 12px;
+    border:1px solid rgba(255,255,255,.1);
+    border-radius:14px;
+    background:rgba(255,255,255,.045);
+    cursor:pointer;
+    transition:background .15s,border-color .15s,transform .15s
+}
+.dcPkOpt:hover{
+    background:rgba(255,255,255,.09);
+    transform:translateY(-1px)
+}
+.dcPkOpt.on{
+    border-color:var(--dc-accent,#ffb400);
+    background:rgba(var(--dc-accent-rgb,255,180,0),.14)
+}
+.dcPkOpt input{
+    position:absolute;
+    opacity:0;
+    pointer-events:none;
+    width:1px;
+    height:1px
+}
+.dcPkChk{
+    flex:0 0 auto;
+    width:22px;
+    height:22px;
+    border-radius:50%;
+    border:2px solid rgba(255,255,255,.35);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:13px;
+    font-weight:800;
+    color:transparent;
+    box-sizing:border-box;
+    transition:background .15s,border-color .15s
+}
+.dcPkChk:after{
+    content:"\2713"
+}
+.dcPkOpt.on .dcPkChk{
+    background:var(--dc-accent,#ffb400);
+    border-color:var(--dc-accent,#ffb400);
+    color:var(--dc-accent-text,#111)
+}
+.dcPkOpt input:focus-visible + .dcPkChk{
+    box-shadow:0 0 0 3px rgba(255,255,255,.5)
+}
+.dcPkAll{
+    grid-column:1/-1;
+    font-weight:700
+}
+.dcPkLbl{
+    flex:1;
+    min-width:0;
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+    font-size:15px;
+    font-weight:700
+}
+.dcPkEp{
+    font-size:12px;
+    font-weight:500;
+    color:rgba(255,255,255,.6)
+}
+.dcPkTag{
+    flex:0 0 auto;
+    white-space:nowrap;
+    padding:2px 8px;
+    border-radius:9999px;
+    background:rgba(34,165,89,.22);
+    color:#6fe3a0;
+    font-size:10px;
+    font-weight:700
+}
+.dcPkFoot{
+    padding:12px 22px 20px
+}
+.dcPkGo{
+    display:block;
+    width:100%;
+    padding:13px 16px;
+    border:0;
+    border-radius:14px;
+    background:var(--dc-accent,#ffb400);
+    color:var(--dc-accent-text,#111);
+    font-size:15px;
+    font-weight:800;
+    cursor:pointer;
+    transition:filter .15s,transform .15s
+}
+.dcPkGo:hover:not(:disabled){
+    filter:brightness(1.1);
+    transform:translateY(-1px)
+}
+.dcPkGo:disabled{
+    opacity:.35;
+    cursor:not-allowed
+}
+@media (max-width:480px){
+    .dcPkList{
+    grid-template-columns:1fr
+}
+
+}
+
+</style><div class="dcRoot"><div class="dcPageBd" aria-hidden="true"><div class="dcPageBdImg"></div><div class="dcPageBdImg"></div><div class="dcPageBdShade"></div></div><div class="dcDiag" style="margin:0 0 1em;font-size:.85em;opacity:.8;white-space:pre-wrap;color:#ffd666;"></div><div class="dcSearch"><button type="button" class="dcHomeBtn focusable" title="Discover"><i class="md-icon">explore</i></button><span>&#128269;</span><input type="text" class="dcSearchInput" placeholder="Films en series zoeken" autocomplete="off" /></div><div class="dcContent"><div class="dcMsg">Laden...</div></div></div><div class="dcOverlay dcM"><div class="dcModal"><button type="button" class="dcClose">&#10005;</button><div class="dcModalBack"></div><div class="dcModalBody"><img class="dcModalPoster" alt="" /><div class="dcModalInfo"><h2 class="dcModalTitle"></h2><div class="dcMeta"></div><div class="dcRatings"></div><div class="dcInfo"></div><div class="dcOverview"></div><div class="dcCastWrap"><button type="button" class="dcCastArr left dcHide" tabindex="-1" data-dir="-1" aria-label="&lt;"></button><div class="dcCast"></div><button type="button" class="dcCastArr right dcHide" tabindex="-1" data-dir="1" aria-label="&gt;"></button></div><div class="dcCollection"></div><div class="dcQueue"></div><div class="dcSeasons"></div><div class="dcBtnRow"><button type="button" class="dcBtn"></button><button type="button" class="dcBtn4k"></button><button type="button" class="dcBtnTrailer"></button><button type="button" class="dcBtnOpen"></button><button type="button" class="dcBtnDel"></button></div></div></div></div></div><div class="dcTrailerOverlay"><button type="button" class="dcClose dcTrailerClose">&#10005;</button><iframe class="dcTrailerFrame" referrerpolicy="strict-origin-when-cross-origin" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe><a class="dcTrailerLink" target="_blank" rel="noopener"></a></div><div class="dcToast"></div></div></body></html>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
