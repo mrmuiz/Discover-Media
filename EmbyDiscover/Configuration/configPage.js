@@ -75,7 +75,7 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         desc_txtFanartKey: ['Meestal niet nodig: het titellogo bovenaan de popup komt van TMDB. Alleen als TMDB voor een titel geen logo heeft en hier een sleutel staat, wordt fanart.tv gevraagd. Gratis sleutel: fanart.tv, accountpagina, Personal API Key. De sleutel blijft op de server.', 'Not needed normally: the title logo at the top of the popup comes from TMDB. Only when TMDB has no logo for a title and a key is set here, fanart.tv is asked. Free key: fanart.tv, account page, Personal API Key. The key stays on the server.', 'Normalerweise nicht nötig: Das Titellogo oben im Popup kommt von TMDB. Nur wenn TMDB für einen Titel kein Logo hat und hier ein Schlüssel steht, wird fanart.tv gefragt. Kostenloser Schlüssel: fanart.tv, Kontoseite, Personal API Key. Der Schlüssel bleibt auf dem Server.'],
         hdgTiles: ['Tegels', 'Tiles', 'Kacheln'],
         hdgOwnLists: ['Eigen lijsten als rij', 'Your own lists as a row', 'Eigene Listen als Reihe'],
-        tab_tmdb: ['TMDB', 'TMDB', 'TMDB'],
+        tab_tmdb: ['Bronnen', 'Sources', 'Quellen'],
         tab_arr: ['Aanvragen', 'Requests', 'Anfragen'],
         desc_requestService: [
             'Met Seerr gaan aanvragen naar Seerr, en Seerr stuurt ze door naar zijn eigen Radarr en Sonarr. Radarr en Sonarr hoef je hier dan niet in te stellen.',
