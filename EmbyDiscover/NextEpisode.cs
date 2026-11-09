@@ -27,6 +27,48 @@ namespace Emby.Plugins.Discover
             try { Http.DefaultRequestHeaders.UserAgent.ParseAdd("EmbyDiscoverMedia/1.0"); } catch { }
         }
 
+        /// <summary>TVmaze-nummer als dat al bekend is (voor de link in het infoblok), anders 0.</summary>
+        internal static int KnownShowId(int tmdbId)
+        {
+            Tuple<DateTime, int> hit;
+            return ShowIds.TryGetValue(tmdbId, out hit) ? hit.Item2 : 0;
+        }
+
+        private static readonly ConcurrentDictionary<int, Tuple<DateTime, string, DateTime?>> Next = new ConcurrentDictionary<int, Tuple<DateTime, string, DateTime?>>();
+
+        /// <summary>Volgende aflevering als code ("S03E05") en datum (lokaal), of null.</summary>
+        internal static async Task<Tuple<string, DateTime?>> Get(IJsonSerializer json, TmdbClient tmdb, int tmdbId, CancellationToken ct)
+        {
+            Tuple<DateTime, string, DateTime?> hit;
+            if (Next.TryGetValue(tmdbId, out hit) && DateTime.UtcNow - hit.Item1 < TimeSpan.FromHours(6))
+                return hit.Item2 == null ? null : Tuple.Create(hit.Item2, hit.Item3);
+            string code = null; DateTime? when = null;
+            try
+            {
+                int showId = await ShowId(json, tmdb, tmdbId, ct).ConfigureAwait(false);
+                if (showId > 0)
+                {
+                    var text = await Http.GetStringAsync("https://api.tvmaze.com/shows/" + showId + "?embed=nextepisode").ConfigureAwait(false);
+                    var show = json.DeserializeFromString<TvmazeShowDto>(text);
+                    var ep = show != null && show._embedded != null ? show._embedded.nextepisode : null;
+                    if (ep != null)
+                    {
+                        code = "S" + ep.season.ToString("00") + "E" + ep.number.ToString("00");
+                        DateTime w;
+                        if (DateTime.TryParse(ep.airstamp, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out w)) when = w.Kind == DateTimeKind.Utc ? w.ToLocalTime() : w;
+                        else if (DateTime.TryParse(ep.airdate, CultureInfo.InvariantCulture, DateTimeStyles.None, out w)) when = w;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                if (ex is OperationCanceledException) throw;
+                DiscoverDiagnostics.Add("TVmaze volgende aflevering " + tmdbId + " mislukt: " + ex.Message);
+            }
+            Next[tmdbId] = Tuple.Create(DateTime.UtcNow, code, when);
+            return code == null ? null : Tuple.Create(code, when);
+        }
+
         internal static async Task<string> Line(IJsonSerializer json, TmdbClient tmdb, int tmdbId, CancellationToken ct)
         {
             var key = tmdbId + "|" + DiscoverLanguage.PluginLanguage;

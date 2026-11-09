@@ -69,7 +69,20 @@ namespace Emby.Plugins.Discover
         public string backdrop_path { get; set; }
         public string original_language { get; set; }
         public string title { get; set; }
+        public string original_title { get; set; }
+        public string original_name { get; set; }
+        public long budget { get; set; }
+        public long revenue { get; set; }
+        public List<TmdbCountry> production_countries { get; set; }
+        public List<string> origin_country { get; set; }
+        public TmdbReleaseDatesWrap release_dates { get; set; }
+        public TmdbExternalIds external_ids { get; set; }
     }
+
+    public class TmdbCountry { public string iso_3166_1 { get; set; } public string name { get; set; } }
+    public class TmdbReleaseDate { public int type { get; set; } public string release_date { get; set; } }
+    public class TmdbReleaseCountry { public string iso_3166_1 { get; set; } public List<TmdbReleaseDate> release_dates { get; set; } }
+    public class TmdbReleaseDatesWrap { public List<TmdbReleaseCountry> results { get; set; } }
 
     public class TmdbListPage
     {
@@ -641,7 +654,7 @@ namespace Emby.Plugins.Discover
         {
             try
             {
-                return await Get<TmdbExtra>((tv ? "/tv/" : "/movie/") + id, "&append_to_response=credits",
+                return await Get<TmdbExtra>((tv ? "/tv/" : "/movie/") + id, tv ? "&append_to_response=credits,external_ids" : "&append_to_response=credits,release_dates,external_ids",
                     Language(), ct).ConfigureAwait(false);
             }
             catch (Exception ex)
