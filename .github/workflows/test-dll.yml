@@ -1,0 +1,29 @@
+name: Test DLL to branch
+
+on:
+  push:
+    branches: ['test/**']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Build
+        run: dotnet build EmbyDiscover/EmbyDiscover.csproj -c Release
+      - name: Push DLL to branch test-dll
+        run: |
+          mkdir out && cp EmbyDiscover/bin/Release/netstandard2.0/Emby.Plugins.Discover.dll out/
+          cd out
+          git init -q -b test-dll
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add Emby.Plugins.Discover.dll
+          git commit -q -m "Test DLL from ${GITHUB_REF_NAME} @ ${GITHUB_SHA::7}"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}.git" test-dll
