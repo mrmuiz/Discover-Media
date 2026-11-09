@@ -1,4 +1,4 @@
-<!DOCTYPE html><html><head><meta charset="utf-8" /><title>Discover</title></head><body><div data-role="page" class="page type-interior discoverUiPage" data-controller="__plugin/discoveruijs1429"><style>
+<!DOCTYPE html><html><head><meta charset="utf-8" /><title>Discover</title></head><body><div data-role="page" class="page type-interior discoverUiPage" data-controller="__plugin/discoveruijs1430"><style>
  body.dcDiscoverActive .skinHeader .pageTitle,body.dcDiscoverActive .skinHeader .headerButton,body.dcDiscoverActive .skinHeader .headerButton .material-icons,body.dcDiscoverActive .skinHeader .headerButton .md-icon,body.dcDiscoverActive .skinHeader .headerButton i,body.dcDiscoverActive .skinHeader .headerUserButton,body.dcDiscoverActive .skinHeader .headerTabs .emby-tab-button{
     color:#fff !important
 }
@@ -1879,9 +1879,6 @@ html.dcPointer .dcCastWrap:hover .dcCastArr{
     display:flex;
     flex-direction:column
 }
-.dcM .dcColL .dcCastWrap{
-    margin-top:auto
-}
 .dcM .dcColR{
     grid-area:side;
     min-width:0
@@ -1889,15 +1886,25 @@ html.dcPointer .dcCastWrap:hover .dcCastArr{
 .dcM .dcColR .dcCollection{
     margin-top:4px
 }
-.dcM .dcColL .dcCast.dcFadeR{
+.dcM .dcModalInfo.dcCols{
+    grid-template-areas:"title side" "meta side" "rate side" "btns side" "left side" "cast cast" !important;
+    grid-template-rows:auto auto auto auto 1fr auto
+}
+.dcM .dcModalInfo.dcCols .dcColR{
+    margin-top:10px
+}
+.dcM .dcModalInfo.dcCols .dcColR .dcInfo{
+    margin-top:0
+}
+.dcM .dcCast.dcFadeR{
     -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 72px),transparent);
     mask-image:linear-gradient(90deg,#000 calc(100% - 72px),transparent)
 }
-.dcM .dcColL .dcCast.dcFadeL{
+.dcM .dcCast.dcFadeL{
     -webkit-mask-image:linear-gradient(90deg,transparent,#000 72px);
     mask-image:linear-gradient(90deg,transparent,#000 72px)
 }
-.dcM .dcColL .dcCast.dcFadeL.dcFadeR{
+.dcM .dcCast.dcFadeL.dcFadeR{
     -webkit-mask-image:linear-gradient(90deg,transparent,#000 72px,#000 calc(100% - 72px),transparent);
     mask-image:linear-gradient(90deg,transparent,#000 72px,#000 calc(100% - 72px),transparent)
 }

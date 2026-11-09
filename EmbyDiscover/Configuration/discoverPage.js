@@ -79,7 +79,7 @@ define([], function() {
             document.head.appendChild(script)
         })()
     }
-    var UI_PAGE = "discoverui1128";
+    var UI_PAGE = "discoverui1129";
     return function(view, params) {
         var embedded = !!(params && params.embedded);
         if (embedded) {
@@ -2447,7 +2447,7 @@ define([], function() {
         }, true);
 
         var dcColMq = window.matchMedia ? window.matchMedia("(min-width:700px)") : null;
-        // Brede popup: links beschrijving, genres, seizoenen, downloadstatus en cast; rechts infoblok en collectie.
+        // Brede popup: links beschrijving, genres, seizoenen en downloadstatus; rechts (vanaf de titel) infoblok en collectie; cast over de volle breedte onderaan.
         // Zo wordt de lege ruimte onder het infoblok gebruikt en hoeft de kaart niet te scrollen. Smal (en op TV) blijft de oude volgorde.
         function arrangeModalCols() {
             var info = overlay.querySelector(".dcModalInfo");
@@ -2468,7 +2468,8 @@ define([], function() {
                     info.insertBefore(L, pick(".dcBtnRow"));
                     info.insertBefore(R, pick(".dcBtnRow"))
                 }
-                [".dcOverview", ".dcGenres", ".dcSeasons", ".dcQueue", ".dcCastWrap"].forEach(function(sel) {
+                info.classList.add("dcCols");
+                [".dcOverview", ".dcGenres", ".dcSeasons", ".dcQueue"].forEach(function(sel) {
                     var e = pick(sel);
                     if (e) {
                         L.appendChild(e)
@@ -2479,7 +2480,11 @@ define([], function() {
                     if (e) {
                         R.appendChild(e)
                     }
-                })
+                });
+                var cw = pick(".dcCastWrap");
+                if (cw && cw.parentNode !== info) {
+                    info.insertBefore(cw, pick(".dcBtnRow"))
+                }
             } else if (L) {
                 var btnRow = pick(".dcBtnRow");
                 [".dcInfo", ".dcOverview", ".dcGenres", ".dcCastWrap", ".dcCollection", ".dcQueue", ".dcSeasons"].forEach(function(sel) {
@@ -2489,7 +2494,8 @@ define([], function() {
                     }
                 });
                 info.removeChild(L);
-                info.removeChild(R)
+                info.removeChild(R);
+                info.classList.remove("dcCols")
             }
         }
         if (dcColMq) {
