@@ -43,9 +43,9 @@ define([], function() {
             return
         }
         var urls = [ApiClient.getUrl("web/ConfigurationPage", {
-            name: "discoverbuttonjs1416"
+            name: "discoverbuttonjs1417"
         }), ApiClient.getUrl("web/configurationpage", {
-            name: "discoverbuttonjs1416"
+            name: "discoverbuttonjs1417"
         }), ApiClient.getUrl("Plugins/Discover/Script")];
         var n = 0;
         (function next() {
@@ -79,7 +79,7 @@ define([], function() {
             document.head.appendChild(script)
         })()
     }
-    var UI_PAGE = "discoverui1122";
+    var UI_PAGE = "discoverui1123";
     return function(view, params) {
         var embedded = !!(params && params.embedded);
         if (embedded) {
@@ -188,9 +188,29 @@ define([], function() {
         }
 
         // Tekst op de balk: "Downloaden 73%"; bij importeren e.d. alleen de status (de balk is dan vol).
+        // Voortgang van een nabewerkingsstap uit de regel van SABnzbd: "Unpacking: 2/5" -> "2/5", "Repairing: 41%" -> "41%".
+        function stageStep(action) {
+            var m = String(action || "").match(/(\d+\s*\/\s*\d+|\d+(?:[.,]\d+)?\s*%)/);
+            return m ? m[1].replace(/\s+/g, "").replace(/\b0+(\d)/g, "$1") : ""
+        }
+
+        function stagePct(action) {
+            var s = stageStep(action), m;
+            if ((m = s.match(/^(\d+)\/(\d+)$/)) && +m[2] > 0) {
+                return Math.max(0, Math.min(100, Math.round(100 * m[1] / m[2])))
+            }
+            if ((m = s.match(/^(\d+(?:[.,]\d+)?)%$/))) {
+                return Math.max(0, Math.min(100, Math.round(parseFloat(m[1].replace(",", ".")))))
+            }
+            return -1
+        }
+
         function statusText(st, stage, progress, action) {
             if (st === "processing" && stage === "script" && action) {
                 return action
+            }
+            if (st === "processing" && action && stageStep(action)) {
+                return stateLabel(st, stage) + " " + stageStep(action)
             }
             return stateLabel(st, stage) + ((st === "downloading" || st === "paused" || st === "stalled") && progress > 0 ? " " + progress + "%" : "")
         }
@@ -468,7 +488,7 @@ define([], function() {
                         sp = rateText(p.Speed);
                     right += (tl ? " \xb7 " + tl : "") + (sp ? " \xb7 " + sp : "")
                 }
-                html += '<div class="dcQRow"><span class="dcQName">' + esc(name) + "</span>" + '<span class="dcQBar ' + esc(p.State) + '"><i style="width:' + (fullBar(p.State) ? 100 : p.Progress) + '%"></i></span>' + '<span class="dcQPct ' + esc(p.State) + '">' + esc(right) + "</span></div>";
+                html += '<div class="dcQRow"><span class="dcQName">' + esc(name) + "</span>" + '<span class="dcQBar ' + esc(p.State) + '"><i style="width:' + (p.State === "processing" && stagePct(p.Action) >= 0 ? stagePct(p.Action) : fullBar(p.State) ? 100 : p.Progress) + '%"></i></span>' + '<span class="dcQPct ' + esc(p.State) + '">' + esc(right) + "</span></div>";
                 if (p.Release) {
                     html += '<div class="dcQRel">' + esc(p.Release) + "</div>"
                 }

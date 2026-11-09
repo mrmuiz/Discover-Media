@@ -251,7 +251,9 @@ namespace Emby.Plugins.Discover
                             Reason = st == "failed" && !string.IsNullOrWhiteSpace(s.fail_message) ? "SABnzbd: " + s.fail_message.Trim() : null,
                             Stage = st == "queued" ? "waiting" : StageOf(s.status)
                         };
-                        if (item.Stage == "script" && !string.IsNullOrWhiteSpace(s.action_line))
+                        // SABnzbd geeft bij elke stap een regel met de voortgang ("Unpacking: 2/5", "Repairing: 41%");
+                        // bij een script is het de laatste uitvoerregel van het script.
+                        if (item.Stage != null && !string.IsNullOrWhiteSpace(s.action_line))
                         {
                             var act = s.action_line.Trim();
                             item.Action = act.Length > 120 ? act.Substring(0, 120) : act;
@@ -325,7 +327,7 @@ namespace Emby.Plugins.Discover
                 }
                 else if (it.Stage != null)
                 {
-                    if (early) { p.State = "processing"; p.Stage = it.Stage; if (it.Stage == "script") p.Action = it.Action; }
+                    if (early) { p.State = "processing"; p.Stage = it.Stage; p.Action = it.Action; }
                 }
                 else if (it.Done && !it.InQueue)
                 {
@@ -401,7 +403,7 @@ namespace Emby.Plugins.Discover
                 {
                     part.State = "processing";
                     part.Stage = it.Stage;
-                    if (it.Stage == "script") part.Action = it.Action;
+                    part.Action = it.Action;
                     part.SizeLeft = 0;
                     if (part.Size <= 0) part.Size = 1;
                 }
