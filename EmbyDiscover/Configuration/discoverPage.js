@@ -79,7 +79,7 @@ define([], function() {
             document.head.appendChild(script)
         })()
     }
-    var UI_PAGE = "discoverui1124";
+    var UI_PAGE = "discoverui1125";
     return function(view, params) {
         var embedded = !!(params && params.embedded);
         if (embedded) {
@@ -2496,6 +2496,15 @@ define([], function() {
                     if (r.Metacritic) {
                         var mc = parseInt(r.Metacritic, 10);
                         h += '<span class="dcRate mc' + (mc < 40 ? " low" : mc < 61 ? " mid" : "") + '" title="Metacritic"><b>MC</b>' + esc(r.Metacritic) + "</span>"
+                    }
+                    if (r.Audience) {
+                        h += '<span class="dcRate pop" title="Rotten Tomatoes \xb7 ' + esc(text("publiek", "audience", "Publikum", "publikum")) + '"><b>POP</b>' + esc(r.Audience) + "</span>"
+                    }
+                    if (r.Letterboxd) {
+                        h += '<span class="dcRate lb" title="Letterboxd (/5)"><b>LB</b>' + esc(r.Letterboxd) + "</span>"
+                    }
+                    if (r.Trakt) {
+                        h += '<span class="dcRate trakt" title="Trakt"><b>Trakt</b>' + esc(r.Trakt) + "</span>"
                     }
                     ratingState.omdb = h;
                     paintRatings()

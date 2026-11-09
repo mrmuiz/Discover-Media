@@ -60,6 +60,10 @@ namespace Emby.Plugins.Discover
         public bool ShowTitleLogo { get; set; } = true;
         /// <summary>Optionele fanart.tv-sleutel (Personal API Key): reserve voor titellogo's die TMDB niet heeft.</summary>
         public string FanartApiKey { get; set; } = "";
+        /// <summary>Optionele MDBList-sleutel: scores van IMDb, Rotten Tomatoes (critici en publiek), Metacritic, Letterboxd en Trakt. Gaat voor OMDb.</summary>
+        public string MdblistApiKey { get; set; } = "";
+        /// <summary>Bij een lopende serie de volgende aflevering (TVmaze, geen sleutel nodig) in het infoblok van de popup.</summary>
+        public bool ShowNextEpisode { get; set; } = true;
         /// <summary>Jaar onder de posters.</summary>
         public bool PosterShowYear { get; set; } = true;
         /// <summary>Specials (seizoen 0) als keuze bij de seizoenen van een serie.</summary>

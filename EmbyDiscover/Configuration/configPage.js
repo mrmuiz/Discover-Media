@@ -70,6 +70,10 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         lbl_txtOmdbKey: ['OMDb API-sleutel (optioneel)', 'OMDb API key (optional)', 'OMDb-API-Schlüssel (optional)'],
         desc_txtOmdbKey: ['Gratis aan te vragen op omdbapi.com (1000 opvragingen per dag). Daarmee toont de popup ook de scores van IMDb, Rotten Tomatoes en Metacritic. Leeg = alleen de TMDB-score.', 'Free from omdbapi.com (1000 requests per day). With it the popup also shows the IMDb, Rotten Tomatoes and Metacritic scores. Empty = TMDB score only.', 'Kostenlos bei omdbapi.com (1000 Abfragen pro Tag). Damit zeigt das Popup auch die Bewertungen von IMDb, Rotten Tomatoes und Metacritic. Leer = nur die TMDB-Bewertung.'],
         btnTestOmdbText: ['Test OMDb', 'Test OMDb', 'OMDb testen'],
+        btnTestMdblistText: ['Test MDBList', 'Test MDBList', 'MDBList testen'],
+        lbl_txtMdblistKey: ['MDBList API-sleutel (optioneel)', 'MDBList API key (optional)', 'MDBList-API-Schlüssel (optional)'],
+        desc_txtMdblistKey: ['Gratis op mdblist.com (Preferences, API Access). Geeft in de popup de scores van IMDb, Rotten Tomatoes (critici en publiek), Metacritic, Letterboxd en Trakt. Staat hier een sleutel, dan gaat MDBList voor OMDb; OMDb blijft de reserve.', 'Free at mdblist.com (Preferences, API Access). Gives the popup the scores of IMDb, Rotten Tomatoes (critics and audience), Metacritic, Letterboxd and Trakt. With a key here MDBList comes before OMDb; OMDb stays the fallback.', 'Kostenlos auf mdblist.com (Preferences, API Access). Liefert im Popup die Bewertungen von IMDb, Rotten Tomatoes (Kritiker und Publikum), Metacritic, Letterboxd und Trakt. Mit einem Schlüssel hier geht MDBList vor OMDb; OMDb bleibt die Reserve.'],
+        lbl_chkShowNextEpisode: ['Volgende aflevering van lopende series in de popup (via TVmaze)', 'Next episode of running series in the popup (via TVmaze)', 'Nächste Folge laufender Serien im Popup (über TVmaze)'],
         lbl_chkShowOmdb: ['Scores van IMDb, Rotten Tomatoes en Metacritic in de popup tonen', 'Show IMDb, Rotten Tomatoes and Metacritic scores in the popup', 'Bewertungen von IMDb, Rotten Tomatoes und Metacritic im Popup zeigen'],
         lbl_txtFanartKey: ['fanart.tv API-sleutel (optioneel)', 'fanart.tv API key (optional)', 'fanart.tv-API-Schlüssel (optional)'],
         desc_txtFanartKey: ['Meestal niet nodig: het titellogo bovenaan de popup komt van TMDB. Alleen als TMDB voor een titel geen logo heeft en hier een sleutel staat, wordt fanart.tv gevraagd. Gratis sleutel: fanart.tv, accountpagina, Personal API Key. De sleutel blijft op de server.', 'Not needed normally: the title logo at the top of the popup comes from TMDB. Only when TMDB has no logo for a title and a key is set here, fanart.tv is asked. Free key: fanart.tv, account page, Personal API Key. The key stays on the server.', 'Normalerweise nicht nötig: Das Titellogo oben im Popup kommt von TMDB. Nur wenn TMDB für einen Titel kein Logo hat und hier ein Schlüssel steht, wird fanart.tv gefragt. Kostenloser Schlüssel: fanart.tv, Kontoseite, Personal API Key. Der Schlüssel bleibt auf dem Server.'],
@@ -613,6 +617,25 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
     }
 
     // ---- Test van de OMDb-sleutel ----
+    function testMdblist(view) {
+        var status = el(view, 'statusMdblist');
+        status.style.color = '';
+        status.textContent = languageText('Testen...', 'Testing...', 'Wird getestet...');
+        ApiClient.ajax({
+            type: 'POST',
+            url: ApiClient.getUrl('Discover/TestMdblist'),
+            data: JSON.stringify({ Key: el(view, 'txtMdblistKey').value.trim() }),
+            contentType: 'application/json',
+            dataType: 'json'
+        }).then(function (r) {
+            status.style.color = r && r.Success ? '#43a047' : '#e53935';
+            status.textContent = (r && r.Message) || '?';
+        }, function (err) {
+            status.style.color = '#e53935';
+            status.textContent = ajaxErrorMessage(err);
+        });
+    }
+
     function testOmdb(view) {
         var status = el(view, 'statusOmdb');
         status.style.color = '';
@@ -778,6 +801,8 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             el(view, 'chkPosterYear').checked = c.PosterShowYear !== false;
             el(view, 'chkShowSpecials').checked = c.ShowSpecials !== false;
             el(view, 'chkShowTitleLogo').checked = c.ShowTitleLogo !== false;
+            el(view, 'chkShowNextEpisode').checked = c.ShowNextEpisode !== false;
+            el(view, 'txtMdblistKey').value = c.MdblistApiKey || '';
             el(view, 'txtFanartKey').value = c.FanartApiKey || '';
             var ps = String(c.PosterScoreSource || '').toLowerCase();
             if (ps !== 'tmdb' && ps !== 'imdb' && ps !== 'none') { ps = c.PosterShowScore === false ? 'none' : 'tmdb'; }
@@ -875,6 +900,8 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             c.PosterShowYear = el(view, 'chkPosterYear').checked;
             c.ShowSpecials = el(view, 'chkShowSpecials').checked;
             c.ShowTitleLogo = el(view, 'chkShowTitleLogo').checked;
+            c.ShowNextEpisode = el(view, 'chkShowNextEpisode').checked;
+            c.MdblistApiKey = el(view, 'txtMdblistKey').value.trim();
             c.FanartApiKey = el(view, 'txtFanartKey').value.trim();
             c.PosterScoreSource = el(view, 'selPosterScore').value || 'tmdb';
             c.PosterShowScore = c.PosterScoreSource !== 'none';
@@ -1117,6 +1144,7 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         view.querySelector('.btnTestTrakt').addEventListener('click', function () { testWatch(view, 'trakt'); });
         view.querySelector('.btnTestTmdbList').addEventListener('click', function () { testWatch(view, 'tmdb'); });
         view.querySelector('.btnTestOmdb').addEventListener('click', function () { testOmdb(view); });
+        view.querySelector('.btnTestMdblist').addEventListener('click', function () { testMdblist(view); });
         view.querySelector('.btnClearAll').addEventListener('click', function () {
             var q = languageText(
                 'Alle bewaarde kaartclips en tegelplaatjes verwijderen? Ze worden bij gebruik vanzelf opnieuw gemaakt.',

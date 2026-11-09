@@ -40,7 +40,23 @@ namespace Emby.Plugins.Discover
         public string RottenTomatoes { get; set; }
         /// <summary>bv. "74"</summary>
         public string Metacritic { get; set; }
+        /// <summary>Rotten Tomatoes publiek (popcorn), bv. "88%" (alleen MDBList).</summary>
+        public string Audience { get; set; }
+        /// <summary>Letterboxd, bv. "4.1" van 5 (alleen MDBList).</summary>
+        public string Letterboxd { get; set; }
+        /// <summary>Trakt, bv. "86%" (alleen MDBList).</summary>
+        public string Trakt { get; set; }
     }
+
+    [Route("/Discover/TestMdblist", "POST", Summary = "Test een MDBList-sleutel")]
+    [Authenticated(Roles = "Admin")]
+    public class DiscoverTestMdblist : IReturn<DiscoverRequestResult>
+    {
+        public string Key { get; set; }
+    }
+
+    public class MdbRatingDto { public string source { get; set; } public double? value { get; set; } public int? score { get; set; } public long? votes { get; set; } }
+    public class MdbItemDto { public string title { get; set; } public List<MdbRatingDto> ratings { get; set; } public string error { get; set; } }
 
     public class OmdbRating { public string Source { get; set; } public string Value { get; set; } }
     public class OmdbResponse
@@ -105,12 +121,84 @@ namespace Emby.Plugins.Discover
             return id;
         }
 
+        private static readonly Dictionary<string, KeyValuePair<DateTime, DiscoverRatingsResult>> MdbCache =
+            new Dictionary<string, KeyValuePair<DateTime, DiscoverRatingsResult>>();
+
+        private async Task<MdbItemDto> FetchMdb(string key, bool tv, int tmdbId)
+        {
+            var url = "https://api.mdblist.com/tmdb/" + (tv ? "show/" : "movie/") + tmdbId + "?apikey=" + Uri.EscapeDataString(key.Trim());
+            using (var resp = await Http.GetAsync(url).ConfigureAwait(false))
+            {
+                var body = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
+                if ((int)resp.StatusCode == 404) return null;
+                MdbItemDto r = null;
+                try { r = _json.DeserializeFromString<MdbItemDto>(body); } catch { }
+                if (!resp.IsSuccessStatusCode || r == null)
+                    throw new InvalidOperationException("MDBList: HTTP " + (int)resp.StatusCode + (r != null && !string.IsNullOrWhiteSpace(r.error) ? " " + r.error : ""));
+                return r;
+            }
+        }
+
+        private static string Num1(double v) => v.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture);
+
+        /// <summary>MDBList-scores omgezet naar dezelfde velden als OMDb, plus publiek, Letterboxd en Trakt. Null = niets bruikbaars.</summary>
+        private static DiscoverRatingsResult FromMdb(MdbItemDto r)
+        {
+            if (r == null || r.ratings == null) return null;
+            var res = new DiscoverRatingsResult();
+            foreach (var x in r.ratings)
+            {
+                if (x == null || !x.value.HasValue || x.value.Value <= 0) continue;
+                var v = x.value.Value;
+                switch ((x.source ?? "").ToLowerInvariant())
+                {
+                    case "imdb":
+                        res.Imdb = Num1(v);
+                        if (x.votes.HasValue && x.votes.Value > 0) res.ImdbVotes = x.votes.Value.ToString("N0", System.Globalization.CultureInfo.InvariantCulture);
+                        break;
+                    case "tomatoes": res.RottenTomatoes = Math.Round(v) + "%"; break;
+                    case "tomatoesaudience":
+                    case "popcorn": res.Audience = Math.Round(v) + "%"; break;
+                    case "metacritic": res.Metacritic = Math.Round(v).ToString(); break;
+                    case "letterboxd": res.Letterboxd = Num1(v > 5 ? v / 2 : v); break;
+                    case "trakt": res.Trakt = Math.Round(v) + "%"; break;
+                }
+            }
+            bool any = res.Imdb != null || res.RottenTomatoes != null || res.Audience != null || res.Metacritic != null || res.Letterboxd != null || res.Trakt != null;
+            return any ? res : null;
+        }
+
         public async Task<object> Get(DiscoverRatingsRequest request)
         {
             var res = new DiscoverRatingsResult();
             var cfg = Plugin.GetCurrentConfiguration();
-            if (string.IsNullOrWhiteSpace(cfg.OmdbApiKey) || !cfg.ShowOmdbRatings || request.TmdbId <= 0) return res;
+            if (!cfg.ShowOmdbRatings || request.TmdbId <= 0) return res;
             bool tv = string.Equals(request.Type, "tv", StringComparison.OrdinalIgnoreCase);
+
+            // MDBList eerst (meer bronnen); lukt dat niet of heeft MDBList niets, dan OMDb zoals voorheen.
+            if (!string.IsNullOrWhiteSpace(cfg.MdblistApiKey))
+            {
+                var mk = (tv ? "t" : "m") + request.TmdbId;
+                lock (MdbCache)
+                {
+                    KeyValuePair<DateTime, DiscoverRatingsResult> hit;
+                    if (MdbCache.TryGetValue(mk, out hit) && DateTime.UtcNow - hit.Key < Ttl && hit.Value != null) return hit.Value;
+                }
+                try
+                {
+                    var m = FromMdb(await FetchMdb(cfg.MdblistApiKey, tv, request.TmdbId).ConfigureAwait(false));
+                    if (m != null)
+                    {
+                        lock (MdbCache) { MdbCache[mk] = new KeyValuePair<DateTime, DiscoverRatingsResult>(DateTime.UtcNow, m); }
+                        return m;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    DiscoverDiagnostics.Add("FOUT MDBList " + request.Type + "/" + request.TmdbId + ": " + ex.Message);
+                }
+            }
+            if (string.IsNullOrWhiteSpace(cfg.OmdbApiKey)) return res;
             try
             {
                 var imdb = await ImdbIdFor(tv, request.TmdbId).ConfigureAwait(false);
@@ -139,6 +227,29 @@ namespace Emby.Plugins.Discover
             catch (Exception ex)
             {
                 DiscoverDiagnostics.Add("FOUT OMDb " + request.Type + "/" + request.TmdbId + ": " + ex.Message);
+            }
+            return res;
+        }
+
+        public async Task<object> Post(DiscoverTestMdblist request)
+        {
+            var res = new DiscoverRequestResult();
+            try
+            {
+                if (string.IsNullOrWhiteSpace(request.Key))
+                    throw new InvalidOperationException(DiscoverLanguage.Text("Vul eerst een MDBList-sleutel in.", "Enter an MDBList key first.", "Zuerst einen MDBList-Schlüssel eingeben."));
+                // Vaste testtitel: The Shawshank Redemption (TMDB 278).
+                var r = await FetchMdb(request.Key, false, 278).ConfigureAwait(false);
+                var m = FromMdb(r);
+                res.Success = m != null;
+                res.Message = res.Success
+                    ? DiscoverLanguage.Text("MDBList werkt: ", "MDBList works: ", "MDBList funktioniert: ") + (r.title ?? "The Shawshank Redemption") + " · IMDb " + (m.Imdb ?? "?")
+                    : "MDBList: " + DiscoverLanguage.Text("geen scores ontvangen", "no scores received", "keine Bewertungen erhalten");
+            }
+            catch (Exception ex)
+            {
+                res.Success = false;
+                res.Message = ex.Message;
             }
             return res;
         }
