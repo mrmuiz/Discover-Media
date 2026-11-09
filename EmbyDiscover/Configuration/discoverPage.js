@@ -79,7 +79,7 @@ define([], function() {
             document.head.appendChild(script)
         })()
     }
-    var UI_PAGE = "discoverui1123";
+    var UI_PAGE = "discoverui1124";
     return function(view, params) {
         var embedded = !!(params && params.embedded);
         if (embedded) {
@@ -2386,8 +2386,43 @@ define([], function() {
 
         // Titellogo (TMDB/fanart.tv) in plaats van de titel als tekst. Pas wisselen als het plaatje geladen is,
         // zodat er nooit een leeg of kapot plaatje staat; het jaar schuift dan naar de regel eronder.
-        function showTitleLogo(i, url) {
+        // Logo uit de eigen Emby-bibliotheek (het logo dat de beheerder in Emby heeft gekozen), alleen als de titel er al in staat.
+        function embyLogo(i) {
+            if (!i || !i.TmdbId) {
+                return Promise.resolve(null)
+            }
+            return getJson("Users/" + ApiClient.getCurrentUserId() + "/Items", {
+                Recursive: true,
+                IncludeItemTypes: i.Type === "tv" ? "Series" : "Movie",
+                AnyProviderIdEquals: "tmdb." + i.TmdbId,
+                Fields: "ProviderIds",
+                Limit: 5
+            }).then(function(res) {
+                var list = res && res.Items || [];
+                for (var k = 0; k < list.length; k++) {
+                    var it = list[k],
+                        t = it.ProviderIds && (it.ProviderIds.Tmdb || it.ProviderIds.tmdb);
+                    if (t && String(t) === String(i.TmdbId) && it.ImageTags && it.ImageTags.Logo) {
+                        return ApiClient.getScaledImageUrl(it.Id, {
+                            type: "Logo",
+                            tag: it.ImageTags.Logo,
+                            maxHeight: 300
+                        })
+                    }
+                }
+                return null
+            }, function() {
+                return null
+            })
+        }
+
+        function showTitleLogo(i, url, fallback) {
             var img = new Image();
+            img.onerror = function() {
+                if (fallback && current === i) {
+                    showTitleLogo(i, fallback, null)
+                }
+            };
             img.className = "dcTitleLogo";
             img.alt = i.Title + (i.Year ? " (" + i.Year + ")" : "");
             img.onload = function() {
@@ -2417,6 +2452,7 @@ define([], function() {
             var titleEl = overlay.querySelector(".dcModalTitle");
             titleEl.textContent = i.Title + (i.Year ? " (" + i.Year + ")" : "");
             titleEl.classList.remove("dcHasLogo");
+            var embyLogoP = embyLogo(i);
             overlay.querySelector(".dcMeta").textContent = text(i.Type === "tv" ? "Serie" : "Film", i.Type === "tv" ? "Series" : "Movie", i.Type === "tv" ? "Serie" : "Film") + (i.Rating && !modernUi() ? "  •  ★ " + i.Rating.toFixed(1) : "");
             var ovEl = overlay.querySelector(".dcOverview");
             ovEl.textContent = i.Overview || text("Geen beschrijving beschikbaar.", "No description available.", "Keine Beschreibung verf\xfcgbar.", "Ingen beskrivelse tilgjengelig.");
@@ -2472,8 +2508,13 @@ define([], function() {
                 if (current !== i || !r) {
                     return
                 }
-                if (r.Logo) {
-                    showTitleLogo(i, r.Logo)
+                if (r.TitleLogo || r.Logo) {
+                    embyLogoP.then(function(own) {
+                        var src = own || r.Logo;
+                        if (src) {
+                            showTitleLogo(i, src, own ? r.Logo : null)
+                        }
+                    })
                 }
                 if (r.Lines && r.Lines.length) {
                     if (isTvClient) {
