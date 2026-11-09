@@ -79,7 +79,7 @@ define([], function() {
             document.head.appendChild(script)
         })()
     }
-    var UI_PAGE = "discoverui1126";
+    var UI_PAGE = "discoverui1127";
     return function(view, params) {
         var embedded = !!(params && params.embedded);
         if (embedded) {
@@ -2066,6 +2066,21 @@ define([], function() {
             }
             var v = ratingState.votes;
             rateEl.innerHTML = (ratingState.tmdb ? '<span class="dcRate tmdb" title="TMDB' + (v ? " \xb7 " + esc(v) + " " + esc(text("stemmen", "votes", "Stimmen", "stemmer")) : "") + '"><b>TMDB</b>' + esc(ratingState.tmdb) + (v ? " <i>(" + esc(v) + ")</i>" : "") + "</span>" : "") + ratingState.omdb
+            if (boxEl) {
+                // In het infoblok: de labels van IMDb, TMDB, Trakt, Letterboxd en Metacritic worden het icoontje van die site.
+                var map = { imdb: "IMDb", tmdb: "TMDB", trakt: "Trakt", lb: "Letterboxd", mc: "Metacritic" };
+                Array.prototype.forEach.call(boxEl.querySelectorAll(".dcRate"), function(el) {
+                    for (var c in map) {
+                        if (el.classList.contains(c)) {
+                            var b = el.querySelector("b");
+                            if (b) {
+                                b.innerHTML = favImg(map[c]);
+                                b.className = "dcIcoB"
+                            }
+                        }
+                    }
+                })
+            }
         }
         var libSeasons = {};
 
@@ -2166,6 +2181,22 @@ define([], function() {
             "Rotten Tomatoes": "#fa320a",
             "TVmaze": "#3c948b"
         };
+        // Het eigen icoontje (favicon) van elke website, opgehaald bij die site via de favicondienst van DuckDuckGo.
+        var SITE_DOMAINS = {
+            "Emby": "emby.media",
+            "TMDB": "themoviedb.org",
+            "IMDb": "imdb.com",
+            "Trakt": "trakt.tv",
+            "Letterboxd": "letterboxd.com",
+            "Rotten Tomatoes": "rottentomatoes.com",
+            "TVmaze": "tvmaze.com",
+            "Metacritic": "metacritic.com"
+        };
+
+        function favImg(name) {
+            var d = SITE_DOMAINS[name];
+            return d ? '<img class="dcFav" alt="" loading="lazy" src="https://icons.duckduckgo.com/ip3/' + d + '.ico">' : ""
+        }
         var INFO_ICONS = {
             ticket: "\ud83c\udf9f\ufe0f",
             cloud: "\u2601\ufe0f",
@@ -2182,9 +2213,8 @@ define([], function() {
             var a = document.createElement("a");
             a.className = "dcTLink emby";
             a.href = "#";
-            a.textContent = "Emby";
+            a.innerHTML = favImg("Emby");
             a.title = text("Openen in Emby", "Open in Emby", "In Emby \xf6ffnen");
-            a.style.background = LINK_COLORS.Emby;
             a.addEventListener("click", function(e) {
                 e.preventDefault();
                 ob.click()
@@ -2195,7 +2225,7 @@ define([], function() {
         // Infoblok als tabel (zoals Seerr): scores bovenin, label links / waarde rechts, links onderaan.
         // Lange lijsten (studio's) en een lange tabel klappen in achter "Meer tonen", zodat de popup past.
         function renderInfoTable(i, infoEl, r) {
-            var MAX_ROWS = 7,
+            var MAX_ROWS = 5,
                 more = text("Meer tonen", "Show more", "Mehr anzeigen", "Vis mer"),
                 h = '<div class="dcIScores"></div>';
             if (r.Tagline) {
@@ -2217,7 +2247,7 @@ define([], function() {
                 h += '<button type="button" class="dcTMoreRows" tabindex="-1">' + esc(more) + " \u2304</button>"
             }
             h += '<div class="dcTLinks">' + (r.Links || []).map(function(l) {
-                return '<a class="dcTLink" target="_blank" rel="noopener" href="' + esc(l.Url) + '" style="background:' + (LINK_COLORS[l.Name] || "#3a4660") + (l.Name === "IMDb" ? ";color:#000" : "") + '">' + esc(l.Name === "Rotten Tomatoes" ? "\ud83c\udf45 RT" : l.Name) + "</a>"
+                return '<a class="dcTLink" target="_blank" rel="noopener" title="' + esc(l.Name) + '" href="' + esc(l.Url) + '">' + (favImg(l.Name) || esc(l.Name)) + "</a>"
             }).join("") + "</div>";
             infoEl.innerHTML = h;
             infoEl.classList.add("dcTable");
