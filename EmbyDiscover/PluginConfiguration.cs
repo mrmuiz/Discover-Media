@@ -56,6 +56,10 @@ namespace Emby.Plugins.Discover
         public string OmdbApiKey { get; set; } = "";
         /// <summary>IMDb-, Rotten Tomatoes- en Metacritic-scores in de popup (alleen met een OMDb-sleutel).</summary>
         public bool ShowOmdbRatings { get; set; } = true;
+        /// <summary>Titellogo (TMDB, anders fanart.tv) in plaats van de titel als tekst bovenaan de popup.</summary>
+        public bool ShowTitleLogo { get; set; } = true;
+        /// <summary>Optionele fanart.tv-sleutel (Personal API Key): reserve voor titellogo's die TMDB niet heeft.</summary>
+        public string FanartApiKey { get; set; } = "";
         /// <summary>Jaar onder de posters.</summary>
         public bool PosterShowYear { get; set; } = true;
         /// <summary>Specials (seizoen 0) als keuze bij de seizoenen van een serie.</summary>

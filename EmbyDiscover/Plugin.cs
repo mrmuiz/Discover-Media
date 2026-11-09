@@ -123,14 +123,14 @@ namespace Emby.Plugins.Discover
             {
                 new PluginPageInfo
                 {
-                    Name = "discoverconfig1093",
+                    Name = "discoverconfig1094",
                     EmbeddedResourcePath = GetType().Namespace + ".Configuration.configPage.html",
                     EnableInMainMenu = true,
                     IsMainConfigPage = true
                 },
                 new PluginPageInfo
                 {
-                    Name = "discoverui1121",
+                    Name = "discoverui1122",
                     DisplayName = "Discover",
                     EmbeddedResourcePath = GetType().Namespace + ".Configuration.discoverPage.html",
                     EnableInMainMenu = true,
@@ -139,7 +139,7 @@ namespace Emby.Plugins.Discover
                 },
                 new PluginPageInfo
                 {
-                    Name = "discoveruijs1422",
+                    Name = "discoveruijs1423",
                     EmbeddedResourcePath = GetType().Namespace + ".Configuration.discoverPage.js"
                 },
                 new PluginPageInfo
@@ -159,7 +159,7 @@ namespace Emby.Plugins.Discover
                 },
                 new PluginPageInfo
                 {
-                    Name = "discoverconfigjs1372",
+                    Name = "discoverconfigjs1373",
                     EmbeddedResourcePath = GetType().Namespace + ".Configuration.configPage.js"
                 }
             };

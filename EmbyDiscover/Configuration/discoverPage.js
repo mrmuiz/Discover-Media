@@ -79,7 +79,7 @@ define([], function() {
             document.head.appendChild(script)
         })()
     }
-    var UI_PAGE = "discoverui1121";
+    var UI_PAGE = "discoverui1122";
     return function(view, params) {
         var embedded = !!(params && params.embedded);
         if (embedded) {
@@ -2364,6 +2364,28 @@ define([], function() {
             }
         }
 
+        // Titellogo (TMDB/fanart.tv) in plaats van de titel als tekst. Pas wisselen als het plaatje geladen is,
+        // zodat er nooit een leeg of kapot plaatje staat; het jaar schuift dan naar de regel eronder.
+        function showTitleLogo(i, url) {
+            var img = new Image();
+            img.className = "dcTitleLogo";
+            img.alt = i.Title + (i.Year ? " (" + i.Year + ")" : "");
+            img.onload = function() {
+                if (current !== i) {
+                    return
+                }
+                var t = overlay.querySelector(".dcModalTitle");
+                t.textContent = "";
+                t.appendChild(img);
+                t.classList.add("dcHasLogo");
+                var m = overlay.querySelector(".dcMeta");
+                if (i.Year && m && m.textContent.indexOf(String(i.Year)) !== 0) {
+                    m.textContent = i.Year + "  \u00b7  " + m.textContent
+                }
+            };
+            img.src = url
+        }
+
         function openModal(i) {
             current = i;
             arrangeModalCols();
@@ -2372,7 +2394,9 @@ define([], function() {
             var img = overlay.querySelector(".dcModalPoster");
             img.src = i.Poster || "";
             img.style.visibility = i.Poster ? "visible" : "hidden";
-            overlay.querySelector(".dcModalTitle").textContent = i.Title + (i.Year ? " (" + i.Year + ")" : "");
+            var titleEl = overlay.querySelector(".dcModalTitle");
+            titleEl.textContent = i.Title + (i.Year ? " (" + i.Year + ")" : "");
+            titleEl.classList.remove("dcHasLogo");
             overlay.querySelector(".dcMeta").textContent = text(i.Type === "tv" ? "Serie" : "Film", i.Type === "tv" ? "Series" : "Movie", i.Type === "tv" ? "Serie" : "Film") + (i.Rating && !modernUi() ? "  •  ★ " + i.Rating.toFixed(1) : "");
             var ovEl = overlay.querySelector(".dcOverview");
             ovEl.textContent = i.Overview || text("Geen beschrijving beschikbaar.", "No description available.", "Keine Beschreibung verf\xfcgbar.", "Ingen beskrivelse tilgjengelig.");
@@ -2427,6 +2451,9 @@ define([], function() {
             }).then(function(r) {
                 if (current !== i || !r) {
                     return
+                }
+                if (r.Logo) {
+                    showTitleLogo(i, r.Logo)
                 }
                 if (r.Lines && r.Lines.length) {
                     if (isTvClient) {

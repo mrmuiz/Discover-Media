@@ -85,6 +85,8 @@ namespace Emby.Plugins.Discover
         public List<string> Lines { get; set; } = new List<string>();
         /// <summary>Belangrijkste cast (max. 15) met foto, voor de ronde fotootjes in de popup.</summary>
         public List<DiscoverPersonDto> Cast { get; set; } = new List<DiscoverPersonDto>();
+        /// <summary>Titellogo (volledige url) voor de kop van de popup; null = titel als tekst.</summary>
+        public string Logo { get; set; }
     }
 
     [Route("/Discover/TrailerKey", "GET", Summary = "YouTube-sleutel van de trailer van een film of serie")]
@@ -872,7 +874,11 @@ namespace Emby.Plugins.Discover
             {
                 bool tv = string.Equals(request.Type, "tv", StringComparison.OrdinalIgnoreCase);
                 if (request.TmdbId <= 0 || string.IsNullOrWhiteSpace(Plugin.GetCurrentConfiguration().TmdbApiKey)) return res;
+                var logoTask = Plugin.GetCurrentConfiguration().ShowTitleLogo
+                    ? TitleLogo.Get(_json, _tmdb, tv, request.TmdbId, CancellationToken.None)
+                    : Task.FromResult<string>(null);
                 var x = await _tmdb.GetExtraCached(tv, request.TmdbId, CancellationToken.None).ConfigureAwait(false);
+                try { res.Logo = await logoTask.ConfigureAwait(false); } catch (Exception ex) { if (ex is OperationCanceledException) throw; }
                 if (x == null) return res;
                 var states = await SafeStates(tv).ConfigureAwait(false);
                 bool hasFiles;

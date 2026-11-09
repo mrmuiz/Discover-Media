@@ -59,6 +59,7 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         optAccent8: ['Wit', 'White', 'Weiß'],
         lbl_chkPosterYear: ['Jaar onder de posters', 'Year below the posters', 'Jahr unter den Postern'],
         lbl_chkShowSpecials: ['Specials tonen bij de seizoenkeuze', 'Show Specials in the season choice', 'Specials bei der Staffelauswahl anzeigen'],
+        lbl_chkShowTitleLogo: ['Titellogo bovenaan de popup (anders de titel als tekst)', 'Title logo at the top of the popup (otherwise the title as text)', 'Titellogo oben im Popup (sonst der Titel als Text)'],
         lbl_selPosterScore: ['Score onder de posters', 'Score below the posters', 'Bewertung unter den Postern'],
         optScore0: ['TMDB-score', 'TMDB score', 'TMDB-Bewertung'],
         optScore1: ['IMDb-score', 'IMDb score', 'IMDb-Bewertung'],
@@ -70,6 +71,8 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         desc_txtOmdbKey: ['Gratis aan te vragen op omdbapi.com (1000 opvragingen per dag). Daarmee toont de popup ook de scores van IMDb, Rotten Tomatoes en Metacritic. Leeg = alleen de TMDB-score.', 'Free from omdbapi.com (1000 requests per day). With it the popup also shows the IMDb, Rotten Tomatoes and Metacritic scores. Empty = TMDB score only.', 'Kostenlos bei omdbapi.com (1000 Abfragen pro Tag). Damit zeigt das Popup auch die Bewertungen von IMDb, Rotten Tomatoes und Metacritic. Leer = nur die TMDB-Bewertung.'],
         btnTestOmdbText: ['Test OMDb', 'Test OMDb', 'OMDb testen'],
         lbl_chkShowOmdb: ['Scores van IMDb, Rotten Tomatoes en Metacritic in de popup tonen', 'Show IMDb, Rotten Tomatoes and Metacritic scores in the popup', 'Bewertungen von IMDb, Rotten Tomatoes und Metacritic im Popup zeigen'],
+        lbl_txtFanartKey: ['fanart.tv API-sleutel (optioneel)', 'fanart.tv API key (optional)', 'fanart.tv-API-Schlüssel (optional)'],
+        desc_txtFanartKey: ['Meestal niet nodig: het titellogo bovenaan de popup komt van TMDB. Alleen als TMDB voor een titel geen logo heeft en hier een sleutel staat, wordt fanart.tv gevraagd. Gratis sleutel: fanart.tv, accountpagina, Personal API Key. De sleutel blijft op de server.', 'Not needed normally: the title logo at the top of the popup comes from TMDB. Only when TMDB has no logo for a title and a key is set here, fanart.tv is asked. Free key: fanart.tv, account page, Personal API Key. The key stays on the server.', 'Normalerweise nicht nötig: Das Titellogo oben im Popup kommt von TMDB. Nur wenn TMDB für einen Titel kein Logo hat und hier ein Schlüssel steht, wird fanart.tv gefragt. Kostenloser Schlüssel: fanart.tv, Kontoseite, Personal API Key. Der Schlüssel bleibt auf dem Server.'],
         hdgTiles: ['Tegels', 'Tiles', 'Kacheln'],
         hdgOwnLists: ['Eigen lijsten als rij', 'Your own lists as a row', 'Eigene Listen als Reihe'],
         tab_tmdb: ['TMDB', 'TMDB', 'TMDB'],
@@ -774,6 +777,8 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             el(view, 'chkShowMyRequests').checked = c.ShowMyRequests !== false;
             el(view, 'chkPosterYear').checked = c.PosterShowYear !== false;
             el(view, 'chkShowSpecials').checked = c.ShowSpecials !== false;
+            el(view, 'chkShowTitleLogo').checked = c.ShowTitleLogo !== false;
+            el(view, 'txtFanartKey').value = c.FanartApiKey || '';
             var ps = String(c.PosterScoreSource || '').toLowerCase();
             if (ps !== 'tmdb' && ps !== 'imdb' && ps !== 'none') { ps = c.PosterShowScore === false ? 'none' : 'tmdb'; }
             el(view, 'selPosterScore').value = ps;
@@ -869,6 +874,8 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             c.ShowMyRequests = el(view, 'chkShowMyRequests').checked;
             c.PosterShowYear = el(view, 'chkPosterYear').checked;
             c.ShowSpecials = el(view, 'chkShowSpecials').checked;
+            c.ShowTitleLogo = el(view, 'chkShowTitleLogo').checked;
+            c.FanartApiKey = el(view, 'txtFanartKey').value.trim();
             c.PosterScoreSource = el(view, 'selPosterScore').value || 'tmdb';
             c.PosterShowScore = c.PosterScoreSource !== 'none';
             c.ShowOmdbRatings = el(view, 'chkShowOmdb').checked;
