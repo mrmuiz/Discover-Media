@@ -2,8 +2,9 @@
 
 - Fix: the **"Requested" confirmation clip** was always in Dutch ("Aangevraagd ... verstuurd naar Radarr of Sonarr"), also on an English server. Apps that play the clip themselves (for example the Emby iOS app) show it when the request card could not be made. The clip now exists in **English, Dutch, German and Norwegian** and follows the plugin language. The text no longer mentions Radarr/Sonarr (it was wrong in Seerr mode).
 - Fix: the name of the request clip in the apps ("Aangevraagd") now follows the plugin language too.
+- New: small **Star** (GitHub) and **Ko-fi** buttons at the top right of the plugin settings page. Only administrators see that page; nothing is added for regular users.
 - Cleanup: removed build output (`obj/`) that had ended up in the repository.
-- Change: page names bumped (`discoverui1121`, `discoveruijs1422`, `discoverbuttonjs1416`).
+- Change: page names bumped (`discoverconfig1093`, `discoverui1121`, `discoveruijs1422`, `discoverbuttonjs1416`).
 
 ## Version 1.4.0.6
 
