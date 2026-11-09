@@ -87,6 +87,8 @@ namespace Emby.Plugins.Discover
         public List<DiscoverPersonDto> Cast { get; set; } = new List<DiscoverPersonDto>();
         /// <summary>Titellogo (volledige url) voor de kop van de popup; null = titel als tekst.</summary>
         public string Logo { get; set; }
+        /// <summary>Instelling "Titellogo in de popup": dan mag de browser ook het logo uit de eigen Emby-bibliotheek gebruiken.</summary>
+        public bool TitleLogo { get; set; }
     }
 
     [Route("/Discover/TrailerKey", "GET", Summary = "YouTube-sleutel van de trailer van een film of serie")]
@@ -874,6 +876,7 @@ namespace Emby.Plugins.Discover
             {
                 bool tv = string.Equals(request.Type, "tv", StringComparison.OrdinalIgnoreCase);
                 if (request.TmdbId <= 0 || string.IsNullOrWhiteSpace(Plugin.GetCurrentConfiguration().TmdbApiKey)) return res;
+                res.TitleLogo = Plugin.GetCurrentConfiguration().ShowTitleLogo;
                 var logoTask = Plugin.GetCurrentConfiguration().ShowTitleLogo
                     ? TitleLogo.Get(_json, _tmdb, tv, request.TmdbId, CancellationToken.None)
                     : Task.FromResult<string>(null);
