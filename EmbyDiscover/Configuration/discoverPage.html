@@ -1,4 +1,4 @@
-<!DOCTYPE html><html><head><meta charset="utf-8" /><title>Discover</title></head><body><div data-role="page" class="page type-interior discoverUiPage" data-controller="__plugin/discoveruijs1442"><style>
+<!DOCTYPE html><html><head><meta charset="utf-8" /><title>Discover</title></head><body><div data-role="page" class="page type-interior discoverUiPage" data-controller="__plugin/discoveruijs1443"><style>
  body.dcDiscoverActive .skinHeader .pageTitle,body.dcDiscoverActive .skinHeader .headerButton,body.dcDiscoverActive .skinHeader .headerButton .material-icons,body.dcDiscoverActive .skinHeader .headerButton .md-icon,body.dcDiscoverActive .skinHeader .headerButton i,body.dcDiscoverActive .skinHeader .headerUserButton,body.dcDiscoverActive .skinHeader .headerTabs .emby-tab-button{
     color:#fff !important
 }
@@ -1986,7 +1986,7 @@ html.dcPointer .dcCastWrap:hover .dcCastArr{
     grid-template-rows:auto auto auto 1fr auto
 }
 .dcM .dcModal{
-    max-height:92vh
+    max-height:97vh
 }
 .dcM .dcModalBody.dcColsOn{
     padding-top:12px
@@ -2091,11 +2091,24 @@ html.dcPointer .dcCastWrap:hover .dcCastArr{
 }
 .dcM .dcColL .dcQueue.show{
     margin-top:auto;
-    padding-top:24px
+    padding-top:10px
 }
 .dcM .dcColL .dcQueue.show ~ .dcCollection{
     margin-top:0;
-    padding-top:16px
+    padding-top:10px
+}
+.dcM .dcColL .dcQHead,.dcM .dcColL .dcQRel{
+    display:none
+}
+.dcM .dcColL .dcQueue.show ~ .dcCollection .dcColItem{
+    width:clamp(60px,calc((100vh - 850px) * 2 / 3),100px)
+}
+.dcM .dcColL .dcQueue.show ~ .dcCollection .dcColPoster{
+    width:clamp(60px,calc((100vh - 850px) * 2 / 3),100px);
+    height:clamp(90px,calc(100vh - 850px),150px)
+}
+.dcM .dcColL .dcQueue.show ~ .dcCollection .dcColAdd{
+    top:calc(clamp(90px,calc(100vh - 850px),150px) - 36px)
 }
 .dcM .dcColL .dcColItem{
     width:clamp(60px,calc((100vh - 795px) * 2 / 3),100px)
@@ -2124,7 +2137,7 @@ html.dcPointer .dcCastWrap:hover .dcCastArr{
     display:block
 }
 .dcM .dcModalInfo.dcCols .dcCastWrap{
-    padding-top:10px
+    padding-top:4px
 }
 .dcM .dcColL .dcQRow{
     flex-wrap:wrap;

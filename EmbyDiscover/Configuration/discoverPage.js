@@ -43,9 +43,9 @@ define([], function() {
             return
         }
         var urls = [ApiClient.getUrl("web/ConfigurationPage", {
-            name: "discoverbuttonjs1425"
+            name: "discoverbuttonjs1426"
         }), ApiClient.getUrl("web/configurationpage", {
-            name: "discoverbuttonjs1425"
+            name: "discoverbuttonjs1426"
         }), ApiClient.getUrl("Plugins/Discover/Script")];
         var n = 0;
         (function next() {
@@ -79,7 +79,7 @@ define([], function() {
             document.head.appendChild(script)
         })()
     }
-    var UI_PAGE = "discoverui1141";
+    var UI_PAGE = "discoverui1142";
     return function(view, params) {
         var embedded = !!(params && params.embedded);
         if (embedded) {
@@ -488,7 +488,7 @@ define([], function() {
                         sp = rateText(p.Speed);
                     right += (tl ? " \xb7 " + tl : "") + (sp ? " \xb7 " + sp : "")
                 }
-                html += '<div class="dcQRow"><span class="dcQName">' + esc(name) + "</span>" + '<span class="dcQBar ' + esc(p.State) + '"><i style="width:' + (p.State === "processing" && stagePct(p.Action) >= 0 ? stagePct(p.Action) : fullBar(p.State) ? 100 : p.Progress) + '%"></i></span>' + '<span class="dcQPct ' + esc(p.State) + '">' + esc(right) + "</span></div>";
+                html += '<div class="dcQRow"' + (p.Release ? ' title="' + esc(p.Release) + '"' : "") + '><span class="dcQName">' + esc(name) + "</span>" + '<span class="dcQBar ' + esc(p.State) + '"><i style="width:' + (p.State === "processing" && stagePct(p.Action) >= 0 ? stagePct(p.Action) : fullBar(p.State) ? 100 : p.Progress) + '%"></i></span>' + '<span class="dcQPct ' + esc(p.State) + '">' + esc(right) + "</span></div>";
                 if (p.Release) {
                     html += '<div class="dcQRel">' + esc(p.Release) + "</div>"
                 }
