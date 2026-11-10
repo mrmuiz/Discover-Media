@@ -73,6 +73,8 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         btnTestMdblistText: ['Test MDBList', 'Test MDBList', 'MDBList testen'],
         lbl_txtMdblistKey: ['MDBList API-sleutel (optioneel)', 'MDBList API key (optional)', 'MDBList-API-Schlüssel (optional)'],
         desc_txtMdblistKey: ['Gratis op mdblist.com (Preferences, API Access). Geeft in de popup de scores van IMDb, Rotten Tomatoes (critici en publiek), Metacritic, Letterboxd en Trakt. Staat hier een sleutel, dan gaat MDBList voor OMDb; OMDb blijft de reserve.', 'Free at mdblist.com (Preferences, API Access). Gives the popup the scores of IMDb, Rotten Tomatoes (critics and audience), Metacritic, Letterboxd and Trakt. With a key here MDBList comes before OMDb; OMDb stays the fallback.', 'Kostenlos auf mdblist.com (Preferences, API Access). Liefert im Popup die Bewertungen von IMDb, Rotten Tomatoes (Kritiker und Publikum), Metacritic, Letterboxd und Trakt. Mit einem Schlüssel hier geht MDBList vor OMDb; OMDb bleibt die Reserve.'],
+        lbl_chkAllowInvalidCerts: ['Zelfondertekende certificaten accepteren (https)', 'Accept self-signed certificates (https)', 'Selbstsignierte Zertifikate akzeptieren (https)'],
+        desc_chkAllowInvalidCerts: ["Voor Radarr, Sonarr, Seerr en de downloadprogramma's via https met een eigen certificaat of via een IP-adres. Alleen aanzetten voor je eigen netwerk.", 'For Radarr, Sonarr, Seerr and the download clients over https with their own certificate or by IP address. Only turn this on for your own network.', 'Für Radarr, Sonarr, Seerr und die Download-Programme über https mit eigenem Zertifikat oder per IP-Adresse. Nur im eigenen Netzwerk einschalten.'],
         lbl_chkShowNextEpisode: ['Volgende aflevering van lopende series in de popup (via TVmaze)', 'Next episode of running series in the popup (via TVmaze)', 'Nächste Folge laufender Serien im Popup (über TVmaze)'],
         lbl_chkShowOmdb: ['Scores van IMDb, Rotten Tomatoes en Metacritic in de popup tonen', 'Show IMDb, Rotten Tomatoes and Metacritic scores in the popup', 'Bewertungen von IMDb, Rotten Tomatoes und Metacritic im Popup zeigen'],
         lbl_txtFanartKey: ['fanart.tv API-sleutel (optioneel)', 'fanart.tv API key (optional)', 'fanart.tv-API-Schlüssel (optional)'],
@@ -807,6 +809,7 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             el(view, 'chkShowSpecials').checked = c.ShowSpecials !== false;
             el(view, 'chkShowTitleLogo').checked = c.ShowTitleLogo !== false;
             el(view, 'chkShowNextEpisode').checked = c.ShowNextEpisode !== false;
+            el(view, 'chkAllowInvalidCerts').checked = c.AllowInvalidCertificates === true;
             el(view, 'txtMdblistKey').value = c.MdblistApiKey || '';
             el(view, 'txtFanartKey').value = c.FanartApiKey || '';
             var ps = String(c.PosterScoreSource || '').toLowerCase();
@@ -907,6 +910,7 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             c.ShowSpecials = el(view, 'chkShowSpecials').checked;
             c.ShowTitleLogo = el(view, 'chkShowTitleLogo').checked;
             c.ShowNextEpisode = el(view, 'chkShowNextEpisode').checked;
+            c.AllowInvalidCertificates = el(view, 'chkAllowInvalidCerts').checked;
             c.MdblistApiKey = el(view, 'txtMdblistKey').value.trim();
             c.FanartApiKey = el(view, 'txtFanartKey').value.trim();
             c.PosterScoreSource = el(view, 'selPosterScore').value || 'tmdb';

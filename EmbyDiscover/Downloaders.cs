@@ -51,7 +51,7 @@ namespace Emby.Plugins.Discover
 
     internal static class QbitClient
     {
-        private static readonly HttpClient Http = new HttpClient { Timeout = TimeSpan.FromSeconds(8) };
+        private static readonly HttpClient Http = new HttpClient(LocalTls.Handler()) { Timeout = TimeSpan.FromSeconds(8) };
         private static string _cookie;
         private static string _cookieFor;
         private static DateTime _failUntil;
@@ -188,7 +188,7 @@ namespace Emby.Plugins.Discover
 
     internal static class TransmissionClient
     {
-        private static readonly HttpClient Http = new HttpClient { Timeout = TimeSpan.FromSeconds(8) };
+        private static readonly HttpClient Http = new HttpClient(LocalTls.Handler()) { Timeout = TimeSpan.FromSeconds(8) };
         private static string _session;
 
         internal static bool Configured
@@ -288,7 +288,7 @@ namespace Emby.Plugins.Discover
 
     internal static class NzbgetClient
     {
-        private static readonly HttpClient Http = new HttpClient { Timeout = TimeSpan.FromSeconds(8) };
+        private static readonly HttpClient Http = new HttpClient(LocalTls.Handler()) { Timeout = TimeSpan.FromSeconds(8) };
 
         internal static bool Configured
         {

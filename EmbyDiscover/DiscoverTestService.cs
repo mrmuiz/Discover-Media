@@ -69,7 +69,7 @@ namespace Emby.Plugins.Discover
     {
         private const string ApiBase = "/api/v3"; // Radarr 6.x en Sonarr 5.x
 
-        private static readonly HttpClient Http = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+        private static readonly HttpClient Http = new HttpClient(LocalTls.Handler()) { Timeout = TimeSpan.FromSeconds(10) };
 
         private readonly IJsonSerializer _json;
 
@@ -87,7 +87,7 @@ namespace Emby.Plugins.Discover
                 if (string.Equals(request.Type, "TmdbLanguages", StringComparison.OrdinalIgnoreCase))
                 {
                     if (string.IsNullOrWhiteSpace(request.ApiKey))
-                        throw new InvalidOperationException("Vul eerst een API key in.");
+                        throw new InvalidOperationException(DiscoverLanguage.Text("Vul eerst een API key in.", "Enter an API key first.", "Bitte zuerst einen API-Schlüssel eingeben.", "Skriv inn en API-nøkkel først."));
 
                     result.Languages = await GetTmdbLanguages(request.ApiKey).ConfigureAwait(false);
                     result.Success = true;
@@ -98,7 +98,7 @@ namespace Emby.Plugins.Discover
                 if (string.Equals(request.Type, "Tmdb", StringComparison.OrdinalIgnoreCase))
                 {
                     if (string.IsNullOrWhiteSpace(request.ApiKey))
-                        throw new InvalidOperationException("Vul eerst een API key in.");
+                        throw new InvalidOperationException(DiscoverLanguage.Text("Vul eerst een API key in.", "Enter an API key first.", "Bitte zuerst einen API-Schlüssel eingeben.", "Skriv inn en API-nøkkel først."));
 
                     using (var resp = await Http.GetAsync(
                         "https://api.themoviedb.org/3/configuration?api_key=" + Uri.EscapeDataString(request.ApiKey.Trim()))
@@ -156,9 +156,9 @@ namespace Emby.Plugins.Discover
                 }
 
                 if (string.IsNullOrWhiteSpace(request.Url))
-                    throw new InvalidOperationException("Vul eerst een URL in.");
+                    throw new InvalidOperationException(DiscoverLanguage.Text("Vul eerst een URL in.", "Enter a URL first.", "Bitte zuerst eine URL eingeben.", "Skriv inn en URL først."));
                 if (string.IsNullOrWhiteSpace(request.ApiKey))
-                    throw new InvalidOperationException("Vul eerst een API key in.");
+                    throw new InvalidOperationException(DiscoverLanguage.Text("Vul eerst een API key in.", "Enter an API key first.", "Bitte zuerst einen API-Schlüssel eingeben.", "Skriv inn en API-nøkkel først."));
 
                 var baseUrl = request.Url.Trim().TrimEnd('/');
                 if (!baseUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
@@ -186,12 +186,16 @@ namespace Emby.Plugins.Discover
             }
             catch (TaskCanceledException)
             {
-                result.Error = "Time-out: geen antwoord binnen 10 seconden. Controleer de URL en poort.";
+                result.Error = DiscoverLanguage.Text("Time-out: geen antwoord binnen 10 seconden. Controleer de URL en poort.", "Time-out: no answer within 10 seconds. Check the URL and port.", "Zeitüberschreitung: keine Antwort innerhalb von 10 Sekunden. URL und Port prüfen.", "Tidsavbrudd: ikke svar innen 10 sekunder. Sjekk URL og port.");
                 LogTmdbLanguageFailure(request, result.Error);
             }
             catch (HttpRequestException ex)
             {
-                result.Error = "Kan geen verbinding maken: " + (ex.InnerException?.Message ?? ex.Message);
+                var why = ex.InnerException?.Message ?? ex.Message;
+                result.Error = DiscoverLanguage.Text("Kan geen verbinding maken: ", "Cannot connect: ", "Keine Verbindung möglich: ", "Kan ikke koble til: ") + why +
+                    (why.IndexOf("certificate", StringComparison.OrdinalIgnoreCase) >= 0
+                        ? DiscoverLanguage.Text(" (zelfondertekend certificaat? Zet 'Zelfondertekende certificaten accepteren' aan op het tabblad Aanvragen.)", " (self-signed certificate? Turn on 'Accept self-signed certificates' on the Requests tab.)", " (selbstsigniertes Zertifikat? 'Selbstsignierte Zertifikate akzeptieren' auf der Registerkarte Anfragen einschalten.)", " (selvsignert sertifikat? Slå på 'Godta selvsignerte sertifikater' på fanen Forespørsler.)")
+                        : "");
                 LogTmdbLanguageFailure(request, result.Error);
             }
             catch (Exception ex)
@@ -293,7 +297,7 @@ namespace Emby.Plugins.Discover
                     if (code == 401)
                         throw new InvalidOperationException("API key geweigerd (401).");
                     if (code == 404)
-                        throw new InvalidOperationException("Niet gevonden (404). Klopt de URL en het type (Radarr/Sonarr)?");
+                        throw new InvalidOperationException(DiscoverLanguage.Text("Niet gevonden (404). Klopt de URL en het type (Radarr/Sonarr)?", "Not found (404). Are the URL and the type (Radarr/Sonarr) correct?", "Nicht gefunden (404). Stimmen URL und Typ (Radarr/Sonarr)?", "Ikke funnet (404). Stemmer URL og type (Radarr/Sonarr)?"));
                     resp.EnsureSuccessStatusCode();
 
                     return await resp.Content.ReadAsStringAsync().ConfigureAwait(false);

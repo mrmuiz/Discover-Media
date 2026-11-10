@@ -24,7 +24,7 @@ namespace Emby.Plugins.Discover
     /// <summary>Praat met Radarr (films) en Sonarr v4 (series), of in de Seerr-modus via SeerrClient met Seerr.</summary>
     internal class ArrClient
     {
-        private static readonly HttpClient Http = new HttpClient(new HttpClientHandler { AutomaticDecompression = System.Net.DecompressionMethods.GZip | System.Net.DecompressionMethods.Deflate }) { Timeout = TimeSpan.FromSeconds(30) };
+        private static readonly HttpClient Http = new HttpClient(LocalTls.Handler(true)) { Timeout = TimeSpan.FromSeconds(30) };
         private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(5);
         private static readonly SemaphoreSlim _movieLock = new SemaphoreSlim(1, 1);
         private static readonly SemaphoreSlim _seriesLock = new SemaphoreSlim(1, 1);

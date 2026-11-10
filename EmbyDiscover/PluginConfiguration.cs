@@ -18,6 +18,8 @@ namespace Emby.Plugins.Discover
         public string RadarrRootFolder { get; set; } = "";
         /// <summary>Radarr "Minimum availability" for new movies: announced, inCinemas or released (default).</summary>
         public string RadarrMinimumAvailability { get; set; } = "released";
+        /// <summary>Accept https certificates that do not validate (self-signed / by IP) for Radarr, Sonarr, Seerr and download clients.</summary>
+        public bool AllowInvalidCertificates { get; set; }
 
         public string SonarrUrl { get; set; } = "";
         public string SonarrApiKey { get; set; } = "";

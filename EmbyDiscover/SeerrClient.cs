@@ -65,7 +65,7 @@ namespace Emby.Plugins.Discover
     /// </summary>
     internal static class SeerrClient
     {
-        private static readonly HttpClient Http = new HttpClient(new HttpClientHandler { AutomaticDecompression = System.Net.DecompressionMethods.GZip | System.Net.DecompressionMethods.Deflate }) { Timeout = TimeSpan.FromSeconds(30) };
+        private static readonly HttpClient Http = new HttpClient(LocalTls.Handler(true)) { Timeout = TimeSpan.FromSeconds(30) };
         private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(5);
         private static readonly TimeSpan UserTtl = TimeSpan.FromMinutes(10);
         private static readonly SemaphoreSlim _mediaLock = new SemaphoreSlim(1, 1);
