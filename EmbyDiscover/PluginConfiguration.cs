@@ -16,6 +16,8 @@ namespace Emby.Plugins.Discover
         // 0 / leeg = eerste profiel / eerste root folder uit Radarr
         public int RadarrQualityProfileId { get; set; } = 0;
         public string RadarrRootFolder { get; set; } = "";
+        /// <summary>Radarr "Minimum availability" for new movies: announced, inCinemas or released (default).</summary>
+        public string RadarrMinimumAvailability { get; set; } = "released";
 
         public string SonarrUrl { get; set; } = "";
         public string SonarrApiKey { get; set; } = "";

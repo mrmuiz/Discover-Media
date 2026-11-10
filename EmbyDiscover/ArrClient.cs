@@ -310,7 +310,19 @@ namespace Emby.Plugins.Discover
         }
 
         /// <returns>true = nieuw toegevoegd, false = stond al in Radarr.</returns>
-        public async Task<bool> AddMovie(int tmdbId, string title, int year, CancellationToken ct, object embyUserId = null)
+        /// <summary>Radarr's minimumAvailability: the given value when valid, else the setting, else "released".</summary>
+        internal static string MinimumAvailability(string wanted)
+        {
+            foreach (var v in new[] { wanted, Plugin.GetCurrentConfiguration()?.RadarrMinimumAvailability })
+            {
+                if (string.Equals(v, "announced", StringComparison.OrdinalIgnoreCase)) return "announced";
+                if (string.Equals(v, "inCinemas", StringComparison.OrdinalIgnoreCase)) return "inCinemas";
+                if (string.Equals(v, "released", StringComparison.OrdinalIgnoreCase)) return "released";
+            }
+            return "released";
+        }
+
+        public async Task<bool> AddMovie(int tmdbId, string title, int year, CancellationToken ct, object embyUserId = null, string minimumAvailability = null)
         {
             if (SeerrClient.Enabled)
             {
@@ -332,7 +344,7 @@ namespace Emby.Plugins.Discover
 
             var body = "{\"title\":\"" + Esc(title) + "\",\"tmdbId\":" + tmdbId + ",\"year\":" + year +
                        ",\"qualityProfileId\":" + profile + ",\"rootFolderPath\":\"" + Esc(root) + "\"" +
-                       ",\"monitored\":true,\"minimumAvailability\":\"released\"" +
+                       ",\"monitored\":true,\"minimumAvailability\":\"" + MinimumAvailability(minimumAvailability) + "\"" +
                        ",\"addOptions\":{\"searchForMovie\":true}}";
 
             await Send(HttpMethod.Post, cfg.RadarrUrl, cfg.RadarrApiKey, "/api/v3/movie", body, ct).ConfigureAwait(false);

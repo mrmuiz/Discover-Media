@@ -5,7 +5,7 @@
     <title>Discover</title>
 </head>
 <body>
-<div data-role="page" class="page type-interior pluginConfigurationPage discoverConfigPage" data-require="emby-input,emby-button,emby-select,emby-checkbox" data-controller="__plugin/discoverconfigjs1375">
+<div data-role="page" class="page type-interior pluginConfigurationPage discoverConfigPage" data-require="emby-input,emby-button,emby-select,emby-checkbox" data-controller="__plugin/discoverconfigjs1376">
     <style>
         .discoverConfigPage .keyWrap { position: relative; }
         .discoverConfigPage .keyWrap input { padding-right: 2.8em; }
@@ -352,6 +352,15 @@
                 <div class="selectContainer">
                     <label class="selectLabel" for="selRadarrRoot">Root folder</label>
                     <select is="emby-select" id="selRadarrRoot"></select>
+                </div>
+                <div class="selectContainer">
+                    <label class="selectLabel" for="selRadarrAvail">Minimum availability</label>
+                    <select is="emby-select" id="selRadarrAvail">
+                        <option value="announced">Announced</option>
+                        <option value="inCinemas">In Cinemas</option>
+                        <option value="released">Released</option>
+                    </select>
+                    <div class="fieldDescription" id="descRadarrAvail">Wanneer Radarr een nieuwe film gaat zoeken. Beheerders kunnen dit per film kiezen in de popup.</div>
                 </div>
 
                 <h3 id="hdgSonarr">Sonarr (series)</h3>

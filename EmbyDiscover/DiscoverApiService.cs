@@ -47,6 +47,8 @@ namespace Emby.Plugins.Discover
         public int[] Seasons { get; set; }
         /// <summary>Alleen in de Seerr-modus met een 4K-server: aanvraag voor de 4K-versie.</summary>
         public bool Is4k { get; set; }
+        /// <summary>Films via Radarr, alleen voor beheerders: announced / inCinemas / released (leeg = instelling).</summary>
+        public string MinimumAvailability { get; set; }
     }
 
     [Route("/Discover/RemoveItem", "POST", Summary = "Verwijder een film of serie uit Radarr/Sonarr (beheerders en gebruikers met Emby-verwijderrechten)")]
@@ -196,6 +198,8 @@ namespace Emby.Plugins.Discover
         /// <summary>Seerr heeft een 4K-server voor films / series: dan toont de popup "4K aanvragen".</summary>
         public bool Seerr4kMovie { get; set; }
         public bool Seerr4kTv { get; set; }
+        /// <summary>Radarr minimum availability (setting), the default of the admin choice in the popup.</summary>
+        public string RadarrMinimumAvailability { get; set; }
         /// <summary>Weergave: jaar / TMDB-score onder de posters, themakleur, OMDb-scores in de popup.</summary>
         public bool PosterShowYear { get; set; } = true;
         public bool ShowSpecials { get; set; } = true;
@@ -476,6 +480,7 @@ namespace Emby.Plugins.Discover
                 RequestService = SeerrClient.Enabled ? "Seerr" : "",
                 Seerr4kMovie = SeerrClient.Has4k(_json, false),
                 Seerr4kTv = SeerrClient.Has4k(_json, true),
+                RadarrMinimumAvailability = ArrClient.MinimumAvailability(null),
                 PosterShowYear = cfg.PosterShowYear,
                 ShowSpecials = cfg.ShowSpecials,
                 PosterShowScore = cfg.EffPosterScoreSource != "none",
@@ -1240,7 +1245,8 @@ namespace Emby.Plugins.Discover
                 else
                 {
                     var m = await _tmdb.GetMovie(request.TmdbId, CancellationToken.None).ConfigureAwait(false);
-                    added = await _arr.AddMovie(request.TmdbId, m.title ?? m.name, YearOf(m.release_date), CancellationToken.None, requesterGuid).ConfigureAwait(false);
+                    added = await _arr.AddMovie(request.TmdbId, m.title ?? m.name, YearOf(m.release_date), CancellationToken.None, requesterGuid,
+                        isAdminRequester ? request.MinimumAvailability : null).ConfigureAwait(false);
                     requested = m;
                 }
 
