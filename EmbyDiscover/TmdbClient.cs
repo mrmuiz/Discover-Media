@@ -189,6 +189,9 @@ namespace Emby.Plugins.Discover
         public List<TmdbNamed> ads { get; set; }
     }
 
+    public class TmdbProviderEntry { public int provider_id { get; set; } public string provider_name { get; set; } }
+    public class TmdbProviderList { public List<TmdbProviderEntry> results { get; set; } }
+
     public class TmdbGenre { public int id { get; set; } public string name { get; set; } }
     public class TmdbGenreList { public List<TmdbGenre> genres { get; set; } }
     public class TmdbLogoInfo { public int id { get; set; } public string name { get; set; } public string logo_path { get; set; } }
@@ -804,6 +807,53 @@ namespace Emby.Plugins.Discover
                 DiscoverDiagnostics.Add("TMDB seizoensposter " + id + "/s" + seasonNumber + " (afbeeldingen) mislukt: " + ex.Message);
             }
             return null;
+        }
+
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, Tuple<DateTime, List<TmdbProviderEntry>>> ProviderListCache =
+            new System.Collections.Concurrent.ConcurrentDictionary<string, Tuple<DateTime, List<TmdbProviderEntry>>>();
+
+        /// <summary>Land uit de ingestelde taal (nl-NL → NL), anders US.</summary>
+        internal static string Region()
+        {
+            var language = Language() ?? "";
+            var separator = language.LastIndexOf('-');
+            return separator >= 0 && separator < language.Length - 1
+                ? language.Substring(separator + 1).ToUpperInvariant()
+                : "US";
+        }
+
+        internal static string NormalizeProvider(string name)
+        {
+            var sb = new System.Text.StringBuilder();
+            foreach (var c in (name ?? "").ToLowerInvariant().Replace("+", "plus"))
+                if (char.IsLetterOrDigit(c)) sb.Append(c);
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// Discover-filter voor films die je in jouw land op een streamingdienst kunt kijken (abonnement),
+        /// bv. "&amp;with_watch_providers=8&amp;watch_region=NL…". Null als die dienst hier niet bestaat.
+        /// </summary>
+        public async Task<string> WatchProviderFilter(string[] names, CancellationToken ct)
+        {
+            var region = Region();
+            Tuple<DateTime, List<TmdbProviderEntry>> hit;
+            List<TmdbProviderEntry> list;
+            if (ProviderListCache.TryGetValue(region, out hit) && hit.Item1 > DateTime.UtcNow)
+            {
+                list = hit.Item2;
+            }
+            else
+            {
+                var r = await Get<TmdbProviderList>("/watch/providers/movie", "&watch_region=" + region, FallbackLanguage, ct).ConfigureAwait(false);
+                list = r?.results ?? new List<TmdbProviderEntry>();
+                ProviderListCache[region] = Tuple.Create(DateTime.UtcNow.AddDays(1), list);
+            }
+            var ids = list.Where(p => names.Contains(NormalizeProvider(p.provider_name)))
+                .Select(p => p.provider_id).Distinct().ToList();
+            if (ids.Count == 0) return null;
+            return "&with_watch_providers=" + string.Join("|", ids) + "&watch_region=" + region +
+                   "&with_watch_monetization_types=flatrate";
         }
 
         public async Task<TmdbWatchProviderCountry> GetTvWatchProviders(int id, CancellationToken ct)

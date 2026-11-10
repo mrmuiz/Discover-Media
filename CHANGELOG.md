@@ -10,7 +10,12 @@
 - Change: the settings tab **TMDB** is now called **Sources**: it holds TMDB, MDBList, OMDb and fanart.tv.
 - New: small **Star** (GitHub) and **Ko-fi** buttons at the top right of the plugin settings page. Only administrators see that page; nothing is added for regular users.
 - Cleanup: removed build output (`obj/`) that had ended up in the repository.
-- Change: page names bumped (`discoverconfig1096`, `discoverconfigjs1375`, `discoverui1133`, `discoveruijs1434`, `discoverbuttonjs1417`).
+- New: **Films / Series choice** on the pages of a studio and of a streaming service (Netflix, Disney+, Prime Video, Apple TV+, Hulu, HBO/Max, discovery+): "All", "Movies" or "Series" at the start of the filter bar. A studio now also shows its series (it used to show movies only). For a streaming service "Series" stays its own series as before, and "Movies" shows the movies you can watch on that service with a subscription in your country (TMDB watch providers, country from the plugin language). "All" mixes both by popularity. Ordinary TV networks (ABC, NBC, ...) keep showing series only.
+- Fix (TV): the **filter bar** (year, score, language, the check boxes and the new Films/Series choice) can now be used with the remote: on the TV page every filter is a button, OK picks the next value or switches the check on/off, and the bar is one row in the arrow-key navigation. The parts no longer stick together.
+- Fix (TV): Rotten Tomatoes scores show as "RT" and "POP" again outside the info table (old TV browsers showed the tomato and popcorn emoji as blobs).
+- Fix (TV): the **cast** names no longer run into each other (old TV browsers do not support flex gaps), and the **collection** in the popup is compact (smaller posters and buttons).
+- Fix (phone): the **title logo** was shown huge and cropped on a narrow screen (it got the poster's size); it is now limited to 320×80.
+- Change: page names bumped (`discoverconfig1096`, `discoverconfigjs1375`, `discoverui1134`, `discoveruijs1435`, `discoverbuttonjs1418`).
 
 ## Version 1.4.0.6
 
