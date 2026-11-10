@@ -1598,6 +1598,22 @@
         });
     }
 
+    // Id's van alle Live TV-opnames (OTA/DVR), ook als die in een gewone seriebibliotheek staan: die afleveringen tellen
+    // niet als "in je bibliotheek". 5 minuten bewaard; zonder Live TV-rechten een lege lijst.
+    var recIdsP = null, recIdsAt = 0;
+    function recordingIds(c) {
+        if (recIdsP && Date.now() - recIdsAt < 300000) { return recIdsP; }
+        recIdsAt = Date.now();
+        recIdsP = Promise.resolve(c.getJSON(c.getUrl('LiveTv/Recordings', {
+            UserId: c.getCurrentUserId(), Limit: 20000, EnableImages: false, EnableUserData: false
+        }))).then(function (r) {
+            var set = {};
+            ((r && r.Items) || []).forEach(function (it) { if (it && it.Id) { set[String(it.Id)] = true; } });
+            return set;
+        }, function () { return {}; });
+        return recIdsP;
+    }
+
     function syncSeasonLibraryStatus(tmdbId) {
         var c = api();
         if (!c || !tmdbId ||
@@ -1621,7 +1637,7 @@
                 seasonLibraryStates[tmdbId] = {};
                 return null;
             }
-            return Promise.all(seriesItems.map(function (series) {
+            return Promise.all([recordingIds(c)].concat(seriesItems.map(function (series) {
                 return c.getJSON(c.getUrl('Users/' + uid + '/Items', {
                     ParentId: series.Id,
                     IncludeItemTypes: 'Episode',
@@ -1629,10 +1645,13 @@
                     Fields: 'ParentIndexNumber',
                     Limit: 5000
                 }));
-            })).then(function (episodeLists) {
+            }))).then(function (all) {
+                var rec = all[0] || {};
+                var episodeLists = all.slice(1);
                 var states = {};
                 episodeLists.forEach(function (episodes) {
                     ((episodes && episodes.Items) || []).forEach(function (item) {
+                        if (rec[String(item.Id)]) { return; }
                         var number = parseInt(item.ParentIndexNumber, 10);
                         if (number > 0) { states[number] = true; }
                     });
@@ -2052,7 +2071,7 @@
         var link = document.createElement('a');
         link.className = 'discover-row-poster';
         // Klik op de poster: de Discover-popup met info en trailer.
-        link.href = '#!/configurationpage?name=discoverui1147&openType=' + item.Type + '&openId=' + item.TmdbId;
+        link.href = '#!/configurationpage?name=discoverui1148&openType=' + item.Type + '&openId=' + item.TmdbId;
         link.setAttribute('aria-label', item.Title);   // geen title: dat gaf een tooltip-vakje over de poster
         // Gewone klik: de popup hier op de pagina openen (Ctrl/middenklik volgt de link naar Discover).
         link.addEventListener('click', function (e) {
@@ -2359,7 +2378,7 @@
     // ---- De Discover-popup boven de huidige pagina ----
     // Laadt de Discover-pagina één keer onzichtbaar (alleen de popup wordt gebruikt) met dezelfde controller
     // als de echte pagina, in "embedded"-modus. Zo is de popup overal gelijk: info, cast, seizoenen, trailer, aanvragen.
-    var DC_UI_PAGE = 'discoverui1147', DC_UI_JS = 'discoveruijs1448';
+    var DC_UI_PAGE = 'discoverui1148', DC_UI_JS = 'discoveruijs1449';
     var embedPromise = null;
     function pageText(c, name) {
         var url = c.getUrl('web/ConfigurationPage', { name: name });

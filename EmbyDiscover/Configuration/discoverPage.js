@@ -43,9 +43,9 @@ define([], function() {
             return
         }
         var urls = [ApiClient.getUrl("web/ConfigurationPage", {
-            name: "discoverbuttonjs1431"
+            name: "discoverbuttonjs1432"
         }), ApiClient.getUrl("web/configurationpage", {
-            name: "discoverbuttonjs1431"
+            name: "discoverbuttonjs1432"
         }), ApiClient.getUrl("Plugins/Discover/Script")];
         var n = 0;
         (function next() {
@@ -79,7 +79,7 @@ define([], function() {
             document.head.appendChild(script)
         })()
     }
-    var UI_PAGE = "discoverui1147";
+    var UI_PAGE = "discoverui1148";
     return function(view, params) {
         var embedded = !!(params && params.embedded);
         if (embedded) {
@@ -2238,6 +2238,34 @@ define([], function() {
             }
         }
 
+        // Live TV-opnames (OTA/DVR) tellen niet als "in je bibliotheek", ook niet in een gewone seriebibliotheek.
+        var recIdsP = null,
+            recIdsAt = 0;
+
+        function recordingIds() {
+            if (recIdsP && Date.now() - recIdsAt < 3e5) {
+                return recIdsP
+            }
+            recIdsAt = Date.now();
+            recIdsP = getJson("LiveTv/Recordings", {
+                UserId: ApiClient.getCurrentUserId(),
+                Limit: 2e4,
+                EnableImages: false,
+                EnableUserData: false
+            }).then(function(r) {
+                var set = {};
+                (r && r.Items || []).forEach(function(it) {
+                    if (it && it.Id) {
+                        set[String(it.Id)] = true
+                    }
+                });
+                return set
+            }, function() {
+                return {}
+            });
+            return recIdsP
+        }
+
         function loadLibrarySeasons(i) {
             if (i.Type !== "tv") {
                 return
@@ -2252,15 +2280,20 @@ define([], function() {
                     return
                 }
                 var uid = ApiClient.getCurrentUserId();
-                return getJson("Users/" + uid + "/Items", {
+                return Promise.all([recordingIds(), getJson("Users/" + uid + "/Items", {
                     ParentId: libId,
                     IncludeItemTypes: "Episode",
                     Recursive: true,
                     Fields: "ParentIndexNumber",
                     Limit: 5e3
-                }).then(function(r) {
+                })]).then(function(res) {
+                    var rec = res[0] || {},
+                        r = res[1];
                     var states = {};
                     (r && r.Items || []).forEach(function(it) {
+                        if (rec[String(it.Id)]) {
+                            return
+                        }
                         var n = parseInt(it.ParentIndexNumber, 10);
                         if (n > 0) {
                             states[n] = true
