@@ -1,8 +1,8 @@
 ## Version 1.4.0.8
 
 - New: **Minimum availability** for Radarr (Requests tab): *Announced*, *In Cinemas* or *Released* (default, as before). Administrators can also choose it per movie: a small selector next to Request in the popup (web client, Radarr mode, movies not requested yet).
-- Fix: **Live TV recordings** (OTA/DVR) no longer count as "in your library". Discover now only looks in the normal movie and TV libraries when it checks whether a title or season is already there (Open in Emby, owned seasons, owned-by-actor rows, the Request button on Emby's pages), so a recorded series can still be requested from Sonarr. Libraries of type Live TV, or named Recordings, are skipped.
-- Change: page names bumped (`discoverconfig1097`, `discoverconfigjs1376`, `discoverui1147`, `discoveruijs1448`, `discoverbuttonjs1431`).
+- Fix: **Live TV recordings** (OTA/DVR) no longer count as "in your library". Discover now only looks in the normal movie and TV libraries when it checks whether a title or season is already there (Open in Emby, owned seasons, owned-by-actor rows, the Request button on Emby's pages), so a recorded series can still be requested from Sonarr. Libraries of type Live TV, or named Recordings, are skipped, and episodes that Emby lists as Live TV recordings do not mark a season as "In library" (in the season picker on Emby's pages and in the popup), also when the recordings sit in a normal TV library.
+- Change: page names bumped (`discoverconfig1097`, `discoverconfigjs1376`, `discoverui1148`, `discoveruijs1449`, `discoverbuttonjs1432`).
 
 ## Version 1.4.0.7
 
