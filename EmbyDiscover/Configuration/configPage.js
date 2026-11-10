@@ -248,6 +248,11 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         label('txtRadarrKey', 'API key', 'API key', 'API-Schlüssel');
         label('selRadarrProfile', 'Quality profile', 'Quality profile', 'Qualitätsprofil');
         label('selRadarrRoot', 'Root folder', 'Root folder', 'Stammordner');
+        label('selRadarrAvail', 'Minimale beschikbaarheid', 'Minimum availability', 'Mindestverfügbarkeit');
+        (function () {
+            var d = view.querySelector('#descRadarrAvail');
+            if (d) { d.textContent = languageText('Wanneer Radarr een nieuwe film gaat zoeken: al bij aankondiging, vanaf de bioscooprelease of pas als hij uit is (standaard). Beheerders kunnen dit per film kiezen in de popup.', 'When Radarr starts looking for a new movie: from the announcement, from the cinema release, or only once it is released (default). Administrators can choose this per movie in the popup.', 'Ab wann Radarr nach einem neuen Film sucht: ab der Ankündigung, ab dem Kinostart oder erst nach der Veröffentlichung (Standard). Administratoren können das im Popup pro Film wählen.'); }
+        })();
         label('txtSonarrUrl', 'URL (bijv. http://192.168.1.10:8989)', 'URL (e.g. http://192.168.1.10:8989)', 'URL (z. B. http://192.168.1.10:8989)');
         label('txtSonarrKey', 'API key', 'API key', 'API-Schlüssel');
         label('selSonarrProfile', 'Quality profile', 'Quality profile', 'Qualitätsprofil');
@@ -863,6 +868,7 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             el(view, 'txtSonarrUrl').value = c.SonarrUrl || '';
             el(view, 'txtSonarrKey').value = c.SonarrApiKey || '';
             fillSaved(view, 'Radarr', c.RadarrQualityProfileId || 0, c.RadarrRootFolder || '');
+            el(view, 'selRadarrAvail').value = c.RadarrMinimumAvailability || 'released';
             fillSaved(view, 'Sonarr', c.SonarrQualityProfileId || 0, c.SonarrRootFolder || '');
             state.dirty = false;
             // Haal profielen/mappen automatisch op als URL en key bekend zijn
@@ -938,6 +944,7 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             c.RadarrApiKey = el(view, 'txtRadarrKey').value.trim();
             c.RadarrQualityProfileId = parseInt(el(view, 'selRadarrProfile').value, 10) || 0;
             c.RadarrRootFolder = el(view, 'selRadarrRoot').value || '';
+            c.RadarrMinimumAvailability = el(view, 'selRadarrAvail').value || 'released';
             c.SonarrUrl = el(view, 'txtSonarrUrl').value.trim();
             c.SonarrApiKey = el(view, 'txtSonarrKey').value.trim();
             c.SonarrQualityProfileId = parseInt(el(view, 'selSonarrProfile').value, 10) || 0;

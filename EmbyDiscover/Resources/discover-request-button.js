@@ -1559,6 +1559,45 @@
         node.nodeValue = leadingWhitespace + prefix + text('Seizoen ', 'Season ', 'Staffel ') + seasonNumber;
     }
 
+    // Alleen gewone film- en seriebibliotheken, niet de Live TV-opnames (OTA/DVR). tv: true / false / null (beide).
+    var libViewsP = null, libViewsKey = '';
+    function libraryViews(c) {
+        var key = c.getCurrentUserId();
+        if (!libViewsP || libViewsKey !== key) {
+            libViewsKey = key;
+            libViewsP = Promise.resolve(c.getJSON(c.getUrl('Users/' + key + '/Views'))).then(function (r) {
+                var ok = [];
+                ((r && r.Items) || []).forEach(function (v) {
+                    var ct = String(v.CollectionType || '').toLowerCase();
+                    if (ct === 'livetv' || /record|opname|aufnahme|opptak|enregistr/i.test(v.Name || '')) { return; }
+                    if (!ct || ct === 'tvshows' || ct === 'movies' || ct === 'mixed' || ct === 'homevideos') { ok.push({ id: v.Id, ct: ct }); }
+                });
+                return ok;
+            }, function () { return []; });
+        }
+        return libViewsP;
+    }
+    function libraryQuery(c, q, tv) {
+        var uid = c.getCurrentUserId();
+        return libraryViews(c).then(function (views) {
+            var vs = views.filter(function (v) {
+                return !v.ct || v.ct === 'mixed' || v.ct === 'homevideos' ||
+                    (tv === null ? (v.ct === 'tvshows' || v.ct === 'movies') : v.ct === (tv ? 'tvshows' : 'movies'));
+            });
+            if (!vs.length) { return Promise.resolve(c.getJSON(c.getUrl('Users/' + uid + '/Items', q))); }
+            return Promise.all(vs.map(function (v) {
+                var qq = {};
+                for (var a in q) { qq[a] = q[a]; }
+                qq.ParentId = v.id;
+                return Promise.resolve(c.getJSON(c.getUrl('Users/' + uid + '/Items', qq))).then(null, function () { return { Items: [] }; });
+            })).then(function (rs) {
+                var items = [];
+                rs.forEach(function (r) { items = items.concat((r && r.Items) || []); });
+                return { Items: items };
+            });
+        });
+    }
+
     function syncSeasonLibraryStatus(tmdbId) {
         var c = api();
         if (!c || !tmdbId ||
@@ -1567,13 +1606,13 @@
             Date.now() < (seasonLibraryRetry[tmdbId] || 0)) { return; }
         seasonLibraryPending[tmdbId] = true;
         var uid = c.getCurrentUserId();
-        c.getJSON(c.getUrl('Users/' + uid + '/Items', {
+        libraryQuery(c, {
             AnyProviderIdEquals: 'Tmdb.' + tmdbId,
             IncludeItemTypes: 'Series',
             Recursive: true,
             Fields: 'ProviderIds',
             Limit: 20
-        })).then(function (r) {
+        }, true).then(function (r) {
             var seriesItems = ((r && r.Items) || []).filter(function (item) {
                 var ids = item.ProviderIds || {};
                 return String(ids.Tmdb || ids.tmdb || '') === String(tmdbId);
@@ -1819,10 +1858,10 @@
         if (libIndexPromise && now - libIndexAt < LIB_INDEX_TTL) { return libIndexPromise; }
         var c = api();
         libIndexAt = now;
-        libIndexPromise = Promise.resolve(c.getJSON(c.getUrl('Users/' + c.getCurrentUserId() + '/Items', {
+        libIndexPromise = libraryQuery(c, {
             Recursive: true, IncludeItemTypes: 'Movie,Series', Fields: 'ProviderIds,ProductionYear',
             EnableImages: false, EnableUserData: false
-        }))).then(function (r) {
+        }, null).then(function (r) {
             var idx = {};
             ((r && r.Items) || []).forEach(function (it) {
                 var type = it.Type === 'Series' ? 'tv' : 'movie';
@@ -2013,7 +2052,7 @@
         var link = document.createElement('a');
         link.className = 'discover-row-poster';
         // Klik op de poster: de Discover-popup met info en trailer.
-        link.href = '#!/configurationpage?name=discoverui1146&openType=' + item.Type + '&openId=' + item.TmdbId;
+        link.href = '#!/configurationpage?name=discoverui1147&openType=' + item.Type + '&openId=' + item.TmdbId;
         link.setAttribute('aria-label', item.Title);   // geen title: dat gaf een tooltip-vakje over de poster
         // Gewone klik: de popup hier op de pagina openen (Ctrl/middenklik volgt de link naar Discover).
         link.addEventListener('click', function (e) {
@@ -2320,7 +2359,7 @@
     // ---- De Discover-popup boven de huidige pagina ----
     // Laadt de Discover-pagina één keer onzichtbaar (alleen de popup wordt gebruikt) met dezelfde controller
     // als de echte pagina, in "embedded"-modus. Zo is de popup overal gelijk: info, cast, seizoenen, trailer, aanvragen.
-    var DC_UI_PAGE = 'discoverui1146', DC_UI_JS = 'discoveruijs1447';
+    var DC_UI_PAGE = 'discoverui1147', DC_UI_JS = 'discoveruijs1448';
     var embedPromise = null;
     function pageText(c, name) {
         var url = c.getUrl('web/ConfigurationPage', { name: name });

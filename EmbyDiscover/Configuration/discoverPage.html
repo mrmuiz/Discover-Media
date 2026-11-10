@@ -1,4 +1,4 @@
-<!DOCTYPE html><html><head><meta charset="utf-8" /><title>Discover</title></head><body><div data-role="page" class="page type-interior discoverUiPage" data-controller="__plugin/discoveruijs1447"><style>
+<!DOCTYPE html><html><head><meta charset="utf-8" /><title>Discover</title></head><body><div data-role="page" class="page type-interior discoverUiPage" data-controller="__plugin/discoveruijs1448"><style>
  body.dcDiscoverActive .skinHeader .pageTitle,body.dcDiscoverActive .skinHeader .headerButton,body.dcDiscoverActive .skinHeader .headerButton .material-icons,body.dcDiscoverActive .skinHeader .headerButton .md-icon,body.dcDiscoverActive .skinHeader .headerButton i,body.dcDiscoverActive .skinHeader .headerUserButton,body.dcDiscoverActive .skinHeader .headerTabs .emby-tab-button{
     color:#fff !important
 }
@@ -438,6 +438,25 @@ html.dcNoYear .dcCapSub .dcYear,html.dcNoScore .dcCapSub .dcStar{
     display:flex;
     flex-wrap:wrap;
     align-items:center
+}
+.dcAvail{
+    display:none;
+    height:42px;
+    border-radius:8px;
+    border:1px solid rgba(255,255,255,.18);
+    background:rgba(255,255,255,.08);
+    color:#fff;
+    font:inherit;
+    font-size:14px;
+    padding:0 10px;
+    cursor:pointer
+}
+.dcAvail.show{
+    display:inline-block
+}
+.dcAvail option{
+    background:#1b2230;
+    color:#fff
 }
 .dcBtnRow > *{
     margin:0 .7em .7em 0
@@ -2780,5 +2799,5 @@ html.dcPointer .dcCastWrap:hover .dcCastArr{
 .dcTLinks:empty{
     display:none
 }
-</style><div class="dcRoot"><div class="dcPageBd" aria-hidden="true"><div class="dcPageBdImg"></div><div class="dcPageBdImg"></div><div class="dcPageBdShade"></div></div><div class="dcDiag" style="margin:0 0 1em;font-size:.85em;opacity:.8;white-space:pre-wrap;color:#ffd666;"></div><div class="dcSearch"><button type="button" class="dcHomeBtn focusable" title="Discover"><i class="md-icon">explore</i></button><span>&#128269;</span><input type="text" class="dcSearchInput" placeholder="Films en series zoeken" autocomplete="off" /></div><div class="dcContent"><div class="dcMsg">Laden...</div></div></div><div class="dcOverlay dcM"><div class="dcModal"><button type="button" class="dcClose">&#10005;</button><div class="dcModalBack"></div><div class="dcModalBody"><img class="dcModalPoster" alt="" /><div class="dcModalInfo"><h2 class="dcModalTitle"></h2><div class="dcMeta"></div><div class="dcRatings"></div><div class="dcInfo"></div><div class="dcOverview"></div><div class="dcCastWrap"><button type="button" class="dcCastArr left dcHide" tabindex="-1" data-dir="-1" aria-label="&lt;"></button><div class="dcCast"></div><button type="button" class="dcCastArr right dcHide" tabindex="-1" data-dir="1" aria-label="&gt;"></button></div><div class="dcCollection"></div><div class="dcQueue"></div><div class="dcSeasons"></div><div class="dcBtnRow"><button type="button" class="dcBtn"></button><button type="button" class="dcBtn4k"></button><button type="button" class="dcBtnTrailer"></button><button type="button" class="dcBtnOpen"></button><button type="button" class="dcBtnDel"></button></div></div></div></div></div><div class="dcTrailerOverlay"><button type="button" class="dcClose dcTrailerClose">&#10005;</button><iframe class="dcTrailerFrame" referrerpolicy="strict-origin-when-cross-origin" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe><a class="dcTrailerLink" target="_blank" rel="noopener"></a></div><div class="dcToast"></div></div></body></html>
+</style><div class="dcRoot"><div class="dcPageBd" aria-hidden="true"><div class="dcPageBdImg"></div><div class="dcPageBdImg"></div><div class="dcPageBdShade"></div></div><div class="dcDiag" style="margin:0 0 1em;font-size:.85em;opacity:.8;white-space:pre-wrap;color:#ffd666;"></div><div class="dcSearch"><button type="button" class="dcHomeBtn focusable" title="Discover"><i class="md-icon">explore</i></button><span>&#128269;</span><input type="text" class="dcSearchInput" placeholder="Films en series zoeken" autocomplete="off" /></div><div class="dcContent"><div class="dcMsg">Laden...</div></div></div><div class="dcOverlay dcM"><div class="dcModal"><button type="button" class="dcClose">&#10005;</button><div class="dcModalBack"></div><div class="dcModalBody"><img class="dcModalPoster" alt="" /><div class="dcModalInfo"><h2 class="dcModalTitle"></h2><div class="dcMeta"></div><div class="dcRatings"></div><div class="dcInfo"></div><div class="dcOverview"></div><div class="dcCastWrap"><button type="button" class="dcCastArr left dcHide" tabindex="-1" data-dir="-1" aria-label="&lt;"></button><div class="dcCast"></div><button type="button" class="dcCastArr right dcHide" tabindex="-1" data-dir="1" aria-label="&gt;"></button></div><div class="dcCollection"></div><div class="dcQueue"></div><div class="dcSeasons"></div><div class="dcBtnRow"><button type="button" class="dcBtn"></button><button type="button" class="dcBtn4k"></button><button type="button" class="dcBtnTrailer"></button><button type="button" class="dcBtnOpen"></button><button type="button" class="dcBtnDel"></button><select class="dcAvail"></select></div></div></div></div></div><div class="dcTrailerOverlay"><button type="button" class="dcClose dcTrailerClose">&#10005;</button><iframe class="dcTrailerFrame" referrerpolicy="strict-origin-when-cross-origin" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe><a class="dcTrailerLink" target="_blank" rel="noopener"></a></div><div class="dcToast"></div></div></body></html>
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     

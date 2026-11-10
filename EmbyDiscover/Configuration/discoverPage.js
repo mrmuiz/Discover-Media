@@ -43,9 +43,9 @@ define([], function() {
             return
         }
         var urls = [ApiClient.getUrl("web/ConfigurationPage", {
-            name: "discoverbuttonjs1430"
+            name: "discoverbuttonjs1431"
         }), ApiClient.getUrl("web/configurationpage", {
-            name: "discoverbuttonjs1430"
+            name: "discoverbuttonjs1431"
         }), ApiClient.getUrl("Plugins/Discover/Script")];
         var n = 0;
         (function next() {
@@ -79,7 +79,7 @@ define([], function() {
             document.head.appendChild(script)
         })()
     }
-    var UI_PAGE = "discoverui1146";
+    var UI_PAGE = "discoverui1147";
     return function(view, params) {
         var embedded = !!(params && params.embedded);
         if (embedded) {
@@ -134,6 +134,8 @@ define([], function() {
                 tv: !!r.Seerr4kTv
             };
             window.__discoverRequestService = r.RequestService || "";
+            radarrSet = !!r.RadarrSet;
+            radarrAvail = r.RadarrMinimumAvailability || "released";
             diag.status = "v" + (r.PluginVersion || "?") + " | " + text("pluginresource: ", "plugin resource: ", "Pluginressource: ") + (r.ButtonScript || text("onbekend", "unknown", "unbekannt"));
             showDiag()
         }, function() {
@@ -151,6 +153,8 @@ define([], function() {
         var searchTimer = null;
         var loaded = false;
         var isAdmin = false;
+        var radarrSet = false,
+            radarrAvail = "released";
         var showTrailer = true;
         var showSpecials = true;
         var fourK = {
@@ -1337,7 +1341,7 @@ define([], function() {
                 return Promise.resolve([])
             }
             var uid = ApiClient.getCurrentUserId();
-            return Promise.resolve(ApiClient.getJSON(ApiClient.getUrl("Users/" + uid + "/Items", {
+            return Promise.resolve(libraryQuery({
                 PersonIds: person.Id,
                 Recursive: true,
                 IncludeItemTypes: "Movie,Series",
@@ -1345,7 +1349,7 @@ define([], function() {
                 SortBy: "PremiereDate,SortName",
                 SortOrder: "Descending",
                 Limit: 200
-            }))).then(function(r) {
+            }, null)).then(function(r) {
                 return r && r.Items || []
             }, function() {
                 return []
@@ -1970,6 +1974,27 @@ define([], function() {
                 k4.classList.toggle("show", !!fourK[current.Type === "tv" ? "tv" : "movie"]);
                 k4.disabled = false
             }
+            // Beheerders: per film kiezen wanneer Radarr gaat zoeken (minimum availability).
+            var av = overlay.querySelector(".dcAvail");
+            if (av) {
+                var showAv = isAdmin && !isTvClient && current.Type !== "tv" && current.Status === 0 && radarrSet && window.__discoverRequestService !== "Seerr";
+                if (showAv) {
+                    av.innerHTML = "";
+                    [
+                        ["announced", text("Bij aankondiging", "Announced", "Angekündigt", "Annonsert")],
+                        ["inCinemas", text("In de bioscoop", "In cinemas", "Im Kino", "På kino")],
+                        ["released", text("Uitgebracht", "Released", "Veröffentlicht", "Utgitt")]
+                    ].forEach(function(o) {
+                        var op = document.createElement("option");
+                        op.value = o[0];
+                        op.textContent = o[1];
+                        av.appendChild(op)
+                    });
+                    av.value = radarrAvail;
+                    av.title = text("Minimale beschikbaarheid in Radarr: wanneer Radarr deze film gaat zoeken", "Minimum availability in Radarr: when Radarr starts looking for this movie", "Mindestverfügbarkeit in Radarr: ab wann Radarr nach diesem Film sucht", "Minimum tilgjengelighet i Radarr: når Radarr begynner å lete etter filmen")
+                }
+                av.classList.toggle("show", showAv)
+            }
             var tb = overlay.querySelector(".dcBtnTrailer");
             tb.textContent = text("Trailer", "Trailer", "Trailer", "Trailer");
             tb.title = tb.textContent;
@@ -2033,6 +2058,10 @@ define([], function() {
             }
             if (is4k) {
                 body.Is4k = true
+            }
+            var avSel = overlay.querySelector(".dcAvail.show");
+            if (avSel && i.Type !== "tv" && !is4k && i === current) {
+                body.MinimumAvailability = avSel.value
             }
             btn.disabled = true;
             api("POST", "Discover/RequestItem", null, body).then(function(r) {
@@ -2648,13 +2677,13 @@ define([], function() {
             if (!i || !i.TmdbId) {
                 return Promise.resolve(null)
             }
-            return getJson("Users/" + ApiClient.getCurrentUserId() + "/Items", {
+            return libraryQuery({
                 Recursive: true,
                 IncludeItemTypes: i.Type === "tv" ? "Series" : "Movie",
                 AnyProviderIdEquals: "tmdb." + i.TmdbId,
                 Fields: "ProviderIds",
                 Limit: 5
-            }).then(function(res) {
+            }, i.Type === "tv").then(function(res) {
                 var list = res && res.Items || [];
                 for (var k = 0; k < list.length; k++) {
                     var it = list[k],
@@ -2934,6 +2963,66 @@ define([], function() {
             }, fallback)
         }
 
+        // Alleen de gewone film- en seriebibliotheken, niet de opnames van Live TV (OTA/DVR): een opgenomen
+        // serie telt dan niet als "in je bibliotheek". tv = true (series), false (films) of null (beide).
+        var libViewsP = null;
+
+        function libraryViews() {
+            if (!libViewsP) {
+                libViewsP = getJson("Users/" + ApiClient.getCurrentUserId() + "/Views").then(function(r) {
+                    var ok = [];
+                    (r && r.Items || []).forEach(function(v) {
+                        var ct = String(v.CollectionType || "").toLowerCase();
+                        if (ct === "livetv" || /record|opname|aufnahme|opptak|enregistr/i.test(v.Name || "")) {
+                            return
+                        }
+                        if (!ct || ct === "tvshows" || ct === "movies" || ct === "mixed" || ct === "homevideos") {
+                            ok.push({
+                                id: v.Id,
+                                ct: ct
+                            })
+                        }
+                    });
+                    return ok
+                }, function() {
+                    return []
+                })
+            }
+            return libViewsP
+        }
+
+        function libraryQuery(q, tv) {
+            var uid = ApiClient.getCurrentUserId();
+            return libraryViews().then(function(views) {
+                var vs = views.filter(function(v) {
+                    return !v.ct || v.ct === "mixed" || v.ct === "homevideos" || (tv === null ? v.ct === "tvshows" || v.ct === "movies" : v.ct === (tv ? "tvshows" : "movies"))
+                });
+                if (!vs.length) {
+                    return getJson("Users/" + uid + "/Items", q)
+                }
+                return Promise.all(vs.map(function(v) {
+                    var qq = {};
+                    for (var a in q) {
+                        qq[a] = q[a]
+                    }
+                    qq.ParentId = v.id;
+                    return getJson("Users/" + uid + "/Items", qq).then(null, function() {
+                        return {
+                            Items: []
+                        }
+                    })
+                })).then(function(rs) {
+                    var items = [];
+                    rs.forEach(function(r) {
+                        items = items.concat(r && r.Items || [])
+                    });
+                    return {
+                        Items: items
+                    }
+                })
+            })
+        }
+
         function findLibraryItem(i) {
             var uid = ApiClient.getCurrentUserId();
             var tv = i.Type === "tv";
@@ -2959,7 +3048,7 @@ define([], function() {
                 byId[a] = base[a]
             }
             byId.AnyProviderIdEquals = "tmdb." + i.TmdbId;
-            return getJson("Users/" + uid + "/Items", byId).then(function(res) {
+            return libraryQuery(byId, tv).then(function(res) {
                 var id = pick(res);
                 if (id) {
                     return id
@@ -2969,7 +3058,7 @@ define([], function() {
                     bySearch[b] = base[b]
                 }
                 bySearch.SearchTerm = i.Title;
-                return getJson("Users/" + uid + "/Items", bySearch).then(pick)
+                return libraryQuery(bySearch, tv).then(pick)
             }).then(null, function() {
                 return null
             })

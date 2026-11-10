@@ -1,3 +1,9 @@
+## Version 1.4.0.8
+
+- New: **Minimum availability** for Radarr (Requests tab): *Announced*, *In Cinemas* or *Released* (default, as before). Administrators can also choose it per movie: a small selector next to Request in the popup (web client, Radarr mode, movies not requested yet).
+- Fix: **Live TV recordings** (OTA/DVR) no longer count as "in your library". Discover now only looks in the normal movie and TV libraries when it checks whether a title or season is already there (Open in Emby, owned seasons, owned-by-actor rows, the Request button on Emby's pages), so a recorded series can still be requested from Sonarr. Libraries of type Live TV, or named Recordings, are skipped.
+- Change: page names bumped (`discoverconfig1097`, `discoverconfigjs1376`, `discoverui1147`, `discoveruijs1448`, `discoverbuttonjs1431`).
+
 ## Version 1.4.0.7
 
 - Fix: the **"Requested" confirmation clip** was always in Dutch ("Aangevraagd ... verstuurd naar Radarr of Sonarr"), also on an English server. Apps that play the clip themselves (for example the Emby iOS app) show it when the request card could not be made. The clip now exists in **English, Dutch, German and Norwegian** and follows the plugin language. The text no longer mentions Radarr/Sonarr (it was wrong in Seerr mode).
