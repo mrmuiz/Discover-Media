@@ -15,7 +15,7 @@
 - Fix (TV): Rotten Tomatoes scores show as "RT" and "POP" again outside the info table (old TV browsers showed the tomato and popcorn emoji as blobs).
 - Fix (TV): the **cast** names no longer run into each other (old TV browsers do not support flex gaps), and the **collection** in the popup is compact (smaller posters and buttons).
 - Fix (phone): the **title logo** was shown huge and cropped on a narrow screen (it got the poster's size); it is now limited to 320×80.
-- Change: page names bumped (`discoverconfig1096`, `discoverconfigjs1375`, `discoverui1143`, `discoveruijs1444`, `discoverbuttonjs1427`).
+- Change: page names bumped (`discoverconfig1096`, `discoverconfigjs1375`, `discoverui1144`, `discoveruijs1445`, `discoverbuttonjs1428`).
 
 ## Version 1.4.0.6
 
