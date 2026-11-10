@@ -1,4 +1,4 @@
-<!DOCTYPE html><html><head><meta charset="utf-8" /><title>Discover</title></head><body><div data-role="page" class="page type-interior discoverUiPage" data-controller="__plugin/discoveruijs1436"><style>
+<!DOCTYPE html><html><head><meta charset="utf-8" /><title>Discover</title></head><body><div data-role="page" class="page type-interior discoverUiPage" data-controller="__plugin/discoveruijs1437"><style>
  body.dcDiscoverActive .skinHeader .pageTitle,body.dcDiscoverActive .skinHeader .headerButton,body.dcDiscoverActive .skinHeader .headerButton .material-icons,body.dcDiscoverActive .skinHeader .headerButton .md-icon,body.dcDiscoverActive .skinHeader .headerButton i,body.dcDiscoverActive .skinHeader .headerUserButton,body.dcDiscoverActive .skinHeader .headerTabs .emby-tab-button{
     color:#fff !important
 }
@@ -1997,18 +1997,19 @@ html.dcPointer .dcCastWrap:hover .dcCastArr{
 .dcM .dcHeadRow{
     grid-area:title;
     display:flex;
+    flex-direction:column;
     flex-wrap:nowrap;
-    align-items:center;
-    gap:10px 20px;
-    margin-bottom:6px
+    align-items:flex-start;
+    gap:14px;
+    margin-bottom:8px
 }
 .dcM .dcHeadRow .dcModalTitle{
     margin:0;
-    flex:0 1 auto;
-    min-width:120px
+    flex:0 0 auto;
+    max-width:100%
 }
 .dcM .dcHeadRow .dcModalTitle .dcTitleLogo{
-    max-width:min(300px,100%);
+    max-width:min(420px,100%);
     max-height:90px
 }
 .dcM .dcHeadRow .dcBtnRow,.dcOverlay:not(.dcTv) .dcHeadRow .dcBtnRow{
@@ -2086,10 +2087,15 @@ html.dcPointer .dcCastWrap:hover .dcCastArr{
 }
 .dcM .dcColL .dcCollection{
     margin-top:auto;
-    padding-top:84px
+    padding-top:24px
+}
+.dcM .dcColL .dcQueue.show{
+    margin-top:auto;
+    padding-top:24px
 }
 .dcM .dcColL .dcQueue.show ~ .dcCollection{
-    padding-top:24px
+    margin-top:0;
+    padding-top:16px
 }
 .dcM .dcColL .dcColItem{
     width:64px
