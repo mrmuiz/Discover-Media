@@ -3,9 +3,14 @@ name: Build
 on:
   push:
     branches: [main]
-    tags: ['v*']
+    tags: ['v*', 'V*']
   pull_request:
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Attach the DLL to this existing release tag (e.g. v1.4.0.8)'
+        required: false
+        default: ''
 
 permissions:
   contents: read
@@ -34,7 +39,7 @@ jobs:
           path: artifacts/Emby.Plugins.Discover.dll
 
   release:
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') || startsWith(github.ref, 'refs/tags/V') || github.event.inputs.release_tag != ''
     needs: build
     runs-on: ubuntu-latest
     permissions:
@@ -45,6 +50,7 @@ jobs:
           name: Emby.Plugins.Discover
       - uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ github.event.inputs.release_tag || github.ref_name }}
           files: Emby.Plugins.Discover.dll
-          generate_release_notes: true
+          generate_release_notes: false
           prerelease: ${{ contains(github.ref_name, 'beta') }}

@@ -103,7 +103,7 @@ namespace Emby.Plugins.Discover
 
     internal static class SabClient
     {
-        private static readonly HttpClient Http = new HttpClient { Timeout = TimeSpan.FromSeconds(8) };
+        private static readonly HttpClient Http = new HttpClient(LocalTls.Handler()) { Timeout = TimeSpan.FromSeconds(8) };
 
         /// <summary>De laatste momentopname (hoort bij de gecachte wachtrij in DownloadQueue).</summary>
         internal static volatile SabSnapshot Last;

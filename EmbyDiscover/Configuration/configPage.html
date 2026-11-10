@@ -5,7 +5,7 @@
     <title>Discover</title>
 </head>
 <body>
-<div data-role="page" class="page type-interior pluginConfigurationPage discoverConfigPage" data-require="emby-input,emby-button,emby-select,emby-checkbox" data-controller="__plugin/discoverconfigjs1376">
+<div data-role="page" class="page type-interior pluginConfigurationPage discoverConfigPage" data-require="emby-input,emby-button,emby-select,emby-checkbox" data-controller="__plugin/discoverconfigjs1377">
     <style>
         .discoverConfigPage .keyWrap { position: relative; }
         .discoverConfigPage .keyWrap input { padding-right: 2.8em; }
@@ -307,6 +307,18 @@
                         <option value="seerr-arr">Seerr + Radarr &amp; Sonarr (voor de status)</option>
                     </select>
                     <div class="fieldDescription" id="desc_requestService">Met Seerr gaan aanvragen naar Seerr, en Seerr stuurt ze door naar zijn eigen Radarr en Sonarr. Radarr en Sonarr hoef je hier dan niet in te stellen.</div>
+                </div>
+
+                <div class="checkboxContainer checkboxContainer-withDescription">
+                    <label class="emby-checkbox-label">
+                        <input is="emby-checkbox" type="checkbox" id="chkAllowInvalidCerts" />
+                        <span class="checkboxLabel" id="lbl_chkAllowInvalidCerts">Zelfondertekende certificaten accepteren (https)</span>
+                        <span class="emby-checkbox-outline">
+                            <span class="emby-checkbox-on"><i class="md-icon">check</i></span>
+                            <span class="emby-checkbox-off"></span>
+                        </span>
+                    </label>
+                    <div class="fieldDescription" id="desc_chkAllowInvalidCerts">Voor Radarr, Sonarr, Seerr en de downloadprogramma's via https met een eigen certificaat of via een IP-adres. Alleen aanzetten voor je eigen netwerk.</div>
                 </div>
 
                 <!-- Seerr -->

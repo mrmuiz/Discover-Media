@@ -1569,7 +1569,7 @@
                 var ok = [];
                 ((r && r.Items) || []).forEach(function (v) {
                     var ct = String(v.CollectionType || '').toLowerCase();
-                    if (ct === 'livetv' || /record|opname|aufnahme|opptak|enregistr/i.test(v.Name || '')) { return; }
+                    if (ct === 'livetv') { return; }
                     if (!ct || ct === 'tvshows' || ct === 'movies' || ct === 'mixed' || ct === 'homevideos') { ok.push({ id: v.Id, ct: ct }); }
                 });
                 return ok;
@@ -2071,7 +2071,7 @@
         var link = document.createElement('a');
         link.className = 'discover-row-poster';
         // Klik op de poster: de Discover-popup met info en trailer.
-        link.href = '#!/configurationpage?name=discoverui1148&openType=' + item.Type + '&openId=' + item.TmdbId;
+        link.href = '#!/configurationpage?name=discoverui1149&openType=' + item.Type + '&openId=' + item.TmdbId;
         link.setAttribute('aria-label', item.Title);   // geen title: dat gaf een tooltip-vakje over de poster
         // Gewone klik: de popup hier op de pagina openen (Ctrl/middenklik volgt de link naar Discover).
         link.addEventListener('click', function (e) {
@@ -2378,7 +2378,7 @@
     // ---- De Discover-popup boven de huidige pagina ----
     // Laadt de Discover-pagina één keer onzichtbaar (alleen de popup wordt gebruikt) met dezelfde controller
     // als de echte pagina, in "embedded"-modus. Zo is de popup overal gelijk: info, cast, seizoenen, trailer, aanvragen.
-    var DC_UI_PAGE = 'discoverui1148', DC_UI_JS = 'discoveruijs1449';
+    var DC_UI_PAGE = 'discoverui1149', DC_UI_JS = 'discoveruijs1450';
     var embedPromise = null;
     function pageText(c, name) {
         var url = c.getUrl('web/ConfigurationPage', { name: name });

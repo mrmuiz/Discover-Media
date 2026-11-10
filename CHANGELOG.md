@@ -1,3 +1,10 @@
+## Version 1.4.0.9
+
+- Fix: libraries are no longer skipped because of their **name** (for example a normal TV library called "Recorded TV"). Only libraries of type Live TV are skipped; Live TV recordings elsewhere are still recognised per episode.
+- New: **Accept self-signed certificates** (Requests tab, off by default). For Radarr, Sonarr, Seerr, qBittorrent, Transmission, NZBGet and SABnzbd over https with a certificate that does not validate, for example a self-signed one or a connection by IP address. Only affects these services, never TMDb or other internet sources.
+- Fix: the error messages of **Test connection** were always in Dutch; they now follow the language setting. A certificate error now also points to the new option.
+- Change: page names bumped (`discoverui1149`, `discoveruijs1450`, `discoverbuttonjs1433`, `discoverconfig1098`, `discoverconfigjs1377`).
+
 ## Version 1.4.0.8
 
 - New: **Minimum availability** for Radarr (Requests tab): *Announced*, *In Cinemas* or *Released* (default, as before). Administrators can also choose it per movie: a small selector next to Request in the popup (web client, Radarr mode, movies not requested yet).

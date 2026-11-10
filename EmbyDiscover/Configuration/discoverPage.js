@@ -43,9 +43,9 @@ define([], function() {
             return
         }
         var urls = [ApiClient.getUrl("web/ConfigurationPage", {
-            name: "discoverbuttonjs1432"
+            name: "discoverbuttonjs1433"
         }), ApiClient.getUrl("web/configurationpage", {
-            name: "discoverbuttonjs1432"
+            name: "discoverbuttonjs1433"
         }), ApiClient.getUrl("Plugins/Discover/Script")];
         var n = 0;
         (function next() {
@@ -79,7 +79,7 @@ define([], function() {
             document.head.appendChild(script)
         })()
     }
-    var UI_PAGE = "discoverui1148";
+    var UI_PAGE = "discoverui1149";
     return function(view, params) {
         var embedded = !!(params && params.embedded);
         if (embedded) {
@@ -3006,7 +3006,7 @@ define([], function() {
                     var ok = [];
                     (r && r.Items || []).forEach(function(v) {
                         var ct = String(v.CollectionType || "").toLowerCase();
-                        if (ct === "livetv" || /record|opname|aufnahme|opptak|enregistr/i.test(v.Name || "")) {
+                        if (ct === "livetv") {
                             return
                         }
                         if (!ct || ct === "tvshows" || ct === "movies" || ct === "mixed" || ct === "homevideos") {
