@@ -43,9 +43,9 @@ define([], function() {
             return
         }
         var urls = [ApiClient.getUrl("web/ConfigurationPage", {
-            name: "discoverbuttonjs1417"
+            name: "discoverbuttonjs1418"
         }), ApiClient.getUrl("web/configurationpage", {
-            name: "discoverbuttonjs1417"
+            name: "discoverbuttonjs1418"
         }), ApiClient.getUrl("Plugins/Discover/Script")];
         var n = 0;
         (function next() {
@@ -79,7 +79,7 @@ define([], function() {
             document.head.appendChild(script)
         })()
     }
-    var UI_PAGE = "discoverui1133";
+    var UI_PAGE = "discoverui1134";
     return function(view, params) {
         var embedded = !!(params && params.embedded);
         if (embedded) {
@@ -1110,6 +1110,72 @@ define([], function() {
             return code
         }
 
+        // Tv: keuzelijsten en vinkjes zijn met de afstandsbediening niet te bedienen (oude webOS),
+        // dus daar komen knoppen voor in de plaats. OK = volgende keuze / aan-uit.
+        function tvFilterButtons() {
+            var bar = content.querySelector(".dcFilters");
+            if (!isTvClient || !bar || bar.__dcTv) {
+                return
+            }
+            bar.__dcTv = true;
+            bar.classList.add("dcFTv");
+            Array.prototype.forEach.call(bar.querySelectorAll("select"), function(sel) {
+                var btn = document.createElement("button");
+                btn.type = "button";
+                btn.className = "dcFCycle focusable";
+                btn.__dcSel = sel;
+                sel.style.display = "none";
+                sel.parentNode.insertBefore(btn, sel);
+                btn.addEventListener("click", function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    var n = sel.options.length;
+                    if (!n) {
+                        return
+                    }
+                    sel.selectedIndex = (sel.selectedIndex + 1) % n;
+                    sel.dispatchEvent(new Event("change", {
+                        bubbles: true
+                    }));
+                    syncTvFilterButtons()
+                })
+            });
+            Array.prototype.forEach.call(bar.querySelectorAll(".dcFCheck"), function(lab) {
+                var cb = lab.querySelector("input");
+                if (!cb) {
+                    return
+                }
+                var btn = document.createElement("button");
+                btn.type = "button";
+                btn.className = "dcFCycle dcFToggle focusable";
+                btn.__dcCb = cb;
+                btn.textContent = lab.textContent.trim();
+                lab.style.display = "none";
+                lab.parentNode.insertBefore(btn, lab);
+                btn.addEventListener("click", function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    cb.checked = !cb.checked;
+                    cb.dispatchEvent(new Event("change", {
+                        bubbles: true
+                    }));
+                    syncTvFilterButtons()
+                })
+            });
+            syncTvFilterButtons()
+        }
+
+        function syncTvFilterButtons() {
+            Array.prototype.forEach.call(content.querySelectorAll(".dcFilters .dcFCycle"), function(btn) {
+                if (btn.__dcSel) {
+                    var o = btn.__dcSel.options[btn.__dcSel.selectedIndex];
+                    btn.textContent = o ? o.textContent : "";
+                } else if (btn.__dcCb) {
+                    btn.classList.toggle("on", !!btn.__dcCb.checked)
+                }
+            })
+        }
+
         function updateLangOptions(b) {
             var sel = content.querySelector(".dcFLang");
             if (!sel || browse !== b) {
@@ -1129,7 +1195,8 @@ define([], function() {
                 o.value = code;
                 o.textContent = langName(code);
                 sel.appendChild(o)
-            })
+            });
+            syncTvFilterButtons()
         }
 
         function passes(i, f) {
@@ -1192,7 +1259,12 @@ define([], function() {
             var yNew = parseInt(bar.querySelector(".dcFYear").value, 10) || 0;
             var gsChanged = !!(gSel && sSel && (parseInt(gSel.value, 10) !== (b.genre || 0) || sSel.value !== (b.sort || "popular")));
             var yChanged = !!(b.srvYear && yNew !== (b.year || 0));
-            if (gsChanged || yChanged) {
+            var mSel = bar.querySelector(".dcFMedia");
+            var mChanged = !!(mSel && mSel.value !== (b.media || ""));
+            if (mChanged) {
+                b.media = mSel.value || ""
+            }
+            if (gsChanged || yChanged || mChanged) {
                 if (gsChanged) {
                     b.genre = parseInt(gSel.value, 10) || 0;
                     b.sort = sSel.value || "popular"
@@ -1571,6 +1643,8 @@ define([], function() {
             openBrowse(null, null, title, rowKey)
         }
 
+        var STREAMING_NETWORKS = [213, 2739, 1024, 2552, 453, 49, 4353];
+
         function openBrowse(kind, id, name, rowKey) {
             homeShown = false;
             browse = {
@@ -1593,6 +1667,7 @@ define([], function() {
                 genre: 0,
                 sort: "popular",
                 year: 0,
+                media: "",
                 upcoming: rowKey === "upcoming_movie" || rowKey === "upcoming_tv",
                 srvYear: !rowKey || rowKey === "popular_movie" || rowKey === "popular_tv" || rowKey === "upcoming_movie" || rowKey === "upcoming_tv"
             };
@@ -1600,6 +1675,9 @@ define([], function() {
             var years = browse.upcoming ? [0, thisYear, thisYear + 1] : [0, 2025, 2020, 2015, 2010, 2e3, 1990];
             var popular = rowKey === "popular_movie" || rowKey === "popular_tv";
             var serverFilters = "";
+            if (!rowKey && (kind === "studio" || kind === "network" && STREAMING_NETWORKS.indexOf(Number(id)) >= 0)) {
+                serverFilters += "<label>" + text("Soort", "Type", "Art") + ' <select class="dcFMedia">' + '<option value="">' + text("Alles", "All", "Alle") + "</option>" + '<option value="movie">' + text("Films", "Movies", "Filme") + "</option>" + '<option value="tv">' + text("Series", "Series", "Serien") + "</option></select></label>"
+            }
             if (popular) {
                 var gs = genreTiles(rowKey === "popular_tv");
                 serverFilters = "<label>" + text("Genre", "Genre", "Genre") + ' <select class="dcFGenre"><option value="0">' + text("alle", "all", "alle") + "</option>" + gs.map(function(g) {
@@ -1609,6 +1687,7 @@ define([], function() {
             content.innerHTML = '<div class="dcBrowseHead"><button type="button" class="dcBack">&#10094; ' + text("Terug", "Back", "Zur\xfcck") + "</button>" + '<span class="dcBrowseTitle">' + esc(name) + "</span></div>" + '<div class="dcFilters">' + serverFilters + "<label>" + text("Jaar", "Year", "Jahr") + ' <select class="dcFYear">' + years.map(function(y) {
                 return '<option value="' + y + '">' + (y ? y + (browse.upcoming ? "" : "+") : text("alle", "all", "alle")) + "</option>"
             }).join("") + "</select></label>" + "<label>" + text("Score", "Score", "Bewertung") + ' <select class="dcFScore"><option value="0">' + text("alle", "all", "alle") + '</option><option value="6">6+</option><option value="7">7+</option><option value="8">8+</option></select></label>' + "<label>" + text("Taal", "Language", "Sprache") + ' <select class="dcFLang"><option value="">' + text("alle", "all", "alle") + "</option></select></label>" + '<label class="dcFCheck"><input type="checkbox" class="dcFOwned" /> ' + text("Niet in mijn bibliotheek", "Not in my library", "Nicht in meiner Bibliothek") + "</label>" + '<label class="dcFCheck"><input type="checkbox" class="dcFRequested" /> ' + text("Nog niet aangevraagd", "Not requested yet", "Noch nicht angefordert") + "</label>" + '<span class="dcFCount"></span>' + "</div>" + '<div class="dcGrid dcBrowseGrid"></div>' + '<div class="dcMore"><button type="button" class="dcBtn dcMoreBtn">' + text("Meer laden", "Load more", "Mehr laden") + "</button></div>";
+            tvFilterButtons();
             var root = view.querySelector(".dcRoot");
             if (root) {
                 root.scrollTop = 0
@@ -1661,7 +1740,8 @@ define([], function() {
                 Kind: b.kind,
                 Id: b.id,
                 Page: b.next,
-                Year: b.year || 0
+                Year: b.year || 0,
+                Media: b.media || ""
             });
             var reqNo = b.req || 0;
             call.then(function(r) {
@@ -2077,6 +2157,13 @@ define([], function() {
                 // In het infoblok: de labels van IMDb, TMDB, Trakt, Letterboxd en Metacritic worden het icoontje van die site.
                 var map = { imdb: "IMDb", tmdb: "TMDB", trakt: "Trakt", lb: "Letterboxd", mc: "Metacritic" };
                 Array.prototype.forEach.call(boxEl.querySelectorAll(".dcRate"), function(el) {
+                    // Tomaat en popcorn alleen hier (oude tv-browsers tonen geen emoji).
+                    var eb = el.querySelector("b");
+                    if (eb && el.classList.contains("rt")) {
+                        eb.textContent = "\ud83c\udf45"
+                    } else if (eb && el.classList.contains("pop")) {
+                        eb.textContent = "\ud83c\udf7f"
+                    }
                     for (var c in map) {
                         if (el.classList.contains(c)) {
                             var b = el.querySelector("b");
@@ -2649,14 +2736,14 @@ define([], function() {
                         h += '<span class="dcRate imdb" title="IMDb' + (r.ImdbVotes ? " \xb7 " + esc(r.ImdbVotes) + " " + esc(text("stemmen", "votes", "Stimmen", "stemmer")) : "") + '"><b>IMDb</b>' + esc(r.Imdb) + "</span>"
                     }
                     if (r.RottenTomatoes) {
-                        h += '<span class="dcRate rt" title="Rotten Tomatoes"><b>\ud83c\udf45</b>' + esc(r.RottenTomatoes) + "</span>"
+                        h += '<span class="dcRate rt" title="Rotten Tomatoes"><b>RT</b>' + esc(r.RottenTomatoes) + "</span>"
                     }
                     if (r.Metacritic) {
                         var mc = parseInt(r.Metacritic, 10);
                         h += '<span class="dcRate mc' + (mc < 40 ? " low" : mc < 61 ? " mid" : "") + '" title="Metacritic"><b>MC</b>' + esc(r.Metacritic) + "</span>"
                     }
                     if (r.Audience) {
-                        h += '<span class="dcRate pop" title="Rotten Tomatoes \xb7 ' + esc(text("publiek", "audience", "Publikum", "publikum")) + '"><b>\ud83c\udf7f</b>' + esc(r.Audience) + "</span>"
+                        h += '<span class="dcRate pop" title="Rotten Tomatoes \xb7 ' + esc(text("publiek", "audience", "Publikum", "publikum")) + '"><b>POP</b>' + esc(r.Audience) + "</span>"
                     }
                     if (r.Letterboxd) {
                         h += '<span class="dcRate lb" title="Letterboxd (/5)"><b>LB</b>' + esc(r.Letterboxd) + "</span>"
@@ -3825,9 +3912,16 @@ define([], function() {
             if (isShown(input)) {
                 lines.push([input])
             }
-            var parts = content.querySelectorAll(".dcBack, .dcRow, .dcGrid, .dcMoreBtn");
+            var parts = content.querySelectorAll(".dcBack, .dcFilters, .dcRow, .dcGrid, .dcMoreBtn");
             Array.prototype.forEach.call(parts, function(p) {
                 if (!isShown(p)) {
+                    return
+                }
+                if (p.classList.contains("dcFilters")) {
+                    var fb = Array.prototype.filter.call(p.querySelectorAll(".dcFCycle"), isUsable);
+                    if (fb.length) {
+                        lines.push(fb)
+                    }
                     return
                 }
                 if (p.classList.contains("dcBack") || p.classList.contains("dcMoreBtn")) {

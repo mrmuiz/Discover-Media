@@ -255,6 +255,8 @@ namespace Emby.Plugins.Discover
         public int Page { get; set; }
         /// <summary>Jaarfilter (0 = alle): alleen titels van dit jaar en nieuwer.</summary>
         public int Year { get; set; }
+        /// <summary>Studio/streamingdienst: "movie", "tv" of leeg/"all" (beide).</summary>
+        public string Media { get; set; }
     }
 
     public class DiscoverRow
@@ -357,6 +359,21 @@ namespace Emby.Plugins.Discover
             new KeyValuePair<int, string>(420, "Marvel Studios"),
             new KeyValuePair<int, string>(9993, "DC"),
             new KeyValuePair<int, string>(41077, "A24")
+        };
+
+        /// <summary>
+        /// Netwerken die ook een streamingdienst zijn: TMDB-netwerk-id → namen van de bijbehorende watch provider
+        /// (genormaliseerd). Daarmee tonen we bij "Films" wat je in jouw land op die dienst kunt kijken.
+        /// </summary>
+        internal static readonly Dictionary<int, string[]> StreamingNetworks = new Dictionary<int, string[]>
+        {
+            { 213, new[] { "netflix" } },
+            { 2739, new[] { "disneyplus" } },
+            { 1024, new[] { "amazonprimevideo", "primevideo" } },
+            { 2552, new[] { "appletvplus", "appletv" } },
+            { 453, new[] { "hulu" } },
+            { 49, new[] { "max", "hbomax", "hbo" } },
+            { 4353, new[] { "discoveryplus" } }
         };
 
         internal static readonly KeyValuePair<int, string>[] Networks =
@@ -626,26 +643,51 @@ namespace Emby.Plugins.Discover
             if (page > 250) return row;
             try
             {
-                bool tv;
-                string filter;
+                int byear = ValidYear(request.Year);
+                // Per soort één of twee bronnen: (tv?, filter). Studio's en streamingdiensten kunnen films én series.
+                var sources = new List<KeyValuePair<bool, string>>();
+                string media = (request.Media ?? "").ToLowerInvariant();
+                bool wantMovie = media != "tv", wantTv = media != "movie";
                 switch (request.Kind)
                 {
-                    case "genre_movie": tv = false; filter = "&with_genres=" + request.Id; break;
-                    case "genre_tv": tv = true; filter = "&with_genres=" + request.Id; break;
-                    case "studio": tv = false; filter = "&with_companies=" + request.Id; break;
-                    case "network": tv = true; filter = "&with_networks=" + request.Id; break;
+                    case "genre_movie": sources.Add(new KeyValuePair<bool, string>(false, "&with_genres=" + request.Id)); break;
+                    case "genre_tv": sources.Add(new KeyValuePair<bool, string>(true, "&with_genres=" + request.Id)); break;
+                    case "studio":
+                        if (wantMovie) sources.Add(new KeyValuePair<bool, string>(false, "&with_companies=" + request.Id));
+                        if (wantTv) sources.Add(new KeyValuePair<bool, string>(true, "&with_companies=" + request.Id));
+                        break;
+                    case "network":
+                        if (wantTv || !StreamingNetworks.ContainsKey(request.Id))
+                            sources.Add(new KeyValuePair<bool, string>(true, "&with_networks=" + request.Id));
+                        if (wantMovie && StreamingNetworks.ContainsKey(request.Id))
+                        {
+                            var prov = await _tmdb.WatchProviderFilter(StreamingNetworks[request.Id], CancellationToken.None).ConfigureAwait(false);
+                            if (prov != null) sources.Add(new KeyValuePair<bool, string>(false, prov));
+                        }
+                        break;
                     default: return row;
                 }
-                int byear = ValidYear(request.Year);
-                if (byear > 0) filter += (tv ? "&first_air_date.gte=" : "&primary_release_date.gte=") + byear + "-01-01";
-                var states = SafeStates(tv);
-                var itemsTask = _tmdb.BrowsePages(tv, filter, page, page + 1, CancellationToken.None);
-                await Task.WhenAll(states, itemsTask).ConfigureAwait(false);
-                row.Items = itemsTask.Result
-                    .Where(x => !x.adult && !string.IsNullOrEmpty(x.poster_path) &&
-                        (!tv || TmdbClient.IsDutchOrUsTv(x)))
-                    .Select(x => ToDto(x, tv, states.Result))
-                    .ToList();
+                if (sources.Count == 0) return row;
+                var tasks = sources.Select(src =>
+                {
+                    var f = src.Value;
+                    if (byear > 0) f += (src.Key ? "&first_air_date.gte=" : "&primary_release_date.gte=") + byear + "-01-01";
+                    return _tmdb.BrowsePages(src.Key, f, page, page + 1, CancellationToken.None);
+                }).ToList();
+                var ms = sources.Any(x => !x.Key) ? SafeStates(false) : Task.FromResult<Dictionary<int, bool>>(null);
+                var ts = sources.Any(x => x.Key) ? SafeStates(true) : Task.FromResult<Dictionary<int, bool>>(null);
+                await Task.WhenAll(tasks.Cast<Task>().Concat(new Task[] { ms, ts })).ConfigureAwait(false);
+                var all = new List<KeyValuePair<double, DiscoverItemDto>>();
+                for (int k = 0; k < sources.Count; k++)
+                {
+                    bool tv = sources[k].Key;
+                    all.AddRange(tasks[k].Result
+                        .Where(x => !x.adult && !string.IsNullOrEmpty(x.poster_path) &&
+                            (!tv || TmdbClient.IsDutchOrUsTv(x)))
+                        .Select(x => new KeyValuePair<double, DiscoverItemDto>(x.popularity, ToDto(x, tv, tv ? ts.Result : ms.Result))));
+                }
+                row.Items = (sources.Count > 1 ? all.OrderByDescending(x => x.Key) : (IEnumerable<KeyValuePair<double, DiscoverItemDto>>)all)
+                    .Select(x => x.Value).ToList();
             }
             catch (Exception ex)
             {
