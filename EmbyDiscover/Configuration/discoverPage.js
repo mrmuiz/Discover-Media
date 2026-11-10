@@ -43,9 +43,9 @@ define([], function() {
             return
         }
         var urls = [ApiClient.getUrl("web/ConfigurationPage", {
-            name: "discoverbuttonjs1429"
+            name: "discoverbuttonjs1430"
         }), ApiClient.getUrl("web/configurationpage", {
-            name: "discoverbuttonjs1429"
+            name: "discoverbuttonjs1430"
         }), ApiClient.getUrl("Plugins/Discover/Script")];
         var n = 0;
         (function next() {
@@ -79,7 +79,7 @@ define([], function() {
             document.head.appendChild(script)
         })()
     }
-    var UI_PAGE = "discoverui1145";
+    var UI_PAGE = "discoverui1146";
     return function(view, params) {
         var embedded = !!(params && params.embedded);
         if (embedded) {
@@ -2350,7 +2350,8 @@ define([], function() {
             if ((r.Rows || []).length > MAX_ROWS) {
                 h += '<button type="button" class="dcTMoreRows" tabindex="-1">' + esc(more) + " \u2304</button>"
             }
-            h += '<div class="dcTLinks">' + (r.Links || []).map(function(l) {
+            // Tv: externe sites openen in de app zelf en je komt niet meer terug; daar alleen de Emby-link.
+            h += '<div class="dcTLinks">' + (isTvClient ? [] : r.Links || []).map(function(l) {
                 return '<a class="dcTLink" target="_blank" rel="noopener" title="' + esc(l.Name) + '" href="' + esc(l.Url) + '">' + (favImg(l.Name) || esc(l.Name)) + "</a>"
             }).join("") + "</div>";
             infoEl.innerHTML = h;
