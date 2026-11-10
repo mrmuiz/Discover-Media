@@ -1,4 +1,4 @@
-<!DOCTYPE html><html><head><meta charset="utf-8" /><title>Discover</title></head><body><div data-role="page" class="page type-interior discoverUiPage" data-controller="__plugin/discoveruijs1441"><style>
+<!DOCTYPE html><html><head><meta charset="utf-8" /><title>Discover</title></head><body><div data-role="page" class="page type-interior discoverUiPage" data-controller="__plugin/discoveruijs1442"><style>
  body.dcDiscoverActive .skinHeader .pageTitle,body.dcDiscoverActive .skinHeader .headerButton,body.dcDiscoverActive .skinHeader .headerButton .material-icons,body.dcDiscoverActive .skinHeader .headerButton .md-icon,body.dcDiscoverActive .skinHeader .headerButton i,body.dcDiscoverActive .skinHeader .headerUserButton,body.dcDiscoverActive .skinHeader .headerTabs .emby-tab-button{
     color:#fff !important
 }
@@ -1989,10 +1989,10 @@ html.dcPointer .dcCastWrap:hover .dcCastArr{
     max-height:92vh
 }
 .dcM .dcModalBody.dcColsOn{
-    padding-top:min(36px,4vh)
+    padding-top:12px
 }
 .dcM .dcModalInfo.dcCols .dcColR{
-    margin-top:calc(min(64px,7vh) - min(36px,4vh) + 10px)
+    margin-top:calc(min(64px,7vh) - 2px)
 }
 .dcM .dcHeadRow{
     grid-area:title;
@@ -2000,7 +2000,7 @@ html.dcPointer .dcCastWrap:hover .dcCastArr{
     flex-direction:column;
     flex-wrap:nowrap;
     align-items:flex-start;
-    gap:14px;
+    gap:10px;
     margin-bottom:8px
 }
 .dcM .dcHeadRow .dcModalTitle{
@@ -2098,7 +2098,7 @@ html.dcPointer .dcCastWrap:hover .dcCastArr{
     padding-top:16px
 }
 .dcM .dcColL .dcColItem{
-    width:100px
+    width:clamp(60px,calc((100vh - 795px) * 2 / 3),100px)
 }
 .dcM .dcColL .dcCollection{
     margin-bottom:0
@@ -2107,11 +2107,11 @@ html.dcPointer .dcCastWrap:hover .dcCastArr{
     padding-bottom:0
 }
 .dcM .dcColL .dcColPoster{
-    width:100px;
-    height:150px
+    width:clamp(60px,calc((100vh - 795px) * 2 / 3),100px);
+    height:clamp(90px,calc(100vh - 795px),150px)
 }
 .dcM .dcColL .dcColAdd{
-    top:112px;
+    top:calc(clamp(90px,calc(100vh - 795px),150px) - 36px);
     right:6px;
     width:30px;
     height:30px;
