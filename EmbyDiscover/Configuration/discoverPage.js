@@ -79,7 +79,7 @@ define([], function() {
             document.head.appendChild(script)
         })()
     }
-    var UI_PAGE = "discoverui1132";
+    var UI_PAGE = "discoverui1133";
     return function(view, params) {
         var embedded = !!(params && params.embedded);
         if (embedded) {
@@ -1886,11 +1886,13 @@ define([], function() {
             var k4 = overlay.querySelector(".dcBtn4k");
             if (k4) {
                 k4.textContent = current.Type === "tv" ? text("Alle seizoenen in 4K", "All seasons in 4K", "Alle Staffeln in 4K") : text("4K aanvragen", "Request in 4K", "In 4K anfordern");
+                k4.title = k4.textContent;
                 k4.classList.toggle("show", !!fourK[current.Type === "tv" ? "tv" : "movie"]);
                 k4.disabled = false
             }
             var tb = overlay.querySelector(".dcBtnTrailer");
             tb.textContent = text("Trailer", "Trailer", "Trailer", "Trailer");
+            tb.title = tb.textContent;
             if (showTrailer) {
                 tb.classList.add("show")
             } else {
@@ -1898,12 +1900,17 @@ define([], function() {
             }
             d.disabled = false;
             delArmed = false;
+            d.classList.remove("armed");
             clearTimeout(delArmTimer);
             if (isAdmin && current.Status === 1) {
                 d.textContent = text("Aanvraag annuleren", "Cancel request", "Anfrage abbrechen");
+                d.title = d.textContent;
+                d.setAttribute("data-kind", "cancel");
                 d.classList.add("show")
             } else if (isAdmin && current.Status === 2) {
                 d.textContent = text("Verwijderen", "Delete", "L\xf6schen");
+                d.title = d.textContent;
+                d.setAttribute("data-kind", "delete");
                 d.classList.add("show")
             } else {
                 d.classList.remove("show")
@@ -2697,6 +2704,7 @@ define([], function() {
             ob.classList.remove("show");
             ob.removeAttribute("data-id");
             ob.textContent = text("Openen in Emby", "Open in Emby", "In Emby \xf6ffnen");
+            ob.title = ob.textContent;
             loadSeasonButtons(i);
             renderQueueInfo(i);
             updateButton();
@@ -3609,6 +3617,7 @@ define([], function() {
             var d = this;
             if (!delArmed) {
                 delArmed = true;
+                d.classList.add("armed");
                 d.textContent = withFiles ? text("Bevestig: verwijderen + bestanden", "Confirm: delete + files", "Best\xe4tigen: l\xf6schen + Dateien") : text("Bevestig: aanvraag annuleren", "Confirm: cancel request", "Best\xe4tigen: Anfrage abbrechen");
                 showToast(q, false);
                 clearTimeout(delArmTimer);
