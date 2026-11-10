@@ -1,4 +1,4 @@
-<!DOCTYPE html><html><head><meta charset="utf-8" /><title>Discover</title></head><body><div data-role="page" class="page type-interior discoverUiPage" data-controller="__plugin/discoveruijs1433"><style>
+<!DOCTYPE html><html><head><meta charset="utf-8" /><title>Discover</title></head><body><div data-role="page" class="page type-interior discoverUiPage" data-controller="__plugin/discoveruijs1434"><style>
  body.dcDiscoverActive .skinHeader .pageTitle,body.dcDiscoverActive .skinHeader .headerButton,body.dcDiscoverActive .skinHeader .headerButton .material-icons,body.dcDiscoverActive .skinHeader .headerButton .md-icon,body.dcDiscoverActive .skinHeader .headerButton i,body.dcDiscoverActive .skinHeader .headerUserButton,body.dcDiscoverActive .skinHeader .headerTabs .emby-tab-button{
     color:#fff !important
 }
@@ -1931,6 +1931,52 @@ html.dcPointer .dcCastWrap:hover .dcCastArr{
 }
 .dcM .dcHeadRow .dcBtnRow > *{
     margin:0
+}
+.dcM .dcHeadRow .dcBtnTrailer,.dcM .dcHeadRow .dcBtnOpen,.dcM .dcHeadRow .dcBtnDel:not(.armed){
+    font-size:0;
+    width:42px;
+    min-width:42px;
+    padding:0;
+    align-items:center;
+    justify-content:center
+}
+.dcM .dcHeadRow .dcBtnTrailer.show,.dcM .dcHeadRow .dcBtnOpen.show,.dcM .dcHeadRow .dcBtnDel.show:not(.armed){
+    display:inline-flex
+}
+.dcM .dcHeadRow .dcBtnTrailer::before,.dcM .dcHeadRow .dcBtnOpen::before,.dcM .dcHeadRow .dcBtnDel:not(.armed)::before{
+    content:"";
+    width:20px;
+    height:20px;
+    background:#fff;
+    -webkit-mask:var(--dc-ico) center/contain no-repeat;
+    mask:var(--dc-ico) center/contain no-repeat
+}
+.dcM .dcHeadRow .dcBtnTrailer{
+    --dc-ico:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M8 5v14l11-7z'/%3E%3C/svg%3E")
+}
+.dcM .dcHeadRow .dcBtnOpen{
+    --dc-ico:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M14 3h7v7h-2V6.4l-9.3 9.3-1.4-1.4L17.6 5H14V3zM5 5h6v2H7v10h10v-4h2v6H5V5z'/%3E%3C/svg%3E")
+}
+.dcM .dcHeadRow .dcBtnDel{
+    --dc-ico:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M9 3h6l1 2h4v2H4V5h4l1-2zM6 9h12l-1 12H7L6 9z'/%3E%3C/svg%3E")
+}
+.dcM .dcHeadRow .dcBtnDel[data-kind="cancel"]{
+    --dc-ico:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6.4 5 19 17.6 17.6 19 5 6.4zM19 6.4 6.4 19 5 17.6 17.6 5z'/%3E%3C/svg%3E")
+}
+.dcM .dcHeadRow .dcBtn4k{
+    font-size:0;
+    padding:0 14px
+}
+.dcM .dcHeadRow .dcBtn4k::after{
+    content:"4K";
+    font-size:14px;
+    font-weight:600
+}
+.dcM .dcHeadRow .dcBtnRow{
+    flex-wrap:nowrap
+}
+.dcM .dcHeadRow .dcBtnDel.armed{
+    white-space:nowrap
 }
 .dcM .dcColL{
     display:flex;
