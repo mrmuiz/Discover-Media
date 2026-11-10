@@ -43,9 +43,9 @@ define([], function() {
             return
         }
         var urls = [ApiClient.getUrl("web/ConfigurationPage", {
-            name: "discoverbuttonjs1421"
+            name: "discoverbuttonjs1422"
         }), ApiClient.getUrl("web/configurationpage", {
-            name: "discoverbuttonjs1421"
+            name: "discoverbuttonjs1422"
         }), ApiClient.getUrl("Plugins/Discover/Script")];
         var n = 0;
         (function next() {
@@ -79,7 +79,7 @@ define([], function() {
             document.head.appendChild(script)
         })()
     }
-    var UI_PAGE = "discoverui1137";
+    var UI_PAGE = "discoverui1138";
     return function(view, params) {
         var embedded = !!(params && params.embedded);
         if (embedded) {
