@@ -43,9 +43,9 @@ define([], function() {
             return
         }
         var urls = [ApiClient.getUrl("web/ConfigurationPage", {
-            name: "discoverbuttonjs1418"
+            name: "discoverbuttonjs1419"
         }), ApiClient.getUrl("web/configurationpage", {
-            name: "discoverbuttonjs1418"
+            name: "discoverbuttonjs1419"
         }), ApiClient.getUrl("Plugins/Discover/Script")];
         var n = 0;
         (function next() {
@@ -79,7 +79,7 @@ define([], function() {
             document.head.appendChild(script)
         })()
     }
-    var UI_PAGE = "discoverui1134";
+    var UI_PAGE = "discoverui1135";
     return function(view, params) {
         var embedded = !!(params && params.embedded);
         if (embedded) {
@@ -1973,6 +1973,7 @@ define([], function() {
             var tb = overlay.querySelector(".dcBtnTrailer");
             tb.textContent = text("Trailer", "Trailer", "Trailer", "Trailer");
             tb.title = tb.textContent;
+            tb.setAttribute("data-short", "Trailer");
             if (showTrailer) {
                 tb.classList.add("show")
             } else {
@@ -1985,11 +1986,13 @@ define([], function() {
             if (isAdmin && current.Status === 1) {
                 d.textContent = text("Aanvraag annuleren", "Cancel request", "Anfrage abbrechen");
                 d.title = d.textContent;
+                d.setAttribute("data-short", text("Annuleren", "Cancel", "Abbrechen", "Avbryt"));
                 d.setAttribute("data-kind", "cancel");
                 d.classList.add("show")
             } else if (isAdmin && current.Status === 2) {
                 d.textContent = text("Verwijderen", "Delete", "L\xf6schen");
                 d.title = d.textContent;
+                d.setAttribute("data-short", text("Verwijderen", "Delete", "L\xf6schen", "Slett"));
                 d.setAttribute("data-kind", "delete");
                 d.classList.add("show")
             } else {
@@ -2792,6 +2795,7 @@ define([], function() {
             ob.removeAttribute("data-id");
             ob.textContent = text("Openen in Emby", "Open in Emby", "In Emby \xf6ffnen");
             ob.title = ob.textContent;
+            ob.setAttribute("data-short", "Emby");
             loadSeasonButtons(i);
             renderQueueInfo(i);
             updateButton();
