@@ -30,6 +30,18 @@
   <img src="docs/screenshots/discover-popup.jpg" alt="Discover popup of The Dark Knight with title logo, info table, scores, collection and cast" width="80%">
 </p>
 
+**Series popup**: for a series in your library the popup also has **Emby** (open it in Emby) and, for administrators, **Delete**.
+
+<p align="center">
+  <img src="docs/screenshots/discover-popup-series.jpg" alt="Discover popup of the series Carrie with Available, Trailer, Emby and Delete buttons and the info table" width="80%">
+</p>
+
+**Person page**: click a cast member for their biography, what is in your library and their other movies and series.
+
+<p align="center">
+  <img src="docs/screenshots/discover-person.jpg" alt="Person page in Discover with photo, biography, In your library and More movies" width="100%">
+</p>
+
 **Studios and streaming services**: choose Movies or Series. Here: movies you can watch on Netflix in your country.
 
 <p align="center">
@@ -68,7 +80,7 @@
   <img src="docs/screenshots/discover-season-detail.jpg" alt="Season detail page with the Play button to request that season" width="80%">
 </p>
 
-**More like this** — on movie and series pages, TMDB recommendations you don't have yet, each with a Request button. The same layout is used for the collection row on movie pages.
+**More like this · not in your library**: on movie and series pages, TMDB recommendations you don't have yet, each with a Request button. The same layout is used for the collection row on movie pages.
 
 <p align="center">
   <img src="docs/screenshots/discover-more-like-this.jpg" alt="More like this row on a movie page with posters and Request buttons" width="100%">
@@ -84,6 +96,12 @@
 
 <p align="center">
   <img src="docs/screenshots/discover-request-from-row.png" alt="Request button changed to Requested with a confirmation message" width="60%">
+</p>
+
+**Settings**: the Sources tab with the TMDB, MDBList, OMDb and fanart.tv keys (keys are masked).
+
+<p align="center">
+  <img src="docs/screenshots/discover-settings-sources.jpg" alt="Plugin settings, Sources tab with masked API keys and test buttons" width="60%">
 </p>
 
 ## What it does
