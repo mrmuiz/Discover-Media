@@ -18,10 +18,22 @@
 
 ## Screenshots
 
-**Discover home** — recently added titles, recent requests and recommendations.
+**Discover home**: new seasons, recently added titles, recent requests and recommendations.
 
 <p align="center">
-  <img src="docs/screenshots/discover-home.png" alt="Emby Discover home page showing recently added titles, recent requests and trending movies and series" width="100%">
+  <img src="docs/screenshots/discover-home-1.4.jpg" alt="Emby Discover home page with New seasons, Recently added and Recent requests rows" width="100%">
+</p>
+
+**Popup**: title logo, Request and Trailer buttons, info table with scores and links, the collection and the cast.
+
+<p align="center">
+  <img src="docs/screenshots/discover-popup.jpg" alt="Discover popup of The Dark Knight with title logo, info table, scores, collection and cast" width="80%">
+</p>
+
+**Studios and streaming services**: choose Movies or Series. Here: movies you can watch on Netflix in your country.
+
+<p align="center">
+  <img src="docs/screenshots/discover-netflix-movies.jpg" alt="Netflix page in Discover with the Type filter set to Movies" width="100%">
 </p>
 
 **Discover Media channel** — browse the available lists and collections. Every folder has its own tile in the Seerr style.
