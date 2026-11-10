@@ -1,4 +1,4 @@
-<!DOCTYPE html><html><head><meta charset="utf-8" /><title>Discover</title></head><body><div data-role="page" class="page type-interior discoverUiPage" data-controller="__plugin/discoveruijs1445"><style>
+<!DOCTYPE html><html><head><meta charset="utf-8" /><title>Discover</title></head><body><div data-role="page" class="page type-interior discoverUiPage" data-controller="__plugin/discoveruijs1446"><style>
  body.dcDiscoverActive .skinHeader .pageTitle,body.dcDiscoverActive .skinHeader .headerButton,body.dcDiscoverActive .skinHeader .headerButton .material-icons,body.dcDiscoverActive .skinHeader .headerButton .md-icon,body.dcDiscoverActive .skinHeader .headerButton i,body.dcDiscoverActive .skinHeader .headerUserButton,body.dcDiscoverActive .skinHeader .headerTabs .emby-tab-button{
     color:#fff !important
 }
@@ -710,6 +710,15 @@ html.dcNoYear .dcCapSub .dcYear,html.dcNoScore .dcCapSub .dcStar{
     overflow:hidden;
     text-overflow:ellipsis;
     text-align:center
+}
+.dcBtnSeason .dcSYear{
+    display:block;
+    font-size:.82em;
+    opacity:.8;
+    margin-top:1px
+}
+.dcBtnSeason .dcSP{
+    display:none
 }
 .dcBtnSeason.all{
     grid-column:1 / -1
@@ -2727,5 +2736,46 @@ html.dcPointer .dcCastWrap:hover .dcCastArr{
 
 }
 
+
+/* Tv 16:9: dezelfde twee kolommen als op de pc, groter en met marges i.p.v. flex-gap (oude webOS). */
+.dcTvPage .dcM.dcTvCols .dcModal{width:92%;max-width:none;max-height:94vh;border-radius:20px}
+.dcTvPage .dcM.dcTvCols .dcModalBody.dcColsOn{padding:18px 34px 12px}
+.dcTvPage .dcM.dcTvCols .dcModalInfo.dcCols{grid-template-columns:minmax(0,1fr) min(380px,30%);column-gap:40px}
+.dcTvPage .dcM.dcTvCols .dcModalInfo.dcCols .dcColR{margin-top:56px}
+.dcTvPage .dcM.dcTvCols .dcHeadRow > *{margin-bottom:12px}
+.dcTvPage .dcM.dcTvCols .dcHeadRow > *:last-child{margin-bottom:0}
+.dcTvPage .dcM.dcTvCols .dcHeadRow .dcModalTitle .dcTitleLogo{max-width:min(480px,100%);max-height:110px}
+.dcTvPage .dcM.dcTvCols .dcHeadRow .dcBtnRow > *{margin:0 12px 0 0!important}
+.dcTvPage .dcM.dcTvCols .dcHeadRow .dcBtn{min-height:48px;padding:8px 30px;font-size:18px}
+.dcTvPage .dcM.dcTvCols .dcHeadRow .dcBtn4k,.dcTvPage .dcM.dcTvCols .dcHeadRow .dcBtnTrailer,.dcTvPage .dcM.dcTvCols .dcHeadRow .dcBtnOpen,.dcTvPage .dcM.dcTvCols .dcHeadRow .dcBtnDel{min-height:48px}
+.dcTvPage .dcM.dcTvCols .dcHeadRow .dcBtnDel.armed{font-size:16px;padding:8px 18px}
+.dcTvPage .dcM.dcTvCols .dcHeadRow .dcBtnTrailer::before,.dcTvPage .dcM.dcTvCols .dcHeadRow .dcBtnOpen::before,.dcTvPage .dcM.dcTvCols .dcHeadRow .dcBtnDel:not(.armed)::before{width:22px;height:22px}
+.dcTvPage .dcM.dcTvCols .dcHeadRow .dcBtnTrailer::after,.dcTvPage .dcM.dcTvCols .dcHeadRow .dcBtnOpen::after,.dcTvPage .dcM.dcTvCols .dcHeadRow .dcBtnDel:not(.armed)::after,.dcTvPage .dcM.dcTvCols .dcHeadRow .dcBtn4k::after{font-size:17px}
+.dcTvPage .dcM.dcTvCols .dcMeta{font-size:17px;margin:0 0 4px}
+.dcTvPage .dcM.dcTvCols .dcOverview{font-size:19px;line-height:1.55;margin:6px 0 10px}
+.dcTvPage .dcM.dcTvCols .dcGenres{font-size:16px}
+.dcTvPage .dcM.dcTvCols .dcGenres > *{margin:0 10px 8px 0}
+.dcTvPage .dcM.dcTvCols .dcInfo{font-size:15px;padding:14px 18px;margin:0}
+.dcTvPage .dcM.dcTvCols .dcRate{font-size:17px}
+.dcTvPage .dcM.dcTvCols .dcIScores > *{margin:0 14px 6px 0}
+.dcTvPage .dcM.dcTvCols .dcTRow > *{margin-right:14px}
+.dcTvPage .dcM.dcTvCols .dcTRow > *:last-child{margin-right:0}
+.dcTvPage .dcM.dcTvCols .dcTLinks > *{margin:0 5px}
+.dcTvPage .dcM.dcTvCols .dcSeasons,.dcTvPage .dcM.dcTvCols .dcSeasonLabel,.dcTvPage .dcM.dcTvCols .dcBtnSeason{font-size:16px!important}
+.dcTvPage .dcM.dcTvCols .dcBtnSeason{padding:7px 12px!important}
+.dcTvPage .dcM.dcTvCols .dcColL .dcQueue{font-size:17px}
+.dcTvPage .dcM.dcTvCols .dcColL .dcQBar{height:14px}
+.dcTvPage .dcM.dcTvCols .dcColTitle{font-size:18px}
+.dcTvPage .dcM.dcTvCols .dcColAll{font-size:15px;padding:5px 16px}
+.dcTvPage .dcM.dcTvCols .dcColHead > *{margin-right:14px}
+.dcTvPage .dcM.dcTvCols .dcColL .dcColItem{width:10vh!important;margin-right:14px}
+.dcTvPage .dcM.dcTvCols .dcColL .dcColPoster{width:10vh!important;height:15vh!important}
+.dcTvPage .dcM.dcTvCols .dcColL .dcColAdd{top:calc(15vh - 40px)!important;width:34px!important;height:34px!important;font-size:18px!important;right:4px}
+.dcTvPage .dcM.dcTvCols .dcColName,.dcTvPage .dcM.dcTvCols .dcColCur{font-size:14px}
+.dcTvPage .dcM.dcTvCols .dcModalInfo.dcCols .dcCastWrap{padding-top:10px}
+.dcTvPage .dcM.dcTvCols .dcCastP,.dcTvPage .dcM.dcTvCols .dcCastPh{width:120px}
+.dcTvPage .dcM.dcTvCols .dcCastPh{height:120px}
+.dcTvPage .dcM.dcTvCols .dcCast > .dcCastP{margin-right:20px!important}
+.dcTvPage .dcM.dcTvCols .dcCastN,.dcTvPage .dcM.dcTvCols .dcCastR{font-size:16px}
 </style><div class="dcRoot"><div class="dcPageBd" aria-hidden="true"><div class="dcPageBdImg"></div><div class="dcPageBdImg"></div><div class="dcPageBdShade"></div></div><div class="dcDiag" style="margin:0 0 1em;font-size:.85em;opacity:.8;white-space:pre-wrap;color:#ffd666;"></div><div class="dcSearch"><button type="button" class="dcHomeBtn focusable" title="Discover"><i class="md-icon">explore</i></button><span>&#128269;</span><input type="text" class="dcSearchInput" placeholder="Films en series zoeken" autocomplete="off" /></div><div class="dcContent"><div class="dcMsg">Laden...</div></div></div><div class="dcOverlay dcM"><div class="dcModal"><button type="button" class="dcClose">&#10005;</button><div class="dcModalBack"></div><div class="dcModalBody"><img class="dcModalPoster" alt="" /><div class="dcModalInfo"><h2 class="dcModalTitle"></h2><div class="dcMeta"></div><div class="dcRatings"></div><div class="dcInfo"></div><div class="dcOverview"></div><div class="dcCastWrap"><button type="button" class="dcCastArr left dcHide" tabindex="-1" data-dir="-1" aria-label="&lt;"></button><div class="dcCast"></div><button type="button" class="dcCastArr right dcHide" tabindex="-1" data-dir="1" aria-label="&gt;"></button></div><div class="dcCollection"></div><div class="dcQueue"></div><div class="dcSeasons"></div><div class="dcBtnRow"><button type="button" class="dcBtn"></button><button type="button" class="dcBtn4k"></button><button type="button" class="dcBtnTrailer"></button><button type="button" class="dcBtnOpen"></button><button type="button" class="dcBtnDel"></button></div></div></div></div></div><div class="dcTrailerOverlay"><button type="button" class="dcClose dcTrailerClose">&#10005;</button><iframe class="dcTrailerFrame" referrerpolicy="strict-origin-when-cross-origin" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe><a class="dcTrailerLink" target="_blank" rel="noopener"></a></div><div class="dcToast"></div></div></body></html>
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     

@@ -43,9 +43,9 @@ define([], function() {
             return
         }
         var urls = [ApiClient.getUrl("web/ConfigurationPage", {
-            name: "discoverbuttonjs1428"
+            name: "discoverbuttonjs1429"
         }), ApiClient.getUrl("web/configurationpage", {
-            name: "discoverbuttonjs1428"
+            name: "discoverbuttonjs1429"
         }), ApiClient.getUrl("Plugins/Discover/Script")];
         var n = 0;
         (function next() {
@@ -79,7 +79,7 @@ define([], function() {
             document.head.appendChild(script)
         })()
     }
-    var UI_PAGE = "discoverui1144";
+    var UI_PAGE = "discoverui1145";
     return function(view, params) {
         var embedded = !!(params && params.embedded);
         if (embedded) {
@@ -2120,7 +2120,7 @@ define([], function() {
                 var ym0 = String(s.AirDate || "").match(/\d{4}/);
                 b.setAttribute("data-year", ym0 ? ym0[0] : "");
                 b.setAttribute("data-season", s.Number);
-                b.textContent = seasonName(s.Number) + (ym0 ? " (" + ym0[0] + ")" : "");
+                b.innerHTML = seasonHtml(s.Number, ym0 ? ym0[0] : "", false);
                 b.title = s.EpisodeCount ? s.EpisodeCount + " " + text("afl.", "eps.", "Folgen") : "";
                 if (s.Upcoming) {
                     b.classList.add("dcSoon");
@@ -2162,6 +2162,9 @@ define([], function() {
                 Array.prototype.forEach.call(boxEl.querySelectorAll(".dcRate"), function(el) {
                     // Tomaat en popcorn alleen hier (oude tv-browsers tonen geen emoji).
                     var eb = el.querySelector("b");
+                    if (isTvClient) {
+                        eb = null
+                    }
                     if (eb && el.classList.contains("rt")) {
                         eb.textContent = "\ud83c\udf45"
                     } else if (eb && el.classList.contains("pop")) {
@@ -2181,19 +2184,23 @@ define([], function() {
         }
         var libSeasons = {};
 
+        // Seizoensnaam met jaartal; op een smal scherm staat het jaartal op een eigen regel (CSS).
+        function seasonHtml(n, yr, have) {
+            return (have ? "\u2713 " : "") + esc(seasonName(n)) + (yr ? '<span class="dcSYear"><span class="dcSP"> (</span>' + esc(yr) + '<span class="dcSP">)</span></span>' : "")
+        }
+
         function applySeasonStates(i) {
             var have = libSeasons[i.TmdbId] || {};
             var btns = overlay.querySelectorAll(".dcBtnSeason[data-season]");
             for (var k = 0; k < btns.length; k++) {
                 var n = parseInt(btns[k].getAttribute("data-season"), 10);
                 var yr = btns[k].getAttribute("data-year");
-                var base = seasonName(n) + (yr ? " (" + yr + ")" : "");
                 if (have[n]) {
-                    btns[k].textContent = "✓ " + base;
+                    btns[k].innerHTML = seasonHtml(n, yr, true);
                     btns[k].disabled = false;
                     btns[k].title = text("Al in je bibliotheek: klik om opnieuw aan te vragen", "Already in your library: click to request again", "Bereits in deiner Bibliothek: erneut anfordern")
                 } else {
-                    btns[k].textContent = base;
+                    btns[k].innerHTML = seasonHtml(n, yr, false);
                     if (btns[k].classList.contains("dcSoon")) {
                         btns[k].insertAdjacentHTML("beforeend", '<span class="dcSoonTag">' + esc(text("binnenkort", "coming soon", "demn\xe4chst", "snart")) + "</span>")
                     }
@@ -2332,7 +2339,7 @@ define([], function() {
                 var items = row.Items || [],
                     show = row.Show > 0 ? row.Show : items.length,
                     v = items.map(function(it, k) {
-                        var pre = it.Flag ? '<img class="dcFlag" alt="" loading="lazy" src="https://flagcdn.com/w20/' + esc(it.Flag) + '.png">' : it.Icon && INFO_ICONS[it.Icon] ? '<span class="dcTIcon">' + INFO_ICONS[it.Icon] + "</span>" : "";
+                        var pre = it.Flag ? '<img class="dcFlag" alt="" loading="lazy" src="https://flagcdn.com/w20/' + esc(it.Flag) + '.png">' : it.Icon && INFO_ICONS[it.Icon] && !isTvClient ? '<span class="dcTIcon">' + INFO_ICONS[it.Icon] + "</span>" : "";
                         return '<div class="dcTItem' + (k >= show ? " dcTExtra" : "") + '"' + (it.Hint ? ' title="' + esc(it.Hint) + '"' : "") + ">" + pre + esc(it.Text) + "</div>"
                     }).join("");
                 if (items.length > show) {
@@ -2551,7 +2558,9 @@ define([], function() {
             if (!info) {
                 return
             }
-            var wide = !isTvClient && !!(dcColMq && dcColMq.matches);
+            // Tv (16:9) krijgt dezelfde twee kolommen als de pc, met eigen maten (dcTvCols).
+            var wide = isTvClient || !!(dcColMq && dcColMq.matches);
+            overlay.classList.toggle("dcTvCols", !!(wide && isTvClient));
             var L = info.querySelector(".dcColL"), R = info.querySelector(".dcColR");
             var pick = function(sel) {
                 return info.querySelector(sel)
@@ -2774,7 +2783,7 @@ define([], function() {
                     })
                 }
                 if (r.Lines && r.Lines.length) {
-                    if (isTvClient) {
+                    if (isTvClient && !(r.Rows && r.Rows.length)) {
                         infoEl.textContent = r.Lines.join("\n")
                     } else {
                         renderInfoBox(i, infoEl, r.Lines, r)
