@@ -277,8 +277,8 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         view.querySelector('.btnUpdCheck span').textContent = languageText('Nu kijken', 'Check now', 'Jetzt prüfen');
         view.querySelector('.btnUpdRestart span').textContent = languageText('Emby herstarten', 'Restart Emby', 'Emby neu starten');
         view.querySelector('.btnUpdTime span').textContent = languageText('Tijd wijzigen', 'Change time', 'Zeit ändern');
-        view.querySelector('.btnUpdPick span').textContent = languageText('Installeren', 'Install', 'Installieren');
-        el(view, 'lblUpdVersion').textContent = languageText('Andere versie installeren (ook terug naar een oudere)', 'Install another version (also back to an older one)', 'Andere Version installieren (auch zurück zu einer älteren)');
+        view.querySelector('.btnUpdPick span').textContent = languageText('Deze versie installeren', 'Install this version', 'Diese Version installieren');
+        el(view, 'lblUpdVersion').textContent = languageText('Vorige versies', 'Previous versions', 'Frühere Versionen');
         view.querySelector('.btnStatus span').textContent = languageText('Start diagnose', 'Run diagnostics', 'Diagnose starten');
         view.querySelector('.btnStatus').nextElementSibling.textContent = languageText(
             'Controleert plugin, kanaal, TMDB, Radarr, Sonarr en gebruikerstoegang. Handig om twee servers te vergelijken.',

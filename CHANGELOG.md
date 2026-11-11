@@ -1,9 +1,10 @@
 ## Version 1.4.0.13
 
 - Fix: the version list was always dark, also with a light theme. It now uses Emby's own select and follows the theme.
+- Change: the version list is now called **Previous versions**, with an **Install this version** button.
 - Change: the release notes moved into the update box, under the buttons, as a **What's new in …** section that is closed by default and scrolls when the notes are long.
 - Fix: the **Check now** button could switch to Dutch after a check.
-- Change: page names bumped (`discoverconfig1106`, `discoverconfigjs1387`).
+- Change: page names bumped (`discoverconfig1107`, `discoverconfigjs1388`).
 
 ## Version 1.4.0.12
 
