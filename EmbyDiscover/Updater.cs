@@ -92,6 +92,7 @@ namespace Emby.Plugins.Discover
                         IsBeta = x.r.prerelease,
                         Date = x.r.published_at,
                         Url = x.r.html_url,
+                        Notes = x.r.body,
                         HasUpdater = x.v >= FirstWithUpdater,
                         DownloadUrl = x.a.browser_download_url,
                         Size = x.a.size,
@@ -252,6 +253,8 @@ namespace Emby.Plugins.Discover
         public string Url { get; set; }
         /// <summary>Vanaf 1.4.0.10 zit de updater erin; oudere versies kun je daarna alleen met de hand bijwerken.</summary>
         public bool HasUpdater { get; set; }
+        /// <summary>Release-tekst van GitHub (markdown).</summary>
+        public string Notes { get; set; }
         internal string DownloadUrl { get; set; }
         internal long Size { get; set; }
         internal string Digest { get; set; }
@@ -264,6 +267,7 @@ namespace Emby.Plugins.Discover
         public bool draft { get; set; }
         public bool prerelease { get; set; }
         public string published_at { get; set; }
+        public string body { get; set; }
         public List<GhAsset> assets { get; set; }
     }
 

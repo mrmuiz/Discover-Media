@@ -359,15 +359,40 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             var d = v.Date ? ' · ' + String(v.Date).slice(0, 10) : '';
             var extra = (v.IsBeta ? ' (beta)' : '') + (v.Version === u.Current ? languageText(' – geïnstalleerd', ' – installed', ' – installiert') : '') +
                 (!v.HasUpdater ? languageText(' – zonder updater', ' – no updater', ' – ohne Updater') : '');
-            html += '<option value="' + esc(v.Tag) + '"' + (v.Version === u.Current ? ' selected' : '') + '>' + esc(v.Version + extra + d) + '</option>';
+            var pick = u.Available ? v.Tag === u.Tag : v.Version === u.Current;
+            html += '<option value="' + esc(v.Tag) + '"' + (pick ? ' selected' : '') + '>' + esc(v.Version + extra + d) + '</option>';
         });
         sel.innerHTML = html;
         syncPick(view, u);
         sel.onchange = function () { syncPick(view, u); };
     }
+    // Heel kleine markdown-weergave voor de release-tekst (koppen, vet, code, lijstjes, links).
+    function miniMarkdown(md) {
+        var out = [], inList = false;
+        String(md || '').replace(/\r/g, '').split('\n').forEach(function (line) {
+            var t = esc(line.trim())
+                .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+                .replace(/`([^`]+)`/g, '<code>$1</code>')
+                .replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener" style="color:#52b54b">$1</a>')
+                .replace(/(^|[^*])\*([^*]+)\*/g, '$1<i>$2</i>');
+            var li = /^[-*] /.test(line.trim());
+            if (li && !inList) { out.push('<ul style="margin:.2em 0 .6em;padding-left:1.3em">'); inList = true; }
+            if (!li && inList) { out.push('</ul>'); inList = false; }
+            if (li) { out.push('<li>' + t.replace(/^[-*] /, '') + '</li>'); }
+            else if (/^#{1,6} /.test(line.trim())) { out.push('<div style="font-weight:600;margin:.7em 0 .2em">' + t.replace(/^#+ /, '') + '</div>'); }
+            else if (t) { out.push('<div style="margin:.2em 0">' + t + '</div>'); }
+        });
+        if (inList) { out.push('</ul>'); }
+        return out.join('');
+    }
     function syncPick(view, u) {
         var sel = el(view, 'selUpdVersion'), btn = view.querySelector('.btnUpdPick');
         var v = ((u && u.Versions) || []).filter(function (x) { return x.Tag === sel.value; })[0];
+        var notes = view.querySelector('.dcUpdNotes');
+        if (v && v.Notes) {
+            notes.style.display = '';
+            notes.innerHTML = '<div style="font-weight:600;margin-bottom:.4em">' + esc(languageText('Wat is nieuw in ', "What's new in ", 'Neu in ') + v.Version + (v.IsBeta ? ' (beta)' : '')) + '</div>' + miniMarkdown(v.Notes);
+        } else { notes.style.display = 'none'; notes.innerHTML = ''; }
         btn.disabled = !v || v.Version === u.Current;
         var note = view.querySelector('.dcUpdPickNote');
         note.textContent = v && !v.HasUpdater
