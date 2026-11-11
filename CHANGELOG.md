@@ -1,3 +1,9 @@
+## Version 1.4.0.14
+
+- Fix: **Check now** and **Change time** hardly looked like buttons in the light theme, because the update box had the same grey. The box now has a thin border and no fill.
+- Fix: the version list always opens on the installed version (or on the new version when there is an update).
+- Change: page names bumped (`discoverconfig1108`, `discoverconfigjs1389`).
+
 ## Version 1.4.0.13
 
 - Fix: the version list was always dark, also with a light theme. It now uses Emby's own select and follows the theme.

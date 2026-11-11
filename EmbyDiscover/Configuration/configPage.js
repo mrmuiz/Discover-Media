@@ -363,6 +363,8 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             html += '<option value="' + esc(v.Tag) + '"' + (pick ? ' selected' : '') + '>' + esc(v.Version + extra + d) + '</option>';
         });
         sel.innerHTML = html;
+        var want = list.filter(function (v) { return u.Available ? v.Tag === u.Tag : v.Version === u.Current; })[0];
+        if (want) { sel.value = want.Tag; }
         syncPick(view, u);
         sel.onchange = function () { syncPick(view, u); };
     }
