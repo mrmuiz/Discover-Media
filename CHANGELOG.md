@@ -1,4 +1,4 @@
-## Unreleased (next version)
+## Version 1.4.0.15
 
 - Change: the **Previous versions** list looks like the theme colour list: larger, with white text on a dark field, easy to read in both themes.
 - Change: page names bumped (`discoverconfig1110`, `discoverconfigjs1391`).
