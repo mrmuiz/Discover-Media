@@ -1,9 +1,10 @@
 ## Version 1.4.0.10
 
+- New: **Updates from GitHub** (General tab). Discover checks daily (04:00, scheduled task "Discover Media: check for updates") for a new release and shows it on the settings page with an **Update** button. The download is checked against GitHub's SHA-256, the old DLL is kept as `.bak`, and a **Restart Emby** button activates it. Options: include test versions (beta / pre-releases), install automatically at night, and then restart Emby automatically as soon as nobody is watching (waits up to 3 hours).
 - Fix: in **Firefox** (Android) the tile "Discover Media" on the home screen opened the channel tiles instead of the Discover page. The loader now also checks every second whether the route just went to the channel, as a safety net next to the Navigation API.
 - Fix: on phones the season buttons of an announced season ("coming soon") were cut off ("Season 2..."), and "Choose a season to request" was squeezed into one column. The tag now sits on its own line under the season name.
 - Change: an announced season without a date now says "TBA" instead of "coming soon".
-- Change: page names bumped (`discoverui1150`, `discoveruijs1451`).
+- Change: page names bumped (`discoverui1150`, `discoveruijs1451`, `discoverconfig1099`, `discoverconfigjs1378`).
 
 ## Version 1.4.0.9
 
