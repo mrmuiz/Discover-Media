@@ -1,3 +1,7 @@
+## Version 1.4.0.10
+
+- Fix: in **Firefox** (Android) the tile "Discover Media" on the home screen opened the channel tiles instead of the Discover page. The loader now also checks every second whether the route just went to the channel, as a safety net next to the Navigation API.
+
 ## Version 1.4.0.9
 
 - Fix: libraries are no longer skipped because of their **name** (for example a normal TV library called "Recorded TV"). Only libraries of type Live TV are skipped; Live TV recordings elsewhere are still recognised per episode.
