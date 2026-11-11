@@ -334,9 +334,15 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         } else if (u.Available) {
             html = cur + '<br>' + languageText('Nieuwe versie beschikbaar: ', 'New version available: ', 'Neue Version verfügbar: ') + '<b>' + link(u.Latest + beta) + '</b>';
             btnI.style.display = '';
+            btnI.__downgrade = false;
             btnI.querySelector('span').textContent = languageText('Bijwerken naar ', 'Update to ', 'Aktualisieren auf ') + u.Latest;
         } else if (u.Latest && verCmp(u.Current, u.Latest) > 0) {
             html = cur + ' · ' + languageText('nieuwer dan de laatste release', 'newer than the latest release', 'neuer als das letzte Release') + ' (' + link(u.Latest + beta) + ')';
+            if (u.CanDowngrade) {
+                btnI.style.display = '';
+                btnI.__downgrade = true;
+                btnI.querySelector('span').textContent = languageText('Terug naar ', 'Go back to ', 'Zurück zu ') + u.Latest;
+            }
         } else if (u.Latest) {
             html = cur + ' · ' + languageText('dit is de nieuwste versie', 'this is the latest version', 'das ist die neueste Version');
         } else {
@@ -359,9 +365,11 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             function (err) { done(function () { updStatus(view, ajaxErrorMessage(err)); }); });
     }
     function installUpdate(view) {
+        var down = view.querySelector('.btnUpdInstall').__downgrade === true;
+        if (down && !window.confirm(languageText('Deze versie vervangen door de laatste gewone release?', 'Replace this version with the latest regular release?', 'Diese Version durch das letzte reguläre Release ersetzen?'))) { return; }
         updStatus(view, languageText('Downloaden en installeren...', 'Downloading and installing...', 'Herunterladen und installieren...'));
         view.querySelector('.btnUpdInstall').style.display = 'none';
-        ApiClient.ajax({ type: 'POST', url: ApiClient.getUrl('Discover/Update/Install'), dataType: 'json' })
+        ApiClient.ajax({ type: 'POST', url: ApiClient.getUrl('Discover/Update/Install', { Downgrade: down }), dataType: 'json' })
             .then(function (u) { showUpdate(view, u); }, function (err) { updStatus(view, ajaxErrorMessage(err)); });
     }
     function restartForUpdate(view) {

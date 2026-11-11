@@ -94,6 +94,7 @@ namespace Emby.Plugins.Discover
                         info.Size = best.a.size;
                         info.Digest = best.a.digest;
                         info.Available = best.v > Current;
+                        info.CanDowngrade = best.v < Current;
                     }
                 }
             }
@@ -111,7 +112,7 @@ namespace Emby.Plugins.Discover
             i.Current = Current.ToString();
             i.PendingVersion = PendingVersion;
             i.CanRestart = CanRestart();
-            if (PendingVersion != null && i.Latest == PendingVersion) i.Available = false;
+            if (PendingVersion != null) { if (i.Latest == PendingVersion) i.Available = false; i.CanDowngrade = false; }
             return i;
         }
 
@@ -133,14 +134,15 @@ namespace Emby.Plugins.Discover
         }
 
         /// <summary>Download en vervang de DLL. Geeft de geïnstalleerde versie terug.</summary>
-        internal static async Task<string> Install(CancellationToken ct)
+        internal static async Task<string> Install(CancellationToken ct, bool downgrade = false)
         {
             await Gate.WaitAsync(ct).ConfigureAwait(false);
             try
             {
                 var info = await Check(true, ct).ConfigureAwait(false);
                 if (info.Error != null) throw new InvalidOperationException(info.Error);
-                if (!info.Available || info.DownloadUrl == null)
+                var ok = info.Available || (downgrade && info.CanDowngrade);
+                if (!ok || info.DownloadUrl == null)
                     throw new InvalidOperationException(DiscoverLanguage.Text("Er is geen nieuwere versie.", "There is no newer version.", "Es gibt keine neuere Version.", "Det finnes ingen nyere versjon."));
 
                 var bytes = await Http.GetByteArrayAsync(info.DownloadUrl).ConfigureAwait(false);
@@ -215,6 +217,8 @@ namespace Emby.Plugins.Discover
         public string Tag { get; set; }
         public bool IsBeta { get; set; }
         public bool Available { get; set; }
+        /// <summary>De geïnstalleerde versie is nieuwer dan de nieuwste gekozen release (bijv. een beta): terugzetten kan.</summary>
+        public bool CanDowngrade { get; set; }
         public string Url { get; set; }
         public string PendingVersion { get; set; }
         public bool CanRestart { get; set; }
@@ -251,7 +255,10 @@ namespace Emby.Plugins.Discover
 
     [Route("/Discover/Update/Install", "POST", Summary = "Nieuwste Discover van GitHub installeren")]
     [Authenticated(Roles = "Admin")]
-    public class InstallDiscoverUpdate : IReturn<UpdateInfo> { }
+    public class InstallDiscoverUpdate : IReturn<UpdateInfo>
+    {
+        public bool Downgrade { get; set; }
+    }
 
     [Route("/Discover/Update/Restart", "POST", Summary = "Emby herstarten om de update te activeren")]
     [Authenticated(Roles = "Admin")]
@@ -284,7 +291,7 @@ namespace Emby.Plugins.Discover
 
         public async Task<object> Post(InstallDiscoverUpdate request)
         {
-            try { await Updater.Install(CancellationToken.None).ConfigureAwait(false); }
+            try { await Updater.Install(CancellationToken.None, request.Downgrade).ConfigureAwait(false); }
             catch (Exception ex)
             {
                 var i = await Updater.Check(false, CancellationToken.None).ConfigureAwait(false);
