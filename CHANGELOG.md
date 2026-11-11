@@ -1,6 +1,8 @@
 ## Version 1.4.0.10
 
 - Fix: in **Firefox** (Android) the tile "Discover Media" on the home screen opened the channel tiles instead of the Discover page. The loader now also checks every second whether the route just went to the channel, as a safety net next to the Navigation API.
+- Fix: on phones the season buttons of an announced season ("coming soon") were cut off ("Season 2..."), and "Choose a season to request" was squeezed into one column. The tag now sits on its own line under the season name.
+- Change: page name bumped (`discoverui1150`).
 
 ## Version 1.4.0.9
 
