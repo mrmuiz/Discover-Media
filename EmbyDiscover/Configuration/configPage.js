@@ -276,6 +276,7 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         view.querySelector('.button-submit span').textContent = languageText('Opslaan', 'Save', 'Speichern');
         view.querySelector('.btnUpdCheck span').textContent = languageText('Nu kijken', 'Check now', 'Jetzt prüfen');
         view.querySelector('.btnUpdRestart span').textContent = languageText('Emby herstarten', 'Restart Emby', 'Emby neu starten');
+        view.querySelector('.btnUpdTime span').textContent = languageText('Tijd wijzigen', 'Change time', 'Zeit ändern');
         view.querySelector('.btnStatus span').textContent = languageText('Start diagnose', 'Run diagnostics', 'Diagnose starten');
         view.querySelector('.btnStatus').nextElementSibling.textContent = languageText(
             'Controleert plugin, kanaal, TMDB, Radarr, Sonarr en gebruikerstoegang. Handig om twee servers te vergelijken.',
@@ -319,6 +320,7 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         var btnI = view.querySelector('.btnUpdInstall'), btnR = view.querySelector('.btnUpdRestart');
         btnI.style.display = 'none'; btnR.style.display = 'none';
         if (!u) { return; }
+        if (u.TaskId) { view.__updTaskId = u.TaskId; }
         var cur = languageText('Geïnstalleerd: ', 'Installed: ', 'Installiert: ') + '<b>' + esc(u.Current || '?') + '</b>';
         var link = function (t) { return u.Url ? '<a href="' + esc(u.Url) + '" target="_blank" rel="noopener" style="color:#52b54b">' + esc(t) + '</a>' : esc(t); };
         var beta = u.IsBeta ? ' (beta)' : '';
@@ -1250,6 +1252,10 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         view.querySelector('.btnUpdCheck').addEventListener('click', function () { checkUpdate(view, true); });
         view.querySelector('.btnUpdInstall').addEventListener('click', function () { installUpdate(view); });
         view.querySelector('.btnUpdRestart').addEventListener('click', function () { restartForUpdate(view); });
+        view.querySelector('.btnUpdTime').addEventListener('click', function () {
+            var page = view.__updTaskId ? 'scheduledtask?id=' + encodeURIComponent(view.__updTaskId) : 'scheduledtasks';
+            if (window.Dashboard && Dashboard.navigate) { Dashboard.navigate(page); } else { window.location.hash = '#!/' + page; }
+        });
         el(view, 'chkUpdateAuto').addEventListener('change', function () { syncUpdateBoxes(view); });
         view.querySelector('.btnStatus').addEventListener('click', function () {
             if (window.Dashboard && Dashboard.navigate) { Dashboard.navigate('configurationpage?name=discoverstatus1079'); }
