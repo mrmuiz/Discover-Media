@@ -1,3 +1,7 @@
+## Version 1.4.0.11 (beta)
+
+- Test release for the new update function (no other changes). Published as a pre-release, so only servers with "Include test versions (beta)" see it.
+
 ## Version 1.4.0.10
 
 - New: **Updates from GitHub** (General tab). Discover checks daily (04:00, scheduled task "Discover Media: check for updates") for a new release and shows it on the settings page with an **Update** button. The download is checked against GitHub's SHA-256, the old DLL is kept as `.bak`, and a **Restart Emby** button activates it. **Change time** opens the scheduled task to pick your own time(s). Options: include test versions (beta / pre-releases), install automatically, and then restart Emby automatically as soon as nobody is watching (waits up to 3 hours).

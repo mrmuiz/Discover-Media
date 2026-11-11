@@ -28,7 +28,7 @@ namespace Emby.Plugins.Discover
             get
             {
                 try { return typeof(Plugin).Assembly.GetName().Version.ToString(); }
-                catch { return "1.4.0.10"; }
+                catch { return "1.4.0.11"; }
             }
         }
 
