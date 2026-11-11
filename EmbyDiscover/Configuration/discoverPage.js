@@ -43,9 +43,9 @@ define([], function() {
             return
         }
         var urls = [ApiClient.getUrl("web/ConfigurationPage", {
-            name: "discoverbuttonjs1433"
+            name: "discoverbuttonjs1434"
         }), ApiClient.getUrl("web/configurationpage", {
-            name: "discoverbuttonjs1433"
+            name: "discoverbuttonjs1434"
         }), ApiClient.getUrl("Plugins/Discover/Script")];
         var n = 0;
         (function next() {
@@ -3099,7 +3099,10 @@ define([], function() {
         var ua = navigator.userAgent || "";
         var isWebTv = /Web0S|webOS|Tizen|SMART-?TV|NetCast|HbbTV/i.test(ua);
         var de = document.documentElement;
-        var isTvClient = isWebTv || !!(de && de.classList && de.classList.contains("layout-tv")) || /Android ?TV|GoogleTV|AFT[A-Z]|BRAVIA|SHIELD Android TV/i.test(ua);
+        // Chromecast met Google TV / Google TV Streamer en andere Android-tv's zonder "Android TV" in de user agent:
+        // Android zonder aanraakscherm en zonder muis (alleen afstandsbediening) is een tv.
+        var androidNoPointer = /Android/i.test(ua) && !!window.matchMedia && window.matchMedia("(pointer: none)").matches && !(navigator.maxTouchPoints > 0);
+        var isTvClient = isWebTv || !!(de && de.classList && de.classList.contains("layout-tv")) || /Android ?TV|GoogleTV|Google TV|Chromecast|AFT[A-Z]|BRAVIA|SHIELD Android TV|PhilipsTV|TPM\d{3}/i.test(ua) || androidNoPointer;
         var lastFocus = null;
         if (isTvClient) {
             view.classList.add("dcTvPage")
@@ -4080,7 +4083,7 @@ define([], function() {
             if (isShown(input)) {
                 lines.push([input])
             }
-            var parts = content.querySelectorAll(".dcBack, .dcFilters, .dcRow, .dcGrid, .dcMoreBtn");
+            var parts = content.querySelectorAll(".dcBack, .dcFilters, .dcRowLink, .dcRow, .dcGrid, .dcMoreBtn");
             Array.prototype.forEach.call(parts, function(p) {
                 if (!isShown(p)) {
                     return
@@ -4092,7 +4095,7 @@ define([], function() {
                     }
                     return
                 }
-                if (p.classList.contains("dcBack") || p.classList.contains("dcMoreBtn")) {
+                if (p.classList.contains("dcBack") || p.classList.contains("dcMoreBtn") || p.classList.contains("dcRowLink")) {
                     if (isUsable(p)) {
                         lines.push([p])
                     }
