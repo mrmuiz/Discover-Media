@@ -219,6 +219,7 @@ namespace Emby.Plugins.Discover
         public string PendingVersion { get; set; }
         public bool CanRestart { get; set; }
         public string Error { get; set; }
+        public string TaskId { get; set; }
         internal string DownloadUrl { get; set; }
         internal long Size { get; set; }
         internal string Digest { get; set; }
@@ -258,15 +259,28 @@ namespace Emby.Plugins.Discover
 
     public class DiscoverUpdateService : IService
     {
-        public DiscoverUpdateService(IServerApplicationHost host, IApplicationPaths paths, IJsonSerializer json)
+        private readonly ITaskManager _tasks;
+
+        public DiscoverUpdateService(IServerApplicationHost host, IApplicationPaths paths, IJsonSerializer json, ITaskManager tasks)
         {
+            _tasks = tasks;
             Updater.Json = json;
             Updater.Host = host;
             Updater.Paths = paths;
         }
 
         public async Task<object> Get(GetDiscoverUpdate request)
-            => await Updater.Check(request.Fresh, CancellationToken.None).ConfigureAwait(false);
+        {
+            var i = await Updater.Check(request.Fresh, CancellationToken.None).ConfigureAwait(false);
+            try
+            {
+                var w = (_tasks?.ScheduledTasks ?? new IScheduledTaskWorker[0])
+                    .FirstOrDefault(x => x?.ScheduledTask != null && x.ScheduledTask.Key == "DiscoverMediaUpdate");
+                i.TaskId = w?.Id;
+            }
+            catch { }
+            return i;
+        }
 
         public async Task<object> Post(InstallDiscoverUpdate request)
         {
