@@ -1,3 +1,8 @@
+## Unreleased (next version)
+
+- Change: the **Previous versions** list looks like the theme colour list: larger, with white text on a dark field, easy to read in both themes.
+- Change: page names bumped (`discoverconfig1110`, `discoverconfigjs1391`).
+
 ## Version 1.4.0.14
 
 - Fix: **Check now** and **Change time** hardly looked like buttons in the light theme, because the update box had the same grey. The box now has a thin border and no fill.
