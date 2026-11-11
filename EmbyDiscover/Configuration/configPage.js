@@ -373,6 +373,8 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         var out = [], inList = false;
         String(md || '').replace(/\r/g, '').split('\n').forEach(function (line) {
             var t = esc(line.trim())
+                .replace(/\[!\[([^\]]*)\]\((https:[^)\s]+)\)\]\((https:[^)\s]+)\)/g, '<a href="$3" target="_blank" rel="noopener"><img src="$2" alt="$1" style="height:2em;vertical-align:middle"></a>')
+                .replace(/!\[([^\]]*)\]\((https:[^)\s]+)\)/g, '<img src="$2" alt="$1" style="max-height:2em;vertical-align:middle">')
                 .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
                 .replace(/`([^`]+)`/g, '<code>$1</code>')
                 .replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener" style="color:#52b54b">$1</a>')
