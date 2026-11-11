@@ -346,9 +346,17 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         updStatus(view, html, true);
     }
     function checkUpdate(view, fresh) {
-        updStatus(view, languageText('Kijken op GitHub...', 'Checking GitHub...', 'GitHub wird geprüft...'));
-        ApiClient.getJSON(ApiClient.getUrl('Discover/Update', { Fresh: !!fresh })).then(function (u) { showUpdate(view, u); },
-            function (err) { updStatus(view, ajaxErrorMessage(err)); });
+        // Bij openen van de pagina stil laden (meestal uit het geheugen, dus direct). Bij "Nu kijken" laat de knop zien dat hij bezig is.
+        var btn = view.querySelector('.btnUpdCheck'), span = btn.querySelector('span');
+        var label = languageText('Nu kijken', 'Check now', 'Jetzt prüfen');
+        var started = Date.now();
+        if (fresh) { btn.disabled = true; span.textContent = languageText('Zoeken naar updates…', 'Looking for updates…', 'Suche nach Updates…'); }
+        var done = function (fn) {
+            setTimeout(function () { btn.disabled = false; span.textContent = label; fn(); }, fresh ? Math.max(0, 700 - (Date.now() - started)) : 0);
+        };
+        ApiClient.getJSON(ApiClient.getUrl('Discover/Update', { Fresh: !!fresh })).then(
+            function (u) { done(function () { showUpdate(view, u); }); },
+            function (err) { done(function () { updStatus(view, ajaxErrorMessage(err)); }); });
     }
     function installUpdate(view) {
         updStatus(view, languageText('Downloaden en installeren...', 'Downloading and installing...', 'Herunterladen und installieren...'));
