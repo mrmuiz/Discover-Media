@@ -1,6 +1,42 @@
+## Unreleased (next version)
+
+- Fix: closing the trailer by clicking next to it only hid the video; the sound kept playing. Closing (X, click outside, Back, leaving the page) now really stops the trailer.
+- Change: page name bumped (`discoveruijs1452`).
+
+## Version 1.4.0.15
+
+- Change: the **Previous versions** list looks like the theme colour list: larger, with white text on a dark field, easy to read in both themes.
+- Change: page names bumped (`discoverconfig1110`, `discoverconfigjs1391`).
+
+## Version 1.4.0.14
+
+- Fix: **Check now** and **Change time** hardly looked like buttons in the light theme, because the update box had the same grey. The box now has a thin border and no fill.
+- Fix: the version list always opens on the installed version (or on the new version when there is an update).
+- Change: page names bumped (`discoverconfig1108`, `discoverconfigjs1389`).
+
+## Version 1.4.0.13
+
+- Fix: the version list was always dark, also with a light theme. It now uses Emby's own select and follows the theme.
+- Change: the version list is now called **Previous versions**, with an **Install this version** button.
+- Change: the release notes moved into the update box, under the buttons, as a **What's new in …** section that is closed by default and scrolls when the notes are long.
+- Fix: the **Check now** button could switch to Dutch after a check.
+- Change: page names bumped (`discoverconfig1107`, `discoverconfigjs1388`).
+
+## Version 1.4.0.12
+
+- New: **Install another version** (Updates tab): a list of all versions on GitHub (also older ones and betas, with their date) to go back one or more versions, or to a beta. Versions before 1.4.0.10 are marked "no updater": from those, updating again is manual. Below the list, a **What's new** box shows the release notes of the chosen version.
+- Change: release builds keep the pre-release setting you chose on GitHub.
+- Change: page name bumped (`discoverconfigjs1386`).
+
+## Version 1.4.0.11 (beta)
+
+- Updates moved to their own **Updates** tab; the tab gets a green dot when a new version is available.
+- Change: page names bumped (`discoverconfig1105`, `discoverconfigjs1386`).
+- Also a test release for the new update function. Published as a pre-release, so only servers with "Include test versions (beta)" see it.
+
 ## Version 1.4.0.10
 
-- New: **Updates from GitHub** (General tab). Discover checks daily (04:00, scheduled task "Discover Media: check for updates") for a new release and shows it on the settings page with an **Update** button. The download is checked against GitHub's SHA-256, the old DLL is kept as `.bak`, and a **Restart Emby** button activates it. **Change time** opens the scheduled task to pick your own time(s). Options: include test versions (beta / pre-releases), install automatically at night, and then restart Emby automatically as soon as nobody is watching (waits up to 3 hours).
+- New: **Updates from GitHub** (General tab). Discover checks daily (04:00, scheduled task "Discover Media: check for updates") for a new release and shows it on the settings page with an **Update** button. The download is checked against GitHub's SHA-256, the old DLL is kept as `.bak`, and a **Restart Emby** button activates it. **Change time** opens the scheduled task to pick your own time(s). Options: include test versions (beta / pre-releases), install automatically, and then restart Emby automatically as soon as nobody is watching (waits up to 3 hours).
 - Fix: in **Firefox** (Android) the tile "Discover Media" on the home screen opened the channel tiles instead of the Discover page. The loader now also checks every second whether the route just went to the channel, as a safety net next to the Navigation API.
 - Fix: on phones the season buttons of an announced season ("coming soon") were cut off ("Season 2..."), and "Choose a season to request" was squeezed into one column. The tag now sits on its own line under the season name.
 - Change: an announced season without a date now says "TBA" instead of "coming soon".

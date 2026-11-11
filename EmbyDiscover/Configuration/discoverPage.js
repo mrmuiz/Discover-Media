@@ -3901,10 +3901,42 @@ define([], function() {
         var trailerFrame = trailerOverlay.querySelector(".dcTrailerFrame");
         var trailerLink = trailerOverlay.querySelector(".dcTrailerLink");
 
+        // Trailer echt stoppen: YouTube een stop-opdracht geven en het iframe vervangen door een leeg exemplaar.
+        // Ook als de trailer op een andere manier verborgen wordt (zie de observer hieronder).
+        function stopTrailerFrame() {
+            if (!trailerFrame.getAttribute("src") || trailerFrame.getAttribute("src") === "about:blank") {
+                return
+            }
+            try {
+                trailerFrame.contentWindow.postMessage('{"event":"command","func":"stopVideo","args":""}', "*")
+            } catch (ignored) {}
+            var fresh = trailerFrame.cloneNode(false);
+            fresh.removeAttribute("src");
+            if (trailerFrame.parentNode) {
+                trailerFrame.parentNode.replaceChild(fresh, trailerFrame)
+            }
+            trailerFrame = fresh
+        }
+
         function closeTrailer() {
             trailerOverlay.classList.remove("open");
-            trailerFrame.src = "about:blank"
+            stopTrailerFrame()
         }
+        if (typeof MutationObserver === "function") {
+            new MutationObserver(function() {
+                if (!trailerOverlay.classList.contains("open")) {
+                    stopTrailerFrame()
+                }
+            }).observe(trailerOverlay, {
+                attributes: true,
+                attributeFilter: ["class"]
+            })
+        }
+        view.addEventListener("viewhide", function() {
+            if (trailerOverlay.classList.contains("open")) {
+                closeTrailer()
+            }
+        });
 
         function syncModalBody() {
             var open = Array.prototype.some.call(document.querySelectorAll(".dcOverlay.open, .dcTrailerOverlay.open"), function(o) {
@@ -3931,7 +3963,7 @@ define([], function() {
         });
         trailerOverlay.querySelector(".dcTrailerClose").addEventListener("click", closeTrailer);
         trailerOverlay.addEventListener("click", function(e) {
-            if (e.target === trailerOverlay) {
+            if (!(e.target && e.target.closest && e.target.closest(".dcTrailerFrame, .dcTrailerLink"))) {
                 closeTrailer()
             }
         });
@@ -3955,7 +3987,7 @@ define([], function() {
                     showToast(text("Geen trailer beschikbaar voor deze titel.", "No trailer available for this title.", "Kein Trailer f\xfcr diesen Titel verf\xfcgbar."), true);
                     return
                 }
-                trailerFrame.src = "https://www.youtube-nocookie.com/embed/" + encodeURIComponent(r.Key) + "?autoplay=1&rel=0&playsinline=1&origin=" + encodeURIComponent(window.location.origin);
+                trailerFrame.src = "https://www.youtube-nocookie.com/embed/" + encodeURIComponent(r.Key) + "?autoplay=1&rel=0&playsinline=1&enablejsapi=1&origin=" + encodeURIComponent(window.location.origin);
                 trailerLink.href = "https://www.youtube.com/watch?v=" + encodeURIComponent(r.Key);
                 trailerLink.textContent = text("Werkt de trailer niet? Open op YouTube", "Trailer not playing? Open on YouTube", "Trailer l\xe4dt nicht? Auf YouTube \xf6ffnen");
                 trailerOverlay.classList.add("open");
