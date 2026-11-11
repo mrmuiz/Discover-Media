@@ -307,6 +307,14 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         var box = r.closest('.checkboxContainer');
         if (box) { box.style.opacity = auto ? '' : '.5'; }
     }
+    function verCmp(a, b) {
+        var x = String(a || '').split('.'), y = String(b || '').split('.');
+        for (var i = 0; i < Math.max(x.length, y.length); i++) {
+            var d = (parseInt(x[i], 10) || 0) - (parseInt(y[i], 10) || 0);
+            if (d) { return d; }
+        }
+        return 0;
+    }
     function showUpdate(view, u) {
         var btnI = view.querySelector('.btnUpdInstall'), btnR = view.querySelector('.btnUpdRestart');
         btnI.style.display = 'none'; btnR.style.display = 'none';
@@ -323,8 +331,10 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             html = cur + '<br>' + languageText('Nieuwe versie beschikbaar: ', 'New version available: ', 'Neue Version verfügbar: ') + '<b>' + link(u.Latest + beta) + '</b>';
             btnI.style.display = '';
             btnI.querySelector('span').textContent = languageText('Bijwerken naar ', 'Update to ', 'Aktualisieren auf ') + u.Latest;
+        } else if (u.Latest && verCmp(u.Current, u.Latest) > 0) {
+            html = cur + ' · ' + languageText('nieuwer dan de laatste release', 'newer than the latest release', 'neuer als das letzte Release') + ' (' + link(u.Latest + beta) + ')';
         } else if (u.Latest) {
-            html = cur + ' · ' + languageText('dit is de nieuwste versie', 'this is the latest version', 'das ist die neueste Version') + ' (' + link(u.Latest + beta) + ')';
+            html = cur + ' · ' + languageText('dit is de nieuwste versie', 'this is the latest version', 'das ist die neueste Version');
         } else {
             html = cur;
         }
