@@ -1,9 +1,3 @@
-## Unreleased (next version)
-
-- Change: the Ko-fi button on the settings page now shows the Ko-fi cup with a heart and says **Buy me a Ko-fi**.
-- Change: **What's new** also shows images and image links from the release notes (such as the Ko-fi button).
-- Change: page names bumped (`discoverconfig1109`, `discoverconfigjs1390`).
-
 ## Version 1.4.0.14
 
 - Fix: **Check now** and **Change time** hardly looked like buttons in the light theme, because the update box had the same grey. The box now has a thin border and no fill.
