@@ -1,6 +1,8 @@
 ## Version 1.4.0.11 (beta)
 
-- Test release for the new update function (no other changes). Published as a pre-release, so only servers with "Include test versions (beta)" see it.
+- Updates moved to their own **Updates** tab; the tab gets a green dot when a new version is available.
+- Change: page names bumped (`discoverconfig1102`, `discoverconfigjs1382`).
+- Also a test release for the new update function. Published as a pre-release, so only servers with "Include test versions (beta)" see it.
 
 ## Version 1.4.0.10
 

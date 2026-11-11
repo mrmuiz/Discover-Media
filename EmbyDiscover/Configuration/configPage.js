@@ -73,7 +73,7 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         btnTestMdblistText: ['Test MDBList', 'Test MDBList', 'MDBList testen'],
         lbl_txtMdblistKey: ['MDBList API-sleutel (optioneel)', 'MDBList API key (optional)', 'MDBList-API-Schlüssel (optional)'],
         desc_txtMdblistKey: ['Gratis op mdblist.com (Preferences, API Access). Geeft in de popup de scores van IMDb, Rotten Tomatoes (critici en publiek), Metacritic, Letterboxd en Trakt. Staat hier een sleutel, dan gaat MDBList voor OMDb; OMDb blijft de reserve.', 'Free at mdblist.com (Preferences, API Access). Gives the popup the scores of IMDb, Rotten Tomatoes (critics and audience), Metacritic, Letterboxd and Trakt. With a key here MDBList comes before OMDb; OMDb stays the fallback.', 'Kostenlos auf mdblist.com (Preferences, API Access). Liefert im Popup die Bewertungen von IMDb, Rotten Tomatoes (Kritiker und Publikum), Metacritic, Letterboxd und Trakt. Mit einem Schlüssel hier geht MDBList vor OMDb; OMDb bleibt die Reserve.'],
-        hdgUpdates: ['Updates', 'Updates', 'Updates'],
+        tab_updates: ['Updates', 'Updates', 'Updates'],
         lbl_chkUpdateCheck: ['Dagelijks kijken of er een nieuwe versie is', 'Check daily for a new version', 'Täglich nach einer neuen Version suchen'],
         lbl_chkUpdateBeta: ['Ook testversies (beta)', 'Include test versions (beta)', 'Auch Testversionen (Beta)'],
         desc_chkUpdateBeta: ['Testversies zijn nieuwer maar minder getest.', 'Test versions are newer but less tested.', 'Testversionen sind neuer, aber weniger getestet.'],
@@ -321,6 +321,8 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         btnI.style.display = 'none'; btnR.style.display = 'none';
         if (!u) { return; }
         if (u.TaskId) { view.__updTaskId = u.TaskId; }
+        var tab = el(view, 'tab_updates');
+        if (tab) { tab.textContent = 'Updates' + (u.Available ? ' \u25cf' : ''); tab.style.color = u.Available ? '#52b54b' : ''; }
         var cur = languageText('Geïnstalleerd: ', 'Installed: ', 'Installiert: ') + '<b>' + esc(u.Current || '?') + '</b>';
         var link = function (t) { return u.Url ? '<a href="' + esc(u.Url) + '" target="_blank" rel="noopener" style="color:#52b54b">' + esc(t) + '</a>' : esc(t); };
         var beta = u.IsBeta ? ' (beta)' : '';

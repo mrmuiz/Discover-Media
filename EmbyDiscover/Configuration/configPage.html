@@ -5,7 +5,7 @@
     <title>Discover</title>
 </head>
 <body>
-<div data-role="page" class="page type-interior pluginConfigurationPage discoverConfigPage" data-require="emby-input,emby-button,emby-select,emby-checkbox" data-controller="__plugin/discoverconfigjs1381">
+<div data-role="page" class="page type-interior pluginConfigurationPage discoverConfigPage" data-require="emby-input,emby-button,emby-select,emby-checkbox" data-controller="__plugin/discoverconfigjs1382">
     <style>
         .discoverConfigPage .keyWrap { position: relative; }
         .discoverConfigPage .keyWrap input { padding-right: 2.8em; }
@@ -52,6 +52,7 @@
                     <button type="button" class="dcTab" role="tab" data-tab="arr" id="tab_arr">Aanvragen</button>
                     <button type="button" class="dcTab" role="tab" data-tab="users" id="tab_users">Gebruikers</button>
                     <button type="button" class="dcTab" role="tab" data-tab="storage" id="tab_storage">Opslag</button>
+                    <button type="button" class="dcTab" role="tab" data-tab="updates" id="tab_updates">Updates</button>
                     <button type="button" class="dcTab" role="tab" data-tab="diag" id="tab_diag">Diagnose</button>
                 </div>
 
@@ -68,7 +69,10 @@
                     </select>
                 </div>
 
-                <h3 id="hdgUpdates">Updates</h3>
+                </div>
+
+                <!-- Updates -->
+                <div class="dcPanel" data-panel="updates">
                 <div class="dcUpdBox" style="margin:0 0 1em;padding:.9em 1em;border-radius:.6em;background:rgba(255,255,255,.06)">
                     <div class="dcUpdStatus" style="margin-bottom:.6em">...</div>
                     <button is="emby-button" type="button" class="raised btnUpdCheck"><span>Nu kijken</span></button>
