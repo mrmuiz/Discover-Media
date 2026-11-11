@@ -191,6 +191,22 @@
         });
     }
 
+    // Vangnet naast de Navigation API: Firefox (Android) meldt de overgang naar het kanaal niet altijd zo dat
+    // het navigate-event hierboven doorstuurt. Elke seconde kijken we daarom ook zelf of de route net naar het
+    // kanaal ging, vanaf een pagina buiten het kanaal (een tik op tegel of menu, geen Terug vanuit een map).
+    var pollRoute = null;
+    function pollCheck() {
+        var route = routeOf(location.href);
+        if (pollRoute === null) { pollRoute = route; return; }
+        if (route === pollRoute) { return; }
+        var from = pollRoute;
+        pollRoute = route;
+        if (!targetsChannel(route) || inChannelRoutes(from)) { return; }
+        refreshConfig(true).then(function (on) {
+            if (on === true && routeOf(location.href) === route && shouldRedirect(route, 'push', from, true)) { log('vangnet: doorsturen'); redirect(); }
+        });
+    }
+
     // ---- Achtergrond bij de tegel "Discover Media" (zoals Emby dat bij andere bibliotheken doet) ----
     // Alleen als de gebruiker in Emby "Achtergronden inschakelen" aan heeft. De foto komt in Emby's eigen
     // achtergrondlaag (.backdropContainer), zodat Emby's verduistering er gewoon overheen valt.
@@ -427,6 +443,7 @@
         if (!a) { return; }
         refreshConfig(false);
         if (!hasNavApi && initialChecked) { onRouteChange(); }
+        if (hasNavApi && initialChecked) { pollCheck(); }
         loadInfo().then(function (i) {
             if (!initialChecked && i && redirectOn !== null) {
                 initialChecked = true;
