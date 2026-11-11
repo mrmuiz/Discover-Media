@@ -1,3 +1,8 @@
+## Unreleased (next version)
+
+- Fix: closing the trailer by clicking next to it only hid the video; the sound kept playing. Closing (X, click outside, Back, leaving the page) now really stops the trailer.
+- Change: page name bumped (`discoveruijs1452`).
+
 ## Version 1.4.0.15
 
 - Change: the **Previous versions** list looks like the theme colour list: larger, with white text on a dark field, easy to read in both themes.
