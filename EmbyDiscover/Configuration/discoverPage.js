@@ -2153,7 +2153,7 @@ define([], function() {
                 b.title = s.EpisodeCount ? s.EpisodeCount + " " + text("afl.", "eps.", "Folgen") : "";
                 if (s.Upcoming) {
                     b.classList.add("dcSoon");
-                    b.insertAdjacentHTML("beforeend", '<span class="dcSoonTag">' + esc(text("binnenkort", "coming soon", "demn\xe4chst", "snart")) + "</span>");
+                    b.insertAdjacentHTML("beforeend", '<span class="dcSoonTag">' + esc(s.AirDate ? text("binnenkort", "coming soon", "demn\xe4chst", "snart") : "TBA") + "</span>");
                     b.title = s.AirDate ? text("Start ", "Starts ", "Start ", "Start ") + s.AirDate : text("Aangekondigd", "Announced", "Angek\xfcndigt", "Annonsert")
                 }
                 b.addEventListener("click", function() {
@@ -2231,7 +2231,7 @@ define([], function() {
                 } else {
                     btns[k].innerHTML = seasonHtml(n, yr, false);
                     if (btns[k].classList.contains("dcSoon")) {
-                        btns[k].insertAdjacentHTML("beforeend", '<span class="dcSoonTag">' + esc(text("binnenkort", "coming soon", "demn\xe4chst", "snart")) + "</span>")
+                        btns[k].insertAdjacentHTML("beforeend", '<span class="dcSoonTag">' + esc(yr ? text("binnenkort", "coming soon", "demn\xe4chst", "snart") : "TBA") + "</span>")
                     }
                     btns[k].disabled = false
                 }
