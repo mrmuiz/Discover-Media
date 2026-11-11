@@ -25,6 +25,7 @@ namespace Emby.Plugins.Discover
     {
         internal const string Repo = "mrmuiz/Discover-Media";
         internal const string AssetName = "Emby.Plugins.Discover.dll";
+        private static readonly Version FirstWithUpdater = new Version(1, 4, 0, 10);
 
         private static readonly HttpClient Http = CreateClient();
         private static readonly SemaphoreSlim Gate = new SemaphoreSlim(1, 1);
@@ -78,23 +79,32 @@ namespace Emby.Plugins.Discover
                     if (!resp.IsSuccessStatusCode)
                         throw new InvalidOperationException("GitHub: HTTP " + (int)resp.StatusCode);
                     var releases = Json.DeserializeFromString<List<GhRelease>>(body) ?? new List<GhRelease>();
-                    var best = releases
-                        .Where(r => r != null && !r.draft && (beta || !r.prerelease))
+                    var all = releases
+                        .Where(r => r != null && !r.draft)
                         .Select(r => new { r, v = ParseTag(r.tag_name), a = (r.assets ?? new List<GhAsset>()).FirstOrDefault(a => string.Equals(a.name, AssetName, StringComparison.OrdinalIgnoreCase)) })
                         .Where(x => x.v != null && x.a != null)
                         .OrderByDescending(x => x.v)
-                        .FirstOrDefault();
+                        .ToList();
+                    info.Versions = all.Select(x => new ReleaseVersion
+                    {
+                        Version = x.v.ToString(),
+                        Tag = x.r.tag_name,
+                        IsBeta = x.r.prerelease,
+                        Date = x.r.published_at,
+                        Url = x.r.html_url,
+                        HasUpdater = x.v >= FirstWithUpdater,
+                        DownloadUrl = x.a.browser_download_url,
+                        Size = x.a.size,
+                        Digest = x.a.digest
+                    }).ToList();
+                    var best = info.Versions.FirstOrDefault(x => beta || !x.IsBeta);
                     if (best != null)
                     {
-                        info.Latest = best.v.ToString();
-                        info.Tag = best.r.tag_name;
-                        info.IsBeta = best.r.prerelease;
-                        info.Url = best.r.html_url;
-                        info.DownloadUrl = best.a.browser_download_url;
-                        info.Size = best.a.size;
-                        info.Digest = best.a.digest;
-                        info.Available = best.v > Current;
-                        info.CanDowngrade = best.v < Current;
+                        info.Latest = best.Version;
+                        info.Tag = best.Tag;
+                        info.IsBeta = best.IsBeta;
+                        info.Url = best.Url;
+                        info.Available = new Version(best.Version) > Current;
                     }
                 }
             }
@@ -112,7 +122,7 @@ namespace Emby.Plugins.Discover
             i.Current = Current.ToString();
             i.PendingVersion = PendingVersion;
             i.CanRestart = CanRestart();
-            if (PendingVersion != null) { if (i.Latest == PendingVersion) i.Available = false; i.CanDowngrade = false; }
+            if (PendingVersion != null && i.Latest == PendingVersion) i.Available = false;
             return i;
         }
 
@@ -134,28 +144,36 @@ namespace Emby.Plugins.Discover
         }
 
         /// <summary>Download en vervang de DLL. Geeft de geïnstalleerde versie terug.</summary>
-        internal static async Task<string> Install(CancellationToken ct, bool downgrade = false)
+        internal static async Task<string> Install(CancellationToken ct, string tag = null)
         {
             await Gate.WaitAsync(ct).ConfigureAwait(false);
             try
             {
                 var info = await Check(true, ct).ConfigureAwait(false);
                 if (info.Error != null) throw new InvalidOperationException(info.Error);
-                var ok = info.Available || (downgrade && info.CanDowngrade);
-                if (!ok || info.DownloadUrl == null)
-                    throw new InvalidOperationException(DiscoverLanguage.Text("Er is geen nieuwere versie.", "There is no newer version.", "Es gibt keine neuere Version.", "Det finnes ingen nyere versjon."));
+                ReleaseVersion pick;
+                if (!string.IsNullOrEmpty(tag))
+                {
+                    pick = (info.Versions ?? new List<ReleaseVersion>()).FirstOrDefault(x => x.Tag == tag);
+                    if (pick == null) throw new InvalidOperationException(DiscoverLanguage.Text("Die versie staat niet (meer) op GitHub.", "That version is not on GitHub (anymore).", "Diese Version ist nicht (mehr) auf GitHub.", "Den versjonen finnes ikke (lenger) på GitHub."));
+                }
+                else
+                {
+                    pick = info.Available ? (info.Versions ?? new List<ReleaseVersion>()).FirstOrDefault(x => x.Tag == info.Tag) : null;
+                    if (pick == null) throw new InvalidOperationException(DiscoverLanguage.Text("Er is geen nieuwere versie.", "There is no newer version.", "Es gibt keine neuere Version.", "Det finnes ingen nyere versjon."));
+                }
 
-                var bytes = await Http.GetByteArrayAsync(info.DownloadUrl).ConfigureAwait(false);
+                var bytes = await Http.GetByteArrayAsync(pick.DownloadUrl).ConfigureAwait(false);
                 if (bytes.Length < 1024 || bytes[0] != (byte)'M' || bytes[1] != (byte)'Z')
                     throw new InvalidOperationException("Download is not a valid DLL. Nothing was changed.");
-                if (info.Size > 0 && bytes.Length != info.Size)
+                if (pick.Size > 0 && bytes.Length != pick.Size)
                     throw new InvalidOperationException("Download incomplete. Nothing was changed.");
-                if (!string.IsNullOrEmpty(info.Digest) && info.Digest.StartsWith("sha256:", StringComparison.OrdinalIgnoreCase))
+                if (!string.IsNullOrEmpty(pick.Digest) && pick.Digest.StartsWith("sha256:", StringComparison.OrdinalIgnoreCase))
                 {
                     using (var sha = SHA256.Create())
                     {
                         var actual = string.Concat(sha.ComputeHash(bytes).Select(b => b.ToString("x2")));
-                        if (!string.Equals(actual, info.Digest.Substring(7), StringComparison.OrdinalIgnoreCase))
+                        if (!string.Equals(actual, pick.Digest.Substring(7), StringComparison.OrdinalIgnoreCase))
                             throw new InvalidOperationException("Checksum does not match GitHub's. Nothing was changed.");
                     }
                 }
@@ -174,10 +192,10 @@ namespace Emby.Plugins.Discover
                     throw;
                 }
 
-                PendingVersion = info.Latest;
-                DiscoverDiagnostics.Add("update: " + info.Latest + " geïnstalleerd in " + target + ", herstart nodig");
+                PendingVersion = pick.Version;
+                DiscoverDiagnostics.Add("update: " + pick.Version + " geïnstalleerd in " + target + ", herstart nodig");
                 try { Host?.NotifyPendingRestart(); } catch { }
-                return info.Latest;
+                return pick.Version;
             }
             finally { Gate.Release(); }
         }
@@ -217,13 +235,23 @@ namespace Emby.Plugins.Discover
         public string Tag { get; set; }
         public bool IsBeta { get; set; }
         public bool Available { get; set; }
-        /// <summary>De geïnstalleerde versie is nieuwer dan de nieuwste gekozen release (bijv. een beta): terugzetten kan.</summary>
-        public bool CanDowngrade { get; set; }
+        public List<ReleaseVersion> Versions { get; set; }
         public string Url { get; set; }
         public string PendingVersion { get; set; }
         public bool CanRestart { get; set; }
         public string Error { get; set; }
         public string TaskId { get; set; }
+    }
+
+    public class ReleaseVersion
+    {
+        public string Version { get; set; }
+        public string Tag { get; set; }
+        public bool IsBeta { get; set; }
+        public string Date { get; set; }
+        public string Url { get; set; }
+        /// <summary>Vanaf 1.4.0.10 zit de updater erin; oudere versies kun je daarna alleen met de hand bijwerken.</summary>
+        public bool HasUpdater { get; set; }
         internal string DownloadUrl { get; set; }
         internal long Size { get; set; }
         internal string Digest { get; set; }
@@ -235,6 +263,7 @@ namespace Emby.Plugins.Discover
         public string html_url { get; set; }
         public bool draft { get; set; }
         public bool prerelease { get; set; }
+        public string published_at { get; set; }
         public List<GhAsset> assets { get; set; }
     }
 
@@ -257,7 +286,8 @@ namespace Emby.Plugins.Discover
     [Authenticated(Roles = "Admin")]
     public class InstallDiscoverUpdate : IReturn<UpdateInfo>
     {
-        public bool Downgrade { get; set; }
+        /// <summary>Leeg: de nieuwste. Anders deze release-tag (ook een oudere versie).</summary>
+        public string Tag { get; set; }
     }
 
     [Route("/Discover/Update/Restart", "POST", Summary = "Emby herstarten om de update te activeren")]
@@ -291,7 +321,7 @@ namespace Emby.Plugins.Discover
 
         public async Task<object> Post(InstallDiscoverUpdate request)
         {
-            try { await Updater.Install(CancellationToken.None, request.Downgrade).ConfigureAwait(false); }
+            try { await Updater.Install(CancellationToken.None, request.Tag).ConfigureAwait(false); }
             catch (Exception ex)
             {
                 var i = await Updater.Check(false, CancellationToken.None).ConfigureAwait(false);

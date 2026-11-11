@@ -277,6 +277,8 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         view.querySelector('.btnUpdCheck span').textContent = languageText('Nu kijken', 'Check now', 'Jetzt prüfen');
         view.querySelector('.btnUpdRestart span').textContent = languageText('Emby herstarten', 'Restart Emby', 'Emby neu starten');
         view.querySelector('.btnUpdTime span').textContent = languageText('Tijd wijzigen', 'Change time', 'Zeit ändern');
+        view.querySelector('.btnUpdPick span').textContent = languageText('Installeren', 'Install', 'Installieren');
+        el(view, 'lblUpdVersion').textContent = languageText('Andere versie installeren (ook terug naar een oudere)', 'Install another version (also back to an older one)', 'Andere Version installieren (auch zurück zu einer älteren)');
         view.querySelector('.btnStatus span').textContent = languageText('Start diagnose', 'Run diagnostics', 'Diagnose starten');
         view.querySelector('.btnStatus').nextElementSibling.textContent = languageText(
             'Controleert plugin, kanaal, TMDB, Radarr, Sonarr en gebruikerstoegang. Handig om twee servers te vergelijken.',
@@ -334,15 +336,9 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         } else if (u.Available) {
             html = cur + '<br>' + languageText('Nieuwe versie beschikbaar: ', 'New version available: ', 'Neue Version verfügbar: ') + '<b>' + link(u.Latest + beta) + '</b>';
             btnI.style.display = '';
-            btnI.__downgrade = false;
             btnI.querySelector('span').textContent = languageText('Bijwerken naar ', 'Update to ', 'Aktualisieren auf ') + u.Latest;
         } else if (u.Latest && verCmp(u.Current, u.Latest) > 0) {
             html = cur + ' · ' + languageText('nieuwer dan de laatste release', 'newer than the latest release', 'neuer als das letzte Release') + ' (' + link(u.Latest + beta) + ')';
-            if (u.CanDowngrade) {
-                btnI.style.display = '';
-                btnI.__downgrade = true;
-                btnI.querySelector('span').textContent = languageText('Terug naar ', 'Go back to ', 'Zurück zu ') + u.Latest;
-            }
         } else if (u.Latest) {
             html = cur + ' · ' + languageText('dit is de nieuwste versie', 'this is the latest version', 'das ist die neueste Version');
         } else {
@@ -350,7 +346,43 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         }
         if (u.Error) { html += '<br><span style="color:#ff6b6b">' + esc(u.Error) + '</span>'; }
         updStatus(view, html, true);
+        fillVersions(view, u);
     }
+    // Keuzelijst met alle versies op GitHub (ook oudere en beta's), om een andere versie te installeren.
+    function fillVersions(view, u) {
+        var row = view.querySelector('.dcUpdPick'), sel = el(view, 'selUpdVersion');
+        var list = (u && u.Versions) || [];
+        if (!list.length || u.PendingVersion) { row.style.display = 'none'; return; }
+        row.style.display = '';
+        var html = '';
+        list.forEach(function (v) {
+            var d = v.Date ? ' · ' + String(v.Date).slice(0, 10) : '';
+            var extra = (v.IsBeta ? ' (beta)' : '') + (v.Version === u.Current ? languageText(' – geïnstalleerd', ' – installed', ' – installiert') : '') +
+                (!v.HasUpdater ? languageText(' – zonder updater', ' – no updater', ' – ohne Updater') : '');
+            html += '<option value="' + esc(v.Tag) + '"' + (v.Version === u.Current ? ' selected' : '') + '>' + esc(v.Version + extra + d) + '</option>';
+        });
+        sel.innerHTML = html;
+        syncPick(view, u);
+        sel.onchange = function () { syncPick(view, u); };
+    }
+    function syncPick(view, u) {
+        var sel = el(view, 'selUpdVersion'), btn = view.querySelector('.btnUpdPick');
+        var v = ((u && u.Versions) || []).filter(function (x) { return x.Tag === sel.value; })[0];
+        btn.disabled = !v || v.Version === u.Current;
+        var note = view.querySelector('.dcUpdPickNote');
+        note.textContent = v && !v.HasUpdater
+            ? languageText('Let op: deze versie heeft nog geen Updates-tabblad. Terug naar een nieuwere versie gaat daarna alleen met de hand.',
+                'Note: this version has no Updates tab yet. Going back to a newer version is then manual only.',
+                'Hinweis: Diese Version hat noch keinen Updates-Reiter. Zurück zu einer neueren Version geht dann nur manuell.')
+            : '';
+    }
+    function pickVersion(view) {
+        var sel = el(view, 'selUpdVersion');
+        var label = sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].textContent : sel.value;
+        if (!window.confirm(languageText('Versie ' + label + ' installeren? Daarna Emby herstarten.', 'Install version ' + label + '? Then restart Emby.', 'Version ' + label + ' installieren? Danach Emby neu starten.'))) { return; }
+        installUpdate(view, sel.value);
+    }
+
     function checkUpdate(view, fresh) {
         // Bij openen van de pagina stil laden (meestal uit het geheugen, dus direct). Bij "Nu kijken" laat de knop zien dat hij bezig is.
         var btn = view.querySelector('.btnUpdCheck'), span = btn.querySelector('span');
@@ -364,12 +396,10 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             function (u) { done(function () { showUpdate(view, u); }); },
             function (err) { done(function () { updStatus(view, ajaxErrorMessage(err)); }); });
     }
-    function installUpdate(view) {
-        var down = view.querySelector('.btnUpdInstall').__downgrade === true;
-        if (down && !window.confirm(languageText('Deze versie vervangen door de laatste gewone release?', 'Replace this version with the latest regular release?', 'Diese Version durch das letzte reguläre Release ersetzen?'))) { return; }
+    function installUpdate(view, tag) {
         updStatus(view, languageText('Downloaden en installeren...', 'Downloading and installing...', 'Herunterladen und installieren...'));
         view.querySelector('.btnUpdInstall').style.display = 'none';
-        ApiClient.ajax({ type: 'POST', url: ApiClient.getUrl('Discover/Update/Install', { Downgrade: down }), dataType: 'json' })
+        ApiClient.ajax({ type: 'POST', url: ApiClient.getUrl('Discover/Update/Install', tag ? { Tag: tag } : {}), dataType: 'json' })
             .then(function (u) { showUpdate(view, u); }, function (err) { updStatus(view, ajaxErrorMessage(err)); });
     }
     function restartForUpdate(view) {
@@ -1269,6 +1299,7 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
 
         view.querySelector('.btnUpdCheck').addEventListener('click', function () { checkUpdate(view, true); });
         view.querySelector('.btnUpdInstall').addEventListener('click', function () { installUpdate(view); });
+        view.querySelector('.btnUpdPick').addEventListener('click', function () { pickVersion(view); });
         view.querySelector('.btnUpdRestart').addEventListener('click', function () { restartForUpdate(view); });
         view.querySelector('.btnUpdTime').addEventListener('click', function () {
             var page = view.__updTaskId ? 'scheduledtask?id=' + encodeURIComponent(view.__updTaskId) : 'scheduledtasks';

@@ -1,13 +1,13 @@
 ## Version 1.4.0.12
 
-- New: **Go back to the regular version.** When you run a beta and turn "Include test versions (beta)" off, the Updates tab shows a **Go back to 1.4.0.x** button that installs the latest regular release (then Restart Emby).
+- New: **Install another version** (Updates tab): a list of all versions on GitHub (also older ones and betas, with their date) to go back one or more versions, or to a beta. Versions before 1.4.0.10 are marked "no updater": from those, updating again is manual.
 - Change: release builds keep the pre-release setting you chose on GitHub.
-- Change: page name bumped (`discoverconfigjs1384`).
+- Change: page name bumped (`discoverconfigjs1385`).
 
 ## Version 1.4.0.11 (beta)
 
 - Updates moved to their own **Updates** tab; the tab gets a green dot when a new version is available.
-- Change: page names bumped (`discoverconfig1103`, `discoverconfigjs1384`).
+- Change: page names bumped (`discoverconfig1104`, `discoverconfigjs1385`).
 - Also a test release for the new update function. Published as a pre-release, so only servers with "Include test versions (beta)" see it.
 
 ## Version 1.4.0.10
