@@ -5,7 +5,7 @@
     <title>Discover</title>
 </head>
 <body>
-<div data-role="page" class="page type-interior pluginConfigurationPage discoverConfigPage" data-require="emby-input,emby-button,emby-select,emby-checkbox" data-controller="__plugin/discoverconfigjs1386">
+<div data-role="page" class="page type-interior pluginConfigurationPage discoverConfigPage" data-require="emby-input,emby-button,emby-select,emby-checkbox" data-controller="__plugin/discoverconfigjs1387">
     <style>
         .discoverConfigPage .keyWrap { position: relative; }
         .discoverConfigPage .keyWrap input { padding-right: 2.8em; }
@@ -73,21 +73,24 @@
 
                 <!-- Updates -->
                 <div class="dcPanel" data-panel="updates">
-                <div class="dcUpdBox" style="margin:0 0 1em;padding:.9em 1em;border-radius:.6em;background:rgba(255,255,255,.06)">
+                <div class="dcUpdBox" style="margin:0 0 1em;padding:.9em 1em;border-radius:.6em;background:rgba(128,128,128,.12)">
                     <div class="dcUpdStatus" style="margin-bottom:.6em;min-height:1.4em"></div>
                     <button is="emby-button" type="button" class="raised btnUpdCheck"><span>Nu kijken</span></button>
                     <button is="emby-button" type="button" class="raised btnUpdInstall" style="display:none"><span>Nu bijwerken</span></button>
                     <button is="emby-button" type="button" class="raised btnUpdRestart" style="display:none"><span>Emby herstarten</span></button>
                     <button is="emby-button" type="button" class="raised btnUpdTime"><span>Tijd wijzigen</span></button>
+                    <details class="dcUpdNotesWrap" style="display:none;margin-top:.7em">
+                        <summary class="dcUpdNotesTitle" style="cursor:pointer;font-weight:600;padding:.3em 0">Wat is nieuw</summary>
+                        <div class="dcUpdNotes" style="margin-top:.4em;padding:.6em .9em;max-height:16em;overflow:auto;border-radius:.4em;border:1px solid rgba(128,128,128,.3);font-size:.92em;line-height:1.45"></div>
+                    </details>
                 </div>
                 <div class="dcUpdPick" style="display:none;margin:0 0 1.2em">
-                    <label class="selectLabel" for="selUpdVersion" id="lblUpdVersion">Andere versie installeren (ook terug naar een oudere)</label>
-                    <div style="display:flex;gap:.6em;align-items:center;flex-wrap:wrap">
-                        <select id="selUpdVersion" style="flex:1;min-width:14em;padding:.55em .6em;border-radius:.3em;background:#292929;color:inherit;border:1px solid rgba(255,255,255,.15);font:inherit"></select>
-                        <button is="emby-button" type="button" class="raised btnUpdPick" style="margin:0"><span>Installeren</span></button>
+                    <div class="selectContainer" style="margin-bottom:.4em">
+                        <label class="selectLabel" for="selUpdVersion" id="lblUpdVersion">Andere versie installeren (ook terug naar een oudere)</label>
+                        <select is="emby-select" id="selUpdVersion"></select>
                     </div>
+                    <button is="emby-button" type="button" class="raised btnUpdPick" style="margin:0"><span>Installeren</span></button>
                     <div class="fieldDescription dcUpdPickNote"></div>
-                    <div class="dcUpdNotes" style="display:none;margin-top:.8em;padding:.8em 1em;max-height:22em;overflow:auto;border-radius:.5em;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);font-size:.92em;line-height:1.45"></div>
                 </div>
                 <div class="checkboxContainer">
                     <label class="emby-checkbox-label">

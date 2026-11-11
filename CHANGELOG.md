@@ -1,3 +1,10 @@
+## Version 1.4.0.13
+
+- Fix: the version list was always dark, also with a light theme. It now uses Emby's own select and follows the theme.
+- Change: the release notes moved into the update box, under the buttons, as a **What's new in …** section that is closed by default and scrolls when the notes are long.
+- Fix: the **Check now** button could switch to Dutch after a check.
+- Change: page names bumped (`discoverconfig1106`, `discoverconfigjs1387`).
+
 ## Version 1.4.0.12
 
 - New: **Install another version** (Updates tab): a list of all versions on GitHub (also older ones and betas, with their date) to go back one or more versions, or to a beta. Versions before 1.4.0.10 are marked "no updater": from those, updating again is manual. Below the list, a **What's new** box shows the release notes of the chosen version.

@@ -352,7 +352,7 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
     function fillVersions(view, u) {
         var row = view.querySelector('.dcUpdPick'), sel = el(view, 'selUpdVersion');
         var list = (u && u.Versions) || [];
-        if (!list.length || u.PendingVersion) { row.style.display = 'none'; return; }
+        if (!list.length || u.PendingVersion) { row.style.display = 'none'; view.querySelector('.dcUpdNotesWrap').style.display = 'none'; return; }
         row.style.display = '';
         var html = '';
         list.forEach(function (v) {
@@ -388,11 +388,12 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
     function syncPick(view, u) {
         var sel = el(view, 'selUpdVersion'), btn = view.querySelector('.btnUpdPick');
         var v = ((u && u.Versions) || []).filter(function (x) { return x.Tag === sel.value; })[0];
-        var notes = view.querySelector('.dcUpdNotes');
+        var wrap = view.querySelector('.dcUpdNotesWrap');
         if (v && v.Notes) {
-            notes.style.display = '';
-            notes.innerHTML = '<div style="font-weight:600;margin-bottom:.4em">' + esc(languageText('Wat is nieuw in ', "What's new in ", 'Neu in ') + v.Version + (v.IsBeta ? ' (beta)' : '')) + '</div>' + miniMarkdown(v.Notes);
-        } else { notes.style.display = 'none'; notes.innerHTML = ''; }
+            wrap.style.display = '';
+            view.querySelector('.dcUpdNotesTitle').textContent = languageText('Wat is nieuw in ', "What's new in ", 'Neu in ') + v.Version + (v.IsBeta ? ' (beta)' : '');
+            view.querySelector('.dcUpdNotes').innerHTML = miniMarkdown(v.Notes);
+        } else { wrap.style.display = 'none'; view.querySelector('.dcUpdNotes').innerHTML = ''; }
         btn.disabled = !v || v.Version === u.Current;
         var note = view.querySelector('.dcUpdPickNote');
         note.textContent = v && !v.HasUpdater
@@ -411,11 +412,10 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
     function checkUpdate(view, fresh) {
         // Bij openen van de pagina stil laden (meestal uit het geheugen, dus direct). Bij "Nu kijken" laat de knop zien dat hij bezig is.
         var btn = view.querySelector('.btnUpdCheck'), span = btn.querySelector('span');
-        var label = languageText('Nu kijken', 'Check now', 'Jetzt prüfen');
         var started = Date.now();
         if (fresh) { btn.disabled = true; span.textContent = languageText('Zoeken naar updates…', 'Looking for updates…', 'Suche nach Updates…'); }
         var done = function (fn) {
-            setTimeout(function () { btn.disabled = false; span.textContent = label; fn(); }, fresh ? Math.max(0, 700 - (Date.now() - started)) : 0);
+            setTimeout(function () { btn.disabled = false; span.textContent = languageText('Nu kijken', 'Check now', 'Jetzt prüfen'); fn(); }, fresh ? Math.max(0, 700 - (Date.now() - started)) : 0);
         };
         ApiClient.getJSON(ApiClient.getUrl('Discover/Update', { Fresh: !!fresh })).then(
             function (u) { done(function () { showUpdate(view, u); }); },
