@@ -73,6 +73,13 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         btnTestMdblistText: ['Test MDBList', 'Test MDBList', 'MDBList testen'],
         lbl_txtMdblistKey: ['MDBList API-sleutel (optioneel)', 'MDBList API key (optional)', 'MDBList-API-Schlüssel (optional)'],
         desc_txtMdblistKey: ['Gratis op mdblist.com (Preferences, API Access). Geeft in de popup de scores van IMDb, Rotten Tomatoes (critici en publiek), Metacritic, Letterboxd en Trakt. Staat hier een sleutel, dan gaat MDBList voor OMDb; OMDb blijft de reserve.', 'Free at mdblist.com (Preferences, API Access). Gives the popup the scores of IMDb, Rotten Tomatoes (critics and audience), Metacritic, Letterboxd and Trakt. With a key here MDBList comes before OMDb; OMDb stays the fallback.', 'Kostenlos auf mdblist.com (Preferences, API Access). Liefert im Popup die Bewertungen von IMDb, Rotten Tomatoes (Kritiker und Publikum), Metacritic, Letterboxd und Trakt. Mit einem Schlüssel hier geht MDBList vor OMDb; OMDb bleibt die Reserve.'],
+        hdgUpdates: ['Updates', 'Updates', 'Updates'],
+        lbl_chkUpdateCheck: ['Dagelijks kijken of er een nieuwe versie is', 'Check daily for a new version', 'Täglich nach einer neuen Version suchen'],
+        lbl_chkUpdateBeta: ['Ook testversies (beta)', 'Include test versions (beta)', 'Auch Testversionen (Beta)'],
+        desc_chkUpdateBeta: ['Testversies zijn nieuwer maar minder getest.', 'Test versions are newer but less tested.', 'Testversionen sind neuer, aber weniger getestet.'],
+        lbl_chkUpdateAuto: ["Nieuwe versie 's nachts automatisch installeren", 'Install new versions automatically at night', 'Neue Versionen nachts automatisch installieren'],
+        lbl_chkUpdateRestart: ['Daarna Emby automatisch herstarten als niemand iets kijkt', 'Then restart Emby automatically when nobody is watching', 'Danach Emby automatisch neu starten, wenn niemand schaut'],
+        desc_chkUpdateRestart: ['Zonder dit vinkje wordt de update actief bij de volgende herstart van Emby.', 'Without this, the update becomes active the next time Emby restarts.', 'Ohne diese Option wird das Update beim nächsten Neustart von Emby aktiv.'],
         lbl_chkAllowInvalidCerts: ['Zelfondertekende certificaten accepteren (https)', 'Accept self-signed certificates (https)', 'Selbstsignierte Zertifikate akzeptieren (https)'],
         desc_chkAllowInvalidCerts: ["Voor Radarr, Sonarr, Seerr en de downloadprogramma's via https met een eigen certificaat of via een IP-adres. Alleen aanzetten voor je eigen netwerk.", 'For Radarr, Sonarr, Seerr and the download clients over https with their own certificate or by IP address. Only turn this on for your own network.', 'Für Radarr, Sonarr, Seerr und die Download-Programme über https mit eigenem Zertifikat oder per IP-Adresse. Nur im eigenen Netzwerk einschalten.'],
         lbl_chkShowNextEpisode: ['Volgende aflevering van lopende series in de popup (via TVmaze)', 'Next episode of running series in the popup (via TVmaze)', 'Nächste Folge laufender Serien im Popup (über TVmaze)'],
@@ -267,6 +274,8 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         view.querySelector('.btnTestRadarr span').textContent = languageText('Test verbinding', 'Test connection', 'Verbindung testen');
         view.querySelector('.btnTestSonarr span').textContent = languageText('Test verbinding', 'Test connection', 'Verbindung testen');
         view.querySelector('.button-submit span').textContent = languageText('Opslaan', 'Save', 'Speichern');
+        view.querySelector('.btnUpdCheck span').textContent = languageText('Nu kijken', 'Check now', 'Jetzt prüfen');
+        view.querySelector('.btnUpdRestart span').textContent = languageText('Emby herstarten', 'Restart Emby', 'Emby neu starten');
         view.querySelector('.btnStatus span').textContent = languageText('Start diagnose', 'Run diagnostics', 'Diagnose starten');
         view.querySelector('.btnStatus').nextElementSibling.textContent = languageText(
             'Controleert plugin, kanaal, TMDB, Radarr, Sonarr en gebruikerstoegang. Handig om twee servers te vergelijken.',
@@ -284,6 +293,60 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             button.setAttribute('title', labelText);
             button.setAttribute('aria-label', labelText);
         });
+    }
+
+    // ---- Updates (GitHub-releases) ----
+    function updStatus(view, html, isHtml) {
+        var st = view.querySelector('.dcUpdStatus');
+        if (st) { if (isHtml) { st.innerHTML = html; } else { st.textContent = html; } }
+    }
+    function syncUpdateBoxes(view) {
+        var auto = el(view, 'chkUpdateAuto').checked;
+        var r = el(view, 'chkUpdateRestart');
+        r.disabled = !auto;
+        var box = r.closest('.checkboxContainer');
+        if (box) { box.style.opacity = auto ? '' : '.5'; }
+    }
+    function showUpdate(view, u) {
+        var btnI = view.querySelector('.btnUpdInstall'), btnR = view.querySelector('.btnUpdRestart');
+        btnI.style.display = 'none'; btnR.style.display = 'none';
+        if (!u) { return; }
+        var cur = languageText('Geïnstalleerd: ', 'Installed: ', 'Installiert: ') + '<b>' + esc(u.Current || '?') + '</b>';
+        var link = function (t) { return u.Url ? '<a href="' + esc(u.Url) + '" target="_blank" rel="noopener" style="color:#52b54b">' + esc(t) + '</a>' : esc(t); };
+        var beta = u.IsBeta ? ' (beta)' : '';
+        var html;
+        if (u.PendingVersion) {
+            html = cur + '<br>' + languageText('Versie ', 'Version ', 'Version ') + '<b>' + esc(u.PendingVersion) + '</b>' +
+                languageText(' is geïnstalleerd. Herstart Emby om hem te activeren.', ' is installed. Restart Emby to activate it.', ' ist installiert. Emby neu starten, um sie zu aktivieren.');
+            if (u.CanRestart) { btnR.style.display = ''; }
+        } else if (u.Available) {
+            html = cur + '<br>' + languageText('Nieuwe versie beschikbaar: ', 'New version available: ', 'Neue Version verfügbar: ') + '<b>' + link(u.Latest + beta) + '</b>';
+            btnI.style.display = '';
+            btnI.querySelector('span').textContent = languageText('Bijwerken naar ', 'Update to ', 'Aktualisieren auf ') + u.Latest;
+        } else if (u.Latest) {
+            html = cur + ' · ' + languageText('dit is de nieuwste versie', 'this is the latest version', 'das ist die neueste Version') + ' (' + link(u.Latest + beta) + ')';
+        } else {
+            html = cur;
+        }
+        if (u.Error) { html += '<br><span style="color:#ff6b6b">' + esc(u.Error) + '</span>'; }
+        updStatus(view, html, true);
+    }
+    function checkUpdate(view, fresh) {
+        updStatus(view, languageText('Kijken op GitHub...', 'Checking GitHub...', 'GitHub wird geprüft...'));
+        ApiClient.getJSON(ApiClient.getUrl('Discover/Update', { Fresh: !!fresh })).then(function (u) { showUpdate(view, u); },
+            function (err) { updStatus(view, ajaxErrorMessage(err)); });
+    }
+    function installUpdate(view) {
+        updStatus(view, languageText('Downloaden en installeren...', 'Downloading and installing...', 'Herunterladen und installieren...'));
+        view.querySelector('.btnUpdInstall').style.display = 'none';
+        ApiClient.ajax({ type: 'POST', url: ApiClient.getUrl('Discover/Update/Install'), dataType: 'json' })
+            .then(function (u) { showUpdate(view, u); }, function (err) { updStatus(view, ajaxErrorMessage(err)); });
+    }
+    function restartForUpdate(view) {
+        if (!window.confirm(languageText('Emby nu herstarten? Wie iets kijkt, wordt even onderbroken.', 'Restart Emby now? Anyone watching will be interrupted briefly.', 'Emby jetzt neu starten? Laufende Wiedergaben werden kurz unterbrochen.'))) { return; }
+        updStatus(view, languageText('Emby herstart. Ververs de pagina over een minuut.', 'Emby is restarting. Refresh the page in a minute.', 'Emby startet neu. Seite in einer Minute neu laden.'));
+        view.querySelector('.btnUpdRestart').style.display = 'none';
+        ApiClient.ajax({ type: 'POST', url: ApiClient.getUrl('Discover/Update/Restart') }).catch(function () { });
     }
 
     function showLoading() { if (window.Dashboard && Dashboard.showLoadingMsg) { Dashboard.showLoadingMsg(); } }
@@ -810,6 +873,12 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             el(view, 'chkShowTitleLogo').checked = c.ShowTitleLogo !== false;
             el(view, 'chkShowNextEpisode').checked = c.ShowNextEpisode !== false;
             el(view, 'chkAllowInvalidCerts').checked = c.AllowInvalidCertificates === true;
+            el(view, 'chkUpdateCheck').checked = c.UpdateCheck !== false;
+            el(view, 'chkUpdateBeta').checked = c.UpdateIncludeBeta === true;
+            el(view, 'chkUpdateAuto').checked = c.UpdateAutoInstall === true;
+            el(view, 'chkUpdateRestart').checked = c.UpdateAutoRestart === true;
+            syncUpdateBoxes(view);
+            if (c.UpdateCheck !== false) { checkUpdate(view, false); } else { updStatus(view, languageText('Niet automatisch gekeken. Klik op Nu kijken.', 'Not checked automatically. Click Check now.', 'Nicht automatisch geprüft. Auf Jetzt prüfen klicken.')); }
             el(view, 'txtMdblistKey').value = c.MdblistApiKey || '';
             el(view, 'txtFanartKey').value = c.FanartApiKey || '';
             var ps = String(c.PosterScoreSource || '').toLowerCase();
@@ -911,6 +980,10 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             c.ShowTitleLogo = el(view, 'chkShowTitleLogo').checked;
             c.ShowNextEpisode = el(view, 'chkShowNextEpisode').checked;
             c.AllowInvalidCertificates = el(view, 'chkAllowInvalidCerts').checked;
+            c.UpdateCheck = el(view, 'chkUpdateCheck').checked;
+            c.UpdateIncludeBeta = el(view, 'chkUpdateBeta').checked;
+            c.UpdateAutoInstall = el(view, 'chkUpdateAuto').checked;
+            c.UpdateAutoRestart = el(view, 'chkUpdateAuto').checked && el(view, 'chkUpdateRestart').checked;
             c.MdblistApiKey = el(view, 'txtMdblistKey').value.trim();
             c.FanartApiKey = el(view, 'txtFanartKey').value.trim();
             c.PosterScoreSource = el(view, 'selPosterScore').value || 'tmdb';
@@ -1164,6 +1237,10 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             if (window.confirm(q)) { cleanCache(view, true); }
         });
 
+        view.querySelector('.btnUpdCheck').addEventListener('click', function () { checkUpdate(view, true); });
+        view.querySelector('.btnUpdInstall').addEventListener('click', function () { installUpdate(view); });
+        view.querySelector('.btnUpdRestart').addEventListener('click', function () { restartForUpdate(view); });
+        el(view, 'chkUpdateAuto').addEventListener('change', function () { syncUpdateBoxes(view); });
         view.querySelector('.btnStatus').addEventListener('click', function () {
             if (window.Dashboard && Dashboard.navigate) { Dashboard.navigate('configurationpage?name=discoverstatus1079'); }
             else { window.location.hash = '#!/configurationpage?name=discoverstatus1079'; }

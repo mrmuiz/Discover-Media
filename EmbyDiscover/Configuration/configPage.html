@@ -5,7 +5,7 @@
     <title>Discover</title>
 </head>
 <body>
-<div data-role="page" class="page type-interior pluginConfigurationPage discoverConfigPage" data-require="emby-input,emby-button,emby-select,emby-checkbox" data-controller="__plugin/discoverconfigjs1377">
+<div data-role="page" class="page type-interior pluginConfigurationPage discoverConfigPage" data-require="emby-input,emby-button,emby-select,emby-checkbox" data-controller="__plugin/discoverconfigjs1378">
     <style>
         .discoverConfigPage .keyWrap { position: relative; }
         .discoverConfigPage .keyWrap input { padding-right: 2.8em; }
@@ -66,6 +66,56 @@
                         <option value="de-DE">Deutsch</option>
                         <option value="nb-NO">Norsk</option>
                     </select>
+                </div>
+
+                <h3 id="hdgUpdates">Updates</h3>
+                <div class="dcUpdBox" style="margin:0 0 1em;padding:.9em 1em;border-radius:.6em;background:rgba(255,255,255,.06)">
+                    <div class="dcUpdStatus" style="margin-bottom:.6em">...</div>
+                    <button is="emby-button" type="button" class="raised btnUpdCheck"><span>Nu kijken</span></button>
+                    <button is="emby-button" type="button" class="raised btnUpdInstall" style="display:none"><span>Nu bijwerken</span></button>
+                    <button is="emby-button" type="button" class="raised btnUpdRestart" style="display:none"><span>Emby herstarten</span></button>
+                </div>
+                <div class="checkboxContainer">
+                    <label class="emby-checkbox-label">
+                        <input is="emby-checkbox" type="checkbox" id="chkUpdateCheck" />
+                        <span class="checkboxLabel" id="lbl_chkUpdateCheck">Dagelijks kijken of er een nieuwe versie is</span>
+                        <span class="emby-checkbox-outline">
+                            <span class="emby-checkbox-on"><i class="md-icon">check</i></span>
+                            <span class="emby-checkbox-off"></span>
+                        </span>
+                    </label>
+                </div>
+                <div class="checkboxContainer checkboxContainer-withDescription">
+                    <label class="emby-checkbox-label">
+                        <input is="emby-checkbox" type="checkbox" id="chkUpdateBeta" />
+                        <span class="checkboxLabel" id="lbl_chkUpdateBeta">Ook testversies (beta)</span>
+                        <span class="emby-checkbox-outline">
+                            <span class="emby-checkbox-on"><i class="md-icon">check</i></span>
+                            <span class="emby-checkbox-off"></span>
+                        </span>
+                    </label>
+                    <div class="fieldDescription" id="desc_chkUpdateBeta">Testversies zijn nieuwer maar minder getest.</div>
+                </div>
+                <div class="checkboxContainer">
+                    <label class="emby-checkbox-label">
+                        <input is="emby-checkbox" type="checkbox" id="chkUpdateAuto" />
+                        <span class="checkboxLabel" id="lbl_chkUpdateAuto">Nieuwe versie 's nachts automatisch installeren</span>
+                        <span class="emby-checkbox-outline">
+                            <span class="emby-checkbox-on"><i class="md-icon">check</i></span>
+                            <span class="emby-checkbox-off"></span>
+                        </span>
+                    </label>
+                </div>
+                <div class="checkboxContainer checkboxContainer-withDescription">
+                    <label class="emby-checkbox-label">
+                        <input is="emby-checkbox" type="checkbox" id="chkUpdateRestart" />
+                        <span class="checkboxLabel" id="lbl_chkUpdateRestart">Daarna Emby automatisch herstarten als niemand iets kijkt</span>
+                        <span class="emby-checkbox-outline">
+                            <span class="emby-checkbox-on"><i class="md-icon">check</i></span>
+                            <span class="emby-checkbox-off"></span>
+                        </span>
+                    </label>
+                    <div class="fieldDescription" id="desc_chkUpdateRestart">Zonder dit vinkje wordt de update actief bij de volgende herstart van Emby.</div>
                 </div>
                 </div>
 

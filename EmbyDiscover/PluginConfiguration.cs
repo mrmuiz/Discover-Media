@@ -20,6 +20,14 @@ namespace Emby.Plugins.Discover
         public string RadarrMinimumAvailability { get; set; } = "released";
         /// <summary>Accept https certificates that do not validate (self-signed / by IP) for Radarr, Sonarr, Seerr and download clients.</summary>
         public bool AllowInvalidCertificates { get; set; }
+        /// <summary>Dagelijks bij GitHub kijken naar een nieuwe Discover (melding op de instellingenpagina).</summary>
+        public bool UpdateCheck { get; set; } = true;
+        /// <summary>Nieuwe versie 's nachts zelf installeren.</summary>
+        public bool UpdateAutoInstall { get; set; }
+        /// <summary>Na automatisch installeren Emby herstarten zodra niemand iets afspeelt.</summary>
+        public bool UpdateAutoRestart { get; set; }
+        /// <summary>Ook testversies (pre-releases op GitHub).</summary>
+        public bool UpdateIncludeBeta { get; set; }
 
         public string SonarrUrl { get; set; } = "";
         public string SonarrApiKey { get; set; } = "";
