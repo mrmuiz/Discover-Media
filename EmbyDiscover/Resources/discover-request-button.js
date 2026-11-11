@@ -380,7 +380,7 @@
             document.documentElement.style.removeProperty('--dc-bottom-clear');
         }
         function tvDevice() {
-            return document.documentElement.classList.contains('layout-tv') || /Web0S|webOS|Tizen|SmartTV|NetCast/i.test(navigator.userAgent || '');
+            return document.documentElement.classList.contains('layout-tv') || /Web0S|webOS|Tizen|SmartTV|NetCast/i.test(navigator.userAgent || '') || androidTvLike();
         }
         function update() {
             if (!document.body) { return; }
@@ -2378,7 +2378,7 @@
     // ---- De Discover-popup boven de huidige pagina ----
     // Laadt de Discover-pagina één keer onzichtbaar (alleen de popup wordt gebruikt) met dezelfde controller
     // als de echte pagina, in "embedded"-modus. Zo is de popup overal gelijk: info, cast, seizoenen, trailer, aanvragen.
-    var DC_UI_PAGE = 'discoverui1150', DC_UI_JS = 'discoveruijs1452';
+    var DC_UI_PAGE = 'discoverui1150', DC_UI_JS = 'discoveruijs1453';
     var embedPromise = null;
     function pageText(c, name) {
         var url = c.getUrl('web/ConfigurationPage', { name: name });
@@ -2748,10 +2748,16 @@
     // Op tv kun je met de afstandsbediening door de posterrijen ("Meer zoals dit" / "Niet in je bibliotheek").
     // Emby's eigen focusnavigatie scrolt deze losse rijen niet, dus doen we links/rechts (tussen posters) en
     // omhoog/omlaag (tussen poster en Aanvragen-knop) zelf, met de poster netjes in beeld.
+    // Android-tv's (Chromecast met Google TV, Philips, ...) zonder aanraakscherm en muis.
+    function androidTvLike() {
+        var ua = navigator.userAgent || '';
+        if (/Android ?TV|GoogleTV|Google TV|Chromecast|AFT[A-Z]|BRAVIA|SHIELD Android TV|PhilipsTV|TPM\d{3}/i.test(ua)) { return true; }
+        try { return /Android/i.test(ua) && window.matchMedia('(pointer: none)').matches && !(navigator.maxTouchPoints > 0); } catch (e) { return false; }
+    }
     function rowIsTv() {
         var de = document.documentElement;
         return !!(de && de.classList && de.classList.contains('layout-tv')) ||
-            /Web0S|webOS|Tizen|SmartTV|NetCast/i.test(navigator.userAgent || '');
+            /Web0S|webOS|Tizen|SmartTV|NetCast/i.test(navigator.userAgent || '') || androidTvLike();
     }
     function rowCardFocusables(card) {
         return { poster: card.querySelector('.discover-row-poster'), btn: card.querySelector('.discover-row-btn') };
