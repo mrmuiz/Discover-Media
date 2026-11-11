@@ -5,7 +5,7 @@
     <title>Discover</title>
 </head>
 <body>
-<div data-role="page" class="page type-interior pluginConfigurationPage discoverConfigPage" data-require="emby-input,emby-button,emby-select,emby-checkbox" data-controller="__plugin/discoverconfigjs1390">
+<div data-role="page" class="page type-interior pluginConfigurationPage discoverConfigPage" data-require="emby-input,emby-button,emby-select,emby-checkbox" data-controller="__plugin/discoverconfigjs1391">
     <style>
         .discoverConfigPage .keyWrap { position: relative; }
         .discoverConfigPage .keyWrap input { padding-right: 2.8em; }
@@ -85,9 +85,9 @@
                     </details>
                 </div>
                 <div class="dcUpdPick" style="display:none;margin:0 0 1.2em">
-                    <div class="selectContainer" style="margin-bottom:.4em">
-                        <label class="selectLabel" for="selUpdVersion" id="lblUpdVersion">Vorige versies</label>
-                        <select is="emby-select" id="selUpdVersion"></select>
+                    <div style="margin-bottom:.6em">
+                        <label class="selectLabel" for="selUpdVersion" id="lblUpdVersion" style="display:block">Vorige versies</label>
+                        <select id="selUpdVersion" style="background:#2b2b2b;color:#fff;border:2px solid #888;border-radius:.4em;font-size:1.2em;min-height:2.8em;padding:.4em .8em;min-width:14em;max-width:100%"></select>
                     </div>
                     <button is="emby-button" type="button" class="raised btnUpdPick" style="margin:0"><span>Deze versie installeren</span></button>
                     <div class="fieldDescription dcUpdPickNote"></div>
