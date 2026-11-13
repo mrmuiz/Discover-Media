@@ -14,7 +14,7 @@
 
 > **New: [Discover Patcher](https://github.com/mrmuiz/Enabler-for-Emby)** – an Android app that installs Emby for Android with Discover built in, right on your phone, tablet or TV box (and keeps it up to date). Prefer your computer? [Discover Enabler](https://github.com/mrmuiz/Enabler-for-Emby#option-2-discover-enabler-windows) does the same on Windows, Linux and macOS. See [Emby for Android: Discover Patcher and Enabler](#emby-for-android-discover-patcher-and-enabler).
 
-> **Status: stable.** The current version is **1.4.0.7**, built against the Emby SDK package `MediaBrowser.Server.Core` 4.10.0.1-beta so that one dll runs on both Emby Server 4.10.2 and 4.11 (beta). It has been installed on both; other Emby versions may work but have not been individually tested. Please report problems through [Issues](../../issues) and include the relevant diagnostics (see [Troubleshooting](#troubleshooting)).
+> **Status: stable.** The current version is **1.4.0.15** (test version: **1.4.0.18 beta**, for those who tick *Include test versions (beta)* on the **Updates** tab), built against the Emby SDK package `MediaBrowser.Server.Core` 4.10.0.1-beta so that one dll runs on both Emby Server 4.10.2 and 4.11 (beta). It has been installed on both; other Emby versions may work but have not been individually tested. Please report problems through [Issues](../../issues) and include the relevant diagnostics (see [Troubleshooting](#troubleshooting)).
 
 ## Screenshots
 
@@ -199,7 +199,7 @@ The request confirmation clip shows a large poster with the status (Requested / 
 
 ## Configuration
 
-The settings are split over tabs: **General**, **Appearance**, **Sources**, **Requests** (Radarr/Sonarr or Seerr), **Users**, **Storage** and **Diagnostics**. The plugin finds the web client folder (with `index.html`) automatically; in the rare case it does not, the folder can be set as `DashboardUiPath` in the plugin's XML configuration file.
+The settings are split over tabs: **General**, **Appearance**, **Sources**, **Requests** (Radarr/Sonarr or Seerr), **Users**, **Storage**, **Updates** and **Diagnostics**. The plugin finds the web client folder (with `index.html`) automatically; in the rare case it does not, the folder can be set as `DashboardUiPath` in the plugin's XML configuration file.
 
 | Setting | Tab | Purpose |
 |---|---|---|
@@ -220,7 +220,7 @@ The settings are split over tabs: **General**, **Appearance**, **Sources**, **Re
 | Request through | Requests | Radarr/Sonarr directly, or a Seerr server (URL and API key). |
 | Radarr / Sonarr URL and API key | Requests | Sends movie requests to Radarr and series requests to Sonarr. |
 | SABnzbd URL and API key (optional) | Requests | Adds the download speed, the stages after 100% (verifying, repairing, extracting, moving, script) and SABnzbd's paused/speed-limit state to the download progress. |
-| NZBGet, qBittorrent, Transmission URL, username and password (optional) | Requests | Same for these downloaders; torrents also show seeders and ratio. |
+| NZBGet, qBittorrent, Transmission URL, username and password (optional) | Requests | Same for these downloaders; torrents also show seeders and ratio. For qBittorrent 5.2+ an **API key** can be used instead of username and password (qBittorrent: Options → WebUI → API Key). |
 | Quality profile and root folder | Requests | Selects the destination settings used for requests. Choose values returned by **Test connection**. |
 | Request limit | Users | At most N requests per X days per user (0 = no limit). Administrators are exempt. Also shows the overview of all requests. |
 | Storage | Storage | How long confirmation clips and tile images are kept, and the maximum cache size. |
