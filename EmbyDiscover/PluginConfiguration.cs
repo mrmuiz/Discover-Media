@@ -48,6 +48,8 @@ namespace Emby.Plugins.Discover
         public string QbitUrl { get; set; } = "";
         public string QbitUser { get; set; } = "";
         public string QbitPassword { get; set; } = "";
+        /// <summary>qBittorrent 5.2+ API key (qbt_...). When set it is used instead of username/password.</summary>
+        public string QbitApiKey { get; set; } = "";
         public string NzbgetUrl { get; set; } = "";
         public string NzbgetUser { get; set; } = "";
         public string NzbgetPassword { get; set; } = "";

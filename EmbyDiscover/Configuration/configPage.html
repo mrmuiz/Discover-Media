@@ -5,7 +5,7 @@
     <title>Discover</title>
 </head>
 <body>
-<div data-role="page" class="page type-interior pluginConfigurationPage discoverConfigPage" data-require="emby-input,emby-button,emby-select,emby-checkbox" data-controller="__plugin/discoverconfigjs1391">
+<div data-role="page" class="page type-interior pluginConfigurationPage discoverConfigPage" data-require="emby-input,emby-button,emby-select,emby-checkbox" data-controller="__plugin/discoverconfigjs1392">
     <style>
         .discoverConfigPage .keyWrap { position: relative; }
         .discoverConfigPage .keyWrap input { padding-right: 2.8em; }
@@ -498,7 +498,12 @@
                     <input is="emby-input" type="password" id="txtQbitPass" autocomplete="new-password" spellcheck="false" />
                     <button is="emby-button" type="button" class="paper-icon-button-light btnToggleKey" data-target="txtQbitPass" title="Tonen" aria-label="Tonen"><i class="md-icon">visibility</i></button>
                 </div>
-                <div class="fieldDescription" id="desc_qbit" style="margin:-1em 0 1.5em;">Gebruikersnaam en wachtwoord van de qBittorrent-webinterface. Staat in qBittorrent de toegang zonder wachtwoord aan voor dit adres, dan mogen ze leeg blijven.</div>
+                <div class="inputContainer keyWrap">
+                    <label class="inputLabel inputLabelUnfocused" for="txtQbitKey">API key (qBittorrent 5.2+, optioneel)</label>
+                    <input is="emby-input" type="password" id="txtQbitKey" autocomplete="off" spellcheck="false" />
+                    <button is="emby-button" type="button" class="paper-icon-button-light btnToggleKey" data-target="txtQbitKey" title="Tonen" aria-label="Tonen"><i class="md-icon">visibility</i></button>
+                </div>
+                <div class="fieldDescription" id="desc_qbit" style="margin:-1em 0 1.5em;">Gebruikersnaam en wachtwoord van de qBittorrent-webinterface. Staat in qBittorrent de toegang zonder wachtwoord aan voor dit adres, dan mogen ze leeg blijven. Vanaf qBittorrent 5.2 kun je in plaats daarvan een API key gebruiken (qBittorrent: Opties → WebUI → API Key); die gaat dan voor.</div>
                 <div>
                     <button is="emby-button" type="button" class="raised btnTestQbit"><span>Test verbinding</span></button>
                     <div class="fieldDescription testStatus" id="statusQbit" style="margin-top:.5em;"></div>

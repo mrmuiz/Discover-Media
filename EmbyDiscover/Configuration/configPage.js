@@ -130,7 +130,7 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             'Mit SABnzbd zeigt der Fortschritt auch die Downloadgeschwindigkeit und die Phasen nach 100 % (Überprüfen, Reparieren, Entpacken, Verschieben, Skript) sowie ob SABnzbd pausiert ist oder ein Geschwindigkeitslimit hat. Leer lassen = nur was Radarr/Sonarr melden.'],
         desc_sabKey: ['Te vinden in SABnzbd onder Config > General > Security (de gewone API key, niet de NZB key).', 'Found in SABnzbd under Config > General > Security (the normal API key, not the NZB key).', 'Zu finden in SABnzbd unter Config > General > Security (der normale API-Schlüssel, nicht der NZB-Schlüssel).'],
         hdgQbit: ['qBittorrent (optioneel)', 'qBittorrent (optional)', 'qBittorrent (optional)'],
-        desc_qbit: ['Gebruikersnaam en wachtwoord van de qBittorrent-webinterface. Staat in qBittorrent de toegang zonder wachtwoord aan voor dit adres, dan mogen ze leeg blijven.', 'Username and password of the qBittorrent web interface. If qBittorrent allows access without a password for this address, they can stay empty.', 'Benutzername und Passwort der qBittorrent-Weboberfläche. Erlaubt qBittorrent für diese Adresse den Zugriff ohne Passwort, können sie leer bleiben.'],
+        desc_qbit: ['Gebruikersnaam en wachtwoord van de qBittorrent-webinterface. Staat in qBittorrent de toegang zonder wachtwoord aan voor dit adres, dan mogen ze leeg blijven. Vanaf qBittorrent 5.2 kun je in plaats daarvan een API key gebruiken (qBittorrent: Opties → WebUI → API Key); die gaat dan voor.', 'Username and password of the qBittorrent web interface. If qBittorrent allows access without a password for this address, they can stay empty. From qBittorrent 5.2 you can use an API key instead (qBittorrent: Options → WebUI → API Key); it then takes precedence.', 'Benutzername und Passwort der qBittorrent-Weboberfläche. Erlaubt qBittorrent für diese Adresse den Zugriff ohne Passwort, können sie leer bleiben. Ab qBittorrent 5.2 kannst du stattdessen einen API-Schlüssel verwenden (qBittorrent: Optionen → WebUI → API Key); er hat dann Vorrang.', 'Brukernavn og passord for qBittorrent-webgrensesnittet. Hvis qBittorrent tillater tilgang uten passord for denne adressen, kan de stå tomme. Fra qBittorrent 5.2 kan du bruke en API-nøkkel i stedet (qBittorrent: Alternativer → WebUI → API Key); den har da forrang.'],
         hdgNzbget: ['NZBGet (optioneel)', 'NZBGet (optional)', 'NZBGet (optional)'],
         desc_nzbget: ['Gebruikersnaam en wachtwoord van NZBGet (Instellingen > Security, ControlUsername en ControlPassword).', 'Username and password of NZBGet (Settings > Security, ControlUsername and ControlPassword).', 'Benutzername und Passwort von NZBGet (Einstellungen > Security, ControlUsername und ControlPassword).'],
         hdgTrans: ['Transmission (optioneel)', 'Transmission (optional)', 'Transmission (optional)'],
@@ -165,7 +165,7 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
     function applyTexts(view) {
         Object.keys(TEXTS).forEach(function (id) {
             var target = el(view, id);
-            if (target) { target.textContent = languageText(TEXTS[id][0], TEXTS[id][1], TEXTS[id][2]); }
+            if (target) { target.textContent = languageText(TEXTS[id][0], TEXTS[id][1], TEXTS[id][2], TEXTS[id][3]); }
         });
     }
 
@@ -178,9 +178,9 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         if (hdgSonarr) { hdgSonarr.textContent = languageText('Sonarr (series)', 'Sonarr (series)', 'Sonarr (Serien)'); }
         applyTexts(view);
 
-        function label(id, dutch, english, german) {
+        function label(id, dutch, english, german, norwegian) {
             var target = view.querySelector('label[for="' + id + '"]');
-            if (target) { target.textContent = languageText(dutch, english, german); }
+            if (target) { target.textContent = languageText(dutch, english, german, norwegian); }
         }
 
         label('txtTmdbKey', 'API key', 'API key', 'API-Schlüssel');
@@ -192,6 +192,7 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         label('txtQbitUrl', 'URL (bijv. http://192.168.1.10:8080)', 'URL (e.g. http://192.168.1.10:8080)', 'URL (z. B. http://192.168.1.10:8080)');
         label('txtQbitUser', 'Gebruikersnaam', 'Username', 'Benutzername');
         label('txtQbitPass', 'Wachtwoord', 'Password', 'Passwort');
+        label('txtQbitKey', 'API key (qBittorrent 5.2+, optioneel)', 'API key (qBittorrent 5.2+, optional)', 'API-Schlüssel (qBittorrent 5.2+, optional)', 'API-nøkkel (qBittorrent 5.2+, valgfri)');
         var qbitTest = view.querySelector('.btnTestQbit span');
         if (qbitTest) { qbitTest.textContent = languageText('Test verbinding', 'Test connection', 'Verbindung testen'); }
         label('txtNzbgetUrl', 'URL (bijv. http://192.168.1.10:6789)', 'URL (e.g. http://192.168.1.10:6789)', 'URL (z. B. http://192.168.1.10:6789)');
@@ -634,14 +635,14 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         });
     }
 
-    function testDownloader(view, type, name, urlId, userId, passId, statusId) {
+    function testDownloader(view, type, name, urlId, userId, passId, statusId, keyId) {
         var status = el(view, statusId);
         status.style.color = '';
         status.textContent = languageText('Testen...', 'Testing...', 'Verbindung wird getestet...');
         ApiClient.ajax({
             type: 'POST',
             url: ApiClient.getUrl('Discover/TestConnection'),
-            data: JSON.stringify({ Type: type, Url: el(view, urlId).value.trim(), Username: el(view, userId).value.trim(), Password: el(view, passId).value }),
+            data: JSON.stringify({ Type: type, Url: el(view, urlId).value.trim(), Username: el(view, userId).value.trim(), Password: el(view, passId).value, ApiKey: keyId ? el(view, keyId).value.trim() : '' }),
             contentType: 'application/json',
             dataType: 'json'
         }).then(function (r) {
@@ -659,7 +660,7 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             status.textContent = languageText('Mislukt: ', 'Failed: ', 'Fehlgeschlagen: ') + ajaxErrorMessage(err);
         });
     }
-    function testQbit(view) { testDownloader(view, 'Qbittorrent', 'qBittorrent', 'txtQbitUrl', 'txtQbitUser', 'txtQbitPass', 'statusQbit'); }
+    function testQbit(view) { testDownloader(view, 'Qbittorrent', 'qBittorrent', 'txtQbitUrl', 'txtQbitUser', 'txtQbitPass', 'statusQbit', 'txtQbitKey'); }
     function testNzbget(view) { testDownloader(view, 'Nzbget', 'NZBGet', 'txtNzbgetUrl', 'txtNzbgetUser', 'txtNzbgetPass', 'statusNzbget'); }
     function testTrans(view) { testDownloader(view, 'Transmission', 'Transmission', 'txtTransUrl', 'txtTransUser', 'txtTransPass', 'statusTrans'); }
 
@@ -1017,6 +1018,7 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             el(view, 'txtQbitUrl').value = c.QbitUrl || '';
             el(view, 'txtQbitUser').value = c.QbitUser || '';
             el(view, 'txtQbitPass').value = c.QbitPassword || '';
+            el(view, 'txtQbitKey').value = c.QbitApiKey || '';
             el(view, 'txtNzbgetUrl').value = c.NzbgetUrl || '';
             el(view, 'txtNzbgetUser').value = c.NzbgetUser || '';
             el(view, 'txtNzbgetPass').value = c.NzbgetPassword || '';
@@ -1100,6 +1102,7 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             c.QbitUrl = el(view, 'txtQbitUrl').value.trim();
             c.QbitUser = el(view, 'txtQbitUser').value.trim();
             c.QbitPassword = el(view, 'txtQbitPass').value;
+            c.QbitApiKey = el(view, 'txtQbitKey').value.trim();
             c.NzbgetUrl = el(view, 'txtNzbgetUrl').value.trim();
             c.NzbgetUser = el(view, 'txtNzbgetUser').value.trim();
             c.NzbgetPassword = el(view, 'txtNzbgetPass').value;
