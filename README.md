@@ -263,6 +263,16 @@ In Docker, `/system/dashboard-ui` is read-only for the Emby user, so the loader 
 3. Apply it with `docker compose up -d`.
 4. Enable **Tile opens the Discover page** in the plugin settings. The diagnostics should now show `[ OK ]` for the tile.
 
+### Native Linux install: writable web client
+
+On a native (non-Docker) install, `/opt/emby-server/system/dashboard-ui` is usually owned by root, so the loader cannot be written ("Access to the path ... is denied"). Give the Emby user write access to the folder and to `index.html`:
+
+```bash
+sudo chown emby:emby /opt/emby-server/system/dashboard-ui /opt/emby-server/system/dashboard-ui/index.html
+```
+
+Emby package updates replace this folder, so repeat the command after each update. Adjust the path and user name if your install differs.
+
 Notes:
 
 - Do step 1 before step 2. An empty bind mount breaks the web UI.
