@@ -1,3 +1,11 @@
+## Version 1.4.0.18 (beta)
+
+- Fix: **qBittorrent 5.2 and newer**: the login always failed ("login failed, check username and password"), even with the right password. qBittorrent 5.2 answers a successful login with "204 No Content" instead of "Ok."; Discover now accepts both.
+- New: optional **API key** for qBittorrent 5.2+ (qBittorrent: Options → WebUI → API Key). When filled in, Discover uses it instead of username and password, so no login is needed at all.
+- Fix: when qBittorrent has temporarily banned the IP after failed logins (HTTP 403), Discover now says so instead of "check username and password".
+- Fix: after a failed qBittorrent login, Discover waited a few minutes before trying again even when the username or password had been changed. The pause now only applies to the same credentials.
+- Change: page names bumped (`discoverconfig1111`, `discoverconfigjs1392`).
+
 ## Version 1.4.0.17 (beta)
 
 - Fix: **qBittorrent** login failed ("login failed, check username and password") when the username or password contained symbols. The login form is now encoded explicitly as UTF-8 with strict percent-encoding, so every character reaches qBittorrent exactly as typed.

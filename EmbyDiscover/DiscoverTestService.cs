@@ -116,7 +116,7 @@ namespace Emby.Plugins.Discover
 
                 if (string.Equals(request.Type, "Qbittorrent", StringComparison.OrdinalIgnoreCase))
                 {
-                    result.Version = await QbitClient.Test(_json, request.Url, request.Username, request.Password, System.Threading.CancellationToken.None).ConfigureAwait(false);
+                    result.Version = await QbitClient.Test(_json, request.Url, request.Username, request.Password, request.ApiKey, System.Threading.CancellationToken.None).ConfigureAwait(false);
                     result.AppName = "qBittorrent";
                     result.Success = true;
                     return result;

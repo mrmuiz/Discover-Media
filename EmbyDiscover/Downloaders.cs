@@ -69,25 +69,32 @@ namespace Emby.Plugins.Discover
         private static string _cookie;
         private static string _cookieFor;
         private static DateTime _failUntil;
+        private static string _failFor;
 
         internal static bool Configured
         {
             get { var c = Plugin.GetCurrentConfiguration(); return c != null && !string.IsNullOrWhiteSpace(c.QbitUrl); }
         }
 
+        private static string Fail(string english, string dutch, string german, string norwegian) =>
+            DiscoverLanguage.Text(dutch, english, german, norwegian);
+
         private static async Task<string> Login(string url, string user, string pass, CancellationToken ct, bool force)
         {
             var b = DlHttp.BaseUrl(url);
             var key = b + "|" + user;
             if (!force && _cookie != null && _cookieFor == key) return _cookie;
-            if (string.IsNullOrWhiteSpace(user)) { _cookie = ""; _cookieFor = key; return ""; } // geen login nodig (bijv. localhost-bypass)
-            // Te vaak met een verkeerd wachtwoord proberen laat qBittorrent het IP-adres blokkeren; daarom even wachten na een mislukte poging.
-            if (DateTime.UtcNow < _failUntil) throw new InvalidOperationException(DiscoverLanguage.Text("inloggen mislukt; volgende poging over enkele minuten (controleer gebruikersnaam en wachtwoord)", "login failed; next attempt in a few minutes (check username and password)", "Anmeldung fehlgeschlagen; nächster Versuch in einigen Minuten (Benutzername und Passwort prüfen)"));
+            if (string.IsNullOrWhiteSpace(user)) { _cookie = ""; _cookieFor = key; return ""; } // no login needed (e.g. localhost bypass)
+            // Retrying a wrong password too often makes qBittorrent ban the IP; wait a while after a failed attempt,
+            // but only for the same URL, user and password (changed credentials are tried right away).
+            var failKey = key + "|" + (pass ?? "").GetHashCode().ToString(CultureInfo.InvariantCulture);
+            if (DateTime.UtcNow < _failUntil && _failFor == failKey)
+                throw new InvalidOperationException(Fail("login failed; next attempt in a few minutes (check username and password)", "inloggen mislukt; volgende poging over enkele minuten (controleer gebruikersnaam en wachtwoord)", "Anmeldung fehlgeschlagen; nächster Versuch in einigen Minuten (Benutzername und Passwort prüfen)", "innlogging mislyktes; nytt forsøk om noen minutter (sjekk brukernavn og passord)"));
             using (var req = new HttpRequestMessage(HttpMethod.Post, b + "/api/v2/auth/login"))
             {
                 req.Headers.Referrer = new Uri(b);
-                // Zelf coderen (UTF-8, alleen A-Z a-z 0-9 - _ . ~ blijft staan): FormUrlEncodedContent gedraagt zich per .NET/Mono-versie
-                // anders bij tekens als ! * ' ( ) + & % en niet-ASCII, waardoor wachtwoorden met symbolen soms verkeerd aankwamen.
+                // Encode ourselves (UTF-8, only A-Z a-z 0-9 - _ . ~ kept): FormUrlEncodedContent differs between .NET/Mono
+                // versions for characters like ! * ' ( ) + & % and non-ASCII.
                 var body = "username=" + DlHttp.FormEncode(user) + "&password=" + DlHttp.FormEncode(pass);
                 req.Content = new StringContent(body, Encoding.ASCII, "application/x-www-form-urlencoded");
                 using (var resp = await Http.SendAsync(req, ct).ConfigureAwait(false))
@@ -98,47 +105,79 @@ namespace Emby.Plugins.Discover
                     if (resp.Headers.TryGetValues("Set-Cookie", out vals))
                         foreach (var v in vals)
                         {
+                            // qBittorrent < 5.2: "SID=..."; 5.2+: "QBT_SID_<port>=..."
                             if (v == null || v.IndexOf("SID", StringComparison.OrdinalIgnoreCase) < 0) continue;
                             var semi = v.IndexOf(';');
                             cookie = semi > 0 ? v.Substring(0, semi) : v;
                             break;
                         }
-                    if (!resp.IsSuccessStatusCode || !string.Equals(text, "Ok.", StringComparison.OrdinalIgnoreCase) || cookie == null)
+                    int code = (int)resp.StatusCode;
+                    if (code == 403)
                     {
-                        _failUntil = DateTime.UtcNow.AddMinutes(5);
-                        throw new InvalidOperationException(DiscoverLanguage.Text("inloggen mislukt", "login failed", "Anmeldung fehlgeschlagen") + (resp.IsSuccessStatusCode ? DiscoverLanguage.Text(" (controleer gebruikersnaam en wachtwoord)", " (check username and password)", " (Benutzername und Passwort prüfen)") : " (HTTP " + (int)resp.StatusCode + ")"));
+                        _failUntil = DateTime.UtcNow.AddMinutes(5); _failFor = failKey;
+                        throw new InvalidOperationException(Fail("qBittorrent has temporarily banned this IP address after too many failed logins (HTTP 403). Wait, or restart qBittorrent, then test again.", "qBittorrent heeft dit IP-adres tijdelijk geblokkeerd na te veel mislukte logins (HTTP 403). Wacht even of herstart qBittorrent en test opnieuw.", "qBittorrent hat diese IP-Adresse nach zu vielen fehlgeschlagenen Anmeldungen vorübergehend gesperrt (HTTP 403). Warte oder starte qBittorrent neu und teste erneut.", "qBittorrent har midlertidig blokkert denne IP-adressen etter for mange mislykkede innlogginger (HTTP 403). Vent, eller start qBittorrent på nytt, og test igjen."));
                     }
-                    _cookie = cookie;
+                    // qBittorrent < 5.2 answers 200 "Ok."; 5.2+ answers 204 No Content. A wrong password gives 200 "Fails." (or 401 on 5.2+).
+                    bool ok = resp.IsSuccessStatusCode && (code == 204 || string.Equals(text, "Ok.", StringComparison.OrdinalIgnoreCase) || (text.Length == 0 && cookie != null));
+                    if (!ok)
+                    {
+                        _failUntil = DateTime.UtcNow.AddMinutes(5); _failFor = failKey;
+                        bool wrongPassword = string.Equals(text, "Fails.", StringComparison.OrdinalIgnoreCase) || code == 401 || resp.IsSuccessStatusCode;
+                        throw new InvalidOperationException(Fail("login failed", "inloggen mislukt", "Anmeldung fehlgeschlagen", "innlogging mislyktes") +
+                            (wrongPassword ? Fail(" (check username and password)", " (controleer gebruikersnaam en wachtwoord)", " (Benutzername und Passwort prüfen)", " (sjekk brukernavn og passord)") : " (HTTP " + code + ")"));
+                    }
+                    _failFor = null;
+                    _cookie = cookie ?? "";
                     _cookieFor = key;
-                    return cookie;
+                    return _cookie;
                 }
             }
         }
 
-        private static async Task<string> GetInfo(string url, string user, string pass, CancellationToken ct)
+        private static async Task<string> GetInfo(string url, string user, string pass, string apiKey, CancellationToken ct)
         {
-            for (int attempt = 0; attempt < 2; attempt++)
+            var b = DlHttp.BaseUrl(url);
+            apiKey = (apiKey ?? "").Trim();
+            if (apiKey.Length > 0)
             {
-                var cookie = await Login(url, user, pass, ct, attempt > 0).ConfigureAwait(false);
-                using (var req = new HttpRequestMessage(HttpMethod.Get, DlHttp.BaseUrl(url) + "/api/v2/torrents/info"))
+                // qBittorrent 5.2+ API key: no login, just a Bearer header on every request.
+                using (var req = new HttpRequestMessage(HttpMethod.Get, b + "/api/v2/torrents/info"))
                 {
-                    req.Headers.Referrer = new Uri(DlHttp.BaseUrl(url));
-                    if (!string.IsNullOrEmpty(cookie)) req.Headers.TryAddWithoutValidation("Cookie", cookie);
+                    req.Headers.Referrer = new Uri(b);
+                    req.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
                     using (var resp = await Http.SendAsync(req, ct).ConfigureAwait(false))
                     {
-                        if ((int)resp.StatusCode == 403 && attempt == 0) { _cookie = null; continue; }
-                        if (!resp.IsSuccessStatusCode) throw new InvalidOperationException("HTTP " + (int)resp.StatusCode + " " + resp.ReasonPhrase);
+                        int code = (int)resp.StatusCode;
+                        if (code == 401 || code == 403)
+                            throw new InvalidOperationException(Fail("API key rejected (HTTP " + code + "); check the key, it needs qBittorrent 5.2 or newer", "API key geweigerd (HTTP " + code + "); controleer de key, hiervoor is qBittorrent 5.2 of nieuwer nodig", "API-Schlüssel abgelehnt (HTTP " + code + "); prüfe den Schlüssel, dafür ist qBittorrent 5.2 oder neuer nötig", "API-nøkkel avvist (HTTP " + code + "); sjekk nøkkelen, dette krever qBittorrent 5.2 eller nyere"));
+                        if (!resp.IsSuccessStatusCode) throw new InvalidOperationException("HTTP " + code + " " + resp.ReasonPhrase);
                         return await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
                     }
                 }
             }
-            throw new InvalidOperationException(DiscoverLanguage.Text("geen toegang (403)", "no access (403)", "kein Zugriff (403)"));
+            for (int attempt = 0; attempt < 2; attempt++)
+            {
+                var cookie = await Login(url, user, pass, ct, attempt > 0).ConfigureAwait(false);
+                using (var req = new HttpRequestMessage(HttpMethod.Get, b + "/api/v2/torrents/info"))
+                {
+                    req.Headers.Referrer = new Uri(b);
+                    if (!string.IsNullOrEmpty(cookie)) req.Headers.TryAddWithoutValidation("Cookie", cookie);
+                    using (var resp = await Http.SendAsync(req, ct).ConfigureAwait(false))
+                    {
+                        int code = (int)resp.StatusCode;
+                        if ((code == 403 || code == 401) && attempt == 0) { _cookie = null; continue; }
+                        if (!resp.IsSuccessStatusCode) throw new InvalidOperationException("HTTP " + code + " " + resp.ReasonPhrase);
+                        return await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
+                    }
+                }
+            }
+            throw new InvalidOperationException(Fail("no access (403)", "geen toegang (403)", "kein Zugriff (403)", "ingen tilgang (403)"));
         }
 
         internal static async Task<SabSnapshot> Fetch(IJsonSerializer json, CancellationToken ct)
         {
             var c = Plugin.GetCurrentConfiguration();
-            var text = await GetInfo(c.QbitUrl, c.QbitUser, c.QbitPassword, ct).ConfigureAwait(false);
+            var text = await GetInfo(c.QbitUrl, c.QbitUser, c.QbitPassword, c.QbitApiKey, ct).ConfigureAwait(false);
             var list = json.DeserializeFromString<List<QbitTorrentDto>>(text) ?? new List<QbitTorrentDto>();
             var snap = new SabSnapshot { Source = "qBittorrent" };
             foreach (var t in list)
@@ -165,14 +204,15 @@ namespace Emby.Plugins.Discover
             return snap;
         }
 
-        internal static async Task<string> Test(IJsonSerializer json, string url, string user, string pass, CancellationToken ct)
+        internal static async Task<string> Test(IJsonSerializer json, string url, string user, string pass, string apiKey, CancellationToken ct)
         {
-            if (string.IsNullOrWhiteSpace(url)) throw new InvalidOperationException(DiscoverLanguage.Text("Vul eerst een URL in.", "Enter a URL first.", "Zuerst eine URL eingeben."));
+            if (string.IsNullOrWhiteSpace(url)) throw new InvalidOperationException(DiscoverLanguage.Text("Vul eerst een URL in.", "Enter a URL first.", "Zuerst eine URL eingeben.", "Skriv inn en URL først."));
             _failUntil = DateTime.MinValue;
+            _failFor = null;
             _cookie = null;
             try
             {
-                await GetInfo(url, user, pass, ct).ConfigureAwait(false);
+                await GetInfo(url, user, pass, apiKey, ct).ConfigureAwait(false);
             }
             catch (InvalidOperationException ex) { throw new InvalidOperationException("qBittorrent: " + ex.Message); }
             return "";
