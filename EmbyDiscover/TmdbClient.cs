@@ -404,7 +404,7 @@ namespace Emby.Plugins.Discover
             }
             catch (Exception ex)
             {
-                DiscoverDiagnostics.Add("TMDB " + path + " verversen op de achtergrond mislukt: " + ex.Message);
+                DiscoverDiagnostics.Add("TMDB " + path + " refresh in the background failed: " + ex.Message);
                 lock (PageCache) { PageEntry e; if (PageCache.TryGetValue(key, out e)) e.Refreshing = false; }
             }
         }
@@ -415,7 +415,7 @@ namespace Emby.Plugins.Discover
             catch (Exception ex)
             {
                 if (ex is OperationCanceledException) throw;
-                DiscoverDiagnostics.Add("TMDB " + path + " (extra pagina) mislukt: " + ex.Message);
+                DiscoverDiagnostics.Add("TMDB " + path + " (extra page) failed: " + ex.Message);
                 return new TmdbPage { results = new List<TmdbItem>() };
             }
         }
@@ -543,7 +543,7 @@ namespace Emby.Plugins.Discover
             catch (Exception ex)
             {
                 if (ex is OperationCanceledException) throw;
-                DiscoverDiagnostics.Add("TMDB titellogo " + key + " mislukt: " + ex.Message);
+                DiscoverDiagnostics.Add("TMDB titellogo " + key + " failed: " + ex.Message);
             }
             lock (LogoCache) { LogoCache[key] = logo; }
             return logo;
@@ -563,7 +563,7 @@ namespace Emby.Plugins.Discover
             catch (Exception ex)
             {
                 if (ex is OperationCanceledException) throw;
-                DiscoverDiagnostics.Add("TMDB logo " + key + " mislukt: " + ex.Message);
+                DiscoverDiagnostics.Add("TMDB logo " + key + " failed: " + ex.Message);
             }
             if (!string.IsNullOrEmpty(logo)) lock (LogoCache) { LogoCache[key] = logo; }
             return logo;
@@ -594,7 +594,7 @@ namespace Emby.Plugins.Discover
             catch (Exception ex)
             {
                 if (ex is OperationCanceledException) throw;
-                DiscoverDiagnostics.Add("TMDB logo-versies " + key + " mislukt: " + ex.Message);
+                DiscoverDiagnostics.Add("TMDB logo versions " + key + " failed: " + ex.Message);
             }
             return list;
         }
@@ -663,7 +663,7 @@ namespace Emby.Plugins.Discover
             catch (Exception ex)
             {
                 if (ex is OperationCanceledException) throw;
-                DiscoverDiagnostics.Add("TMDB extra's " + (tv ? "tv/" : "film/") + id + " mislukt: " + ex.Message);
+                DiscoverDiagnostics.Add("TMDB extra's " + (tv ? "tv/" : "movie/") + id + " failed: " + ex.Message);
                 return null;
             }
         }
@@ -739,7 +739,7 @@ namespace Emby.Plugins.Discover
             catch (Exception ex)
             {
                 if (ex is OperationCanceledException) throw;
-                DiscoverDiagnostics.Add("TMDB seizoensbeschrijving " + id + "/s" + seasonNumber + " (" + lang + ") mislukt: " + ex.Message);
+                DiscoverDiagnostics.Add("TMDB seizoensbeschrijving " + id + "/s" + seasonNumber + " (" + lang + ") failed: " + ex.Message);
             }
 
             if (!string.Equals(lang, FallbackLanguage, StringComparison.OrdinalIgnoreCase) &&
@@ -762,7 +762,7 @@ namespace Emby.Plugins.Discover
                 catch (Exception ex)
                 {
                     if (ex is OperationCanceledException) throw;
-                    DiscoverDiagnostics.Add("TMDB Engelse seizoensbeschrijving " + id + "/s" + seasonNumber + " mislukt: " + ex.Message);
+                    DiscoverDiagnostics.Add("TMDB Engelse seizoensbeschrijving " + id + "/s" + seasonNumber + " failed: " + ex.Message);
                 }
             }
             return item;
@@ -783,7 +783,7 @@ namespace Emby.Plugins.Discover
             catch (Exception ex)
             {
                 if (ex is OperationCanceledException) throw;
-                DiscoverDiagnostics.Add("TMDB seizoensposter " + id + "/s" + seasonNumber + " (seizoen) mislukt: " + ex.Message);
+                DiscoverDiagnostics.Add("TMDB seizoensposter " + id + "/s" + seasonNumber + " (season) failed: " + ex.Message);
             }
 
             try
@@ -804,7 +804,7 @@ namespace Emby.Plugins.Discover
             catch (Exception ex)
             {
                 if (ex is OperationCanceledException) throw;
-                DiscoverDiagnostics.Add("TMDB seizoensposter " + id + "/s" + seasonNumber + " (afbeeldingen) mislukt: " + ex.Message);
+                DiscoverDiagnostics.Add("TMDB seizoensposter " + id + "/s" + seasonNumber + " (images) failed: " + ex.Message);
             }
             return null;
         }
@@ -914,7 +914,7 @@ namespace Emby.Plugins.Discover
                         lastError = ex;
                         // 404 = (seizoen) bestaat niet: niet opnieuw proberen.
                         if (ex.Message.IndexOf("404", StringComparison.Ordinal) >= 0) break;
-                        DiscoverDiagnostics.Add("TMDB video's " + a.Item1 + " (" + a.Item3 + ") poging " + (retry + 1) + " mislukt: " + ex.Message);
+                        DiscoverDiagnostics.Add("TMDB video's " + a.Item1 + " (" + a.Item3 + ") poging " + (retry + 1) + " failed: " + ex.Message);
                         await Task.Delay(500, ct).ConfigureAwait(false);
                     }
                 }
@@ -939,7 +939,7 @@ namespace Emby.Plugins.Discover
             }
 
             if (!answered && lastError != null)
-                throw new InvalidOperationException("TMDB niet bereikbaar voor video's: " + lastError.Message, lastError);
+                throw new InvalidOperationException("TMDB not reachable for videos: " + lastError.Message, lastError);
             return null;
         }
 

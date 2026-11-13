@@ -14,7 +14,7 @@ using MediaBrowser.Model.Services;
 
 namespace Emby.Plugins.Discover
 {
-    [Route("/Discover/ContinueSeries", "GET", Summary = "Series in de bibliotheek waar TMDB al een nieuwer seizoen van heeft")]
+    [Route("/Discover/ContinueSeries", "GET", Summary = "Series in the library for which TMDB already has a newer season")]
     [Authenticated]
     public class DiscoverContinueRequest : IReturn<DiscoverRow> { }
 
@@ -73,7 +73,7 @@ namespace Emby.Plugins.Discover
             }
             catch (Exception ex)
             {
-                DiscoverDiagnostics.Add("FOUT rij Nieuwe seizoenen: " + ex.Message);
+                DiscoverDiagnostics.Add("ERROR row New seasons: " + ex.Message);
                 return row;
             }
             finally { Build.Release(); }
@@ -143,13 +143,13 @@ namespace Emby.Plugins.Discover
                     };
                     lock (found) found.Add(new KeyValuePair<DateTime, DiscoverItemDto>(airDate, dto));
                 }
-                catch (Exception ex) { DiscoverDiagnostics.Add("Nieuwe seizoenen: " + kv.Key.Name + " mislukt: " + ex.Message); }
+                catch (Exception ex) { DiscoverDiagnostics.Add("New seasons: " + kv.Key.Name + " failed: " + ex.Message); }
                 finally { gate.Release(); }
             }).ToList();
             await Task.WhenAll(tasks).ConfigureAwait(false);
 
             row.Items = found.OrderByDescending(f => f.Key).Select(f => f.Value).Take(MaxShown).ToList();
-            DiscoverDiagnostics.Add("rij Nieuwe seizoenen: " + row.Items.Count + " van " + candidates.Count + " series");
+            DiscoverDiagnostics.Add("row New seasons: " + row.Items.Count + " of " + candidates.Count + " series");
             return row;
         }
     }

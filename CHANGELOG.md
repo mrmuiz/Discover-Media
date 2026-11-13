@@ -5,6 +5,7 @@
 - Fix: on a TV the remote can now reach the row titles (such as "Upcoming movies ›") to open the full list.
 - Fix: **qBittorrent** login failed ("login failed, check username and password") when the username or password contained symbols. The login form is now encoded explicitly as UTF-8 with strict percent-encoding, so every character reaches qBittorrent exactly as typed.
 - Fix: error messages of the qBittorrent, Transmission and NZBGet connection (login failed, wrong password, no valid response, …) were always Dutch; they now follow the Discover language.
+- Change: no more hard-coded Dutch in the server code. Messages shown to users (errors, channel texts, status page) follow the Discover language (Dutch, English, German); log and diagnostics lines, and the API route descriptions, are now in English.
 - Change: page names bumped (`discoveruijs1453`, `discoverbuttonjs1434`).
 
 ## Version 1.4.0.15

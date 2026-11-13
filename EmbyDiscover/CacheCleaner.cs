@@ -146,7 +146,7 @@ namespace Emby.Plugins.Discover
                 // Tegels weg? Dan moet Emby de mappen opnieuw opvragen, anders toont hij kapotte plaatjes.
                 bool tilesRemoved = tiles.Any(t => { try { t.Refresh(); return !t.Exists; } catch { return false; } });
                 if (tilesRemoved) BumpEpoch();
-                var msg = "opruimen: " + removed + " bestanden verwijderd (" + (freed / 1048576) + " MB)";
+                var msg = "cleanup: " + removed + " files removed (" + (freed / 1048576) + " MB)";
                 DiscoverDiagnostics.Add(msg);
                 return msg;
             }
@@ -163,7 +163,7 @@ namespace Emby.Plugins.Discover
             _timer = new Timer(_ =>
             {
                 try { CacheCleaner.Run(false); }
-                catch (Exception ex) { DiscoverDiagnostics.Add("FOUT opruimen: " + ex.Message); }
+                catch (Exception ex) { DiscoverDiagnostics.Add("ERROR cleanup: " + ex.Message); }
             }, null, TimeSpan.FromMinutes(2), TimeSpan.FromHours(24));
         }
 

@@ -122,12 +122,12 @@ namespace Emby.Plugins.Discover
                                 TimeoutMs = 15000
                             }, CancellationToken.None).ConfigureAwait(false);
                         }
-                        catch (Exception ex) { DiscoverDiagnostics.Add("melding beschikbaar mislukt: " + ex.Message); }
+                        catch (Exception ex) { DiscoverDiagnostics.Add("available notification failed: " + ex.Message); }
                     }
-                    DiscoverDiagnostics.Add("melding beschikbaar verstuurd: " + title);
+                    DiscoverDiagnostics.Add("available notification sent: " + title);
                 }
             }
-            catch (Exception ex) { DiscoverDiagnostics.Add("FOUT controle beschikbare aanvragen: " + ex.Message); }
+            catch (Exception ex) { DiscoverDiagnostics.Add("ERROR checking available requests: " + ex.Message); }
             finally { Interlocked.Exchange(ref _busy, 0); }
         }
     }

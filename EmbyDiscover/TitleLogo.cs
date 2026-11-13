@@ -56,7 +56,7 @@ namespace Emby.Plugins.Discover
                     catch (Exception ex)
                     {
                         if (ex is OperationCanceledException) throw;
-                        DiscoverDiagnostics.Add("fanart.tv logo " + (tv ? "t" : "m") + tmdbId + " mislukt: " + ex.Message);
+                        DiscoverDiagnostics.Add("fanart.tv logo " + (tv ? "t" : "m") + tmdbId + " failed: " + ex.Message);
                     }
                 }
             }

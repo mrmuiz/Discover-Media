@@ -63,7 +63,7 @@ namespace Emby.Plugins.Discover
             catch (Exception ex)
             {
                 if (ex is OperationCanceledException) throw;
-                DiscoverDiagnostics.Add("TVmaze volgende aflevering " + tmdbId + " mislukt: " + ex.Message);
+                DiscoverDiagnostics.Add("TVmaze next episode " + tmdbId + " failed: " + ex.Message);
             }
             Next[tmdbId] = Tuple.Create(DateTime.UtcNow, code, when);
             return code == null ? null : Tuple.Create(code, when);
@@ -98,7 +98,7 @@ namespace Emby.Plugins.Discover
             catch (Exception ex)
             {
                 if (ex is OperationCanceledException) throw;
-                DiscoverDiagnostics.Add("TVmaze volgende aflevering " + tmdbId + " mislukt: " + ex.Message);
+                DiscoverDiagnostics.Add("TVmaze next episode " + tmdbId + " failed: " + ex.Message);
             }
             Lines[key] = Tuple.Create(DateTime.UtcNow, line);
             return line;

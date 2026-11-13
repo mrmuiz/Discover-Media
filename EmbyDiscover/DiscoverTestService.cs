@@ -9,7 +9,7 @@ using MediaBrowser.Model.Services;
 
 namespace Emby.Plugins.Discover
 {
-    [Route("/Discover/TestConnection", "POST", Summary = "Test Radarr/Sonarr en haal profielen en root folders op")]
+    [Route("/Discover/TestConnection", "POST", Summary = "Test Radarr/Sonarr and fetch profiles and root folders")]
     [Authenticated(Roles = "Admin")]
     public class TestConnectionRequest : IReturn<TestConnectionResult>
     {
@@ -105,7 +105,7 @@ namespace Emby.Plugins.Discover
                         .ConfigureAwait(false))
                     {
                         if ((int)resp.StatusCode == 401)
-                            throw new InvalidOperationException("TMDB weigert de key (401). Gebruik de 'API Key' (v3), niet het Read Access Token.");
+                            throw new InvalidOperationException(DiscoverLanguage.Text("TMDB weigert de key (401). Gebruik de 'API Key' (v3), niet het Read Access Token.", "TMDB rejects the key (401). Use the 'API Key' (v3), not the Read Access Token.", "TMDB lehnt den Schlüssel ab (401). Verwende den 'API Key' (v3), nicht das Read Access Token."));
                         resp.EnsureSuccessStatusCode();
                     }
 
@@ -210,7 +210,7 @@ namespace Emby.Plugins.Discover
         private static void LogTmdbLanguageFailure(TestConnectionRequest request, string error)
         {
             if (request != null && string.Equals(request.Type, "TmdbLanguages", StringComparison.OrdinalIgnoreCase))
-                DiscoverDiagnostics.Add("FOUT TMDB-talenlijst: " + error);
+                DiscoverDiagnostics.Add("ERROR TMDB language list: " + error);
         }
 
         private async Task<List<TmdbLanguageOption>> GetTmdbLanguages(string apiKey)
@@ -220,14 +220,14 @@ namespace Emby.Plugins.Discover
                 Uri.EscapeDataString(apiKey.Trim())).ConfigureAwait(false))
             {
                 if ((int)resp.StatusCode == 401)
-                    throw new InvalidOperationException("TMDB weigert de key voor de talenlijst (401).");
+                    throw new InvalidOperationException(DiscoverLanguage.Text("TMDB weigert de key voor de talenlijst (401).", "TMDB rejects the key for the language list (401).", "TMDB lehnt den Schlüssel für die Sprachliste ab (401)."));
                 if (!resp.IsSuccessStatusCode)
                     throw new InvalidOperationException(
                         "TMDB-talenlijst gaf HTTP " + (int)resp.StatusCode + " " + resp.ReasonPhrase + ".");
 
                 var languages = _json.DeserializeFromString<List<TmdbLanguageResponse>>(
                     await resp.Content.ReadAsStringAsync().ConfigureAwait(false));
-                if (languages == null) throw new InvalidOperationException("TMDB gaf geen geldige talenlijst terug.");
+                if (languages == null) throw new InvalidOperationException(DiscoverLanguage.Text("TMDB gaf geen geldige talenlijst terug.", "TMDB returned no valid language list.", "TMDB lieferte keine gültige Sprachliste."));
 
                 var options = languages
                     .Where(x => !string.IsNullOrWhiteSpace(x.iso_639_1))

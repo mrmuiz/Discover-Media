@@ -13,7 +13,7 @@ namespace Emby.Plugins.Discover
     // Rijen op gewone Emby-pagina's (webclient): "Meer zoals dit" en de collectie op film/serie-pagina's,
     // en "Niet in je bibliotheek" op acteur/regisseur-pagina's. Het knopscript filtert wat al in Emby staat.
 
-    [Route("/Discover/PersonCredits", "GET", Summary = "Films en series van een acteur/regisseur (TMDB), ook als ze niet in de bibliotheek staan")]
+    [Route("/Discover/PersonCredits", "GET", Summary = "Movies and series of an actor/director (TMDB), also when they are not in the library")]
     [Authenticated]
     public class DiscoverPersonCreditsRequest : IReturn<DiscoverRelatedRow>
     {
@@ -21,7 +21,7 @@ namespace Emby.Plugins.Discover
         public int TmdbPersonId { get; set; }
     }
 
-    [Route("/Discover/Person", "GET", Summary = "Gegevens van een persoon (TMDB) voor de persoonspagina in Discover")]
+    [Route("/Discover/Person", "GET", Summary = "Details of a person (TMDB) for the person page in Discover")]
     [Authenticated]
     public class DiscoverPersonRequest : IReturn<DiscoverPersonResult>
     {
@@ -43,7 +43,7 @@ namespace Emby.Plugins.Discover
         public int Gender { get; set; }
     }
 
-    [Route("/Discover/Related", "GET", Summary = "TMDB-aanbevelingen en collectie bij een film of serie")]
+    [Route("/Discover/Related", "GET", Summary = "TMDB recommendations and collection for a movie or series")]
     [Authenticated]
     public class DiscoverRelatedRequest : IReturn<DiscoverRelatedResult>
     {
@@ -55,7 +55,7 @@ namespace Emby.Plugins.Discover
         public string ImdbId { get; set; }
     }
 
-    [Route("/Discover/LoaderConfig", "GET", Summary = "Staat 'Tegel opent Discover-pagina' aan? (voor het lader-script)")]
+    [Route("/Discover/LoaderConfig", "GET", Summary = "Is 'Tile opens the Discover page' on? (for the loader script)")]
     [Authenticated]
     public class DiscoverLoaderConfigRequest : IReturn<DiscoverLoaderConfigResult> { }
 
@@ -68,7 +68,7 @@ namespace Emby.Plugins.Discover
         public string Version { get; set; }
     }
 
-    [Route("/Discover/Backdrops", "GET", Summary = "Achtergronden (TMDB trending) voor de tegel Discover Media op de Emby-startpagina")]
+    [Route("/Discover/Backdrops", "GET", Summary = "Backgrounds (TMDB trending) for the Discover Media tile on the Emby home page")]
     [Authenticated]
     public class DiscoverBackdropsRequest : IReturn<DiscoverBackdropsResult> { }
 
@@ -77,7 +77,7 @@ namespace Emby.Plugins.Discover
         public List<string> Urls { get; set; } = new List<string>();
     }
 
-    [Route("/Discover/ChannelInfo", "GET", Summary = "Emby-id van het Discover-kanaal (ook als het kanaal in Emby een andere naam heeft gekregen)")]
+    [Route("/Discover/ChannelInfo", "GET", Summary = "Emby id of the Discover channel (also when the channel has been renamed in Emby)")]
     [Authenticated]
     public class DiscoverChannelInfoRequest : IReturn<DiscoverChannelInfoResult> { }
 
@@ -87,7 +87,7 @@ namespace Emby.Plugins.Discover
         public string Name { get; set; }
     }
 
-    [Route("/Discover/IsDiscoverItem", "GET", Summary = "Hoort dit Emby-item bij het Discover-kanaal? (Emby 4.11 geeft ChannelId niet altijd mee)")]
+    [Route("/Discover/IsDiscoverItem", "GET", Summary = "Does this Emby item belong to the Discover channel? (Emby 4.11 does not always supply ChannelId)")]
     [Authenticated]
     public class DiscoverIsItemRequest : IReturn<DiscoverIsItemResult>
     {
@@ -103,7 +103,7 @@ namespace Emby.Plugins.Discover
         public List<string> OurIds { get; set; } = new List<string>();
     }
 
-    [Route("/Discover/ItemCast", "GET", Summary = "Cast (met foto) bij een titel in het Discover-kanaal")]
+    [Route("/Discover/ItemCast", "GET", Summary = "Cast (with photo) of a title in the Discover channel")]
     [Authenticated]
     public class DiscoverItemCastRequest : IReturn<DiscoverItemCastResult>
     {
@@ -124,7 +124,7 @@ namespace Emby.Plugins.Discover
         public string Overview { get; set; }
     }
 
-    [Route("/Discover/ItemBackdrop", "GET", Summary = "Achtergrond voor een pagina of tegel in het Discover-kanaal")]
+    [Route("/Discover/ItemBackdrop", "GET", Summary = "Background for a page or tile in the Discover channel")]
     [Authenticated]
     public class DiscoverItemBackdropRequest : IReturn<DiscoverItemBackdropResult>
     {
@@ -140,7 +140,7 @@ namespace Emby.Plugins.Discover
         public string Url { get; set; }
     }
 
-    [Route("/Discover/Seasons", "GET", Summary = "Seizoenen van een serie (voor de seizoenskeuze vanuit een rij)")]
+    [Route("/Discover/Seasons", "GET", Summary = "Seasons of a series (for the season picker from a row)")]
     [Authenticated]
     public class DiscoverSeasonsRequest : IReturn<DiscoverSeasonsResult>
     {
@@ -223,7 +223,7 @@ namespace Emby.Plugins.Discover
             catch (Exception ex)
             {
                 if (ex is OperationCanceledException) throw;
-                DiscoverDiagnostics.Add("achtergronden voor de startpagina mislukt: " + ex.Message);
+                DiscoverDiagnostics.Add("backgrounds for the home page failed: " + ex.Message);
                 if (cached != null) res.Urls = cached;
             }
             return res;
@@ -269,7 +269,7 @@ namespace Emby.Plugins.Discover
                     }
                 }
             }
-            catch (Exception ex) { DiscoverDiagnostics.Add("kanaal opzoeken mislukt: " + ex.Message); }
+            catch (Exception ex) { DiscoverDiagnostics.Add("channel lookup failed: " + ex.Message); }
             lock (ChannelGate) { if (res.Id != null) { _channel = res; _channelAt = DateTime.UtcNow; } }
             return res;
         }
@@ -312,7 +312,7 @@ namespace Emby.Plugins.Discover
                     res.Ours = ch != null && ch.Id == item.InternalId.ToString(System.Globalization.CultureInfo.InvariantCulture);
                 }
             }
-            catch (Exception ex) { DiscoverDiagnostics.Add("item controleren mislukt: " + ex.Message); }
+            catch (Exception ex) { DiscoverDiagnostics.Add("checking item failed: " + ex.Message); }
             return res;
         }
 
@@ -400,7 +400,7 @@ namespace Emby.Plugins.Discover
             catch (Exception ex)
             {
                 if (ex is OperationCanceledException) throw;
-                DiscoverDiagnostics.Add("achtergrond item " + request.Id + ": " + ex.Message);
+                DiscoverDiagnostics.Add("background item " + request.Id + ": " + ex.Message);
             }
             return res;
         }
@@ -441,7 +441,7 @@ namespace Emby.Plugins.Discover
             catch (Exception ex)
             {
                 if (ex is OperationCanceledException) throw;
-                DiscoverDiagnostics.Add("FOUT persoon " + request.Id + ": " + ex.Message);
+                DiscoverDiagnostics.Add("ERROR person " + request.Id + ": " + ex.Message);
             }
             return res;
         }
@@ -456,7 +456,7 @@ namespace Emby.Plugins.Discover
                 if (personId <= 0) personId = await _tmdb.FindPersonId(request.Name, CancellationToken.None).ConfigureAwait(false);
                 if (personId <= 0)
                 {
-                    DiscoverDiagnostics.Add("persoon: geen TMDB-id gevonden voor '" + request.Name + "'");
+                    DiscoverDiagnostics.Add("person: no TMDB id found for '" + request.Name + "'");
                     return row;
                 }
                 row.TmdbPersonId = personId;
@@ -484,8 +484,8 @@ namespace Emby.Plugins.Discover
             catch (Exception ex)
             {
                 if (ex is OperationCanceledException) throw;
-                _logger.Error("Discover: persoonscredits mislukt: {0}", ex.Message);
-                DiscoverDiagnostics.Add("FOUT persoonscredits '" + request.Name + "': " + ex.Message);
+                _logger.Error("Discover: person credits failed: {0}", ex.Message);
+                DiscoverDiagnostics.Add("ERROR person credits '" + request.Name + "': " + ex.Message);
             }
             return row;
         }
@@ -548,8 +548,8 @@ namespace Emby.Plugins.Discover
             catch (Exception ex)
             {
                 if (ex is OperationCanceledException) throw;
-                _logger.Error("Discover: aanbevelingen mislukt: {0}", ex.Message);
-                DiscoverDiagnostics.Add("FOUT aanbevelingen " + request.Type + "/" + request.TmdbId + ": " + ex.Message);
+                _logger.Error("Discover: recommendations failed: {0}", ex.Message);
+                DiscoverDiagnostics.Add("ERROR recommendations " + request.Type + "/" + request.TmdbId + ": " + ex.Message);
             }
             return res;
         }
@@ -583,7 +583,7 @@ namespace Emby.Plugins.Discover
             catch (Exception ex)
             {
                 if (ex is OperationCanceledException) throw;
-                DiscoverDiagnostics.Add("FOUT seizoenen " + request.TmdbId + ": " + ex.Message);
+                DiscoverDiagnostics.Add("ERROR seasons " + request.TmdbId + ": " + ex.Message);
             }
             return res;
         }
@@ -594,7 +594,7 @@ namespace Emby.Plugins.Discover
             catch (Exception ex)
             {
                 if (ex is OperationCanceledException) throw;
-                DiscoverDiagnostics.Add("TMDB collectie bij film " + movieId + " mislukt: " + ex.Message);
+                DiscoverDiagnostics.Add("TMDB collection for movie " + movieId + " failed: " + ex.Message);
                 return null;
             }
         }
@@ -609,7 +609,7 @@ namespace Emby.Plugins.Discover
             }
             catch (Exception ex)
             {
-                DiscoverDiagnostics.Add("FOUT status " + (tv ? "Sonarr" : "Radarr") + ": " + ex.Message);
+                DiscoverDiagnostics.Add("ERROR status " + (tv ? "Sonarr" : "Radarr") + ": " + ex.Message);
                 return new Dictionary<int, bool>();
             }
         }

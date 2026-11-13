@@ -125,7 +125,7 @@ namespace Emby.Plugins.Discover
                         _has4kTv = await AnyFourK(json, "/settings/sonarr").ConfigureAwait(false);
                         _4kAt = DateTime.UtcNow;
                     }
-                    catch (Exception ex) { DiscoverDiagnostics.Add("Seerr 4K-servers opvragen mislukt: " + ex.Message); _4kAt = DateTime.UtcNow; }
+                    catch (Exception ex) { DiscoverDiagnostics.Add("fetching Seerr 4K servers failed: " + ex.Message); _4kAt = DateTime.UtcNow; }
                     finally { Interlocked.Exchange(ref _4kBusy, 0); }
                 });
             }
@@ -317,7 +317,7 @@ namespace Emby.Plugins.Discover
                         catch (Exception ex)
                         {
                             if (ex is OperationCanceledException) throw;
-                            DiscoverDiagnostics.Add("Seerr-gebruikers ophalen mislukt (aanvraag gaat op naam van de API-key): " + ex.Message);
+                            DiscoverDiagnostics.Add("fetching Seerr users failed (request is made in the name of the API key): " + ex.Message);
                         }
                         _users = users = map;
                         _usersAt = DateTime.UtcNow;
@@ -327,7 +327,7 @@ namespace Emby.Plugins.Discover
             }
             int id;
             if (users.TryGetValue(key, out id)) return id;
-            DiscoverDiagnostics.Add("Seerr: geen Seerr-gebruiker gekoppeld aan Emby-gebruiker " + key + "; aanvraag op naam van de API-key");
+            DiscoverDiagnostics.Add("Seerr: no Seerr user linked to Emby user " + key + "; request made in the name of the API key");
             return null;
         }
 
@@ -336,7 +336,7 @@ namespace Emby.Plugins.Discover
         /// <returns>true = aangevraagd, false = stond al aangevraagd / niets nieuws om aan te vragen.</returns>
         internal static async Task<bool> Request(IJsonSerializer json, bool tv, int tmdbId, int tvdbId, int[] seasons, object embyUserId, CancellationToken ct, bool is4k = false)
         {
-            if (!Configured) throw new InvalidOperationException("Seerr is niet ingesteld.");
+            if (!Configured) throw new InvalidOperationException(DiscoverLanguage.Text("Seerr is niet ingesteld.", "Seerr is not configured.", "Seerr ist nicht eingerichtet."));
             string body;
             if (tv)
             {
@@ -355,7 +355,7 @@ namespace Emby.Plugins.Discover
             if (r.Code == 409 || r.Code == 202)
             {
                 // 409: al aangevraagd. 202: alle gevraagde seizoenen zijn al aangevraagd of beschikbaar.
-                DiscoverDiagnostics.Add("Seerr " + (tv ? "serie " : "film ") + tmdbId + ": " + MessageOf(json, r));
+                DiscoverDiagnostics.Add("Seerr " + (tv ? "series " : "movie ") + tmdbId + ": " + MessageOf(json, r));
                 return false;
             }
             if (r.Code < 200 || r.Code > 299)
@@ -368,11 +368,11 @@ namespace Emby.Plugins.Discover
             }
             catch { }
             _pending[(tv ? "t:" : "m:") + tmdbId] = pending;
-            if (is4k) DiscoverDiagnostics.Add("Seerr: 4K-aanvraag voor " + (tv ? "serie " : "film ") + tmdbId);
+            if (is4k) DiscoverDiagnostics.Add("Seerr: 4K request for " + (tv ? "series " : "movie ") + tmdbId);
             Invalidate();
             DownloadQueue.Invalidate();
-            DiscoverDiagnostics.Add("Seerr " + (tv ? "serie " : "film ") + tmdbId + " aangevraagd" + (asUser.HasValue ? " als Seerr-gebruiker " + asUser.Value : "") +
-                (pending ? " (wacht op goedkeuring)" : ""));
+            DiscoverDiagnostics.Add("Seerr " + (tv ? "series " : "movie ") + tmdbId + " requested" + (asUser.HasValue ? " as Seerr user " + asUser.Value : "") +
+                (pending ? " (awaiting approval)" : ""));
             return true;
         }
 
@@ -389,7 +389,7 @@ namespace Emby.Plugins.Discover
             catch (Exception ex)
             {
                 if (ex is OperationCanceledException) throw;
-                DiscoverDiagnostics.Add("Seerr aanvraag opzoeken (" + (tv ? "serie " : "film ") + tmdbId + "): " + ex.Message);
+                DiscoverDiagnostics.Add("Seerr request lookup (" + (tv ? "series " : "movie ") + tmdbId + "): " + ex.Message);
             }
             if (media == null || media.requests == null) return false;
             bool any = false;
@@ -398,7 +398,7 @@ namespace Emby.Plugins.Discover
                 var r = await Call(HttpMethod.Post, "/request/" + rq.id + "/retry", "{}", ct).ConfigureAwait(false);
                 bool ok = r.Code >= 200 && r.Code <= 299;
                 if (ok) any = true;
-                DiscoverDiagnostics.Add("Seerr aanvraag " + rq.id + " opnieuw proberen: " + (ok ? "gelukt" : "mislukt (" + MessageOf(json, r) + ")"));
+                DiscoverDiagnostics.Add("Seerr request " + rq.id + " retry: " + (ok ? "succeeded" : "failed (" + MessageOf(json, r) + ")"));
             }
             if (any) { Invalidate(); DownloadQueue.Invalidate(); }
             return any;
@@ -426,7 +426,7 @@ namespace Emby.Plugins.Discover
         /// <returns>true = verwijderd, false = Seerr kende de titel niet.</returns>
         internal static async Task<bool> Remove(IJsonSerializer json, bool tv, int tmdbId, bool deleteFiles, CancellationToken ct)
         {
-            if (!Configured) throw new InvalidOperationException("Seerr is niet ingesteld.");
+            if (!Configured) throw new InvalidOperationException(DiscoverLanguage.Text("Seerr is niet ingesteld.", "Seerr is not configured.", "Seerr ist nicht eingerichtet."));
             var m = await FindMedia(json, tv, tmdbId, ct).ConfigureAwait(false);
             if (m == null || m.id <= 0) { Invalidate(); return false; }
 
@@ -436,7 +436,7 @@ namespace Emby.Plugins.Discover
             {
                 var f = await Call(HttpMethod.Delete, "/media/" + m.id + "/file", null, ct).ConfigureAwait(false);
                 if (f.Code < 200 || f.Code > 299)
-                    DiscoverDiagnostics.Add("Seerr: uit " + (tv ? "Sonarr" : "Radarr") + " halen mislukt voor " + tmdbId + ": " + MessageOf(json, f));
+                    DiscoverDiagnostics.Add("Seerr: from " + (tv ? "Sonarr" : "Radarr") + " removal failed for " + tmdbId + ": " + MessageOf(json, f));
             }
             var d = await Call(HttpMethod.Delete, "/media/" + m.id, null, ct).ConfigureAwait(false);
             if ((d.Code < 200 || d.Code > 299) && d.Code != 404)
@@ -464,7 +464,7 @@ namespace Emby.Plugins.Discover
                 catch (Exception ex)
                 {
                     if (ex is OperationCanceledException) throw;
-                    DiscoverDiagnostics.Add("FOUT wachtrij Seerr lezen: " + ex.Message);
+                    DiscoverDiagnostics.Add("ERROR reading Seerr queue: " + ex.Message);
                     continue;
                 }
                 if (p == null || p.results == null) continue;
@@ -508,17 +508,17 @@ namespace Emby.Plugins.Discover
 
         internal static async Task<string> Test(IJsonSerializer json, string url, string apiKey, CancellationToken ct)
         {
-            if (string.IsNullOrWhiteSpace(url)) throw new InvalidOperationException("Vul eerst een URL in.");
-            if (string.IsNullOrWhiteSpace(apiKey)) throw new InvalidOperationException("Vul eerst een API key in.");
+            if (string.IsNullOrWhiteSpace(url)) throw new InvalidOperationException(DiscoverLanguage.Text("Vul eerst een URL in.", "Enter a URL first.", "Zuerst eine URL eingeben."));
+            if (string.IsNullOrWhiteSpace(apiKey)) throw new InvalidOperationException(DiscoverLanguage.Text("Vul eerst een API key in.", "Enter an API key first.", "Zuerst einen API-Schlüssel eingeben."));
 
             var st = await Send(HttpMethod.Get, url, apiKey, "/status", null, null, ct).ConfigureAwait(false);
             if (st.Code < 200 || st.Code > 299)
-                throw new InvalidOperationException("Seerr niet bereikbaar op " + NormalizeBase(url) + " (" + MessageOf(json, st) + ").");
+                throw new InvalidOperationException(DiscoverLanguage.Text("Seerr niet bereikbaar op ", "Seerr not reachable at ", "Seerr nicht erreichbar unter ") + NormalizeBase(url) + " (" + MessageOf(json, st) + ").");
             var status = json.DeserializeFromString<SeerrStatusDto>(st.Text);
 
             var me = await Send(HttpMethod.Get, url, apiKey, "/auth/me", null, null, ct).ConfigureAwait(false);
             if (me.Code == 401 || me.Code == 403)
-                throw new InvalidOperationException("Seerr weigert de API key (" + me.Code + "). Gebruik de API key uit Seerr > Instellingen > Algemeen.");
+                throw new InvalidOperationException(DiscoverLanguage.Text("Seerr weigert de API key (", "Seerr rejects the API key (", "Seerr lehnt den API-Schlüssel ab (") + me.Code + DiscoverLanguage.Text("). Gebruik de API key uit Seerr > Instellingen > Algemeen.", "). Use the API key from Seerr > Settings > General.", "). Verwende den API-Schlüssel aus Seerr > Einstellungen > Allgemein."));
             if (me.Code < 200 || me.Code > 299)
                 throw new InvalidOperationException("Seerr: " + MessageOf(json, me));
 

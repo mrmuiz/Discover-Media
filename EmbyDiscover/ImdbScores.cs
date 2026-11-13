@@ -15,7 +15,7 @@ namespace Emby.Plugins.Discover
     // IMDb-score onder de posters uit de officiële gratis IMDb-dataset (title.ratings.tsv.gz, alleen niet-commercieel gebruik).
     // Geen API-sleutel of limiet: het bestand wordt lokaal bewaard (plugin-datamap) en wekelijks ververst.
 
-    [Route("/Discover/ImdbScore", "GET", Summary = "IMDb-score uit de IMDb-dataset")]
+    [Route("/Discover/ImdbScore", "GET", Summary = "IMDb score from the IMDb dataset")]
     [Authenticated]
     public class DiscoverImdbScoreRequest : IReturn<DiscoverImdbScoreResult>
     {
@@ -79,12 +79,12 @@ namespace Emby.Plugins.Discover
                         catch (Exception ex)
                         {
                             _lastFail = DateTime.UtcNow;
-                            DiscoverDiagnostics.Add("IMDb-dataset downloaden mislukt: " + ex.Message);
+                            DiscoverDiagnostics.Add("downloading the IMDb dataset failed: " + ex.Message);
                         }
                     }
                     if (File.Exists(path)) Load(path);
                 }
-                catch (Exception ex) { DiscoverDiagnostics.Add("IMDb-dataset laden mislukt: " + ex.Message); }
+                catch (Exception ex) { DiscoverDiagnostics.Add("loading the IMDb dataset failed: " + ex.Message); }
                 finally { lock (Gate) { _busy = false; } }
             });
         }

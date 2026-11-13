@@ -13,7 +13,7 @@ namespace Emby.Plugins.Discover
     // OMDb (omdbapi.com): scores van IMDb, Rotten Tomatoes en Metacritic voor de popup.
     // Alleen actief met een eigen OMDb-sleutel in de instellingen. Per IMDb-id 24 uur bewaard (gratis sleutel: 1000/dag).
 
-    [Route("/Discover/Ratings", "GET", Summary = "IMDb-, Rotten Tomatoes- en Metacritic-score (via OMDb)")]
+    [Route("/Discover/Ratings", "GET", Summary = "IMDb, Rotten Tomatoes and Metacritic score (via OMDb)")]
     [Authenticated]
     public class DiscoverRatingsRequest : IReturn<DiscoverRatingsResult>
     {
@@ -22,7 +22,7 @@ namespace Emby.Plugins.Discover
         public int TmdbId { get; set; }
     }
 
-    [Route("/Discover/TestOmdb", "POST", Summary = "Test een OMDb-sleutel")]
+    [Route("/Discover/TestOmdb", "POST", Summary = "Test an OMDb key")]
     [Authenticated(Roles = "Admin")]
     public class DiscoverTestOmdb : IReturn<DiscoverRequestResult>
     {
@@ -48,7 +48,7 @@ namespace Emby.Plugins.Discover
         public string Trakt { get; set; }
     }
 
-    [Route("/Discover/TestMdblist", "POST", Summary = "Test een MDBList-sleutel")]
+    [Route("/Discover/TestMdblist", "POST", Summary = "Test an MDBList key")]
     [Authenticated(Roles = "Admin")]
     public class DiscoverTestMdblist : IReturn<DiscoverRequestResult>
     {
@@ -195,7 +195,7 @@ namespace Emby.Plugins.Discover
                 }
                 catch (Exception ex)
                 {
-                    DiscoverDiagnostics.Add("FOUT MDBList " + request.Type + "/" + request.TmdbId + ": " + ex.Message);
+                    DiscoverDiagnostics.Add("ERROR MDBList " + request.Type + "/" + request.TmdbId + ": " + ex.Message);
                 }
             }
             if (string.IsNullOrWhiteSpace(cfg.OmdbApiKey)) return res;
@@ -220,13 +220,13 @@ namespace Emby.Plugins.Discover
                 }
                 else
                 {
-                    DiscoverDiagnostics.Add("OMDb " + imdb + ": " + (r.Error ?? "geen resultaat"));
+                    DiscoverDiagnostics.Add("OMDb " + imdb + ": " + (r.Error ?? "no result"));
                 }
                 lock (Cache) { Cache[imdb] = new KeyValuePair<DateTime, DiscoverRatingsResult>(DateTime.UtcNow, res); }
             }
             catch (Exception ex)
             {
-                DiscoverDiagnostics.Add("FOUT OMDb " + request.Type + "/" + request.TmdbId + ": " + ex.Message);
+                DiscoverDiagnostics.Add("ERROR OMDb " + request.Type + "/" + request.TmdbId + ": " + ex.Message);
             }
             return res;
         }

@@ -15,7 +15,7 @@ namespace Emby.Plugins.Discover
         public static int Requests;
         public static int RequestErrors;
         /// <summary>Resultaat van het installeren van het knop-script in de Emby-webclient.</summary>
-        public static string ButtonScript = "OK Emby-pluginresource; open Discover om het script in deze browser te laden.";
+        public static string ButtonScript = "OK Emby plugin resource; open Discover to load the script in this browser.";
         /// <summary>Resultaat van het (optioneel) in de webclient-index.html zetten van de lader (tegel -> Discover).</summary>
         public static string WebInject = "uit";
 

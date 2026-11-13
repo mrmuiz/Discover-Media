@@ -12,11 +12,11 @@ using MediaBrowser.Model.Services;
 
 namespace Emby.Plugins.Discover
 {
-    [Route("/Discover/Watchlist", "GET", Summary = "Rijen uit de Trakt-watchlist en/of een TMDB-lijst")]
+    [Route("/Discover/Watchlist", "GET", Summary = "Rows from the Trakt watchlist and/or a TMDB list")]
     [Authenticated]
     public class DiscoverWatchlistRequest : IReturn<WatchlistResult> { }
 
-    [Route("/Discover/TestWatchlist", "POST", Summary = "Test Trakt of TMDB-lijst")]
+    [Route("/Discover/TestWatchlist", "POST", Summary = "Test Trakt or TMDB list")]
     [Authenticated(Roles = "Admin")]
     public class DiscoverTestWatchlist : IReturn<DiscoverRequestResult>
     {
@@ -87,12 +87,12 @@ namespace Emby.Plugins.Discover
                 if (trakt)
                 {
                     try { var r = await TraktRow(cfg.TraktUser.Trim(), cfg.TraktClientId.Trim()).ConfigureAwait(false); if (r != null) rows.Add(r); }
-                    catch (Exception ex) { DiscoverDiagnostics.Add("FOUT Trakt-watchlist: " + ex.Message); }
+                    catch (Exception ex) { DiscoverDiagnostics.Add("ERROR Trakt watchlist: " + ex.Message); }
                 }
                 if (listId.Length > 0)
                 {
                     try { var r = await TmdbRow(listId).ConfigureAwait(false); if (r != null) rows.Add(r); }
-                    catch (Exception ex) { DiscoverDiagnostics.Add("FOUT TMDB-lijst " + listId + ": " + ex.Message); }
+                    catch (Exception ex) { DiscoverDiagnostics.Add("ERROR TMDB list " + listId + ": " + ex.Message); }
                 }
                 lock (CacheGate) { _cache = new KeyValuePair<string, KeyValuePair<DateTime, List<DiscoverRow>>>(key, new KeyValuePair<DateTime, List<DiscoverRow>>(DateTime.UtcNow, rows)); }
             }
@@ -104,7 +104,7 @@ namespace Emby.Plugins.Discover
                 if (rows.Any(r => r.Items.Any(i => i.Type == "movie"))) ms = await _arr.GetMovieStates(CancellationToken.None).ConfigureAwait(false);
                 if (rows.Any(r => r.Items.Any(i => i.Type == "tv"))) ts = await _arr.GetSeriesStates(CancellationToken.None).ConfigureAwait(false);
             }
-            catch (Exception ex) { DiscoverDiagnostics.Add("FOUT status voor watchlist: " + ex.Message); }
+            catch (Exception ex) { DiscoverDiagnostics.Add("ERROR status for watchlist: " + ex.Message); }
             foreach (var row in rows)
             {
                 var copy = new DiscoverRow { Key = row.Key, Title = row.Title };
@@ -134,8 +134,8 @@ namespace Emby.Plugins.Discover
                 using (var resp = await Http.SendAsync(req).ConfigureAwait(false))
                 {
                     int code = (int)resp.StatusCode;
-                    if (code == 401 || code == 403) throw new InvalidOperationException("Trakt weigert de toegang (" + code + "). Klopt de Client ID, en is het profiel openbaar?");
-                    if (code == 404) throw new InvalidOperationException("Trakt-gebruiker niet gevonden (404).");
+                    if (code == 401 || code == 403) throw new InvalidOperationException(DiscoverLanguage.Text("Trakt weigert de toegang (", "Trakt denies access (", "Trakt verweigert den Zugriff (") + code + DiscoverLanguage.Text("). Klopt de Client ID, en is het profiel openbaar?", "). Is the Client ID correct, and is the profile public?", "). Stimmt die Client-ID, und ist das Profil öffentlich?"));
+                    if (code == 404) throw new InvalidOperationException(DiscoverLanguage.Text("Trakt-gebruiker niet gevonden (404).", "Trakt user not found (404).", "Trakt-Benutzer nicht gefunden (404)."));
                     resp.EnsureSuccessStatusCode();
                     return await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
                 }

@@ -333,7 +333,7 @@ namespace Emby.Plugins.Discover
                 bool searched = RadarrConfigured && await ExtendExistingMovie(tmdbId, title, ct).ConfigureAwait(false);
                 return retried || searched;
             }
-            if (!RadarrConfigured) throw new InvalidOperationException("Radarr is niet ingesteld.");
+            if (!RadarrConfigured) throw new InvalidOperationException(DiscoverLanguage.Text("Radarr is niet ingesteld.", "Radarr is not configured.", "Radarr ist nicht eingerichtet."));
             var cfg = Plugin.GetCurrentConfiguration();
 
             var states = await GetMovieStates(ct).ConfigureAwait(false);
@@ -370,7 +370,7 @@ namespace Emby.Plugins.Discover
             catch (Exception ex)
             {
                 if (ex is OperationCanceledException) throw;
-                DiscoverDiagnostics.Add("Radarr film opzoeken (" + title + "): " + ex.Message);
+                DiscoverDiagnostics.Add("Radarr movie lookup (" + title + "): " + ex.Message);
             }
             if (movie == null || movie.id <= 0) { InvalidateCaches(); return false; }
             if (movie.hasFile) return false;
@@ -387,7 +387,7 @@ namespace Emby.Plugins.Discover
                 catch (Exception ex)
                 {
                     if (ex is OperationCanceledException) throw;
-                    DiscoverDiagnostics.Add("Radarr film monitoren (" + title + "): " + ex.Message);
+                    DiscoverDiagnostics.Add("Radarr monitor movie (" + title + "): " + ex.Message);
                 }
             }
             try
@@ -402,7 +402,7 @@ namespace Emby.Plugins.Discover
                 DiscoverDiagnostics.Add("Radarr zoeken (" + title + "): " + ex.Message);
             }
             if (changed) InvalidateCaches();
-            DiscoverDiagnostics.Add("Radarr " + title + " (stond al in Radarr, geen bestand): " + (movie.monitored ? "al gemonitord" : "nu gemonitord") + ", zoekopdracht gestart");
+            DiscoverDiagnostics.Add("Radarr " + title + " (already in Radarr, no file): " + (movie.monitored ? "already monitored" : "now monitored") + ", search started");
             return changed;
         }
 
@@ -426,7 +426,7 @@ namespace Emby.Plugins.Discover
                 bool searched = SonarrConfigured && await ExtendExistingSeries(tmdbId, tvdbId, title, seasons, ct).ConfigureAwait(false);
                 return retried || searched;
             }
-            if (!SonarrConfigured) throw new InvalidOperationException("Sonarr is niet ingesteld.");
+            if (!SonarrConfigured) throw new InvalidOperationException(DiscoverLanguage.Text("Sonarr is niet ingesteld.", "Sonarr is not configured.", "Sonarr ist nicht eingerichtet."));
             var cfg = Plugin.GetCurrentConfiguration();
 
             var states = await GetSeriesStates(ct).ConfigureAwait(false);
@@ -463,7 +463,7 @@ namespace Emby.Plugins.Discover
                 catch (Exception ex)
                 {
                     if (ex is OperationCanceledException) throw;
-                    DiscoverDiagnostics.Add("Sonarr seizoenen opzoeken mislukt (alleen gekozen seizoenen meegestuurd): " + ex.Message);
+                    DiscoverDiagnostics.Add("Sonarr season lookup failed (only the selected seasons were sent): " + ex.Message);
                 }
                 var parts = new List<string>();
                 foreach (var n in all)
@@ -475,7 +475,7 @@ namespace Emby.Plugins.Discover
                 if (sonarrKnows.Count > 0 && selected.Any(n => !sonarrKnows.Contains(n)))
                 {
                     monitorNew = "all";
-                    DiscoverDiagnostics.Add("Sonarr kent seizoen " + string.Join(",", selected.Where(n => !sonarrKnows.Contains(n))) + " van " + title + " nog niet: nieuwe seizoenen worden gemonitord");
+                    DiscoverDiagnostics.Add("Sonarr does not know season " + string.Join(",", selected.Where(n => !sonarrKnows.Contains(n))) + " of " + title + " yet: new seasons will be monitored");
                 }
             }
 
@@ -501,7 +501,7 @@ namespace Emby.Plugins.Discover
                     var chosen = seasons.Distinct().ToArray();
                     var ignored = Task.Run(() => FinishSeasonRequest(newId, chosen, title));
                 }
-                else DiscoverDiagnostics.Add("Sonarr gaf geen serie-id terug voor " + title + "; seizoenen niet extra gecontroleerd");
+                else DiscoverDiagnostics.Add("Sonarr returned no series id for " + title + "; seasons not double-checked");
             }
             return true;
         }
@@ -571,7 +571,7 @@ namespace Emby.Plugins.Discover
                     await SendApi(HttpMethod.Put, "/series/editor", "{\"seriesIds\":[" + existing.id + "],\"monitored\":true}").ConfigureAwait(false);
                     changed = true;
                 }
-                catch (Exception ex) { DiscoverDiagnostics.Add("Sonarr serie monitoren (" + title + "): " + ex.Message); }
+                catch (Exception ex) { DiscoverDiagnostics.Add("Sonarr monitor series (" + title + "): " + ex.Message); }
             }
 
             // Seizoensvlag (alleen Sonarr v5 heeft dit endpoint; bij een fout gaan we gewoon door met de afleveringen).
@@ -588,10 +588,10 @@ namespace Emby.Plugins.Discover
                 {
                     await SendApi(HttpMethod.Put, "/series/editor", "{\"seriesIds\":[" + existing.id + "],\"monitorNewItems\":\"all\"}").ConfigureAwait(false);
                     if (unknown.Count > 0) changed = true;
-                    DiscoverDiagnostics.Add(all ? "Sonarr: nieuwe seizoenen van " + title + " worden gemonitord"
-                        : "Sonarr kent seizoen " + string.Join(",", unknown) + " van " + title + " nog niet: nieuwe seizoenen worden gemonitord");
+                    DiscoverDiagnostics.Add(all ? "Sonarr: new seasons of " + title + " will be monitored"
+                        : "Sonarr does not know season " + string.Join(",", unknown) + " of " + title + " yet: new seasons will be monitored");
                 }
-                catch (Exception ex) { DiscoverDiagnostics.Add("Sonarr nieuwe seizoenen monitoren (" + title + "): " + ex.Message); }
+                catch (Exception ex) { DiscoverDiagnostics.Add("Sonarr monitor new seasons (" + title + "): " + ex.Message); }
             }
             foreach (var n in target)
             {
@@ -603,7 +603,7 @@ namespace Emby.Plugins.Discover
                     await SendApi(HttpMethod.Put, "/series/" + existing.id + "/season", "{\"seasonNumber\":" + n + ",\"monitored\":true}").ConfigureAwait(false);
                     changed = true;
                 }
-                catch (Exception ex) { DiscoverDiagnostics.Add("Sonarr seizoen " + n + " monitoren (" + title + "): " + ex.Message); }
+                catch (Exception ex) { DiscoverDiagnostics.Add("Sonarr season " + n + " monitoren (" + title + "): " + ex.Message); }
             }
 
             List<SonarrEpisodeDto> eps = null;
@@ -612,10 +612,10 @@ namespace Emby.Plugins.Discover
                 var t = await SendApi(HttpMethod.Get, "/episode?seriesId=" + existing.id, null).ConfigureAwait(false);
                 eps = _json.DeserializeFromString<List<SonarrEpisodeDto>>(t);
             }
-            catch (Exception ex) { DiscoverDiagnostics.Add("Sonarr afleveringen ophalen (" + title + "): " + ex.Message); }
+            catch (Exception ex) { DiscoverDiagnostics.Add("Sonarr fetch episodes (" + title + "): " + ex.Message); }
             if (eps == null || eps.Count == 0)
             {
-                DiscoverDiagnostics.Add("Sonarr kent de afleveringen van " + title + " niet; alleen de seizoensvlaggen zijn bijgewerkt");
+                DiscoverDiagnostics.Add("Sonarr does not know the episodes of " + title + " yet; only the season flags were updated");
                 if (changed) InvalidateCaches();
                 return changed;
             }
@@ -629,7 +629,7 @@ namespace Emby.Plugins.Discover
                     await SendApi(HttpMethod.Put, "/episode/monitor", "{\"episodeIds\":[" + string.Join(",", on) + "],\"monitored\":true}").ConfigureAwait(false);
                     changed = true;
                 }
-                catch (Exception ex) { DiscoverDiagnostics.Add("Sonarr afleveringen monitoren (" + title + "): " + ex.Message); }
+                catch (Exception ex) { DiscoverDiagnostics.Add("Sonarr monitor episodes (" + title + "): " + ex.Message); }
             }
 
             // Zoeken alleen als er uitgezonden afleveringen zonder bestand zijn; wat nog niet is uitgezonden pakt Sonarr zelf op.
@@ -652,8 +652,8 @@ namespace Emby.Plugins.Discover
             }
 
             if (changed) InvalidateCaches();
-            DiscoverDiagnostics.Add("Sonarr " + title + " (stond al in Sonarr): seizoen " + string.Join(", ", target) + " gemonitord (" + on.Count +
-                " afleveringen aangezet), zoekopdracht voor " + (missing.Count == 0 ? "niets (geen ontbrekende uitgezonden afleveringen)" : (all ? "de hele serie" : "seizoen " + string.Join(", ", missing))));
+            DiscoverDiagnostics.Add("Sonarr " + title + " (already in Sonarr): season " + string.Join(", ", target) + " gemonitord (" + on.Count +
+                " episodes enabled), search for " + (missing.Count == 0 ? "nothing (no missing aired episodes)" : (all ? "the whole series" : "season " + string.Join(", ", missing))));
             return changed;
         }
 
@@ -685,12 +685,12 @@ namespace Emby.Plugins.Discover
                         var t = await SendApi(HttpMethod.Get, "/episode?seriesId=" + seriesId, null).ConfigureAwait(false);
                         eps = _json.DeserializeFromString<List<SonarrEpisodeDto>>(t);
                     }
-                    catch (Exception ex) { DiscoverDiagnostics.Add("Sonarr afleveringen ophalen (" + title + "): " + ex.Message); }
+                    catch (Exception ex) { DiscoverDiagnostics.Add("Sonarr fetch episodes (" + title + "): " + ex.Message); }
                     if (eps != null && eps.Count > 0) break;
                 }
                 if (eps == null || eps.Count == 0)
                 {
-                    DiscoverDiagnostics.Add("Sonarr kent de afleveringen van " + title + " nog niet; monitoring niet gecontroleerd");
+                    DiscoverDiagnostics.Add("Sonarr does not know the episodes of " + title + " yet; monitoring not verified");
                     return;
                 }
 
@@ -698,7 +698,7 @@ namespace Emby.Plugins.Discover
                 foreach (var n in selected)
                 {
                     try { await SendApi(HttpMethod.Put, "/series/" + seriesId + "/season", "{\"seasonNumber\":" + n + ",\"monitored\":true}").ConfigureAwait(false); }
-                    catch (Exception ex) { DiscoverDiagnostics.Add("Sonarr seizoen " + n + " monitoren (" + title + "): " + ex.Message); }
+                    catch (Exception ex) { DiscoverDiagnostics.Add("Sonarr season " + n + " monitoren (" + title + "): " + ex.Message); }
                 }
 
                 var on = eps.Where(e => selected.Contains(e.seasonNumber) && !e.monitored).Select(e => e.id).ToList();
@@ -710,19 +710,19 @@ namespace Emby.Plugins.Discover
                     if (off.Count > 0)
                         await SendApi(HttpMethod.Put, "/episode/monitor", "{\"episodeIds\":[" + string.Join(",", off) + "],\"monitored\":false}").ConfigureAwait(false);
                 }
-                catch (Exception ex) { DiscoverDiagnostics.Add("Sonarr afleveringen monitoren (" + title + "): " + ex.Message); }
+                catch (Exception ex) { DiscoverDiagnostics.Add("Sonarr monitor episodes (" + title + "): " + ex.Message); }
 
                 // SeriesSearch zoekt alleen de gemonitorde afleveringen: dat zijn nu precies de gekozen seizoenen.
                 try { await SendApi(HttpMethod.Post, "/command", "{\"name\":\"SeriesSearch\",\"seriesId\":" + seriesId + "}").ConfigureAwait(false); }
                 catch (Exception ex) { DiscoverDiagnostics.Add("Sonarr zoeken (" + title + "): " + ex.Message); }
 
                 InvalidateCaches();
-                DiscoverDiagnostics.Add("Sonarr " + title + ": seizoen " + string.Join(", ", selected.OrderBy(x => x)) +
-                    " gemonitord (" + on.Count + " afleveringen aangezet, " + off.Count + " uitgezet) en zoekopdracht (SeriesSearch) gestart");
+                DiscoverDiagnostics.Add("Sonarr " + title + ": season " + string.Join(", ", selected.OrderBy(x => x)) +
+                    " gemonitord (" + on.Count + " episodes enabled, " + off.Count + " disabled) and search (SeriesSearch) started");
             }
             catch (Exception ex)
             {
-                DiscoverDiagnostics.Add("FOUT seizoensmonitoring " + title + ": " + ex.Message);
+                DiscoverDiagnostics.Add("ERROR season monitoring " + title + ": " + ex.Message);
             }
         }
 
@@ -753,16 +753,16 @@ namespace Emby.Plugins.Discover
                     catch (Exception ex)
                     {
                         if (ex is OperationCanceledException) throw;
-                        DiscoverDiagnostics.Add("FOUT wachtrij-item " + it.id + " verwijderen in " + name + ": " + ex.Message);
+                        DiscoverDiagnostics.Add("ERROR queue item " + it.id + " removal in " + name + ": " + ex.Message);
                     }
                 }
                 if (items.Count > 0)
-                    DiscoverDiagnostics.Add(name + ": " + items.Count + " download(s) uit de wachtrij en downloadclient gehaald");
+                    DiscoverDiagnostics.Add(name + ": " + items.Count + " download(s) removed from the queue and download client");
             }
             catch (Exception ex)
             {
                 if (ex is OperationCanceledException) throw;
-                DiscoverDiagnostics.Add("FOUT wachtrij opruimen in " + name + ": " + ex.Message);
+                DiscoverDiagnostics.Add("ERROR clearing queue in " + name + ": " + ex.Message);
             }
         }
 
@@ -770,7 +770,7 @@ namespace Emby.Plugins.Discover
         public async Task<bool> RemoveMovie(int tmdbId, bool deleteFiles, CancellationToken ct)
         {
             if (SeerrClient.Enabled) return await SeerrClient.Remove(_json, false, tmdbId, deleteFiles, ct).ConfigureAwait(false);
-            if (!RadarrConfigured) throw new InvalidOperationException("Radarr is niet ingesteld.");
+            if (!RadarrConfigured) throw new InvalidOperationException(DiscoverLanguage.Text("Radarr is niet ingesteld.", "Radarr is not configured.", "Radarr ist nicht eingerichtet."));
             var cfg = Plugin.GetCurrentConfiguration();
 
             var text = await Send(HttpMethod.Get, cfg.RadarrUrl, cfg.RadarrApiKey, "/api/v3/movie", null, ct).ConfigureAwait(false);
@@ -790,7 +790,7 @@ namespace Emby.Plugins.Discover
         public async Task<bool> RemoveSeries(int tmdbId, bool deleteFiles, CancellationToken ct)
         {
             if (SeerrClient.Enabled) return await SeerrClient.Remove(_json, true, tmdbId, deleteFiles, ct).ConfigureAwait(false);
-            if (!SonarrConfigured) throw new InvalidOperationException("Sonarr is niet ingesteld.");
+            if (!SonarrConfigured) throw new InvalidOperationException(DiscoverLanguage.Text("Sonarr is niet ingesteld.", "Sonarr is not configured.", "Sonarr ist nicht eingerichtet."));
             var cfg = Plugin.GetCurrentConfiguration();
 
             var text = await Send(HttpMethod.Get, cfg.SonarrUrl, cfg.SonarrApiKey, "/api/v3/series", null, ct).ConfigureAwait(false);

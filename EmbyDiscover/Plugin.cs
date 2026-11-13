@@ -86,7 +86,7 @@ namespace Emby.Plugins.Discover
             }
             catch (Exception ex)
             {
-                DiscoverDiagnostics.Add("FOUT opgeslagen plugininstellingen laden: " + ex.Message);
+                DiscoverDiagnostics.Add("ERROR loading saved plugin settings: " + ex.Message);
             }
 
             return Configuration;
@@ -190,10 +190,10 @@ namespace Emby.Plugins.Discover
                 catch (Exception ex)
                 {
                     last = ex;
-                    DiscoverDiagnostics.Add("map '" + dir + "' niet beschrijfbaar: " + ex.Message);
+                    DiscoverDiagnostics.Add("folder '" + dir + "' not writable: " + ex.Message);
                 }
             }
-            throw new InvalidOperationException("Geen beschrijfbare map voor de kaartclips: " + (last == null ? "geen map beschikbaar" : last.Message));
+            throw new InvalidOperationException("No writable folder for the card clips: " + (last == null ? "no folder available" : last.Message));
         }
 
         /// <summary>
@@ -239,7 +239,7 @@ namespace Emby.Plugins.Discover
                         var tmp = target + "." + Guid.NewGuid().ToString("N") + ".tmp";
                         using (var src = GetType().Assembly.GetManifestResourceStream(res))
                         {
-                            if (src == null) throw new InvalidOperationException("Clip ontbreekt in de DLL.");
+                            if (src == null) throw new InvalidOperationException("Clip missing in the DLL.");
                             using (var dst = File.Create(tmp)) { src.CopyTo(dst); }
                         }
                         if (File.Exists(target)) File.Delete(target);
@@ -251,11 +251,11 @@ namespace Emby.Plugins.Discover
                 catch (Exception ex)
                 {
                     last = ex;
-                    DiscoverDiagnostics.Add("clip schrijven mislukt in '" + dir + "': " + ex.Message);
+                    DiscoverDiagnostics.Add("writing clip failed in '" + dir + "': " + ex.Message);
                 }
             }
             throw new InvalidOperationException(
-                "De bevestigingsclip kon nergens worden weggeschreven: " + (last == null ? "geen map beschikbaar" : last.Message));
+                "The confirmation clip could not be written anywhere: " + (last == null ? "no folder available" : last.Message));
         }
     }
 }

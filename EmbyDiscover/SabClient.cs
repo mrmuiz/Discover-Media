@@ -265,7 +265,7 @@ namespace Emby.Plugins.Discover
             catch (Exception ex)
             {
                 if (ex is OperationCanceledException) throw;
-                DiscoverDiagnostics.Add("FOUT SABnzbd-geschiedenis lezen: " + ex.Message);
+                DiscoverDiagnostics.Add("ERROR reading SABnzbd history: " + ex.Message);
             }
             return snap;
         }
@@ -322,7 +322,7 @@ namespace Emby.Plugins.Discover
                     if (early || p.State == "stalled")
                     {
                         p.State = "stalled";
-                        if (string.IsNullOrWhiteSpace(p.Reason)) p.Reason = it.Reason ?? "SABnzbd: download mislukt";
+                        if (string.IsNullOrWhiteSpace(p.Reason)) p.Reason = it.Reason ?? DiscoverLanguage.Text("SABnzbd: download mislukt", "SABnzbd: download failed", "SABnzbd: Download fehlgeschlagen");
                     }
                 }
                 else if (it.Stage != null)
@@ -397,7 +397,7 @@ namespace Emby.Plugins.Discover
                 if (it.Failed)
                 {
                     part.State = "stalled";
-                    part.Reason = it.Reason ?? "SABnzbd: download mislukt";
+                    part.Reason = it.Reason ?? DiscoverLanguage.Text("SABnzbd: download mislukt", "SABnzbd: download failed", "SABnzbd: Download fehlgeschlagen");
                 }
                 else if (it.Stage != null)
                 {
@@ -434,13 +434,13 @@ namespace Emby.Plugins.Discover
         /// <summary>Test URL en API key. Geeft de SABnzbd-versie terug.</summary>
         internal static async Task<string> Test(IJsonSerializer json, string url, string apiKey, CancellationToken ct)
         {
-            if (string.IsNullOrWhiteSpace(url)) throw new InvalidOperationException("Vul eerst een URL in.");
-            if (string.IsNullOrWhiteSpace(apiKey)) throw new InvalidOperationException("Vul eerst een API key in.");
+            if (string.IsNullOrWhiteSpace(url)) throw new InvalidOperationException(DiscoverLanguage.Text("Vul eerst een URL in.", "Enter a URL first.", "Zuerst eine URL eingeben."));
+            if (string.IsNullOrWhiteSpace(apiKey)) throw new InvalidOperationException(DiscoverLanguage.Text("Vul eerst een API key in.", "Enter an API key first.", "Zuerst einen API-Schlüssel eingeben."));
             // mode=version vraagt geen key; mode=queue wel, dus daarmee controleren we de key.
             var qText = await Call(url, apiKey, "mode=queue&start=0&limit=1", ct).ConfigureAwait(false);
             var env = json.DeserializeFromString<SabQueueEnvelopeDto>(qText);
             if (env == null || env.queue == null)
-                throw new InvalidOperationException(env != null && !string.IsNullOrWhiteSpace(env.error) ? "SABnzbd: " + env.error : "SABnzbd gaf geen geldig antwoord. Controleer de URL en de API key.");
+                throw new InvalidOperationException(env != null && !string.IsNullOrWhiteSpace(env.error) ? "SABnzbd: " + env.error : DiscoverLanguage.Text("SABnzbd gaf geen geldig antwoord. Controleer de URL en de API key.", "SABnzbd gave no valid response. Check the URL and the API key.", "SABnzbd lieferte keine gültige Antwort. URL und API-Schlüssel prüfen."));
             string version = "";
             try
             {

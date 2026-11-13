@@ -46,7 +46,7 @@ namespace Emby.Plugins.Discover
             var ffmpeg = FindFfmpeg();
             if (ffmpeg == null)
                 throw new InvalidOperationException(
-                    "ffmpeg niet gevonden; zet FfmpegPath in Emby.Plugins.Discover.xml");
+                    "ffmpeg not found; set FfmpegPath in Emby.Plugins.Discover.xml");
 
             var dir = Plugin.Instance.WorkDir("discover-cards");
             var final = Path.Combine(dir, string.Format("card-{0}{1}-s{2}-{3}-v{4}.mp4",
@@ -96,7 +96,7 @@ namespace Emby.Plugins.Discover
                         await Render(ffmpeg, work, t, tv, alreadyThere, season, posterPath, CancellationToken.None).ConfigureAwait(false);
                         var made = Path.Combine(work, "out.mp4");
                         if (!File.Exists(made) || new FileInfo(made).Length == 0)
-                            throw new InvalidOperationException("ffmpeg maakte geen bestand");
+                            throw new InvalidOperationException("ffmpeg produced no file");
                         if (File.Exists(final)) File.Delete(final);
                         File.Move(made, final);
                     }
@@ -217,7 +217,7 @@ namespace Emby.Plugins.Discover
             a.Append("-map [v] -frames:v 1 frame.png");
             await RunFfmpeg(ffmpeg, work, a.ToString(), 60000).ConfigureAwait(false);
             if (!File.Exists(Path.Combine(work, "frame.png")) || new FileInfo(Path.Combine(work, "frame.png")).Length == 0)
-                throw new InvalidOperationException("ffmpeg maakte het kaartbeeld niet");
+                throw new InvalidOperationException("ffmpeg did not produce the card image");
 
             // ---- stap 2: het beeld als clip van <Seconds> seconden met in- en uitfaden ----
             var c = new StringBuilder();
@@ -257,7 +257,7 @@ namespace Emby.Plugins.Discover
                 if (!done)
                 {
                     try { p.Kill(); } catch { }
-                    throw new TimeoutException("ffmpeg duurde langer dan " + (timeoutMs / 1000) + " seconden");
+                    throw new TimeoutException("ffmpeg took longer than " + (timeoutMs / 1000) + " seconden");
                 }
                 p.WaitForExit();
                 if (p.ExitCode != 0)
@@ -366,7 +366,7 @@ namespace Emby.Plugins.Discover
             var asm = typeof(RequestCard).Assembly;
             using (var src = asm.GetManifestResourceStream(typeof(RequestCard).Namespace + ".Resources." + name))
             {
-                if (src == null) throw new InvalidOperationException("Lettertype ontbreekt in de DLL: " + name);
+                if (src == null) throw new InvalidOperationException("Font missing in the DLL: " + name);
                 using (var dst = File.Create(target)) { src.CopyTo(dst); }
             }
         }
@@ -387,7 +387,7 @@ namespace Emby.Plugins.Discover
             }
             catch (Exception ex)
             {
-                DiscoverDiagnostics.Add("afbeelding voor kaartclip niet opgehaald: " + ex.Message);
+                DiscoverDiagnostics.Add("image for card clip not fetched: " + ex.Message);
                 return false;
             }
         }

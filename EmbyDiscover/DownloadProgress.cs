@@ -154,7 +154,7 @@ namespace Emby.Plugins.Discover
                         catch (Exception ex)
                         {
                             if (ex is OperationCanceledException) throw;
-                            DiscoverDiagnostics.Add("FOUT wachtrij Radarr/Sonarr naast Seerr: " + ex.Message);
+                            DiscoverDiagnostics.Add("ERROR queue Radarr/Sonarr next to Seerr: " + ex.Message);
                         }
                     }
                     if (Plugin.GetCurrentConfiguration().SeerrArrStatus) NudgeArr(json, seerrParts);
@@ -203,7 +203,7 @@ namespace Emby.Plugins.Discover
                 if (doMovie && wantMovie) { _nudgeMovieAt = now; Refresh(false); }
                 if (doTv && wantTv) { _nudgeTvAt = now; Refresh(true); }
             }
-            catch (Exception ex) { DiscoverDiagnostics.Add("FOUT wachtrij verversen: " + ex.Message); }
+            catch (Exception ex) { DiscoverDiagnostics.Add("ERROR refreshing queue: " + ex.Message); }
         }
 
         private static readonly TimeSpan PendingWindow = TimeSpan.FromHours(6);
@@ -225,7 +225,7 @@ namespace Emby.Plugins.Discover
                     res.Add(r);
                 }
             }
-            catch (Exception ex) { DiscoverDiagnostics.Add("FOUT recente aanvragen lezen: " + ex.Message); }
+            catch (Exception ex) { DiscoverDiagnostics.Add("ERROR reading recent requests: " + ex.Message); }
             return res;
         }
 
@@ -238,7 +238,7 @@ namespace Emby.Plugins.Discover
                     await ArrClient.PostRaw(sonarr, "/api/v3/command", "{\"name\":\"RefreshMonitoredDownloads\"}", CancellationToken.None).ConfigureAwait(false);
                     Invalidate();
                 }
-                catch (Exception ex) { DiscoverDiagnostics.Add("FOUT " + (sonarr ? "Sonarr" : "Radarr") + " RefreshMonitoredDownloads: " + ex.Message); }
+                catch (Exception ex) { DiscoverDiagnostics.Add("ERROR " + (sonarr ? "Sonarr" : "Radarr") + " RefreshMonitoredDownloads: " + ex.Message); }
             });
         }
 
@@ -336,7 +336,7 @@ namespace Emby.Plugins.Discover
                 catch (Exception ex)
                 {
                     if (ex is OperationCanceledException) throw;
-                    DiscoverDiagnostics.Add("FOUT " + f.Item1 + " lezen: " + ex.Message);
+                    DiscoverDiagnostics.Add("ERROR " + f.Item1 + " read: " + ex.Message);
                 }
             }
         }
@@ -355,7 +355,7 @@ namespace Emby.Plugins.Discover
             catch (Exception ex)
             {
                 if (ex is OperationCanceledException) throw;
-                DiscoverDiagnostics.Add("FOUT wachtrij " + (sonarr ? "Sonarr" : "Radarr") + " lezen: " + ex.Message);
+                DiscoverDiagnostics.Add("ERROR queue " + (sonarr ? "Sonarr" : "Radarr") + " read: " + ex.Message);
                 return new List<ArrQueueFullItemDto>();
             }
         }
@@ -574,7 +574,7 @@ namespace Emby.Plugins.Discover
                 if (File.Exists(path))
                     _data = json.DeserializeFromString<StoredRequestFile>(File.ReadAllText(path));
             }
-            catch (Exception ex) { DiscoverDiagnostics.Add("aanvragenlijst lezen mislukt: " + ex.Message); }
+            catch (Exception ex) { DiscoverDiagnostics.Add("reading the request list failed: " + ex.Message); }
             if (_data == null) _data = new StoredRequestFile();
             if (_data.Requests == null) _data.Requests = new List<StoredRequest>();
             return _data;
@@ -590,7 +590,7 @@ namespace Emby.Plugins.Discover
                 if (File.Exists(path)) File.Delete(path);
                 File.Move(tmp, path);
             }
-            catch (Exception ex) { DiscoverDiagnostics.Add("aanvragenlijst opslaan mislukt: " + ex.Message); }
+            catch (Exception ex) { DiscoverDiagnostics.Add("saving the request list failed: " + ex.Message); }
         }
 
         internal static void Add(IJsonSerializer json, object userId, bool tv, TmdbItem item, int tmdbId)
@@ -624,7 +624,7 @@ namespace Emby.Plugins.Discover
                     Save(json);
                 }
             }
-            catch (Exception ex) { DiscoverDiagnostics.Add("aanvraag onthouden mislukt: " + ex.Message); }
+            catch (Exception ex) { DiscoverDiagnostics.Add("remembering the request failed: " + ex.Message); }
         }
 
         /// <summary>Aanvragen van deze gebruiker sinds een moment, oudste datum eerst (voor de limiet).</summary>
@@ -672,15 +672,15 @@ namespace Emby.Plugins.Discover
 
     // ---------- API ----------
 
-    [Route("/Discover/Queue", "GET", Summary = "Downloadvoortgang uit de wachtrij van Radarr en Sonarr")]
+    [Route("/Discover/Queue", "GET", Summary = "Download progress from the Radarr and Sonarr queue")]
     [Authenticated]
     public class DiscoverQueueRequest : IReturn<QueueResultDto> { }
 
-    [Route("/Discover/MyRequests", "GET", Summary = "Wat de ingelogde gebruiker via Discover heeft aangevraagd")]
+    [Route("/Discover/MyRequests", "GET", Summary = "What the logged-in user has requested through Discover")]
     [Authenticated]
     public class DiscoverMyRequestsRequest : IReturn<DiscoverRow> { }
 
-    [Route("/Discover/AllRequests", "GET", Summary = "Alle aanvragen via Discover, voor beheerders")]
+    [Route("/Discover/AllRequests", "GET", Summary = "All requests through Discover, for administrators")]
     [Authenticated(Roles = "Admin")]
     public class DiscoverAllRequestsRequest : IReturn<AdminRequestsDto> { }
 
@@ -719,7 +719,7 @@ namespace Emby.Plugins.Discover
                 res.Items = DownloadQueue.Group(parts, admin);
                 res.Sab = SabClient.Info();
             }
-            catch (Exception ex) { DiscoverDiagnostics.Add("FOUT wachtrij: " + ex.Message); }
+            catch (Exception ex) { DiscoverDiagnostics.Add("ERROR queue: " + ex.Message); }
             return res;
         }
 
@@ -734,7 +734,7 @@ namespace Emby.Plugins.Discover
                 if (all.Any(r => r.Type == "movie")) ms = await _arr.GetMovieStates(CancellationToken.None).ConfigureAwait(false);
                 if (all.Any(r => r.Type == "tv")) ts = await _arr.GetSeriesStates(CancellationToken.None).ConfigureAwait(false);
             }
-            catch (Exception ex) { DiscoverDiagnostics.Add("FOUT status voor aanvragenoverzicht: " + ex.Message); }
+            catch (Exception ex) { DiscoverDiagnostics.Add("ERROR status for the requests overview: " + ex.Message); }
             foreach (var r in all)
             {
                 var states = r.Type == "tv" ? ts : ms;
@@ -769,7 +769,7 @@ namespace Emby.Plugins.Discover
                 if (mine.Any(r => r.Type == "movie")) ms = await _arr.GetMovieStates(CancellationToken.None).ConfigureAwait(false);
                 if (mine.Any(r => r.Type == "tv")) ts = await _arr.GetSeriesStates(CancellationToken.None).ConfigureAwait(false);
             }
-            catch (Exception ex) { DiscoverDiagnostics.Add("FOUT status voor Mijn aanvragen: " + ex.Message); }
+            catch (Exception ex) { DiscoverDiagnostics.Add("ERROR status for My requests: " + ex.Message); }
 
             foreach (var r in mine)
             {

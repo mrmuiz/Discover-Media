@@ -39,15 +39,15 @@ namespace Emby.Plugins.Discover
                         var wait = _last + MinGap - DateTime.UtcNow;
                         if (wait > TimeSpan.Zero) { await Task.Delay(wait).ConfigureAwait(false); }
                         var worker = Find();
-                        if (worker == null) { DiscoverDiagnostics.Add("kanaalverversing: taak 'Refresh Internet Channels' niet gevonden"); return; }
+                        if (worker == null) { DiscoverDiagnostics.Add("channel refresh: task 'Refresh Internet Channels' not found"); return; }
                         if (worker.State != TaskState.Idle) continue;   // loopt al: straks opnieuw kijken
                         _last = DateTime.UtcNow;
-                        DiscoverDiagnostics.Add("kanaalverversing zelf gestart (" + why + ")");
+                        DiscoverDiagnostics.Add("channel refresh started by the plugin (" + why + ")");
                         _tasks.QueueScheduledTask(worker.ScheduledTask, new TaskOptions());
                         return;
                     }
                 }
-                catch (Exception ex) { DiscoverDiagnostics.Add("kanaalverversing starten mislukt: " + ex.Message); }
+                catch (Exception ex) { DiscoverDiagnostics.Add("starting the channel refresh failed: " + ex.Message); }
                 finally { Interlocked.Exchange(ref _pending, 0); }
             });
         }
