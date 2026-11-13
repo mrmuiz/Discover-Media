@@ -3,6 +3,7 @@
 - Fix: closing the trailer by clicking next to it only hid the video; the sound kept playing. Closing (X, click outside, Back, leaving the page) now really stops the trailer.
 - Fix: **Chromecast with Google TV** and other Android TVs (e.g. Philips) were not recognised as a TV when they don't say "Android TV" in their user agent: the popup and posters were far too big and fell off the screen. Android devices without touch screen and mouse (remote only) now get the TV layout.
 - Fix: on a TV the remote can now reach the row titles (such as "Upcoming movies ›") to open the full list.
+- Fix: **qBittorrent** login failed ("login failed, check username and password") when the username or password contained symbols. The login form is now encoded explicitly as UTF-8 with strict percent-encoding, so every character reaches qBittorrent exactly as typed.
 - Change: page names bumped (`discoveruijs1453`, `discoverbuttonjs1434`).
 
 ## Version 1.4.0.15

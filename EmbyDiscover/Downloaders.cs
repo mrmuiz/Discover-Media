@@ -24,6 +24,20 @@ namespace Emby.Plugins.Discover
             return b;
         }
 
+        internal static string FormEncode(string s)
+        {
+            var sb = new StringBuilder();
+            foreach (var by in Encoding.UTF8.GetBytes(s ?? ""))
+            {
+                var ch = (char)by;
+                if ((ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9') || ch == '-' || ch == '_' || ch == '.' || ch == '~')
+                    sb.Append(ch);
+                else
+                    sb.Append('%').Append(by.ToString("X2", CultureInfo.InvariantCulture));
+            }
+            return sb.ToString();
+        }
+
         internal static string Basic(string user, string pass)
         {
             return Convert.ToBase64String(Encoding.UTF8.GetBytes((user ?? "") + ":" + (pass ?? "")));
@@ -72,11 +86,10 @@ namespace Emby.Plugins.Discover
             using (var req = new HttpRequestMessage(HttpMethod.Post, b + "/api/v2/auth/login"))
             {
                 req.Headers.Referrer = new Uri(b);
-                req.Content = new FormUrlEncodedContent(new[]
-                {
-                    new KeyValuePair<string, string>("username", user ?? ""),
-                    new KeyValuePair<string, string>("password", pass ?? "")
-                });
+                // Zelf coderen (UTF-8, alleen A-Z a-z 0-9 - _ . ~ blijft staan): FormUrlEncodedContent gedraagt zich per .NET/Mono-versie
+                // anders bij tekens als ! * ' ( ) + & % en niet-ASCII, waardoor wachtwoorden met symbolen soms verkeerd aankwamen.
+                var body = "username=" + DlHttp.FormEncode(user) + "&password=" + DlHttp.FormEncode(pass);
+                req.Content = new StringContent(body, Encoding.ASCII, "application/x-www-form-urlencoded");
                 using (var resp = await Http.SendAsync(req, ct).ConfigureAwait(false))
                 {
                     var text = (await resp.Content.ReadAsStringAsync().ConfigureAwait(false) ?? "").Trim();
