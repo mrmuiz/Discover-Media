@@ -1,4 +1,29 @@
 define([], function() {
+function dcBottomBarOffset(self) {
+    // Height of a fixed bar at the bottom of the screen (Emby app tab bar: Start, Search, Downloads, Live TV),
+    // so a toast can sit above it instead of behind it. 0 when there is none.
+    try {
+        var w = window.innerWidth || 0, h = window.innerHeight || 0;
+        if (!w || !h || !document.elementsFromPoint) { return 0; }
+        var best = 0;
+        [0.2, 0.5, 0.8].forEach(function (fx) {
+            var els = document.elementsFromPoint(w * fx, h - 4) || [];
+            for (var i = 0; i < els.length; i++) {
+                var el = els[i];
+                if (el === self || (self && self.contains(el))) { continue; }
+                for (var n = el; n && n !== document.body && n !== document.documentElement; n = n.parentElement) {
+                    var cs = window.getComputedStyle(n);
+                    if (cs && (cs.position === 'fixed' || cs.position === 'sticky')) {
+                        var r = n.getBoundingClientRect();
+                        if (r.bottom >= h - 2 && r.height > 0 && r.height < h * 0.3) { best = Math.max(best, h - r.top); }
+                        break;
+                    }
+                }
+            }
+        });
+        return best;
+    } catch (e) { return 0; }
+}
     "use strict";
     var uiLanguage = "nl";
 
@@ -43,9 +68,9 @@ define([], function() {
             return
         }
         var urls = [ApiClient.getUrl("web/ConfigurationPage", {
-            name: "discoverbuttonjs1434"
+            name: "discoverbuttonjs1435"
         }), ApiClient.getUrl("web/configurationpage", {
-            name: "discoverbuttonjs1434"
+            name: "discoverbuttonjs1435"
         }), ApiClient.getUrl("Plugins/Discover/Script")];
         var n = 0;
         (function next() {
@@ -79,7 +104,7 @@ define([], function() {
             document.head.appendChild(script)
         })()
     }
-    var UI_PAGE = "discoverui1150";
+    var UI_PAGE = "discoverui1151";
     return function(view, params) {
         var embedded = !!(params && params.embedded);
         if (embedded) {
@@ -1953,7 +1978,12 @@ define([], function() {
         function showToast(text, isErr) {
             toast.textContent = text;
             toast.className = "dcToast" + (isErr ? " err" : "");
+            toast.style.bottom = "";
             toast.style.display = "block";
+            if (!view.classList.contains("dcTvPage") && !view.querySelector(".dcTvPage")) {
+                var bar = dcBottomBarOffset(toast);
+                if (bar > 0) { toast.style.bottom = (bar + 12) + "px"; }
+            }
             setTimeout(function() {
                 toast.style.display = "none"
             }, 3500)

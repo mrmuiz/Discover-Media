@@ -15,7 +15,7 @@ namespace Emby.Plugins.Discover
     public class RadarrMovieDto { public int id { get; set; } public int tmdbId { get; set; } public bool hasFile { get; set; } public bool monitored { get; set; } public string added { get; set; } }
     public class SonarrStatsDto { public int episodeFileCount { get; set; } public int episodeCount { get; set; } }
     public class SonarrSeasonDto { public int seasonNumber { get; set; } public bool monitored { get; set; } public SonarrStatsDto statistics { get; set; } }
-    public class SonarrSeriesDto { public int id { get; set; } public int tmdbId { get; set; } public int tvdbId { get; set; } public bool monitored { get; set; } public string added { get; set; } public SonarrStatsDto statistics { get; set; } public List<SonarrSeasonDto> seasons { get; set; } }
+    public class SonarrSeriesDto { public int id { get; set; } public int tmdbId { get; set; } public int tvdbId { get; set; } public string title { get; set; } public int year { get; set; } public string imdbId { get; set; } public bool monitored { get; set; } public string added { get; set; } public SonarrStatsDto statistics { get; set; } public List<SonarrSeasonDto> seasons { get; set; } }
     public class SonarrEpisodeDto { public int id { get; set; } public int seasonNumber { get; set; } public bool monitored { get; set; } public bool hasFile { get; set; } public string airDateUtc { get; set; } }
     public class ArrQueueItemDto { public int id { get; set; } public int movieId { get; set; } public int seriesId { get; set; } }
     public class ArrQueueDto { public List<ArrQueueItemDto> records { get; set; } }
@@ -415,6 +415,48 @@ namespace Emby.Plugins.Discover
         /// de gevraagde seizoenen gaan erbij op gemonitord en wat ontbreekt wordt gezocht.
         /// </remarks>
         /// <returns>true = nieuw toegevoegd of bij een bestaande serie iets aangezet/gezocht, false = er was niets te doen.</returns>
+        /// <summary>
+        /// TMDB has no TVDB id for some series. Ask Sonarr's own lookup instead: by TMDB id, then IMDb id, then title (+ year).
+        /// Returns 0 when Sonarr (TheTVDB) does not know the series either.
+        /// </summary>
+        public async Task<int> ResolveTvdbId(int tmdbId, string imdbId, string title, string firstAirDate, CancellationToken ct)
+        {
+            if (!SonarrConfigured) return 0;
+            var cfg = Plugin.GetCurrentConfiguration();
+            int year = 0;
+            if (!string.IsNullOrEmpty(firstAirDate) && firstAirDate.Length >= 4) int.TryParse(firstAirDate.Substring(0, 4), out year);
+            async Task<List<SonarrSeriesDto>> Lookup(string term)
+            {
+                try
+                {
+                    var text = await Send(HttpMethod.Get, cfg.SonarrUrl, cfg.SonarrApiKey, "/api/v3/series/lookup?term=" + Uri.EscapeDataString(term), null, ct).ConfigureAwait(false);
+                    return _json.DeserializeFromString<List<SonarrSeriesDto>>(text) ?? new List<SonarrSeriesDto>();
+                }
+                catch (Exception ex)
+                {
+                    if (ex is OperationCanceledException) throw;
+                    DiscoverDiagnostics.Add("Sonarr lookup '" + term + "' failed: " + ex.Message);
+                    return new List<SonarrSeriesDto>();
+                }
+            }
+            var byTmdb = (await Lookup("tmdb:" + tmdbId).ConfigureAwait(false)).FirstOrDefault(x => x.tvdbId > 0 && (x.tmdbId == tmdbId || x.tmdbId == 0));
+            if (byTmdb != null) { DiscoverDiagnostics.Add("TVDB id " + byTmdb.tvdbId + " for TMDB " + tmdbId + " found via Sonarr (tmdb lookup)"); return byTmdb.tvdbId; }
+            if (!string.IsNullOrWhiteSpace(imdbId))
+            {
+                var byImdb = (await Lookup("imdb:" + imdbId.Trim()).ConfigureAwait(false)).FirstOrDefault(x => x.tvdbId > 0);
+                if (byImdb != null) { DiscoverDiagnostics.Add("TVDB id " + byImdb.tvdbId + " for TMDB " + tmdbId + " found via Sonarr (imdb lookup)"); return byImdb.tvdbId; }
+            }
+            if (!string.IsNullOrWhiteSpace(title))
+            {
+                var list = await Lookup(title.Trim()).ConfigureAwait(false);
+                var hit = list.FirstOrDefault(x => x.tvdbId > 0 && x.tmdbId == tmdbId)
+                          ?? list.FirstOrDefault(x => x.tvdbId > 0 && year > 0 && x.year == year && string.Equals((x.title ?? "").Trim(), title.Trim(), StringComparison.OrdinalIgnoreCase));
+                if (hit != null) { DiscoverDiagnostics.Add("TVDB id " + hit.tvdbId + " for TMDB " + tmdbId + " found via Sonarr (title lookup)"); return hit.tvdbId; }
+            }
+            DiscoverDiagnostics.Add("No TVDB id for TMDB " + tmdbId + " (" + title + "): not on TMDB and not found by Sonarr");
+            return 0;
+        }
+
         public async Task<bool> AddSeries(int tmdbId, int tvdbId, string title, int[] seasons, CancellationToken ct, object embyUserId = null)
         {
             if (SeerrClient.Enabled)

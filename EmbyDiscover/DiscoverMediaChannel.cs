@@ -1251,9 +1251,12 @@ namespace Emby.Plugins.Discover
             {
                 var t = await tmdb.GetTv(tmdbId, ct).ConfigureAwait(false);
                 var ext = await tmdb.GetTvExternalIds(tmdbId, ct).ConfigureAwait(false);
-                if ((ext == null || ext.tvdb_id == null) && !SeerrClient.Enabled)
-                    throw new InvalidOperationException(DiscoverLanguage.Text("Geen TVDB-id bij deze serie; Sonarr kan hem niet toevoegen.", "This series has no TVDB id; Sonarr cannot add it.", "Diese Serie hat keine TVDB-ID; Sonarr kann sie nicht hinzufügen."));
-                added = await arr.AddSeries(tmdbId, ext?.tvdb_id ?? 0, t.name ?? t.title, seasons, ct, embyUserId).ConfigureAwait(false);
+                int tvdbId = ext?.tvdb_id ?? 0;
+                if (tvdbId <= 0 && !SeerrClient.Enabled)
+                    tvdbId = await arr.ResolveTvdbId(tmdbId, ext?.imdb_id, t.name ?? t.title, t.first_air_date, ct).ConfigureAwait(false);
+                if (tvdbId <= 0 && !SeerrClient.Enabled)
+                    throw new InvalidOperationException(DiscoverLanguage.Text("Deze serie staat niet op TheTVDB; Sonarr kan hem daarom niet toevoegen.", "This series is not on TheTVDB, so Sonarr cannot add it.", "Diese Serie ist nicht bei TheTVDB; Sonarr kann sie daher nicht hinzufügen.", "Denne serien finnes ikke på TheTVDB, så Sonarr kan ikke legge den til."));
+                added = await arr.AddSeries(tmdbId, tvdbId, t.name ?? t.title, seasons, ct, embyUserId).ConfigureAwait(false);
             }
             else
             {
