@@ -1,3 +1,8 @@
+## Version 1.4.0.19 (beta)
+
+- Fix: requesting some series through Sonarr failed with "This series has no TVDB id" (for example *Thunderbirds: The Anniversary Episodes*), because TMDB does not list a TVDB id for them. Discover now asks Sonarr to find the series itself (by TMDB id, IMDb id, then title and year) before giving up.
+- Change: when the series really is not on TheTVDB, the message now says so ("This series is not on TheTVDB, so Sonarr cannot add it").
+
 ## Version 1.4.0.18 (beta)
 
 - Fix: **qBittorrent 5.2 and newer**: the login always failed ("login failed, check username and password"), even with the right password. qBittorrent 5.2 answers a successful login with "204 No Content" instead of "Ok."; Discover now accepts both.
