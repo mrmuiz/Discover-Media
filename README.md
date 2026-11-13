@@ -14,7 +14,7 @@
 
 > **New: [Discover Patcher](https://github.com/mrmuiz/Enabler-for-Emby)** – an Android app that installs Emby for Android with Discover built in, right on your phone, tablet or TV box (and keeps it up to date). Prefer your computer? [Discover Enabler](https://github.com/mrmuiz/Enabler-for-Emby#option-2-discover-enabler-windows) does the same on Windows, Linux and macOS. See [Emby for Android: Discover Patcher and Enabler](#emby-for-android-discover-patcher-and-enabler).
 
-> **Status: stable.** The current version is **1.4.0.15** (test version: **1.4.0.18 beta**, for those who tick *Include test versions (beta)* on the **Updates** tab), built against the Emby SDK package `MediaBrowser.Server.Core` 4.10.0.1-beta so that one dll runs on both Emby Server 4.10.2 and 4.11 (beta). It has been installed on both; other Emby versions may work but have not been individually tested. Please report problems through [Issues](../../issues) and include the relevant diagnostics (see [Troubleshooting](#troubleshooting)).
+> **Status: stable.** The current version is **1.4.0.18**, built against the Emby SDK package `MediaBrowser.Server.Core` 4.10.0.1-beta so that one dll runs on both Emby Server 4.10.2 and 4.11 (beta). It has been installed on both; other Emby versions may work but have not been individually tested. Please report problems through [Issues](../../issues) and include the relevant diagnostics (see [Troubleshooting](#troubleshooting)).
 
 ## Screenshots
 
