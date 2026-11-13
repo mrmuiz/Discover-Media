@@ -726,12 +726,40 @@
     function toast(text, isError) {
         var t = document.createElement('div');
         t.textContent = text;
-        t.style.cssText = 'position:fixed;left:50%;bottom:3em;transform:translateX(-50%);z-index:100000;padding:.8em 1.6em;' +
+        t.style.cssText = 'position:fixed;left:50%;bottom:3em;transform:translateX(-50%);z-index:2147483000;padding:.8em 1.6em;' +
             'border-radius:2em;color:#fff;font-size:1.1em;background:' + (isError ? '#d32f2f' : '#22a559') +
             ';box-shadow:0 4px 20px rgba(0,0,0,.4);font-family:inherit;';
         document.body.appendChild(t);
+        var bar = dcBottomBarOffset(t);
+        if (bar > 0) { t.style.bottom = (bar + 12) + 'px'; }
         setTimeout(function () { if (t.parentNode) { t.parentNode.removeChild(t); } }, 3500);
     }
+    function dcBottomBarOffset(self) {
+        // Height of a fixed bar at the bottom of the screen (Emby app tab bar: Start, Search, Downloads, Live TV),
+        // so a toast can sit above it instead of behind it. 0 when there is none.
+        try {
+            var w = window.innerWidth || 0, h = window.innerHeight || 0;
+            if (!w || !h || !document.elementsFromPoint) { return 0; }
+            var best = 0;
+            [0.2, 0.5, 0.8].forEach(function (fx) {
+                var els = document.elementsFromPoint(w * fx, h - 4) || [];
+                for (var i = 0; i < els.length; i++) {
+                    var el = els[i];
+                    if (el === self || (self && self.contains(el))) { continue; }
+                    for (var n = el; n && n !== document.body && n !== document.documentElement; n = n.parentElement) {
+                        var cs = window.getComputedStyle(n);
+                        if (cs && (cs.position === 'fixed' || cs.position === 'sticky')) {
+                            var r = n.getBoundingClientRect();
+                            if (r.bottom >= h - 2 && r.height > 0 && r.height < h * 0.3) { best = Math.max(best, h - r.top); }
+                            break;
+                        }
+                    }
+                }
+            });
+            return best;
+        } catch (e) { return 0; }
+    }
+
 
     function setLabel(btn, text, icon) {
         var span = btn.querySelector('.detailButton-text') || btn.querySelector('span');
@@ -2071,7 +2099,7 @@
         var link = document.createElement('a');
         link.className = 'discover-row-poster';
         // Klik op de poster: de Discover-popup met info en trailer.
-        link.href = '#!/configurationpage?name=discoverui1150&openType=' + item.Type + '&openId=' + item.TmdbId;
+        link.href = '#!/configurationpage?name=discoverui1151&openType=' + item.Type + '&openId=' + item.TmdbId;
         link.setAttribute('aria-label', item.Title);   // geen title: dat gaf een tooltip-vakje over de poster
         // Gewone klik: de popup hier op de pagina openen (Ctrl/middenklik volgt de link naar Discover).
         link.addEventListener('click', function (e) {
@@ -2378,7 +2406,7 @@
     // ---- De Discover-popup boven de huidige pagina ----
     // Laadt de Discover-pagina één keer onzichtbaar (alleen de popup wordt gebruikt) met dezelfde controller
     // als de echte pagina, in "embedded"-modus. Zo is de popup overal gelijk: info, cast, seizoenen, trailer, aanvragen.
-    var DC_UI_PAGE = 'discoverui1150', DC_UI_JS = 'discoveruijs1453';
+    var DC_UI_PAGE = 'discoverui1151', DC_UI_JS = 'discoveruijs1454';
     var embedPromise = null;
     function pageText(c, name) {
         var url = c.getUrl('web/ConfigurationPage', { name: name });
