@@ -12,7 +12,7 @@
   <a href="https://ko-fi.com/mrmuiz"><img src="https://ko-fi.com/img/githubbutton_sm.svg" alt="Support me on Ko-fi"></a>
 </p>
 
-> **New: [Discover Enabler](https://github.com/mrmuiz/Enabler-for-Emby)** brings the full Discover page to the **Emby for Android** app (phones, tablets, Android TV boxes and Fire TV). See [Emby for Android: Discover Enabler](#emby-for-android-discover-enabler).
+> **New: [Discover Patcher](https://github.com/mrmuiz/Enabler-for-Emby)** – an Android app that installs Emby for Android with Discover built in, right on your phone, tablet or TV box (and keeps it up to date). Prefer your computer? [Discover Enabler](https://github.com/mrmuiz/Enabler-for-Emby#option-2-discover-enabler-windows) does the same on Windows, Linux and macOS. See [Emby for Android: Discover Patcher and Enabler](#emby-for-android-discover-patcher-and-enabler).
 
 > **Status: stable.** The current version is **1.4.0.7**, built against the Emby SDK package `MediaBrowser.Server.Core` 4.10.0.1-beta so that one dll runs on both Emby Server 4.10.2 and 4.11 (beta). It has been installed on both; other Emby versions may work but have not been individually tested. Please report problems through [Issues](../../issues) and include the relevant diagnostics (see [Troubleshooting](#troubleshooting)).
 
@@ -140,7 +140,7 @@
 
 ## Which Emby apps get what
 
-| | Web client (browser) | Emby for Android with [Discover Enabler](https://github.com/mrmuiz/Enabler-for-Emby) | Other Emby apps (LG, Samsung, Android TV app, iOS, ...) |
+| | Web client (browser) | Emby for Android with [Discover Patcher / Enabler](https://github.com/mrmuiz/Enabler-for-Emby) | Other Emby apps (LG, Samsung, Android TV app, iOS, ...) |
 |---|---|---|---|
 | **Discover Media** channel: browse, Request and Trailer tiles | Yes | Yes | Yes |
 | Requesting through Radarr / Sonarr / Seerr | Yes | Yes | Yes (press Play on the Request item) |
@@ -150,9 +150,14 @@
 
 The official Emby apps ship their own built-in client, which a plugin cannot extend. In those apps everything goes through the **Discover Media** channel, which works everywhere.
 
-### Emby for Android: Discover Enabler
+### Emby for Android: Discover Patcher and Enabler
 
-[**Discover Enabler**](https://github.com/mrmuiz/Enabler-for-Emby) is a small tool (Windows, Linux, macOS) that makes the official **Emby for Android** app load this plugin: Discover in the app's menu, the Discover tile opens the Discover page and the Request button works on Emby's own pages. It downloads the app straight from Emby for your device (phones and tablets, Android TV boxes, Fire TV) and changes nothing else; Emby Premiere stays as it is. The separate *Emby for Android TV* and *Fire TV* apps cannot be patched; on those devices use the patched ARMv7 or Fire TV build instead.
+The official **Emby for Android** app (phones and tablets, Android TV boxes, Chromecast with Google TV, Fire TV) can load this plugin after a small patch: Discover in the app's menu, the Discover tile opens the Discover page, the Request button works on Emby's own pages, and optionally Emby's server menu shows in the app. Nothing else changes; Emby Premiere stays as it is. Both tools are in [Enabler for Emby](https://github.com/mrmuiz/Enabler-for-Emby):
+
+- **Option 1 – Discover Patcher (Android app):** install `DiscoverPatcher.apk` on the device itself. It downloads the latest official Emby beta, adds Discover, signs and installs it, and tells you when a new Emby version is available.
+- **Option 2 – Discover Enabler (Windows, Linux, macOS):** patch the Emby APK on your computer and copy it to the device.
+
+The separate *Emby for Android TV* and *Fire TV* apps cannot be patched; on those devices use the patched Emby for Android app instead (it works with a remote).
 
 <p align="center">
   <a href="https://github.com/mrmuiz/Enabler-for-Emby"><img src="https://raw.githubusercontent.com/mrmuiz/Enabler-for-Emby/main/docs/banner.jpg" alt="Discover Enabler for Emby" width="80%"></a>
@@ -177,7 +182,7 @@ The official Emby apps ship their own built-in client, which a plugin cannot ext
 6. Give the intended users access to channels in their Emby user settings.
 7. **For the first channel load, run the Internet Channels refresh once:** open **Dashboard > Scheduled Tasks > Internet Channels** and start **Refresh Internet Channels**. The initial refresh can take several minutes or longer. Leave it running until it finishes; be patient and do not repeatedly start the task.
 
-The plugin adds a small loader script to the web client's `index.html` (setting **Tile opens the Discover page**, on by default), so the Discover tile opens the Discover page and the Request button works on every detail page. If the web client folder is read-only (often in Docker), the loader cannot be added: the Discover page and buttons still work after **Discover** has been opened once in that browser; see [Docker: writable web client](#docker-writable-web-client). Native Emby apps do not run browser scripts and use the Play-based request flow in the **Discover Media** channel (except Emby for Android with [Discover Enabler](#emby-for-android-discover-enabler)).
+The plugin adds a small loader script to the web client's `index.html` (setting **Tile opens the Discover page**, on by default), so the Discover tile opens the Discover page and the Request button works on every detail page. If the web client folder is read-only (often in Docker), the loader cannot be added: the Discover page and buttons still work after **Discover** has been opened once in that browser; see [Docker: writable web client](#docker-writable-web-client). Native Emby apps do not run browser scripts and use the Play-based request flow in the **Discover Media** channel (except Emby for Android with [Discover Patcher or Enabler](#emby-for-android-discover-patcher-and-enabler)).
 
 For Docker, do not use `localhost` for Radarr or Sonarr unless those services share the Emby container's network namespace. Use an address that Emby can reach, such as a service/container name on the same Docker network or the host's LAN address.
 
