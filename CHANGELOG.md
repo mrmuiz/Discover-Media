@@ -1,7 +1,3 @@
-## Version 1.4.0.21 (beta)
-
-- Fix: **cards that Emby had already cached before 1.4.0.20 kept the old `Tmdb` id** and so still showed up in "Continue Watching" (and picked up the playback position of library movies, even of movies that were removed). Three minutes after Emby starts, Discover now removes these cached cards once. They are only a cache of the channel: Emby recreates them with the new id when somebody opens the channel. Your library, your requests and your settings are not touched.
-
 ## Version 1.4.0.20 (beta)
 
 - Fix: after you stopped a movie from your library halfway, **"Continue Watching" also showed the Discover request cards of that movie**. Emby shares the playback position between items with the same TMDB id. Discover items now store their TMDB id under their own name (`DiscoverTmdb`), so they no longer share anything with your library. Emby re-reads the cached cards automatically (cache version bumped).
@@ -10,6 +6,7 @@
 - Fix: since 1.4.0.17 the **recent activity list on the status page** showed English lines instead of your Discover language (the status page translates these lines itself, and the English rewrite broke that). The lines are back to their original form and are translated again. The Emby log itself stays in English.
 - Fix: card clips: Discover now uses the ffmpeg that **Emby itself is set to use** (Emby Settings > Transcoding) before it searches for one. On some Linux installs the default `/opt/emby-server/bin/ffmpeg` cannot be started by the plugin ("No such file or directory") and the fixed confirmation clip was used instead.
 - Change: the remaining Dutch texts (ffmpeg errors, the "API key rejected" message, two row titles) are now English or follow the Discover language.
+- Fix: **cards that Emby had already cached before 1.4.0.20 kept the old `Tmdb` id** and so still showed up in "Continue Watching" (and picked up the playback position of library movies, even of movies that were removed). Three minutes after Emby starts, Discover now removes these cached cards once. They are only a cache of the channel: Emby recreates them with the new id when somebody opens the channel. Your library, your requests and your settings are not touched.
 - Change: page names bumped (`discoverui1152`, `discoveruijs1455`, `discoverbuttonjs1436`).
 
 ## Version 1.4.0.19 (beta)
