@@ -1,7 +1,7 @@
 ## Version 1.4.0.20 (beta)
 
 - Fix: after you stopped a movie from your library halfway, **"Continue Watching" also showed the Discover request cards of that movie**. Emby shares the playback position between items with the same TMDB id. Discover items now store their TMDB id under their own name (`DiscoverTmdb`), so they no longer share anything with your library. Emby re-reads the cached cards automatically (cache version bumped).
-- Fix: Emby's built-in **"Refresh Internet Channels"** task crawled the whole Discover channel (every list, title and season, thousands of TMDB requests, timeouts and rate limiting). The channel now asks Emby not to auto-refresh sub-levels, and the title and season folders are skipped when Emby opens them in the background without a user.
+- Fix: Emby's built-in **"Refresh Internet Channels"** task crawled the whole Discover channel (every list, title and season, thousands of TMDB requests, timeouts and rate limiting). The title and season folders are now skipped when Emby opens them in the background without a user (no TMDB requests for them any more).
 - Change: the log line `Discover: channel opened ...` now also shows the user id (0 = Emby itself), which helps to see what triggers a request.
 - Change: page names bumped (`discoverui1152`, `discoveruijs1455`, `discoverbuttonjs1436`).
 

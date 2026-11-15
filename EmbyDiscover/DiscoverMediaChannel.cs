@@ -94,9 +94,7 @@ namespace Emby.Plugins.Discover
 
         public ChannelFeatures Features => new ChannelFeatures
         {
-            ShowRootFoldersAtTopLevel = true,
-            // Emby's "Refresh Internet Channels" task must not walk down into every list, title and season (that is all of TMDB).
-            AutoRefreshLevels = 0
+            ShowRootFoldersAtTopLevel = true
         };
 
         private static bool IsDeepFolder(string id)
