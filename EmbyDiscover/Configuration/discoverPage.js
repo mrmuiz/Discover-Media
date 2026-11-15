@@ -68,9 +68,9 @@ function dcBottomBarOffset(self) {
             return
         }
         var urls = [ApiClient.getUrl("web/ConfigurationPage", {
-            name: "discoverbuttonjs1435"
+            name: "discoverbuttonjs1436"
         }), ApiClient.getUrl("web/configurationpage", {
-            name: "discoverbuttonjs1435"
+            name: "discoverbuttonjs1436"
         }), ApiClient.getUrl("Plugins/Discover/Script")];
         var n = 0;
         (function next() {
@@ -104,7 +104,7 @@ function dcBottomBarOffset(self) {
             document.head.appendChild(script)
         })()
     }
-    var UI_PAGE = "discoverui1151";
+    var UI_PAGE = "discoverui1152";
     return function(view, params) {
         var embedded = !!(params && params.embedded);
         if (embedded) {

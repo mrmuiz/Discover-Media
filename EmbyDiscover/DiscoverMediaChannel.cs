@@ -72,7 +72,7 @@ namespace Emby.Plugins.Discover
         // Ophogen als Emby oude (bewaarde) kanaalinhoud blijft tonen.
         // De tegel-epoch verandert als de opruiming tegelplaatjes heeft verwijderd: dan vraagt Emby de mappen opnieuw op
         // en maakt de plugin de ontbrekende plaatjes opnieuw (anders verwijst Emby naar een bestand dat niet meer bestaat).
-        public string DataVersion => (Plugin.GetCurrentConfiguration().ShowTrailerTile ? "76" : "76-notrailer") + "-e" + CacheCleaner.TileEpoch;
+        public string DataVersion => (Plugin.GetCurrentConfiguration().ShowTrailerTile ? "77" : "77-notrailer") + "-e" + CacheCleaner.TileEpoch;
         public ChannelParentalRating ParentalRating => ChannelParentalRating.GeneralAudience;
         public bool IsEnabledFor(string userId) => true;
 
@@ -94,8 +94,17 @@ namespace Emby.Plugins.Discover
 
         public ChannelFeatures Features => new ChannelFeatures
         {
-            ShowRootFoldersAtTopLevel = true
+            ShowRootFoldersAtTopLevel = true,
+            // Emby's "Refresh Internet Channels" task must not walk down into every list, title and season (that is all of TMDB).
+            AutoRefreshLevels = 0
         };
+
+        private static bool IsDeepFolder(string id)
+        {
+            return !string.IsNullOrEmpty(id)
+                && (id.StartsWith(AskItemPrefix) || id.StartsWith(AskTvItemPrefix)
+                    || id.StartsWith(AskSeasonFolderPrefix) || id.StartsWith(LegacyAskSeasonFolderPrefix));
+        }
 
         // ---------- Mappen en items ----------
         public async Task<ChannelItemResult> GetChannelItems(InternalChannelItemQuery query, CancellationToken ct)
@@ -104,12 +113,20 @@ namespace Emby.Plugins.Discover
             var hasKey = !string.IsNullOrWhiteSpace(cfg.TmdbApiKey);
             var folder = string.IsNullOrEmpty(query.FolderId) ? "(root)" : query.FolderId;
 
+            // Emby's own background refresh (no user) walks every folder; the title and season folders are skipped for it:
+            // they only make sense for a user who opens them, and crawling them hammers TMDB for nothing.
+            var systemCall = query.UserId == 0;
+            if (systemCall && IsDeepFolder(query.FolderId))
+            {
+                throw new InvalidOperationException("Discover: skipped (background refresh does not crawl title folders)");
+            }
+
             DiscoverDiagnostics.CountCall();
             var tmdbLanguage = TmdbClient.Language();
             DiscoverDiagnostics.Add(string.Format("requested: folder={0} start={1} limit={2} key={3} language={4}",
                 folder, query.StartIndex, query.Limit, hasKey, tmdbLanguage));
-            _logger.Info("Discover: channel opened, folder '{0}', TMDB key set: {1}, TMDB language: {2}, Radarr: {3}, Sonarr: {4}, start: {5}, limit: {6}",
-                folder, hasKey, tmdbLanguage, ArrClient.RadarrConfigured, ArrClient.SonarrConfigured, query.StartIndex, query.Limit);
+            _logger.Info("Discover: channel opened, folder '{0}', TMDB key set: {1}, TMDB language: {2}, Radarr: {3}, Sonarr: {4}, start: {5}, limit: {6}, user: {7}",
+                folder, hasKey, tmdbLanguage, ArrClient.RadarrConfigured, ArrClient.SonarrConfigured, query.StartIndex, query.Limit, query.UserId);
 
             var id = query.FolderId;
             // Bewust een exception en geen "bericht-item": een normaal resultaat wordt door Emby bewaard,
@@ -263,7 +280,7 @@ namespace Emby.Plugins.Discover
                     ? "https://image.tmdb.org/t/p/w780" + t.backdrop_path
                     : TmdbClient.PosterUrl(t.poster_path),
                 Overview = overview.ToString(),
-                ProviderIds = new ProviderIdDictionary { { "Tmdb", tmdbId.ToString() } }
+                ProviderIds = new ProviderIdDictionary { { "DiscoverTmdb", tmdbId.ToString() } }
             };
             if (y.HasValue) item.ProductionYear = y;
             if (t.vote_average > 0) item.CommunityRating = (float)t.vote_average;
@@ -444,7 +461,7 @@ namespace Emby.Plugins.Discover
                     ContentType = ChannelMediaContentType.Clip,
                     ImageUrl = allImage,
                     Overview = allOverview,
-                    ProviderIds = new ProviderIdDictionary { { "Tmdb", tmdbId.ToString() } },
+                    ProviderIds = new ProviderIdDictionary { { "DiscoverTmdb", tmdbId.ToString() } },
                     ForceUpdate = true
                 });
             }
@@ -560,7 +577,7 @@ namespace Emby.Plugins.Discover
                     // Media items need a client-fetchable URL; local generated file paths leave blank tiles here.
                     ImageUrl = image,
                     Overview = overview,
-                    ProviderIds = new ProviderIdDictionary { { "Tmdb", tmdbId.ToString() } },
+                    ProviderIds = new ProviderIdDictionary { { "DiscoverTmdb", tmdbId.ToString() } },
                     IndexNumber = seasonNumber,
                     ForceUpdate = true
                 });
@@ -1013,7 +1030,7 @@ namespace Emby.Plugins.Discover
                     ContentType = ChannelMediaContentType.Trailer,
                     ImageUrl = TmdbClient.PosterUrl(i.poster_path),
                     Overview = WithDate(i, tv),
-                    ProviderIds = new ProviderIdDictionary { { "Tmdb", i.id.ToString() } }
+                    ProviderIds = new ProviderIdDictionary { { "DiscoverTmdb", i.id.ToString() } }
                 };
                 if (request)
                 {

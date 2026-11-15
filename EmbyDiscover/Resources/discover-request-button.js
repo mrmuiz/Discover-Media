@@ -641,7 +641,7 @@
                         Name: askName,
                         Year: item.ProductionYear || 0,
                         Overview: '',
-                        TmdbId: parseInt(askPid.Tmdb || askPid.tmdb || 0, 10) || 0
+                        TmdbId: parseInt(askPid.DiscoverTmdb || askPid.Tmdb || askPid.tmdb || 0, 10) || 0
                     }),
                     dataType: 'json'
                 }).then(function (r) {
@@ -664,7 +664,7 @@
                 seasonAskIds[id] = true;
                 askStatus[id] = 0;
                 var seasonProviderIds = item.ProviderIds || {};
-                var seriesTmdbId = parseInt(seasonProviderIds.Tmdb || seasonProviderIds.tmdb || String(seasonProviderIds.DiscoverSeasonTmdb || '').split('-')[0] || 0, 10) || 0;
+                var seriesTmdbId = parseInt(seasonProviderIds.DiscoverTmdb || seasonProviderIds.Tmdb || seasonProviderIds.tmdb || String(seasonProviderIds.DiscoverSeasonTmdb || '').split('-')[0] || 0, 10) || 0;
                 var seasonNo = parseInt(String(seasonProviderIds.DiscoverSeasonTmdb || '').split('-')[1] || 0, 10) ||
                     parseInt((/(?:Seizoen|Season|Staffel)\s+(\d+)/i.exec(nm) || [])[1] || 0, 10) || 0;
                 if (seriesTmdbId > 0) {
@@ -686,7 +686,7 @@
             }
             var name = String(item.Name || '').replace(/^[\u2713\u23F3]\s+/, '');
             var pid = item.ProviderIds || {};
-            var tmdb = parseInt(pid.Tmdb || pid.tmdb || 0, 10) || 0;
+            var tmdb = parseInt(pid.DiscoverTmdb || pid.Tmdb || pid.tmdb || 0, 10) || 0;
             // Seizoentrailer: de sleutel is "<serie-id>-s<seizoen>"; de knop Aanvragen vraagt dan alleen dat seizoen aan.
             var seasonTrailer = /^(\d+)-s(\d+)$/.exec(String(pid.DiscoverTrailerTmdb || ''));
             if (seasonTrailer && trailerIds[id]) {
@@ -1848,7 +1848,7 @@
                         found[item.Id] = {
                             name: item.Name || '',
                             parentId: item.ParentId || '',
-                            tmdbId: parseInt(providerIds.Tmdb || providerIds.tmdb || String(providerIds.DiscoverSeasonTmdb || '').split('-')[0] || 0, 10) || 0
+                            tmdbId: parseInt(providerIds.DiscoverTmdb || providerIds.Tmdb || providerIds.tmdb || String(providerIds.DiscoverSeasonTmdb || '').split('-')[0] || 0, 10) || 0
                         };
                     }
                 });
@@ -2099,7 +2099,7 @@
         var link = document.createElement('a');
         link.className = 'discover-row-poster';
         // Klik op de poster: de Discover-popup met info en trailer.
-        link.href = '#!/configurationpage?name=discoverui1151&openType=' + item.Type + '&openId=' + item.TmdbId;
+        link.href = '#!/configurationpage?name=discoverui1152&openType=' + item.Type + '&openId=' + item.TmdbId;
         link.setAttribute('aria-label', item.Title);   // geen title: dat gaf een tooltip-vakje over de poster
         // Gewone klik: de popup hier op de pagina openen (Ctrl/middenklik volgt de link naar Discover).
         link.addEventListener('click', function (e) {
@@ -2406,7 +2406,7 @@
     // ---- De Discover-popup boven de huidige pagina ----
     // Laadt de Discover-pagina één keer onzichtbaar (alleen de popup wordt gebruikt) met dezelfde controller
     // als de echte pagina, in "embedded"-modus. Zo is de popup overal gelijk: info, cast, seizoenen, trailer, aanvragen.
-    var DC_UI_PAGE = 'discoverui1151', DC_UI_JS = 'discoveruijs1454';
+    var DC_UI_PAGE = 'discoverui1152', DC_UI_JS = 'discoveruijs1455';
     var embedPromise = null;
     function pageText(c, name) {
         var url = c.getUrl('web/ConfigurationPage', { name: name });
@@ -2544,7 +2544,7 @@
     function loadRowsFor(id, item) {
         var c = api();
         var p = item.ProviderIds || {};
-        var tmdb = parseInt(p.Tmdb || p.tmdb || '0', 10) || 0;
+        var tmdb = parseInt(p.DiscoverTmdb || p.Tmdb || p.tmdb || '0', 10) || 0;
         var req;
         if (item.Type === 'Person') {
             req = Promise.resolve(c.ajax({
