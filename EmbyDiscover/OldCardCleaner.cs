@@ -9,7 +9,8 @@ using MediaBrowser.Model.Logging;
 namespace Emby.Plugins.Discover
 {
     /// <summary>
-    /// Once after an update: removes the cached Discover cards that Emby stored with the old provider id ("Tmdb").
+    /// Once after an update: removes all cached Discover channel items (folders and cards) that Emby stored with the old provider id ("Tmdb"),
+    /// then asks for a channel refresh so the lists are rebuilt.
     /// Those cards share their playback position with library movies (they show up in "Continue Watching").
     /// They are only a cache of the channel: Emby recreates them (now with "DiscoverTmdb") when a user opens the channel.
     /// </summary>
@@ -40,7 +41,8 @@ namespace Emby.Plugins.Discover
                     cfg = Plugin.GetCurrentConfiguration();
                     cfg.OldCardsCleanedFor = Marker;
                     try { Plugin.Instance.UpdateConfiguration(cfg); } catch { }
-                    _logger.Info("Discover: removed {0} cached cards with the old provider id", removed);
+                    _logger.Info("Discover: removed {0} cached channel items (old provider id)", removed);
+                    if (removed > 0) ChannelRefresher.Request("cached items removed");
                     DiscoverDiagnostics.Add("old cached cards removed: " + removed);
                 }
                 catch (Exception ex)
@@ -67,8 +69,6 @@ namespace Emby.Plugins.Discover
                 foreach (var it in items)
                 {
                     if (it.InternalId == ch.InternalId || !OurExternalId(it.ExternalId)) continue;
-                    var ids = it.ProviderIds;
-                    if (ids == null || !ids.ContainsKey("Tmdb") || ids.ContainsKey("DiscoverTmdb")) continue;
                     try
                     {
                         _library.DeleteItem(it, new DeleteOptions { DeleteFileLocation = false }, false);
