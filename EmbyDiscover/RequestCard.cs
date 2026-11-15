@@ -257,7 +257,7 @@ namespace Emby.Plugins.Discover
                 if (!done)
                 {
                     try { p.Kill(); } catch { }
-                    throw new TimeoutException("ffmpeg took longer than " + (timeoutMs / 1000) + " seconden");
+                    throw new TimeoutException("ffmpeg took longer than " + (timeoutMs / 1000) + " seconds");
                 }
                 p.WaitForExit();
                 if (p.ExitCode != 0)
@@ -265,7 +265,7 @@ namespace Emby.Plugins.Discover
                     string tail;
                     lock (err) { tail = err.ToString().Trim(); }
                     if (tail.Length > 400) tail = tail.Substring(tail.Length - 400);
-                    throw new InvalidOperationException("ffmpeg gaf code " + p.ExitCode + ": " + tail);
+                    throw new InvalidOperationException("ffmpeg exited with code " + p.ExitCode + ": " + tail);
                 }
             }
         }
@@ -387,7 +387,7 @@ namespace Emby.Plugins.Discover
             }
             catch (Exception ex)
             {
-                DiscoverDiagnostics.Add("image for card clip not fetched: " + ex.Message);
+                DiscoverDiagnostics.Add("afbeelding voor kaartclip niet opgehaald: " + ex.Message);
                 return false;
             }
         }
@@ -396,6 +396,14 @@ namespace Emby.Plugins.Discover
         {
             var configured = Plugin.GetCurrentConfiguration().FfmpegPath;
             if (!string.IsNullOrWhiteSpace(configured) && File.Exists(configured.Trim())) return configured.Trim();
+
+            // The ffmpeg that Emby itself is set to use (Emby Settings > Transcoding): it is known to start on this server.
+            try
+            {
+                var emby = Plugin.Instance == null ? null : Plugin.Instance.EmbyEncoderPath;
+                if (!string.IsNullOrWhiteSpace(emby) && File.Exists(emby.Trim())) return emby.Trim();
+            }
+            catch { }
 
             bool win = Environment.OSVersion.Platform == PlatformID.Win32NT;
             string exe = win ? "ffmpeg.exe" : "ffmpeg";

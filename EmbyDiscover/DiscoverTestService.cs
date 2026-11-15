@@ -210,7 +210,7 @@ namespace Emby.Plugins.Discover
         private static void LogTmdbLanguageFailure(TestConnectionRequest request, string error)
         {
             if (request != null && string.Equals(request.Type, "TmdbLanguages", StringComparison.OrdinalIgnoreCase))
-                DiscoverDiagnostics.Add("ERROR TMDB language list: " + error);
+                DiscoverDiagnostics.Add("FOUT TMDB-talenlijst: " + error);
         }
 
         private async Task<List<TmdbLanguageOption>> GetTmdbLanguages(string apiKey)
@@ -295,7 +295,7 @@ namespace Emby.Plugins.Discover
                 {
                     var code = (int)resp.StatusCode;
                     if (code == 401)
-                        throw new InvalidOperationException("API key geweigerd (401).");
+                        throw new InvalidOperationException(DiscoverLanguage.Text("API key geweigerd (401).", "API key rejected (401).", "API-Schlüssel abgelehnt (401)."));
                     if (code == 404)
                         throw new InvalidOperationException(DiscoverLanguage.Text("Niet gevonden (404). Klopt de URL en het type (Radarr/Sonarr)?", "Not found (404). Are the URL and the type (Radarr/Sonarr) correct?", "Nicht gefunden (404). Stimmen URL und Typ (Radarr/Sonarr)?", "Ikke funnet (404). Stemmer URL og type (Radarr/Sonarr)?"));
                     resp.EnsureSuccessStatusCode();

@@ -163,7 +163,7 @@ namespace Emby.Plugins.Discover
             _timer = new Timer(_ =>
             {
                 try { CacheCleaner.Run(false); }
-                catch (Exception ex) { DiscoverDiagnostics.Add("ERROR cleanup: " + ex.Message); }
+                catch (Exception ex) { DiscoverDiagnostics.Add("FOUT opruimen: " + ex.Message); }
             }, null, TimeSpan.FromMinutes(2), TimeSpan.FromHours(24));
         }
 

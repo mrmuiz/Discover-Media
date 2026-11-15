@@ -265,7 +265,7 @@ namespace Emby.Plugins.Discover
             catch (Exception ex)
             {
                 if (ex is OperationCanceledException) throw;
-                DiscoverDiagnostics.Add("ERROR reading SABnzbd history: " + ex.Message);
+                DiscoverDiagnostics.Add("FOUT SABnzbd-geschiedenis lezen: " + ex.Message);
             }
             return snap;
         }

@@ -87,12 +87,12 @@ namespace Emby.Plugins.Discover
                 if (trakt)
                 {
                     try { var r = await TraktRow(cfg.TraktUser.Trim(), cfg.TraktClientId.Trim()).ConfigureAwait(false); if (r != null) rows.Add(r); }
-                    catch (Exception ex) { DiscoverDiagnostics.Add("ERROR Trakt watchlist: " + ex.Message); }
+                    catch (Exception ex) { DiscoverDiagnostics.Add("FOUT Trakt-watchlist: " + ex.Message); }
                 }
                 if (listId.Length > 0)
                 {
                     try { var r = await TmdbRow(listId).ConfigureAwait(false); if (r != null) rows.Add(r); }
-                    catch (Exception ex) { DiscoverDiagnostics.Add("ERROR TMDB list " + listId + ": " + ex.Message); }
+                    catch (Exception ex) { DiscoverDiagnostics.Add("FOUT TMDB-lijst " + listId + ": " + ex.Message); }
                 }
                 lock (CacheGate) { _cache = new KeyValuePair<string, KeyValuePair<DateTime, List<DiscoverRow>>>(key, new KeyValuePair<DateTime, List<DiscoverRow>>(DateTime.UtcNow, rows)); }
             }
@@ -104,7 +104,7 @@ namespace Emby.Plugins.Discover
                 if (rows.Any(r => r.Items.Any(i => i.Type == "movie"))) ms = await _arr.GetMovieStates(CancellationToken.None).ConfigureAwait(false);
                 if (rows.Any(r => r.Items.Any(i => i.Type == "tv"))) ts = await _arr.GetSeriesStates(CancellationToken.None).ConfigureAwait(false);
             }
-            catch (Exception ex) { DiscoverDiagnostics.Add("ERROR status for watchlist: " + ex.Message); }
+            catch (Exception ex) { DiscoverDiagnostics.Add("FOUT status voor watchlist: " + ex.Message); }
             foreach (var row in rows)
             {
                 var copy = new DiscoverRow { Key = row.Key, Title = row.Title };

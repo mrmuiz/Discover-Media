@@ -28,7 +28,7 @@ namespace Emby.Plugins.Discover
             get
             {
                 try { return typeof(Plugin).Assembly.GetName().Version.ToString(); }
-                catch { return "1.4.0.20"; }
+                catch { return "1.4.0.21"; }
             }
         }
 
@@ -42,6 +42,21 @@ namespace Emby.Plugins.Discover
             _xmlSerializer = xmlSerializer;
             _serverConfigurationManager = serverConfigurationManager;
             Instance = this;
+        }
+
+        /// <summary>Path of the ffmpeg that Emby itself uses (Settings > Transcoding), when one is set. Read without a compile-time reference.</summary>
+        public string EmbyEncoderPath
+        {
+            get
+            {
+                try
+                {
+                    var cfg = _serverConfigurationManager.GetConfiguration("encoding");
+                    var pi = cfg == null ? null : cfg.GetType().GetProperty("EncoderAppPath");
+                    return pi == null ? null : pi.GetValue(cfg, null) as string;
+                }
+                catch { return null; }
+            }
         }
 
         public string ServerUiCulture => _serverConfigurationManager.Configuration.UICulture;
@@ -86,7 +101,7 @@ namespace Emby.Plugins.Discover
             }
             catch (Exception ex)
             {
-                DiscoverDiagnostics.Add("ERROR loading saved plugin settings: " + ex.Message);
+                DiscoverDiagnostics.Add("FOUT opgeslagen plugininstellingen laden: " + ex.Message);
             }
 
             return Configuration;
@@ -190,7 +205,7 @@ namespace Emby.Plugins.Discover
                 catch (Exception ex)
                 {
                     last = ex;
-                    DiscoverDiagnostics.Add("folder '" + dir + "' not writable: " + ex.Message);
+                    DiscoverDiagnostics.Add("map '" + dir + "' niet beschrijfbaar: " + ex.Message);
                 }
             }
             throw new InvalidOperationException("No writable folder for the card clips: " + (last == null ? "no folder available" : last.Message));
@@ -251,7 +266,7 @@ namespace Emby.Plugins.Discover
                 catch (Exception ex)
                 {
                     last = ex;
-                    DiscoverDiagnostics.Add("writing clip failed in '" + dir + "': " + ex.Message);
+                    DiscoverDiagnostics.Add("clip schrijven mislukt in '" + dir + "': " + ex.Message);
                 }
             }
             throw new InvalidOperationException(

@@ -112,7 +112,7 @@ namespace Emby.Plugins.Discover
             catch (Exception ex)
             {
                 info.Error = ex.Message;
-                DiscoverDiagnostics.Add("update: check failed: " + ex.Message);
+                DiscoverDiagnostics.Add("update: kijken mislukt: " + ex.Message);
             }
             if (info.Error == null) { _cache = info; _cacheAt = DateTime.UtcNow; _cacheBeta = beta; }
             return Finish(info);
@@ -194,7 +194,7 @@ namespace Emby.Plugins.Discover
                 }
 
                 PendingVersion = pick.Version;
-                DiscoverDiagnostics.Add("update: " + pick.Version + " installed in " + target + ", herstart nodig");
+                DiscoverDiagnostics.Add("update: " + pick.Version + " geïnstalleerd in " + target + ", herstart nodig");
                 try { Host?.NotifyPendingRestart(); } catch { }
                 return pick.Version;
             }
@@ -224,7 +224,7 @@ namespace Emby.Plugins.Discover
             {
                 await Task.Delay(1500).ConfigureAwait(false);   // eerst het antwoord naar de browser laten gaan
                 try { var r = m.Invoke(Host, null); if (r is Task t) await t.ConfigureAwait(false); }
-                catch (Exception ex) { DiscoverDiagnostics.Add("update: restart failed: " + (ex.InnerException?.Message ?? ex.Message)); }
+                catch (Exception ex) { DiscoverDiagnostics.Add("update: herstart mislukt: " + (ex.InnerException?.Message ?? ex.Message)); }
             });
         }
     }
@@ -368,7 +368,7 @@ namespace Emby.Plugins.Discover
             if (info.Available && cfg.UpdateAutoInstall)
             {
                 try { await Updater.Install(ct).ConfigureAwait(false); }
-                catch (Exception ex) { DiscoverDiagnostics.Add("update: automatic install failed: " + ex.Message); }
+                catch (Exception ex) { DiscoverDiagnostics.Add("update: automatisch installeren mislukt: " + ex.Message); }
             }
             progress.Report(60);
             if (Updater.PendingVersion != null && cfg.UpdateAutoInstall && cfg.UpdateAutoRestart)

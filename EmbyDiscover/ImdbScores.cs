@@ -79,12 +79,12 @@ namespace Emby.Plugins.Discover
                         catch (Exception ex)
                         {
                             _lastFail = DateTime.UtcNow;
-                            DiscoverDiagnostics.Add("downloading the IMDb dataset failed: " + ex.Message);
+                            DiscoverDiagnostics.Add("IMDb-dataset downloaden mislukt: " + ex.Message);
                         }
                     }
                     if (File.Exists(path)) Load(path);
                 }
-                catch (Exception ex) { DiscoverDiagnostics.Add("loading the IMDb dataset failed: " + ex.Message); }
+                catch (Exception ex) { DiscoverDiagnostics.Add("IMDb-dataset laden mislukt: " + ex.Message); }
                 finally { lock (Gate) { _busy = false; } }
             });
         }

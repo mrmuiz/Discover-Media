@@ -60,7 +60,7 @@ namespace Emby.Plugins.Discover
             }
             catch (Exception ex)
             {
-                DiscoverDiagnostics.Add("blocked-request notification failed: " + ex.Message);
+                DiscoverDiagnostics.Add("melding geblokkeerde aanvraag mislukt: " + ex.Message);
             }
         }
 
@@ -79,7 +79,7 @@ namespace Emby.Plugins.Discover
                 int tmdbId;
                 if (rest.Length < 3 || !int.TryParse(rest.Substring(2), out tmdbId))
                 {
-                    DiscoverDiagnostics.Add("request on play: unknown id " + ext);
+                    DiscoverDiagnostics.Add("aanvraag bij afspelen: onbekend id " + ext);
                     return;
                 }
 
@@ -87,7 +87,7 @@ namespace Emby.Plugins.Discover
                 var user = e.Users != null && e.Users.Count > 0 ? e.Users[0] : null;
                 if (user != null && !RequestAccess.IsAllowed(user.Id))
                 {
-                    DiscoverDiagnostics.Add("request blocked for user " + user.Name + ": " + ext);
+                    DiscoverDiagnostics.Add("aanvraag geblokkeerd voor gebruiker " + user.Name + ": " + ext);
                     _logger.Info("Discover: request {0} blocked for user {1}", ext, user.Name);
                     NotifyBlocked(e);
                     return;
@@ -97,7 +97,7 @@ namespace Emby.Plugins.Discover
                     var limitMsg = RequestAccess.LimitMessage(_json, user.Id, user.Policy != null && user.Policy.IsAdministrator);
                     if (limitMsg != null)
                     {
-                        DiscoverDiagnostics.Add("request (Play) over the limit for " + user.Name + ": " + ext);
+                        DiscoverDiagnostics.Add("aanvraag (Afspelen) boven de limiet voor " + user.Name + ": " + ext);
                         NotifyBlocked(e, limitMsg);
                         return;
                     }
@@ -108,7 +108,7 @@ namespace Emby.Plugins.Discover
                     try
                     {
                         var msg = await DiscoverMediaChannel.RequestTitle(_tmdb, _arr, tv, tmdbId, null, CancellationToken.None, user != null ? (object)user.Id : null).ConfigureAwait(false);
-                        DiscoverDiagnostics.Add("request via Play: " + ext + " -> " + msg);
+                        DiscoverDiagnostics.Add("aanvraag via Afspelen: " + ext + " -> " + msg);
                         if (user != null)
                         {
                             try
@@ -117,7 +117,7 @@ namespace Emby.Plugins.Discover
                                             : await _tmdb.GetMovie(tmdbId, CancellationToken.None).ConfigureAwait(false);
                                 RequestStore.Add(_json, user.Id, tv, it, tmdbId);
                             }
-                            catch (Exception ex) { DiscoverDiagnostics.Add("remembering request (Play) failed: " + ex.Message); }
+                            catch (Exception ex) { DiscoverDiagnostics.Add("aanvraag (Afspelen) onthouden mislukt: " + ex.Message); }
                         }
                         DownloadQueue.Invalidate();
                         _logger.Info("Discover: request via Play {0}: {1}", ext, msg);
@@ -125,14 +125,14 @@ namespace Emby.Plugins.Discover
                     catch (Exception ex)
                     {
                         _logger.Error("Discover: request via Play failed for {0}: {1}", ext, ex.Message);
-                        DiscoverDiagnostics.Add("ERROR request (Play) " + ext + ": " + ex.Message);
+                        DiscoverDiagnostics.Add("FOUT aanvraag (Afspelen) " + ext + ": " + ex.Message);
                         DiscoverDiagnostics.CountRequest(false);
                     }
                 });
             }
             catch (Exception ex)
             {
-                DiscoverDiagnostics.Add("ERROR PlaybackStart: " + ex.Message);
+                DiscoverDiagnostics.Add("FOUT PlaybackStart: " + ex.Message);
             }
         }
     }
