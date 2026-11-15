@@ -1,3 +1,7 @@
+## Version 1.4.0.21 (beta)
+
+- Fix: **cards that Emby had already cached before 1.4.0.20 kept the old `Tmdb` id** and so still showed up in "Continue Watching" (and picked up the playback position of library movies, even of movies that were removed). Three minutes after Emby starts, Discover now removes these cached cards once. They are only a cache of the channel: Emby recreates them with the new id when somebody opens the channel. Your library, your requests and your settings are not touched.
+
 ## Version 1.4.0.20 (beta)
 
 - Fix: after you stopped a movie from your library halfway, **"Continue Watching" also showed the Discover request cards of that movie**. Emby shares the playback position between items with the same TMDB id. Discover items now store their TMDB id under their own name (`DiscoverTmdb`), so they no longer share anything with your library. Emby re-reads the cached cards automatically (cache version bumped).
