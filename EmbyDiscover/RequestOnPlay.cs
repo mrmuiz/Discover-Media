@@ -70,11 +70,33 @@ namespace Emby.Plugins.Discover
             {
                 var ext = e == null || e.Item == null ? null : e.Item.ExternalId;
                 if (string.IsNullOrEmpty(ext)) return;
-                // "Alle seizoenen" (hele serie in een keer) of het gewone aanvraagitem.
+                ext = DiscoverMediaChannel.StripTileMark(ext);
+                bool seasonRequest = ext.StartsWith(DiscoverMediaChannel.AskSeasonPrefix, StringComparison.Ordinal);
                 bool allSeasons = ext.StartsWith(DiscoverMediaChannel.AskAllPrefix, StringComparison.Ordinal);
-                if (!allSeasons && !ext.StartsWith(DiscoverMediaChannel.AskPrefix, StringComparison.Ordinal)) return;
+                if (!seasonRequest && !allSeasons && !ext.StartsWith(DiscoverMediaChannel.AskPrefix, StringComparison.Ordinal)) return;
 
-                var rest = DiscoverMediaChannel.StripTileMark(ext.Substring((allSeasons ? DiscoverMediaChannel.AskAllPrefix : DiscoverMediaChannel.AskPrefix).Length));   // "m:123" of "t:123"
+                int[] seasons = null;
+                string rest;
+                if (seasonRequest)
+                {
+                    var parts = ext.Substring(DiscoverMediaChannel.AskSeasonPrefix.Length).Split(':');
+                    int seasonTmdbId;
+                    int seasonNumber;
+                    if (parts.Length != 4 || parts[0] != "t" || parts[2] != "s" ||
+                        !int.TryParse(parts[1], out seasonTmdbId) || seasonTmdbId <= 0 ||
+                        !int.TryParse(parts[3], out seasonNumber) || seasonNumber <= 0)
+                    {
+                        DiscoverDiagnostics.Add("aanvraag bij afspelen: onbekend seizoens-id " + ext);
+                        return;
+                    }
+                    rest = "t:" + seasonTmdbId;
+                    seasons = new[] { seasonNumber };
+                }
+                else
+                {
+                    var prefix = allSeasons ? DiscoverMediaChannel.AskAllPrefix : DiscoverMediaChannel.AskPrefix;
+                    rest = ext.Substring(prefix.Length); // "m:123" of "t:123"
+                }
                 bool tv = rest.StartsWith("t:", StringComparison.Ordinal);
                 int tmdbId;
                 if (rest.Length < 3 || !int.TryParse(rest.Substring(2), out tmdbId))
@@ -107,7 +129,7 @@ namespace Emby.Plugins.Discover
                 {
                     try
                     {
-                        var msg = await DiscoverMediaChannel.RequestTitle(_tmdb, _arr, tv, tmdbId, null, CancellationToken.None, user != null ? (object)user.Id : null).ConfigureAwait(false);
+                        var msg = await DiscoverMediaChannel.RequestTitle(_tmdb, _arr, tv, tmdbId, seasons, CancellationToken.None, user != null ? (object)user.Id : null).ConfigureAwait(false);
                         DiscoverDiagnostics.Add("aanvraag via Afspelen: " + ext + " -> " + msg);
                         if (user != null)
                         {

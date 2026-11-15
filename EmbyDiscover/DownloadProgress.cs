@@ -521,6 +521,8 @@ namespace Emby.Plugins.Discover
         public string Added { get; set; }
         /// <summary>Er is al een melding "beschikbaar" naar de aanvrager gestuurd.</summary>
         public bool Notified { get; set; }
+        /// <summary>Sessies die deze melding al succesvol hebben ontvangen terwijl andere sessies faalden.</summary>
+        public List<string> NotifiedSessionIds { get; set; }
         /// <summary>Is ooit gezien als "nog niet beschikbaar"; alleen dan volgt een melding (geen meldingen voor oude aanvragen).</summary>
         public bool SeenPending { get; set; }
     }

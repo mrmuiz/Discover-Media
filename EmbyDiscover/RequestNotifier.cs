@@ -71,7 +71,7 @@ namespace Emby.Plugins.Discover
                     if (uid.Length == 0) continue;
                     List<string> l;
                     if (!active.TryGetValue(uid, out l)) active[uid] = l = new List<string>();
-                    l.Add(s.Id);
+                    if (!l.Contains(s.Id)) l.Add(s.Id);
                 }
 
                 var send = new List<KeyValuePair<StoredRequest, List<string>>>();
@@ -97,8 +97,13 @@ namespace Emby.Plugins.Discover
                         }
                         List<string> ids;
                         if (!active.TryGetValue(r.UserId ?? "", out ids)) continue; // later opnieuw proberen
-                        r.Notified = true; changed = true;
-                        send.Add(new KeyValuePair<StoredRequest, List<string>>(r, ids));
+                        var pendingIds = ids.Where(id => r.NotifiedSessionIds == null || !r.NotifiedSessionIds.Contains(id)).ToList();
+                        if (pendingIds.Count == 0)
+                        {
+                            r.Notified = true; changed = true;
+                            continue;
+                        }
+                        send.Add(new KeyValuePair<StoredRequest, List<string>>(r, pendingIds));
                     }
                     return changed;
                 });
@@ -111,6 +116,7 @@ namespace Emby.Plugins.Discover
                         title + " is beschikbaar om te kijken.",
                         title + " is available to watch.",
                         title + " ist jetzt verfügbar.");
+                    var delivered = new List<string>();
                     foreach (var sid in kv.Value)
                     {
                         try
@@ -121,10 +127,31 @@ namespace Emby.Plugins.Discover
                                 Text = text,
                                 TimeoutMs = 15000
                             }, CancellationToken.None).ConfigureAwait(false);
+                            delivered.Add(sid);
                         }
                         catch (Exception ex) { DiscoverDiagnostics.Add("melding beschikbaar mislukt: " + ex.Message); }
                     }
-                    DiscoverDiagnostics.Add("melding beschikbaar verstuurd: " + title);
+                    if (delivered.Count > 0)
+                    {
+                        RequestStore.Update(_json, list =>
+                        {
+                            var stored = list.FirstOrDefault(x => !x.Notified &&
+                                x.UserId == r.UserId && x.Type == r.Type && x.TmdbId == r.TmdbId && x.Added == r.Added);
+                            if (stored == null) return false;
+                            if (stored.NotifiedSessionIds == null) stored.NotifiedSessionIds = new List<string>();
+                            foreach (var sid in delivered)
+                                if (!stored.NotifiedSessionIds.Contains(sid)) stored.NotifiedSessionIds.Add(sid);
+
+                            List<string> activeIds;
+                            if (active.TryGetValue(stored.UserId ?? "", out activeIds) &&
+                                activeIds.All(id => stored.NotifiedSessionIds.Contains(id)))
+                                stored.Notified = true;
+                            return true;
+                        });
+                    }
+                    DiscoverDiagnostics.Add(delivered.Count == kv.Value.Count
+                        ? "melding beschikbaar verstuurd: " + title
+                        : "melding beschikbaar deels verstuurd; resterende sessies worden opnieuw geprobeerd: " + title);
                 }
             }
             catch (Exception ex) { DiscoverDiagnostics.Add("FOUT controle beschikbare aanvragen: " + ex.Message); }

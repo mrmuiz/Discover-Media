@@ -9,14 +9,14 @@ using MediaBrowser.Model.Logging;
 namespace Emby.Plugins.Discover
 {
     /// <summary>
-    /// Once after an update: removes all cached Discover channel items (folders and cards) that Emby stored with the old provider id ("Tmdb"),
+    /// Once after an update: removes cached Discover channel items (folders and cards),
     /// then asks for a channel refresh so the lists are rebuilt.
     /// Those cards share their playback position with library movies (they show up in "Continue Watching").
     /// They are only a cache of the channel: Emby recreates them (now with "DiscoverTmdb") when a user opens the channel.
     /// </summary>
     public class OldCardCleaner : IServerEntryPoint
     {
-        private const string Marker = "1.4.0.20";
+        private const string Marker = "1.4.0.22";
         private readonly ILibraryManager _library;
         private readonly ILogger _logger;
 
@@ -37,13 +37,21 @@ namespace Emby.Plugins.Discover
                     await Task.Delay(TimeSpan.FromMinutes(3)).ConfigureAwait(false);
                     var cfg = Plugin.GetCurrentConfiguration();
                     if (string.Equals(cfg.OldCardsCleanedFor, Marker, StringComparison.Ordinal)) return;
-                    var removed = Clean();
-                    cfg = Plugin.GetCurrentConfiguration();
-                    cfg.OldCardsCleanedFor = Marker;
-                    try { Plugin.Instance.UpdateConfiguration(cfg); } catch { }
-                    _logger.Info("Discover: removed {0} cached channel items (old provider id)", removed);
+                    bool complete;
+                    var removed = Clean(out complete);
+                    if (complete)
+                    {
+                        cfg = Plugin.GetCurrentConfiguration();
+                        cfg.OldCardsCleanedFor = Marker;
+                        try { Plugin.Instance.UpdateConfiguration(cfg); } catch { }
+                    }
+                    else
+                    {
+                        DiscoverDiagnostics.Add("old cached items cleanup incomplete; will retry next startup");
+                    }
+                    _logger.Info("Discover: removed {0} cached channel items", removed);
                     if (removed > 0) ChannelRefresher.Request("cached items removed");
-                    DiscoverDiagnostics.Add("old cached cards removed: " + removed);
+                    DiscoverDiagnostics.Add("cached channel items removed: " + removed);
                 }
                 catch (Exception ex)
                 {
@@ -56,9 +64,10 @@ namespace Emby.Plugins.Discover
         private static bool OurExternalId(string ext) =>
             !string.IsNullOrEmpty(ext) && (ext.StartsWith("ask", StringComparison.Ordinal) || ext.StartsWith("tr", StringComparison.Ordinal));
 
-        private int Clean()
+        private int Clean(out bool complete)
         {
             var removed = 0;
+            complete = true;
             var channels = _library.GetItemList(new InternalItemsQuery { IncludeItemTypes = new[] { "Channel" } });
             foreach (var ch in channels)
             {
@@ -74,7 +83,11 @@ namespace Emby.Plugins.Discover
                         _library.DeleteItem(it, new DeleteOptions { DeleteFileLocation = false }, false);
                         removed++;
                     }
-                    catch (Exception ex) { DiscoverDiagnostics.Add("removing cached card failed: " + ex.Message); }
+                    catch (Exception ex)
+                    {
+                        complete = false;
+                        DiscoverDiagnostics.Add("removing cached card failed: " + ex.Message);
+                    }
                 }
             }
             return removed;
