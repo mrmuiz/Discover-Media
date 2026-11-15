@@ -63,7 +63,7 @@ namespace Emby.Plugins.Discover
                 var kids = _library.GetItemList(new InternalItemsQuery { ParentIds = new[] { ch.InternalId }, Limit = 25 });
                 if (!kids.Any(k => OurExternalId(k.ExternalId)) && !string.Equals(ch.Name, "Discover Media", StringComparison.OrdinalIgnoreCase)) continue;
 
-                var items = _library.GetItemList(new InternalItemsQuery { ChannelIds = new[] { ch.InternalId } });
+                var items = _library.GetItemList(new InternalItemsQuery { ParentIds = new[] { ch.InternalId }, Recursive = true });
                 foreach (var it in items)
                 {
                     if (it.InternalId == ch.InternalId || !OurExternalId(it.ExternalId)) continue;
