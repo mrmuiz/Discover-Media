@@ -120,6 +120,9 @@ namespace Emby.Plugins.Discover
         /// <summary>Optioneel: volledig pad naar ffmpeg, voor de bevestigingskaart per titel. Leeg = zoeken op gangbare plekken.</summary>
         public string FfmpegPath { get; set; } = "";
 
+        /// <summary>Version for which the old cached cards (old provider id) were removed once.</summary>
+        public string OldCardsCleanedFor { get; set; } = "";
+
         /// <summary>Toon de tegelnaam als tekst op kanaaltegelafbeeldingen. Op false = plaatjes zonder toegevoegde tekst.</summary>
         public bool TileTextImages { get; set; } = true;
 
