@@ -45,16 +45,25 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           name: Emby.Plugins.Discover
-      - name: Keep the pre-release setting of an existing release
+      - name: Decide whether this is a pre-release
         id: pre
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.event.inputs.release_tag || github.ref_name }}
         run: |
+          # An existing release keeps its own setting.
           PRE=$(gh api "repos/${{ github.repository }}/releases/tags/$TAG" --jq .prerelease 2>/dev/null || true)
+          if [ -z "$PRE" ] || [ "$PRE" = "null" ]; then
+            # The release does not exist yet and this job creates it, so the CHANGELOG decides:
+            # "## Version 1.2.3.4 (beta)" means pre-release. Without that line it is a normal release.
+            VER="${TAG#v}"; VER="${VER#V}"
+            if grep -qiF "## Version $VER (beta)" CHANGELOG.md; then PRE=true; else PRE=false; fi
+            echo "no release for $TAG yet; CHANGELOG says pre-release: $PRE"
+          fi
           case "$TAG" in *beta*) PRE=true;; esac
           [ "$PRE" = true ] || PRE=false
           echo "prerelease=$PRE" >> "$GITHUB_OUTPUT"
@@ -65,3 +74,5 @@ jobs:
           files: Emby.Plugins.Discover.dll
           generate_release_notes: false
           prerelease: ${{ steps.pre.outputs.prerelease }}
+          # A pre-release must never become the "latest" that the updater offers to everyone.
+          make_latest: ${{ steps.pre.outputs.prerelease == 'true' && 'false' || 'true' }}
