@@ -133,7 +133,14 @@
 
 ### Requests and users
 
-- **Request limit per user**: at most N requests per X days (administrators are exempt; in Seerr mode Seerr's own quotas apply).
+**Where requests go.** Straight to Radarr and Sonarr, or through a request service: **Seerr** (Jellyseerr/Overseerr) or **Ombi**.
+
+Two things work differently with Ombi, because of what its API offers:
+
+- Ombi cannot request on behalf of another user through an API key. Every request arrives under the owner of the key, with the name of the requester added as a label. So Ombi's own per-user quotas and approval rules do not apply per person; Discover's own request limit stays in effect instead.
+- Ombi has no queue the plugin can read, and it does not remove a title from Radarr or Sonarr when a request is deleted. Fill in Radarr and Sonarr next to Ombi (the **Ombi + Radarr & Sonarr** option) and Discover reads them for the titles already in your library, the download progress, and cancelling a request.
+
+- **Request limit per user**: at most N requests per X days (administrators are exempt; in Seerr mode Seerr's own quotas apply, in Ombi mode this limit stays in effect).
 - **Overview of all requests** for administrators, with a count per user.
 - A **"… is available to watch"** notification in Emby for the person who requested a title, as soon as it has files.
 - Announced seasons can already be requested; Sonarr picks them up when they appear.
@@ -167,7 +174,7 @@ The separate *Emby for Android TV* and *Fire TV* apps cannot be patched; on thos
 
 - Emby Server 4.10.2 or newer (4.11 beta included). The plugin is built against `MediaBrowser.Server.Core` 4.10.0.1-beta; it has been installed on Emby Server 4.10.2.0 and on the 4.11 beta.
 - A [TMDB API key](https://www.themoviedb.org/settings/api).
-- Radarr for movie requests and/or Sonarr for series requests, **or** a Seerr (Jellyseerr/Overseerr) server. Series requests through Sonarr require Sonarr v4 or v5 (tested with both; older versions are not supported).
+- Radarr for movie requests and/or Sonarr for series requests, **or** a Seerr (Jellyseerr/Overseerr) or Ombi server. Series requests through Sonarr require Sonarr v4 or v5 (tested with both; older versions are not supported).
 - Optional: a free [MDBList API key](https://mdblist.com/preferences/) for IMDb, Rotten Tomatoes, Metacritic, Letterboxd and Trakt scores in the popup (or an [OMDb API key](https://www.omdbapi.com/apikey.aspx) for IMDb, Rotten Tomatoes and Metacritic).
 - Optional: a [fanart.tv API key](https://fanart.tv/get-an-api-key/) for more title logos.
 - Emby's bundled `ffmpeg` is used to create some channel artwork and the request confirmation clip.
@@ -199,7 +206,7 @@ The request confirmation clip shows a large poster with the status (Requested / 
 
 ## Configuration
 
-The settings are split over tabs: **General**, **Appearance**, **Sources**, **Requests** (Radarr/Sonarr or Seerr), **Users**, **Storage**, **Updates** and **Diagnostics**. The plugin finds the web client folder (with `index.html`) automatically; in the rare case it does not, the folder can be set as `DashboardUiPath` in the plugin's XML configuration file.
+The settings are split over tabs: **General**, **Appearance**, **Sources**, **Requests** (Radarr/Sonarr, Seerr or Ombi), **Users**, **Storage**, **Updates** and **Diagnostics**. The plugin finds the web client folder (with `index.html`) automatically; in the rare case it does not, the folder can be set as `DashboardUiPath` in the plugin's XML configuration file.
 
 | Setting | Tab | Purpose |
 |---|---|---|
@@ -217,7 +224,7 @@ The settings are split over tabs: **General**, **Appearance**, **Sources**, **Re
 | MDBList API key | Sources | Optional (free, 1000 requests a day). IMDb, Rotten Tomatoes (critics and audience), Metacritic, Letterboxd and Trakt scores in the popup, with a test button. Cached per title. |
 | OMDb API key | Sources | Optional fallback for IMDb, Rotten Tomatoes and Metacritic scores. |
 | fanart.tv API key | Sources | Optional. More title logos when Emby and TMDB have none. |
-| Request through | Requests | Radarr/Sonarr directly, or a Seerr server (URL and API key). |
+| Request through | Requests | Radarr/Sonarr directly, or a Seerr or Ombi server (URL and API key). |
 | Radarr / Sonarr URL and API key | Requests | Sends movie requests to Radarr and series requests to Sonarr. |
 | SABnzbd URL and API key (optional) | Requests | Adds the download speed, the stages after 100% (verifying, repairing, extracting, moving, script) and SABnzbd's paused/speed-limit state to the download progress. |
 | NZBGet, qBittorrent, Transmission URL, username and password (optional) | Requests | Same for these downloaders; torrents also show seeders and ratio. For qBittorrent 5.2+ an **API key** can be used instead of username and password (qBittorrent: Options → WebUI → API Key). |

@@ -429,11 +429,11 @@ namespace Emby.Plugins.Discover
                     "Druk op \u25B6 om alle seizoenen in \u00E9\u00E9n keer aan te vragen, ook seizoenen die later uitkomen.",
                     "Press \u25B6 to request all seasons at once, including seasons released later.",
                     "Drücke auf \u25B6, um alle Staffeln auf einmal anzufordern, auch später erscheinende Staffeln.");
-                if (sonarrSeasons.Count > 0 && SeerrClient.Enabled)
+                if (sonarrSeasons.Count > 0 && RequestHub.External)
                     allOverview += "\n\n" + DiscoverLanguage.Text(
-                        "\u23F3 Deze serie is al aangevraagd in Seerr. Opnieuw aanvragen vraagt de seizoenen aan die nog niet zijn aangevraagd.",
-                        "\u23F3 This series has already been requested in Seerr. Requesting again requests the seasons that have not been requested yet.",
-                        "\u23F3 Diese Serie wurde bereits in Seerr angefordert. Eine erneute Anfrage fordert die noch nicht angeforderten Staffeln an.");
+                        "\u23F3 Deze serie is al aangevraagd in " + RequestHub.Name + ". Opnieuw aanvragen vraagt de seizoenen aan die nog niet zijn aangevraagd.",
+                        "\u23F3 This series has already been requested in " + RequestHub.Name + ". Requesting again requests the seasons that have not been requested yet.",
+                        "\u23F3 Diese Serie wurde bereits in " + RequestHub.Name + " angefordert. Eine erneute Anfrage fordert die noch nicht angeforderten Staffeln an.");
                 else if (sonarrSeasons.Count > 0)
                     allOverview += "\n\n" + DiscoverLanguage.Text(
                         "\u23F3 Deze serie staat al in Sonarr. Opnieuw aanvragen zet alle seizoenen (behalve specials) op gemonitord en zoekt naar ontbrekende afleveringen.",
@@ -1259,7 +1259,7 @@ namespace Emby.Plugins.Discover
 
 
         /// <summary>Vraagt een titel aan bij Radarr/Sonarr; null seasons behoudt de bestaande all-seasons-aanvraag.</summary>
-        internal static async Task<string> RequestTitle(TmdbClient tmdb, ArrClient arr, bool tv, int tmdbId, int[] seasons, CancellationToken ct, object embyUserId = null)
+        internal static async Task<string> RequestTitle(TmdbClient tmdb, ArrClient arr, bool tv, int tmdbId, int[] seasons, CancellationToken ct, object embyUserId = null, string alias = null)
         {
             bool added;
             if (tv)
@@ -1267,16 +1267,16 @@ namespace Emby.Plugins.Discover
                 var t = await tmdb.GetTv(tmdbId, ct).ConfigureAwait(false);
                 var ext = await tmdb.GetTvExternalIds(tmdbId, ct).ConfigureAwait(false);
                 int tvdbId = ext?.tvdb_id ?? 0;
-                if (tvdbId <= 0 && !SeerrClient.Enabled)
+                if (tvdbId <= 0 && RequestHub.NeedsTvdbId)
                     tvdbId = await arr.ResolveTvdbId(tmdbId, ext?.imdb_id, t.name ?? t.title, t.first_air_date, ct).ConfigureAwait(false);
-                if (tvdbId <= 0 && !SeerrClient.Enabled)
+                if (tvdbId <= 0 && RequestHub.NeedsTvdbId)
                     throw new InvalidOperationException(DiscoverLanguage.Text("Deze serie staat niet op TheTVDB; Sonarr kan hem daarom niet toevoegen.", "This series is not on TheTVDB, so Sonarr cannot add it.", "Diese Serie ist nicht bei TheTVDB; Sonarr kann sie daher nicht hinzufügen.", "Denne serien finnes ikke på TheTVDB, så Sonarr kan ikke legge den til."));
-                added = await arr.AddSeries(tmdbId, tvdbId, t.name ?? t.title, seasons, ct, embyUserId).ConfigureAwait(false);
+                added = await arr.AddSeries(tmdbId, tvdbId, t.name ?? t.title, seasons, ct, embyUserId, alias).ConfigureAwait(false);
             }
             else
             {
                 var m = await tmdb.GetMovie(tmdbId, ct).ConfigureAwait(false);
-                added = await arr.AddMovie(tmdbId, m.title ?? m.name, YearOf(m.release_date) ?? 0, ct, embyUserId).ConfigureAwait(false);
+                added = await arr.AddMovie(tmdbId, m.title ?? m.name, YearOf(m.release_date) ?? 0, ct, embyUserId, null, alias).ConfigureAwait(false);
             }
             DiscoverDiagnostics.CountRequest(true);
             return added

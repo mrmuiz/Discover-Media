@@ -27,13 +27,14 @@ namespace Emby.Plugins.Discover
         }
 
         /// <summary>
-        /// Limiet per gebruiker (alleen rechtstreeks naar Radarr/Sonarr; Seerr heeft zijn eigen limieten).
+        /// Limiet per gebruiker. Seerr heeft eigen limieten per gebruiker, dus daar geldt deze niet;
+        /// bij Ombi en bij Radarr/Sonarr rechtstreeks wel.
         /// null = mag aanvragen, anders de melding voor de gebruiker.
         /// </summary>
         internal static string LimitMessage(MediaBrowser.Model.Serialization.IJsonSerializer json, object userId, bool isAdmin)
         {
             var cfg = Plugin.GetCurrentConfiguration();
-            if (isAdmin || cfg.RequestLimit <= 0 || SeerrClient.Enabled) return null;
+            if (isAdmin || cfg.RequestLimit <= 0 || RequestHub.HasOwnLimits) return null;
             int days = cfg.RequestLimitDays > 0 ? cfg.RequestLimitDays : 7;
             var since = DateTime.UtcNow.AddDays(-days);
             var dates = RequestStore.DatesSince(json, userId, since);

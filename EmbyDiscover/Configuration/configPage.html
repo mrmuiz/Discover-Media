@@ -5,7 +5,7 @@
     <title>Discover</title>
 </head>
 <body>
-<div data-role="page" class="page type-interior pluginConfigurationPage discoverConfigPage" data-require="emby-input,emby-button,emby-select,emby-checkbox" data-controller="__plugin/discoverconfigjs1392">
+<div data-role="page" class="page type-interior pluginConfigurationPage discoverConfigPage" data-require="emby-input,emby-button,emby-select,emby-checkbox" data-controller="__plugin/discoverconfigjs1393">
     <style>
         .discoverConfigPage .keyWrap { position: relative; }
         .discoverConfigPage .keyWrap input { padding-right: 2.8em; }
@@ -372,6 +372,8 @@
                         <option value="arr">Radarr &amp; Sonarr (rechtstreeks)</option>
                         <option value="seerr">Seerr</option>
                         <option value="seerr-arr">Seerr + Radarr &amp; Sonarr (voor de status)</option>
+                        <option value="ombi">Ombi</option>
+                        <option value="ombi-arr">Ombi + Radarr &amp; Sonarr (voor de status)</option>
                     </select>
                     <div class="fieldDescription" id="desc_requestService">Met Seerr gaan aanvragen naar Seerr, en Seerr stuurt ze door naar zijn eigen Radarr en Sonarr. Radarr en Sonarr hoef je hier dan niet in te stellen.</div>
                 </div>
@@ -406,6 +408,26 @@
                     <div class="fieldDescription testStatus" id="statusSeerr" style="margin-top:.5em;"></div>
                 </div>
                 <div class="fieldDescription" id="desc_seerrAsUser" style="margin-top:1em;">Wie in Emby is aangemeld en ook in Seerr bestaat, vraagt aan op zijn eigen Seerr-account (met de rechten, limieten en goedkeuring uit Seerr). Staat iemand niet in Seerr, dan gaat de aanvraag op naam van de eigenaar van de API key.</div>
+                </div>
+
+                <!-- Ombi -->
+                <div id="ombiFields">
+                <h3 id="hdgOmbi">Ombi</h3>
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused" for="txtOmbiUrl">URL (bijv. http://192.168.1.10:5000)</label>
+                    <input is="emby-input" type="text" id="txtOmbiUrl" />
+                </div>
+                <div class="inputContainer keyWrap">
+                    <label class="inputLabel inputLabelUnfocused" for="txtOmbiKey">API key</label>
+                    <input is="emby-input" type="password" id="txtOmbiKey" autocomplete="new-password" spellcheck="false" />
+                    <button is="emby-button" type="button" class="paper-icon-button-light btnToggleKey" data-target="txtOmbiKey" title="Tonen" aria-label="Tonen"><i class="md-icon">visibility</i></button>
+                </div>
+                <div class="fieldDescription" id="desc_ombiKey" style="margin:-1em 0 1.5em;">Te vinden in Ombi onder Settings &gt; Configuration &gt; General.</div>
+                <div>
+                    <button is="emby-button" type="button" class="raised btnTestOmbi"><span>Test verbinding</span></button>
+                    <div class="fieldDescription testStatus" id="statusOmbi" style="margin-top:.5em;"></div>
+                </div>
+                <div class="fieldDescription" id="desc_ombiAsUser" style="margin-top:1em;">Ombi kan via een API key niet namens een andere gebruiker aanvragen: elke aanvraag komt binnen op naam van de eigenaar van de key, met de naam van de aanvrager erbij als label. De limiet per gebruiker hieronder blijft daarom gelden, en goedkeuring in Ombi volgt de rechten van die key.</div>
                 </div>
 
                 <!-- Radarr & Sonarr -->

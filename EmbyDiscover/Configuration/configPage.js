@@ -95,6 +95,11 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             'With Seerr, requests go to Seerr, which passes them on to its own Radarr and Sonarr. You then do not need to set up Radarr and Sonarr here.',
             'Mit Seerr gehen Anfragen an Seerr, das sie an sein eigenes Radarr und Sonarr weitergibt. Radarr und Sonarr musst du hier dann nicht einrichten.'],
         desc_seerrKey: ['Te vinden in Seerr onder Instellingen > Algemeen.', 'Found in Seerr under Settings > General.', 'Zu finden in Seerr unter Einstellungen > Allgemein.'],
+        desc_ombiKey: ['Te vinden in Ombi onder Settings > Configuration > General.', 'Found in Ombi under Settings > Configuration > General.', 'Zu finden in Ombi unter Settings > Configuration > General.'],
+        desc_ombiAsUser: [
+            'Ombi kan via een API key niet namens een andere gebruiker aanvragen: elke aanvraag komt binnen op naam van de eigenaar van de key, met de naam van de aanvrager erbij als label. De limiet per gebruiker hieronder blijft daarom gelden, en goedkeuring in Ombi volgt de rechten van die key.',
+            'Through an API key Ombi cannot request on behalf of another user: every request comes in under the owner of the key, with the name of the requester added as a label. The per-user limit below therefore stays in effect, and approval in Ombi follows the permissions of that key.',
+            'Über einen API-Schlüssel kann Ombi nicht im Namen eines anderen Benutzers anfordern: Jede Anfrage kommt unter dem Besitzer des Schlüssels an, mit dem Namen des Anfragenden als Label. Das Limit pro Benutzer unten bleibt deshalb aktiv, und die Freigabe in Ombi folgt den Rechten dieses Schlüssels.'],
         desc_seerrAsUser: [
             'Wie in Emby is aangemeld en ook in Seerr bestaat, vraagt aan op zijn eigen Seerr-account (met de rechten, limieten en goedkeuring uit Seerr). Staat iemand niet in Seerr, dan gaat de aanvraag op naam van de eigenaar van de API key.',
             'Whoever is signed in to Emby and also exists in Seerr requests with their own Seerr account (with the permissions, limits and approval from Seerr). If someone is not in Seerr, the request is made as the owner of the API key.',
@@ -187,6 +192,8 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         label('selRequestService', 'Aanvragen via', 'Send requests to', 'Anfragen senden an');
         label('txtSeerrUrl', 'URL (bijv. http://192.168.1.10:5055)', 'URL (e.g. http://192.168.1.10:5055)', 'URL (z. B. http://192.168.1.10:5055)');
         label('txtSeerrKey', 'API key', 'API key', 'API-Schlüssel');
+        label('txtOmbiUrl', 'URL (bijv. http://192.168.1.10:5000)', 'URL (e.g. http://192.168.1.10:5000)', 'URL (z. B. http://192.168.1.10:5000)');
+        label('txtOmbiKey', 'API key', 'API key', 'API-Schlüssel');
         label('txtSabUrl', 'URL (bijv. http://192.168.1.10:8080)', 'URL (e.g. http://192.168.1.10:8080)', 'URL (z. B. http://192.168.1.10:8080)');
         label('txtSabKey', 'API key', 'API key', 'API-Schlüssel');
         label('txtQbitUrl', 'URL (bijv. http://192.168.1.10:8080)', 'URL (e.g. http://192.168.1.10:8080)', 'URL (z. B. http://192.168.1.10:8080)');
@@ -214,8 +221,13 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         if (serviceSelect && serviceSelect.options.length > 2) {
             serviceSelect.options[2].textContent = languageText('Seerr + Radarr & Sonarr (voor de status)', 'Seerr + Radarr & Sonarr (for the status)', 'Seerr + Radarr & Sonarr (für den Status)');
         }
-        var seerrTest = view.querySelector('.btnTestSeerr span');
-        if (seerrTest) { seerrTest.textContent = languageText('Test verbinding', 'Test connection', 'Verbindung testen'); }
+        if (serviceSelect && serviceSelect.options.length > 4) {
+            serviceSelect.options[4].textContent = languageText('Ombi + Radarr & Sonarr (voor de status)', 'Ombi + Radarr & Sonarr (for the status)', 'Ombi + Radarr & Sonarr (für den Status)');
+        }
+        ['.btnTestSeerr span', '.btnTestOmbi span'].forEach(function (sel) {
+            var b = view.querySelector(sel);
+            if (b) { b.textContent = languageText('Test verbinding', 'Test connection', 'Verbindung testen'); }
+        });
         label('selPluginLanguage', 'Plugin-taal', 'Plugin language', 'Plugin-Sprache');
         label('selTmdbLang', 'TMDB-taal', 'TMDB language', 'TMDB-Sprache');
         var diagLabel = el(view, 'lbl_chkShowDiagnostics');
@@ -580,9 +592,26 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
     function updateServiceView(view) {
         var mode = el(view, 'selRequestService').value;
         var seerr = mode === 'seerr' || mode === 'seerr-arr';
+        var ombi = mode === 'ombi' || mode === 'ombi-arr';
+        var plusArr = mode === 'seerr-arr' || mode === 'ombi-arr';
         el(view, 'seerrFields').style.display = seerr ? '' : 'none';
-        el(view, 'arrFields').style.display = (!seerr || mode === 'seerr-arr') ? '' : 'none';
+        el(view, 'ombiFields').style.display = ombi ? '' : 'none';
+        el(view, 'arrFields').style.display = ((!seerr && !ombi) || plusArr) ? '' : 'none';
         var desc = el(view, 'desc_requestService');
+        if (desc && mode === 'ombi') {
+            desc.textContent = languageText(
+                'Met Ombi gaan aanvragen naar Ombi, en Ombi stuurt ze door naar zijn eigen Radarr en Sonarr. Vul Radarr en Sonarr er hieronder bij als je ook wilt zien wat er al in je bibliotheek staat en hoe ver een download is.',
+                'With Ombi, requests go to Ombi, which passes them on to its own Radarr and Sonarr. Add Radarr and Sonarr below as well if you also want to see what is already in your library and how far a download has got.',
+                'Mit Ombi gehen Anfragen an Ombi, das sie an sein eigenes Radarr und Sonarr weitergibt. Trage Radarr und Sonarr unten zusätzlich ein, wenn du auch sehen willst, was schon in deiner Bibliothek steht und wie weit ein Download ist.');
+            return;
+        }
+        if (desc && mode === 'ombi-arr') {
+            desc.textContent = languageText(
+                'Aanvragen gaan naar Ombi. Radarr en Sonarr worden erbij gelezen voor de titels die al in je bibliotheek staan, de voortgang van downloads en het annuleren van een aanvraag. Ombi heeft zelf geen wachtrij die de plugin kan uitlezen.',
+                'Requests go to Ombi. Radarr and Sonarr are read alongside it for the titles already in your library, the progress of downloads and cancelling a request. Ombi itself has no queue the plugin can read.',
+                'Anfragen gehen an Ombi. Radarr und Sonarr werden zusätzlich gelesen für die Titel, die schon in deiner Bibliothek stehen, den Fortschritt von Downloads und das Abbrechen einer Anfrage. Ombi selbst hat keine Warteschlange, die das Plugin lesen kann.');
+            return;
+        }
         if (desc && mode !== 'seerr-arr' && TEXTS.desc_requestService) {
             desc.textContent = languageText(TEXTS.desc_requestService[0], TEXTS.desc_requestService[1], TEXTS.desc_requestService[2]);
         }
@@ -594,16 +623,20 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         }
     }
 
-    function testSeerr(view) {
-        var status = el(view, 'statusSeerr');
-        var url = el(view, 'txtSeerrUrl').value.trim();
-        var key = el(view, 'txtSeerrKey').value.trim();
+    function testSeerr(view) { testRequestService(view, 'Seerr'); }
+    function testOmbi(view) { testRequestService(view, 'Ombi'); }
+
+    // name = 'Seerr' of 'Ombi'; de velden heten statusSeerr/txtSeerrUrl/txtSeerrKey, en zo ook voor Ombi.
+    function testRequestService(view, name) {
+        var status = el(view, 'status' + name);
+        var url = el(view, 'txt' + name + 'Url').value.trim();
+        var key = el(view, 'txt' + name + 'Key').value.trim();
         status.style.color = '';
         status.textContent = languageText('Testen...', 'Testing...', 'Verbindung wird getestet...');
         ApiClient.ajax({
             type: 'POST',
             url: ApiClient.getUrl('Discover/TestConnection'),
-            data: JSON.stringify({ Type: 'Seerr', Url: url, ApiKey: key }),
+            data: JSON.stringify({ Type: name, Url: url, ApiKey: key }),
             contentType: 'application/json',
             dataType: 'json'
         }).then(function (r) {
@@ -615,13 +648,13 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             }
             // Version = "versie|Radarr-servers|Sonarr-servers"
             var parts = String(r.Version || '').split('|');
-            var msg = languageText('Verbonden met Seerr', 'Connected to Seerr', 'Verbunden mit Seerr') + (parts[0] ? ' ' + parts[0] : '');
+            var msg = languageText('Verbonden met ', 'Connected to ', 'Verbunden mit ') + name + (parts[0] ? ' ' + parts[0] : '');
             if (parts.length >= 3) {
-                msg += ' - ' + parts[1] + ' Radarr-, ' + parts[2] + ' Sonarr-' + languageText('server(s) ingesteld in Seerr.', 'server(s) set up in Seerr.', 'Server in Seerr eingerichtet.');
+                msg += ' - ' + parts[1] + ' Radarr-, ' + parts[2] + ' Sonarr-' + languageText('server(s) ingesteld in ', 'server(s) set up in ', 'Server eingerichtet in ') + name + '.';
                 if (parts[1] === '0' || parts[2] === '0') {
-                    msg += ' ' + languageText('Zonder Radarr- of Sonarr-server kan Seerr die aanvragen niet uitvoeren.',
-                        'Without a Radarr or Sonarr server Seerr cannot fulfil those requests.',
-                        'Ohne Radarr- oder Sonarr-Server kann Seerr diese Anfragen nicht ausführen.');
+                    msg += ' ' + languageText('Zonder Radarr- of Sonarr-server kan ' + name + ' die aanvragen niet uitvoeren.',
+                        'Without a Radarr or Sonarr server ' + name + ' cannot fulfil those requests.',
+                        'Ohne Radarr- oder Sonarr-Server kann ' + name + ' diese Anfragen nicht ausführen.');
                 }
             } else {
                 msg += '.';
@@ -629,7 +662,7 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             status.style.color = '#43a047';
             status.textContent = msg;
         }, function (err) {
-            console.error('Discover: Seerr-test mislukt', err);
+            console.error('Discover: ' + name + '-test mislukt', err);
             status.style.color = '#e53935';
             status.textContent = languageText('Mislukt: ', 'Failed: ', 'Fehlgeschlagen: ') + ajaxErrorMessage(err);
         });
@@ -1010,9 +1043,14 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             }, function (err) {
                 console.error('Discover: Emby-taal ophalen mislukt', err);
             });
-            el(view, 'selRequestService').value = c.RequestService === 'seerr' ? (c.SeerrArrStatus ? 'seerr-arr' : 'seerr') : 'arr';
+            el(view, 'selRequestService').value =
+                c.RequestService === 'seerr' ? (c.SeerrArrStatus ? 'seerr-arr' : 'seerr')
+                : c.RequestService === 'ombi' ? (c.SeerrArrStatus ? 'ombi-arr' : 'ombi')
+                : 'arr';
             el(view, 'txtSeerrUrl').value = c.SeerrUrl || '';
             el(view, 'txtSeerrKey').value = c.SeerrApiKey || '';
+            el(view, 'txtOmbiUrl').value = c.OmbiUrl || '';
+            el(view, 'txtOmbiKey').value = c.OmbiApiKey || '';
             el(view, 'txtSabUrl').value = c.SabUrl || '';
             el(view, 'txtSabKey').value = c.SabApiKey || '';
             el(view, 'txtQbitUrl').value = c.QbitUrl || '';
@@ -1038,6 +1076,7 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             if (c.RadarrUrl && c.RadarrApiKey) { testConnection(view, 'Radarr', state); }
             if (c.SonarrUrl && c.SonarrApiKey) { testConnection(view, 'Sonarr', state); }
             if (c.RequestService === 'seerr' && c.SeerrUrl && c.SeerrApiKey) { testSeerr(view); }
+            if (c.RequestService === 'ombi' && c.OmbiUrl && c.OmbiApiKey) { testOmbi(view); }
             hideLoading();
         }, function (err) {
             console.error('Discover: config laden mislukt', err);
@@ -1093,10 +1132,14 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             c.TmdbLanguageMode = tmdbLanguage === 'auto' ? 'auto' : 'manual';
             if (tmdbLanguage !== 'auto') { c.TmdbLanguage = tmdbLanguage; }
             var svc = el(view, 'selRequestService').value;
-            c.RequestService = svc === 'seerr' || svc === 'seerr-arr' ? 'seerr' : 'arr';
-            c.SeerrArrStatus = svc === 'seerr-arr';
+            c.RequestService = svc === 'seerr' || svc === 'seerr-arr' ? 'seerr'
+                : svc === 'ombi' || svc === 'ombi-arr' ? 'ombi'
+                : 'arr';
+            c.SeerrArrStatus = svc === 'seerr-arr' || svc === 'ombi-arr';
             c.SeerrUrl = el(view, 'txtSeerrUrl').value.trim();
             c.SeerrApiKey = el(view, 'txtSeerrKey').value.trim();
+            c.OmbiUrl = el(view, 'txtOmbiUrl').value.trim();
+            c.OmbiApiKey = el(view, 'txtOmbiKey').value.trim();
             c.SabUrl = el(view, 'txtSabUrl').value.trim();
             c.SabApiKey = el(view, 'txtSabKey').value.trim();
             c.QbitUrl = el(view, 'txtQbitUrl').value.trim();
@@ -1273,6 +1316,9 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         });
         view.querySelector('.btnTestSeerr').addEventListener('click', function () {
             testSeerr(view);
+        });
+        view.querySelector('.btnTestOmbi').addEventListener('click', function () {
+            testOmbi(view);
         });
         view.querySelector('.btnTestSab').addEventListener('click', function () {
             testSab(view);

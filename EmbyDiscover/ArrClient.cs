@@ -21,7 +21,7 @@ namespace Emby.Plugins.Discover
     public class ArrQueueDto { public List<ArrQueueItemDto> records { get; set; } }
     public class RecentEntry { public int TmdbId { get; set; } public bool HasFile { get; set; } public string Added { get; set; } }
 
-    /// <summary>Praat met Radarr (films) en Sonarr v4 (series), of in de Seerr-modus via SeerrClient met Seerr.</summary>
+    /// <summary>Praat met Radarr (films) en Sonarr v4 (series), of via RequestHub met Seerr of Ombi.</summary>
     internal class ArrClient
     {
         private static readonly HttpClient Http = new HttpClient(LocalTls.Handler(true)) { Timeout = TimeSpan.FromSeconds(30) };
@@ -65,17 +65,23 @@ namespace Emby.Plugins.Discover
                 : Send(HttpMethod.Post, cfg.RadarrUrl, cfg.RadarrApiKey, path, body, ct);
         }
 
-        /// <summary>In de Seerr-modus: true als Seerr is ingesteld (Seerr regelt dan zowel films als series).</summary>
-        public static bool RadarrConfigured => SeerrClient.Enabled ? SeerrClient.Configured :
+        /// <summary>Radarr zelf is ingevuld (los van de vraag waar aanvragen heen gaan).</summary>
+        public static bool RadarrDirect =>
             !string.IsNullOrWhiteSpace(Plugin.GetCurrentConfiguration().RadarrUrl) &&
             !string.IsNullOrWhiteSpace(Plugin.GetCurrentConfiguration().RadarrApiKey);
 
-        public static bool SonarrConfigured => SeerrClient.Enabled ? SeerrClient.Configured :
+        /// <summary>Sonarr zelf is ingevuld (los van de vraag waar aanvragen heen gaan).</summary>
+        public static bool SonarrDirect =>
             !string.IsNullOrWhiteSpace(Plugin.GetCurrentConfiguration().SonarrUrl) &&
             !string.IsNullOrWhiteSpace(Plugin.GetCurrentConfiguration().SonarrApiKey);
 
-        /// <summary>Naam van de dienst waar aanvragen heen gaan, voor meldingen: "Seerr", of "Sonarr"/"Radarr".</summary>
-        public static string ServiceName(bool tv) => SeerrClient.Enabled ? "Seerr" : (tv ? "Sonarr" : "Radarr");
+        /// <summary>Bij een aanvraagdienst (Seerr/Ombi): true als die is ingesteld; die regelt dan films en series.</summary>
+        public static bool RadarrConfigured => RequestHub.External ? RequestHub.Configured : RadarrDirect;
+
+        public static bool SonarrConfigured => RequestHub.External ? RequestHub.Configured : SonarrDirect;
+
+        /// <summary>Naam van de dienst waar aanvragen heen gaan, voor meldingen: "Seerr", "Ombi", of "Sonarr"/"Radarr".</summary>
+        public static string ServiceName(bool tv) => RequestHub.External ? RequestHub.Name : (tv ? "Sonarr" : "Radarr");
 
         /// <summary>Spaties weg, geen slash aan het eind en http:// ervoor als het schema ontbreekt.</summary>
         private static string NormalizeBase(string baseUrl)
@@ -131,7 +137,32 @@ namespace Emby.Plugins.Discover
         public async Task<Dictionary<int, bool>> GetMovieStates(CancellationToken ct)
         {
             if (!RadarrConfigured) return new Dictionary<int, bool>();
-            if (SeerrClient.Enabled) return await SeerrClient.GetStates(_json, false, ct).ConfigureAwait(false);
+            if (RequestHub.External)
+            {
+                var states = await RequestHub.GetStates(_json, false, ct).ConfigureAwait(false);
+                // Ombi kent alleen wat via Ombi is aangevraagd. Staat Radarr er ook bij, dan vult die de rest
+                // van de bibliotheek aan, zodat films die er al stonden ook hun vinkje krijgen.
+                if (OmbiClient.Enabled && RadarrDirect)
+                {
+                    try
+                    {
+                        foreach (var kv in await DirectMovieStates(ct).ConfigureAwait(false))
+                            if (kv.Value || !states.ContainsKey(kv.Key)) states[kv.Key] = kv.Value;
+                    }
+                    catch (Exception ex)
+                    {
+                        if (ex is OperationCanceledException) throw;
+                        DiscoverDiagnostics.Add("ERROR Radarr next to Ombi: " + ex.Message);
+                    }
+                }
+                return states;
+            }
+            return await DirectMovieStates(ct).ConfigureAwait(false);
+        }
+
+        /// <summary>De filmlijst van Radarr zelf.</summary>
+        private async Task<Dictionary<int, bool>> DirectMovieStates(CancellationToken ct)
+        {
             var cachedNow = _movieCache;
             if (cachedNow != null && DateTime.UtcNow - _movieCacheAt < CacheTtl) return cachedNow;
 
@@ -159,13 +190,34 @@ namespace Emby.Plugins.Discover
         public async Task<Dictionary<int, bool>> GetSeriesStates(CancellationToken ct)
         {
             if (!SonarrConfigured) return new Dictionary<int, bool>();
-            if (SeerrClient.Enabled)
+            if (RequestHub.External)
             {
-                var seerrStates = await SeerrClient.GetStates(_json, true, ct).ConfigureAwait(false);
-                var seerrPartial = await SeerrClient.GetPartial(_json, ct).ConfigureAwait(false);
-                lock (_seriesCacheLock) { _seriesPartial = seerrPartial; }
-                return seerrStates;
+                var states = await RequestHub.GetStates(_json, true, ct).ConfigureAwait(false);
+                var partial = await RequestHub.GetPartial(_json, ct).ConfigureAwait(false);
+                // Zie GetMovieStates: Sonarr vult bij Ombi de series aan die er al stonden.
+                if (OmbiClient.Enabled && SonarrDirect)
+                {
+                    try
+                    {
+                        foreach (var kv in await DirectSeriesStates(ct).ConfigureAwait(false))
+                            if (kv.Value || !states.ContainsKey(kv.Key)) states[kv.Key] = kv.Value;
+                        lock (_seriesCacheLock) { foreach (var id in _seriesPartial) partial.Add(id); }
+                    }
+                    catch (Exception ex)
+                    {
+                        if (ex is OperationCanceledException) throw;
+                        DiscoverDiagnostics.Add("ERROR Sonarr next to Ombi: " + ex.Message);
+                    }
+                }
+                lock (_seriesCacheLock) { _seriesPartial = partial; }
+                return states;
             }
+            return await DirectSeriesStates(ct).ConfigureAwait(false);
+        }
+
+        /// <summary>De serielijst van Sonarr zelf.</summary>
+        private async Task<Dictionary<int, bool>> DirectSeriesStates(CancellationToken ct)
+        {
             var cachedNow = _seriesCache;
             if (cachedNow != null && DateTime.UtcNow - _seriesCacheAt < CacheTtl) return cachedNow;
 
@@ -219,7 +271,30 @@ namespace Emby.Plugins.Discover
         public async Task<Dictionary<int, SonarrSeasonDto>> GetSeasonStates(int tmdbId, CancellationToken ct)
         {
             if (!SonarrConfigured) return new Dictionary<int, SonarrSeasonDto>();
-            if (SeerrClient.Enabled) return await SeerrClient.GetSeasonStates(_json, tmdbId, ct).ConfigureAwait(false);
+            if (RequestHub.External)
+            {
+                var seasons = await RequestHub.GetSeasonStates(_json, tmdbId, ct).ConfigureAwait(false);
+                // Sonarr weet bij Ombi welke afleveringen er echt staan; de aanvraag in Ombi vult de rest aan.
+                if (OmbiClient.Enabled && SonarrDirect)
+                {
+                    try
+                    {
+                        await DirectSeriesStates(ct).ConfigureAwait(false);
+                        lock (_seriesCacheLock)
+                        {
+                            Dictionary<int, SonarrSeasonDto> direct;
+                            if (_seriesSeasonCache.TryGetValue(tmdbId, out direct))
+                                foreach (var kv in direct) seasons[kv.Key] = kv.Value;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        if (ex is OperationCanceledException) throw;
+                        DiscoverDiagnostics.Add("ERROR Sonarr seasons next to Ombi: " + ex.Message);
+                    }
+                }
+                return seasons;
+            }
             await GetSeriesStates(ct).ConfigureAwait(false);
             lock (_seriesCacheLock)
             {
@@ -233,7 +308,13 @@ namespace Emby.Plugins.Discover
         /// <summary>Laatst toegevoegde titels in Radarr/Sonarr (nieuwste eerst).</summary>
         public async Task<List<RecentEntry>> GetRecent(bool tv, CancellationToken ct)
         {
-            if (SeerrClient.Enabled) return await SeerrClient.GetRecent(_json, tv, ct).ConfigureAwait(false);
+            // Bij Ombi zijn de aanvragen geen goede "onlangs toegevoegd"-lijst; staat Radarr/Sonarr erbij, neem die.
+            if (OmbiClient.Enabled && (tv ? SonarrDirect : RadarrDirect))
+            {
+                if (tv) await DirectSeriesStates(ct).ConfigureAwait(false); else await DirectMovieStates(ct).ConfigureAwait(false);
+                return new List<RecentEntry>(tv ? _seriesRecent : _movieRecent);
+            }
+            if (RequestHub.External) return await RequestHub.GetRecent(_json, tv, ct).ConfigureAwait(false);
             if (tv) await GetSeriesStates(ct).ConfigureAwait(false); else await GetMovieStates(ct).ConfigureAwait(false);
             return new List<RecentEntry>(tv ? _seriesRecent : _movieRecent);
         }
@@ -285,7 +366,7 @@ namespace Emby.Plugins.Discover
         {
             _movieCache = null;
             _seriesCache = null;
-            SeerrClient.Invalidate();
+            RequestHub.Invalidate();
             lock (_seriesCacheLock) { _seriesSeasonCache = new Dictionary<int, Dictionary<int, SonarrSeasonDto>>(); }
         }
 
@@ -322,15 +403,15 @@ namespace Emby.Plugins.Discover
             return "released";
         }
 
-        public async Task<bool> AddMovie(int tmdbId, string title, int year, CancellationToken ct, object embyUserId = null, string minimumAvailability = null)
+        public async Task<bool> AddMovie(int tmdbId, string title, int year, CancellationToken ct, object embyUserId = null, string minimumAvailability = null, string alias = null)
         {
-            if (SeerrClient.Enabled)
+            if (RequestHub.External)
             {
-                if (await SeerrClient.Request(_json, false, tmdbId, 0, null, embyUserId, ct).ConfigureAwait(false)) return true;
-                // Stond al in Seerr: een mislukte aanvraag opnieuw proberen en, als Radarr ook is ingesteld, de film daar
-                // op gemonitord zetten en laten zoeken (Seerr zoekt zelf niet opnieuw).
-                bool retried = await SeerrClient.RetryFailed(_json, false, tmdbId, ct).ConfigureAwait(false);
-                bool searched = RadarrConfigured && await ExtendExistingMovie(tmdbId, title, ct).ConfigureAwait(false);
+                if (await RequestHub.Request(_json, false, tmdbId, 0, null, embyUserId, alias, ct).ConfigureAwait(false)) return true;
+                // Stond er al: een mislukte aanvraag opnieuw proberen en, als Radarr ook is ingesteld, de film daar
+                // op gemonitord zetten en laten zoeken (de aanvraagdienst zoekt zelf niet opnieuw).
+                bool retried = await RequestHub.RetryFailed(_json, false, tmdbId, ct).ConfigureAwait(false);
+                bool searched = RadarrDirect && await ExtendExistingMovie(tmdbId, title, ct).ConfigureAwait(false);
                 return retried || searched;
             }
             if (!RadarrConfigured) throw new InvalidOperationException(DiscoverLanguage.Text("Radarr is niet ingesteld.", "Radarr is not configured.", "Radarr ist nicht eingerichtet."));
@@ -457,15 +538,15 @@ namespace Emby.Plugins.Discover
             return 0;
         }
 
-        public async Task<bool> AddSeries(int tmdbId, int tvdbId, string title, int[] seasons, CancellationToken ct, object embyUserId = null)
+        public async Task<bool> AddSeries(int tmdbId, int tvdbId, string title, int[] seasons, CancellationToken ct, object embyUserId = null, string alias = null)
         {
-            if (SeerrClient.Enabled)
+            if (RequestHub.External)
             {
-                if (await SeerrClient.Request(_json, true, tmdbId, tvdbId, seasons, embyUserId, ct).ConfigureAwait(false)) return true;
-                // Stond al in Seerr: mislukte aanvraag opnieuw proberen en, als Sonarr ook is ingesteld, de seizoenen daar
+                if (await RequestHub.Request(_json, true, tmdbId, tvdbId, seasons, embyUserId, alias, ct).ConfigureAwait(false)) return true;
+                // Stond er al: mislukte aanvraag opnieuw proberen en, als Sonarr ook is ingesteld, de seizoenen daar
                 // op gemonitord zetten en ontbrekende afleveringen laten zoeken.
-                bool retried = await SeerrClient.RetryFailed(_json, true, tmdbId, ct).ConfigureAwait(false);
-                bool searched = SonarrConfigured && await ExtendExistingSeries(tmdbId, tvdbId, title, seasons, ct).ConfigureAwait(false);
+                bool retried = await RequestHub.RetryFailed(_json, true, tmdbId, ct).ConfigureAwait(false);
+                bool searched = SonarrDirect && await ExtendExistingSeries(tmdbId, tvdbId, title, seasons, ct).ConfigureAwait(false);
                 return retried || searched;
             }
             if (!SonarrConfigured) throw new InvalidOperationException(DiscoverLanguage.Text("Sonarr is niet ingesteld.", "Sonarr is not configured.", "Sonarr ist nicht eingerichtet."));
@@ -811,8 +892,27 @@ namespace Emby.Plugins.Discover
         /// <returns>true = verwijderd uit Radarr, false = stond er niet in.</returns>
         public async Task<bool> RemoveMovie(int tmdbId, bool deleteFiles, CancellationToken ct)
         {
-            if (SeerrClient.Enabled) return await SeerrClient.Remove(_json, false, tmdbId, deleteFiles, ct).ConfigureAwait(false);
-            if (!RadarrConfigured) throw new InvalidOperationException(DiscoverLanguage.Text("Radarr is niet ingesteld.", "Radarr is not configured.", "Radarr ist nicht eingerichtet."));
+            if (RequestHub.External)
+            {
+                bool gone = await RequestHub.Remove(_json, false, tmdbId, deleteFiles, ct).ConfigureAwait(false);
+                // Ombi haalt een film niet uit Radarr; staat Radarr erbij, dan ruimt de plugin dat zelf op.
+                if (OmbiClient.Enabled && RadarrDirect)
+                {
+                    try { gone = await RemoveMovieDirect(tmdbId, deleteFiles, ct).ConfigureAwait(false) || gone; }
+                    catch (Exception ex)
+                    {
+                        if (ex is OperationCanceledException) throw;
+                        DiscoverDiagnostics.Add("ERROR Radarr removal next to Ombi: " + ex.Message);
+                    }
+                }
+                return gone;
+            }
+            return await RemoveMovieDirect(tmdbId, deleteFiles, ct).ConfigureAwait(false);
+        }
+
+        private async Task<bool> RemoveMovieDirect(int tmdbId, bool deleteFiles, CancellationToken ct)
+        {
+            if (!RadarrDirect) throw new InvalidOperationException(DiscoverLanguage.Text("Radarr is niet ingesteld.", "Radarr is not configured.", "Radarr ist nicht eingerichtet."));
             var cfg = Plugin.GetCurrentConfiguration();
 
             var text = await Send(HttpMethod.Get, cfg.RadarrUrl, cfg.RadarrApiKey, "/api/v3/movie", null, ct).ConfigureAwait(false);
@@ -831,8 +931,27 @@ namespace Emby.Plugins.Discover
         /// <returns>true = verwijderd uit Sonarr, false = stond er niet in.</returns>
         public async Task<bool> RemoveSeries(int tmdbId, bool deleteFiles, CancellationToken ct)
         {
-            if (SeerrClient.Enabled) return await SeerrClient.Remove(_json, true, tmdbId, deleteFiles, ct).ConfigureAwait(false);
-            if (!SonarrConfigured) throw new InvalidOperationException(DiscoverLanguage.Text("Sonarr is niet ingesteld.", "Sonarr is not configured.", "Sonarr ist nicht eingerichtet."));
+            if (RequestHub.External)
+            {
+                bool gone = await RequestHub.Remove(_json, true, tmdbId, deleteFiles, ct).ConfigureAwait(false);
+                // Zie RemoveMovie: Ombi raakt Sonarr niet aan.
+                if (OmbiClient.Enabled && SonarrDirect)
+                {
+                    try { gone = await RemoveSeriesDirect(tmdbId, deleteFiles, ct).ConfigureAwait(false) || gone; }
+                    catch (Exception ex)
+                    {
+                        if (ex is OperationCanceledException) throw;
+                        DiscoverDiagnostics.Add("ERROR Sonarr removal next to Ombi: " + ex.Message);
+                    }
+                }
+                return gone;
+            }
+            return await RemoveSeriesDirect(tmdbId, deleteFiles, ct).ConfigureAwait(false);
+        }
+
+        private async Task<bool> RemoveSeriesDirect(int tmdbId, bool deleteFiles, CancellationToken ct)
+        {
+            if (!SonarrDirect) throw new InvalidOperationException(DiscoverLanguage.Text("Sonarr is niet ingesteld.", "Sonarr is not configured.", "Sonarr ist nicht eingerichtet."));
             var cfg = Plugin.GetCurrentConfiguration();
 
             var text = await Send(HttpMethod.Get, cfg.SonarrUrl, cfg.SonarrApiKey, "/api/v3/series", null, ct).ConfigureAwait(false);

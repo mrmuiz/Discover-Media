@@ -146,6 +146,15 @@ namespace Emby.Plugins.Discover
                     return result;
                 }
 
+                if (string.Equals(request.Type, "Ombi", StringComparison.OrdinalIgnoreCase))
+                {
+                    // Version = "versie|aantal Radarr-servers|aantal Sonarr-servers"
+                    result.Version = await OmbiClient.Test(_json, request.Url, request.ApiKey, System.Threading.CancellationToken.None).ConfigureAwait(false);
+                    result.AppName = "Ombi";
+                    result.Success = true;
+                    return result;
+                }
+
                 if (string.Equals(request.Type, "Seerr", StringComparison.OrdinalIgnoreCase))
                 {
                     // Version = "versie|aantal Radarr-servers|aantal Sonarr-servers" (aantallen alleen als Seerr ze geeft)

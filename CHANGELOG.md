@@ -1,3 +1,10 @@
+## Version 1.4.0.23 (beta)
+
+- New: **Ombi** can now be used as the request service, next to Radarr/Sonarr and Seerr. Pick it under *Requests > Request through*, fill in the URL and the API key from Ombi's *Settings > Configuration > General*, and press **Test connection**. Movies, series and single seasons are requested through Ombi's own API, and the request status fills the marks on the Discover page and the channel.
+- Note on Ombi: through an API key Ombi cannot request on behalf of another user, so every request arrives under the owner of the key with the requester's name added as a label. Ombi's per-user quotas therefore do not apply per person, and Discover's own request limit stays in effect instead.
+- Note on Ombi: Ombi has no queue the plugin can read, and deleting a request does not remove the title from Radarr or Sonarr. Choose **Ombi + Radarr & Sonarr** and fill those in as well, and Discover uses them for the titles already in your library, the download progress and cancelling a request.
+- Change: page names bumped (`discoverconfig1112`, `discoverconfigjs1393`, `discoverstatusjs1104`).
+
 ## Version 1.4.0.22 (beta)
 
 - Fix: playing a season request card now submits only that season to Sonarr or Seerr.

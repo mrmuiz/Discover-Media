@@ -216,9 +216,9 @@ define(['emby-button'], function () {
                     (r.TmdbKeySet ? ok : bad)(lines, 'TMDB ' + text('key ingesteld: ', 'key configured: ', 'Schlüssel eingerichtet: ') + (r.TmdbKeySet ? text('ja', 'yes', 'ja') : text('NEE', 'NO', 'NEIN')));
                     info(lines, text('Plugin-/Emby-taal: ', 'Plugin/Emby language: ', 'Plugin-/Emby-Sprache: ') + r.PluginLanguage + '; ' + text('TMDB-taal: ', 'TMDB language: ', 'TMDB-Sprache: ') + r.TmdbLanguage);
                     info(lines, text('Debuginformatie op Discover-/detailpagina\'s: ', 'Diagnostics on Discover/item pages: ', 'Diagnoseinformationen auf Discover-/Detailseiten: ') + (r.ShowDiagnostics ? text('aan', 'on', 'ein') : text('uit', 'off', 'aus')));
-                    if (r.RequestService === 'Seerr') {
-                        info(lines, text('Aanvragen gaan via: Seerr', 'Requests go through: Seerr', 'Anfragen laufen über: Seerr'));
-                        (r.RadarrSet ? ok : bad)(lines, 'Seerr ' + text('ingesteld: ', 'configured: ', 'eingerichtet: ') + (r.RadarrSet ? text('ja', 'yes', 'ja') : text('NEE', 'NO', 'NEIN')));
+                    if (r.RequestService === 'Seerr' || r.RequestService === 'Ombi') {
+                        info(lines, text('Aanvragen gaan via: ', 'Requests go through: ', 'Anfragen laufen über: ') + r.RequestService);
+                        (r.RadarrSet ? ok : bad)(lines, r.RequestService + ' ' + text('ingesteld: ', 'configured: ', 'eingerichtet: ') + (r.RadarrSet ? text('ja', 'yes', 'ja') : text('NEE', 'NO', 'NEIN')));
                     } else {
                         (r.RadarrSet ? ok : bad)(lines, 'Radarr ' + text('ingesteld: ', 'configured: ', 'eingerichtet: ') + (r.RadarrSet ? text('ja', 'yes', 'ja') : text('NEE', 'NO', 'NEIN')));
                         (r.SonarrSet ? ok : bad)(lines, 'Sonarr ' + text('ingesteld: ', 'configured: ', 'eingerichtet: ') + (r.SonarrSet ? text('ja', 'yes', 'ja') : text('NEE', 'NO', 'NEIN')));
@@ -256,16 +256,22 @@ define(['emby-button'], function () {
                     if (r && r.Success) { ok(lines, text('TMDB werkt', 'TMDB is working', 'TMDB funktioniert')); } else { bad(lines, 'TMDB: ' + ((r && r.Error) || text('onbekende fout', 'unknown error', 'unbekannter Fehler'))); }
                 });
             }));
-            if (cfg.RequestService === 'seerr') {
-                tests.push(step(lines, text('Seerr testen', 'Test Seerr', 'Seerr testen'), function () {
-                    if (!cfg.SeerrUrl || !cfg.SeerrApiKey) { bad(lines, 'Seerr: ' + text('URL of key ontbreekt', 'URL or key missing', 'URL oder Schlüssel fehlt')); return; }
-                    return postJson('Discover/TestConnection', { Type: 'Seerr', Url: cfg.SeerrUrl, ApiKey: cfg.SeerrApiKey }).then(function (r) {
-                        if (r && r.Success) { ok(lines, 'Seerr ' + String(r.Version || '').split('|')[0] + ' ' + text('bereikbaar op ', 'reachable at ', 'erreichbar unter ') + cfg.SeerrUrl); }
-                        else { bad(lines, 'Seerr ' + text('op ', 'at ', 'unter ') + cfg.SeerrUrl + ': ' + ((r && r.Error) || text('onbekende fout', 'unknown error', 'unbekannter Fehler'))); }
-                    });
-                }));
+            if (cfg.RequestService === 'seerr' || cfg.RequestService === 'ombi') {
+                (function () {
+                    var name = cfg.RequestService === 'ombi' ? 'Ombi' : 'Seerr';
+                    var url = cfg.RequestService === 'ombi' ? cfg.OmbiUrl : cfg.SeerrUrl;
+                    var key = cfg.RequestService === 'ombi' ? cfg.OmbiApiKey : cfg.SeerrApiKey;
+                    tests.push(step(lines, text(name + ' testen', 'Test ' + name, name + ' testen'), function () {
+                        if (!url || !key) { bad(lines, name + ': ' + text('URL of key ontbreekt', 'URL or key missing', 'URL oder Schlüssel fehlt')); return; }
+                        return postJson('Discover/TestConnection', { Type: name, Url: url, ApiKey: key }).then(function (r) {
+                            if (r && r.Success) { ok(lines, name + ' ' + String(r.Version || '').split('|')[0] + ' ' + text('bereikbaar op ', 'reachable at ', 'erreichbar unter ') + url); }
+                            else { bad(lines, name + ' ' + text('op ', 'at ', 'unter ') + url + ': ' + ((r && r.Error) || text('onbekende fout', 'unknown error', 'unbekannter Fehler'))); }
+                        });
+                    }));
+                })();
             }
-            (cfg.RequestService === 'seerr' ? [] : ['Radarr', 'Sonarr']).forEach(function (kind) {
+            // Radarr en Sonarr worden ook getest als ze naast Ombi/Seerr zijn ingevuld (voor status en voortgang).
+            ((cfg.RequestService === 'seerr' || cfg.RequestService === 'ombi') && !cfg.SeerrArrStatus ? [] : ['Radarr', 'Sonarr']).forEach(function (kind) {
                 tests.push(step(lines, text(kind + ' testen', 'Test ' + kind, kind + ' testen'), function () {
                     var url = cfg[kind + 'Url'], key = cfg[kind + 'ApiKey'];
                     if (!url || !key) { bad(lines, kind + ': ' + text('URL of key ontbreekt', 'URL or key missing', 'URL oder Schlüssel fehlt')); return; }

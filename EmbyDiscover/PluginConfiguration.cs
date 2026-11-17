@@ -34,12 +34,17 @@ namespace Emby.Plugins.Discover
         public int SonarrQualityProfileId { get; set; } = 0;
         public string SonarrRootFolder { get; set; } = "";
 
-        /// <summary>Waarheen aanvragen gaan: "arr" = rechtstreeks naar Radarr en Sonarr (standaard), "seerr" = via Seerr.</summary>
+        /// <summary>Waarheen aanvragen gaan: "arr" = rechtstreeks naar Radarr en Sonarr (standaard), "seerr" = via Seerr, "ombi" = via Ombi.</summary>
         public string RequestService { get; set; } = "arr";
         /// <summary>Alleen bij Seerr: ook de wachtrij van Radarr en Sonarr lezen voor de echte importfases en de reden bij een probleem.</summary>
         public bool SeerrArrStatus { get; set; } = false;
         public string SeerrUrl { get; set; } = "";
         public string SeerrApiKey { get; set; } = "";
+
+        /// <summary>Ombi: adres van de server, bijvoorbeeld http://192.168.1.10:5000.</summary>
+        public string OmbiUrl { get; set; } = "";
+        /// <summary>Ombi: de API key uit Settings > Configuration > General.</summary>
+        public string OmbiApiKey { get; set; } = "";
 
         /// <summary>Optioneel: SABnzbd voor snelheid en de fases na 100% (verifiëren, repareren, uitpakken, verplaatsen, script).</summary>
         public string SabUrl { get; set; } = "";

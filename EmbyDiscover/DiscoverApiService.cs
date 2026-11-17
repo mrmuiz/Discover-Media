@@ -477,9 +477,9 @@ namespace Emby.Plugins.Discover
                 TmdbLanguage = TmdbClient.Language(),
                 RadarrSet = ArrClient.RadarrConfigured,
                 SonarrSet = ArrClient.SonarrConfigured,
-                RequestService = SeerrClient.Enabled ? "Seerr" : "",
-                Seerr4kMovie = SeerrClient.Has4k(_json, false),
-                Seerr4kTv = SeerrClient.Has4k(_json, true),
+                RequestService = RequestHub.Name ?? "",
+                Seerr4kMovie = RequestHub.Has4k(_json, false),
+                Seerr4kTv = RequestHub.Has4k(_json, true),
                 RadarrMinimumAvailability = ArrClient.MinimumAvailability(null),
                 PosterShowYear = cfg.PosterShowYear,
                 ShowSpecials = cfg.ShowSpecials,
@@ -1221,7 +1221,7 @@ namespace Emby.Plugins.Discover
                 bool tv = string.Equals(request.Type, "tv", StringComparison.OrdinalIgnoreCase);
                 bool added;
                 TmdbItem requested;
-                if (request.Is4k && SeerrClient.Enabled)
+                if (request.Is4k && RequestHub.External)
                 {
                     requested = tv ? await _tmdb.GetTv(request.TmdbId, CancellationToken.None).ConfigureAwait(false)
                                    : await _tmdb.GetMovie(request.TmdbId, CancellationToken.None).ConfigureAwait(false);
@@ -1231,25 +1231,25 @@ namespace Emby.Plugins.Discover
                         try { var ext4k = await _tmdb.GetTvExternalIds(request.TmdbId, CancellationToken.None).ConfigureAwait(false); tvdb = ext4k?.tvdb_id ?? 0; }
                         catch { }
                     }
-                    added = await SeerrClient.Request(_json, tv, request.TmdbId, tvdb, request.Seasons, requesterGuid, CancellationToken.None, true).ConfigureAwait(false);
+                    added = await RequestHub.Request(_json, tv, request.TmdbId, tvdb, request.Seasons, requesterGuid, requesterName, CancellationToken.None, true).ConfigureAwait(false);
                 }
                 else if (tv)
                 {
                     var t = await _tmdb.GetTv(request.TmdbId, CancellationToken.None).ConfigureAwait(false);
                     var ext = await _tmdb.GetTvExternalIds(request.TmdbId, CancellationToken.None).ConfigureAwait(false);
                     int tvdbId = ext?.tvdb_id ?? 0;
-                    if (tvdbId <= 0 && !SeerrClient.Enabled)
+                    if (tvdbId <= 0 && RequestHub.NeedsTvdbId)
                         tvdbId = await _arr.ResolveTvdbId(request.TmdbId, ext?.imdb_id, t.name ?? t.title, t.first_air_date, CancellationToken.None).ConfigureAwait(false);
-                    if (tvdbId <= 0 && !SeerrClient.Enabled)
+                    if (tvdbId <= 0 && RequestHub.NeedsTvdbId)
                         throw new InvalidOperationException(DiscoverLanguage.Text("Deze serie staat niet op TheTVDB; Sonarr kan hem daarom niet toevoegen.", "This series is not on TheTVDB, so Sonarr cannot add it.", "Diese Serie ist nicht bei TheTVDB; Sonarr kann sie daher nicht hinzufügen.", "Denne serien finnes ikke på TheTVDB, så Sonarr kan ikke legge den til."));
-                    added = await _arr.AddSeries(request.TmdbId, tvdbId, t.name ?? t.title, request.Seasons, CancellationToken.None, requesterGuid).ConfigureAwait(false);
+                    added = await _arr.AddSeries(request.TmdbId, tvdbId, t.name ?? t.title, request.Seasons, CancellationToken.None, requesterGuid, requesterName).ConfigureAwait(false);
                     requested = t;
                 }
                 else
                 {
                     var m = await _tmdb.GetMovie(request.TmdbId, CancellationToken.None).ConfigureAwait(false);
                     added = await _arr.AddMovie(request.TmdbId, m.title ?? m.name, YearOf(m.release_date), CancellationToken.None, requesterGuid,
-                        isAdminRequester ? request.MinimumAvailability : null).ConfigureAwait(false);
+                        isAdminRequester ? request.MinimumAvailability : null, requesterName).ConfigureAwait(false);
                     requested = m;
                 }
 
@@ -1261,10 +1261,10 @@ namespace Emby.Plugins.Discover
                 if (tv && request.Seasons != null && request.Seasons.Length > 0)
                     seasonNote = " (" + DiscoverLanguage.Text("seizoen ", "season ", "Staffel ") +
                         string.Join(", ", request.Seasons.OrderBy(x => x)) + ")";
-                if (request.Is4k && SeerrClient.Enabled) seasonNote += " (4K)";
+                if (request.Is4k && RequestHub.External) seasonNote += " (4K)";
                 res.Message = added
                     ? DiscoverLanguage.Text("Aangevraagd", "Requested", "Angefordert") + seasonNote +
-                        (SeerrClient.WaitsForApproval(tv, request.TmdbId)
+                        (RequestHub.WaitsForApproval(tv, request.TmdbId)
                             ? DiscoverLanguage.Text(" (wacht op goedkeuring)", " (awaiting approval)", " (wartet auf Freigabe)")
                             : "")
                     : DiscoverLanguage.Text("Stond al in ", "Already in ", "Bereits in ") + ArrClient.ServiceName(tv);
