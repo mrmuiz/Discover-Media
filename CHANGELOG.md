@@ -1,4 +1,4 @@
-## Version 1.4.0.23 (beta)
+## Version 1.4.0.23
 
 - New: **Ombi** can now be used as the request service, next to Radarr/Sonarr and Seerr. Pick it under *Requests > Request through*, fill in the URL and the API key from Ombi's *Settings > Configuration > General*, and press **Test connection**. Movies, series and single seasons are requested through Ombi's own API, and the request status fills the marks on the Discover page and the channel.
 - Note on Ombi: through an API key Ombi cannot request on behalf of another user, so every request arrives under the owner of the key with the requester's name added as a label. Ombi's per-user quotas therefore do not apply per person, and Discover's own request limit stays in effect instead.
