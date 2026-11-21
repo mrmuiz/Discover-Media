@@ -192,7 +192,7 @@ namespace Emby.Plugins.Discover
                     Downloading = st == "downloading" || st == "forceddl" || st == "metadl" || st == "forcedmetadl" || st == "stalleddl",
                     Paused = st == "pauseddl" || st == "stoppeddl",
                     Failed = st == "error" || st == "missingfiles",
-                    Reason = st == "error" || st == "missingfiles" ? "qBittorrent: " + (st == "missingfiles" ? DiscoverLanguage.Text("bestanden ontbreken", "files missing", "Dateien fehlen") : DiscoverLanguage.Text("fout", "error", "Fehler")) : null,
+                    Reason = st == "error" || st == "missingfiles" ? "qBittorrent: " + (st == "missingfiles" ? DiscoverLanguage.T("dl.files_missing") : DiscoverLanguage.T("dl.error")) : null,
                     Stage = st.StartsWith("checking", StringComparison.Ordinal) ? "verifying" : st == "moving" ? "moving" : null,
                     Speed = t.dlspeed,
                     Seeds = Math.Max(t.num_complete, t.num_seeds),
@@ -206,7 +206,7 @@ namespace Emby.Plugins.Discover
 
         internal static async Task<string> Test(IJsonSerializer json, string url, string user, string pass, string apiKey, CancellationToken ct)
         {
-            if (string.IsNullOrWhiteSpace(url)) throw new InvalidOperationException(DiscoverLanguage.Text("Vul eerst een URL in.", "Enter a URL first.", "Zuerst eine URL eingeben.", "Skriv inn en URL først."));
+            if (string.IsNullOrWhiteSpace(url)) throw new InvalidOperationException(DiscoverLanguage.T("dl.enter_a_url_first"));
             _failUntil = DateTime.MinValue;
             _failFor = null;
             _cookie = null;
@@ -272,13 +272,13 @@ namespace Emby.Plugins.Discover
                             if (resp.Headers.TryGetValues("X-Transmission-Session-Id", out vals)) _session = vals.FirstOrDefault();
                             continue;
                         }
-                        if ((int)resp.StatusCode == 401) throw new InvalidOperationException(DiscoverLanguage.Text("Transmission: gebruikersnaam of wachtwoord klopt niet (401).", "Transmission: wrong username or password (401).", "Transmission: Benutzername oder Passwort falsch (401)."));
-                        if (!resp.IsSuccessStatusCode) throw new InvalidOperationException(DiscoverLanguage.Text("Transmission gaf HTTP ", "Transmission returned HTTP ", "Transmission antwortete mit HTTP ") + (int)resp.StatusCode + " " + resp.ReasonPhrase + ".");
+                        if ((int)resp.StatusCode == 401) throw new InvalidOperationException(DiscoverLanguage.T("dl.transmission_wrong_username_or_password"));
+                        if (!resp.IsSuccessStatusCode) throw new InvalidOperationException(DiscoverLanguage.T("dl.transmission_returned_http") + (int)resp.StatusCode + " " + resp.ReasonPhrase + ".");
                         return await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
                     }
                 }
             }
-            throw new InvalidOperationException(DiscoverLanguage.Text("Transmission: geen sessie gekregen (409).", "Transmission: no session received (409).", "Transmission: keine Sitzung erhalten (409)."));
+            throw new InvalidOperationException(DiscoverLanguage.T("dl.transmission_no_session_received_409"));
         }
 
         internal static async Task<SabSnapshot> Fetch(IJsonSerializer json, CancellationToken ct)
@@ -288,7 +288,7 @@ namespace Emby.Plugins.Discover
                 "{\"method\":\"torrent-get\",\"arguments\":{\"fields\":[\"hashString\",\"name\",\"status\",\"rateDownload\",\"uploadRatio\",\"percentDone\",\"error\",\"errorString\",\"trackerStats\"]}}", ct).ConfigureAwait(false);
             var r = json.DeserializeFromString<TransResultDto>(text);
             if (r == null || r.arguments == null || r.arguments.torrents == null)
-                throw new InvalidOperationException(DiscoverLanguage.Text("Transmission gaf geen torrentlijst terug", "Transmission returned no torrent list", "Transmission lieferte keine Torrent-Liste") + (r != null && !string.IsNullOrWhiteSpace(r.result) ? " (" + r.result + ")" : "") + ".");
+                throw new InvalidOperationException(DiscoverLanguage.T("dl.transmission_returned_no_torrent_list") + (r != null && !string.IsNullOrWhiteSpace(r.result) ? " (" + r.result + ")" : "") + ".");
             var snap = new SabSnapshot { Source = "Transmission" };
             foreach (var t in r.arguments.torrents)
             {
@@ -304,7 +304,7 @@ namespace Emby.Plugins.Discover
                     Downloading = t.status == 4,
                     Paused = t.status == 0 && t.percentDone < 1.0,
                     Failed = t.error > 0,
-                    Reason = t.error > 0 ? "Transmission: " + (string.IsNullOrWhiteSpace(t.errorString) ? DiscoverLanguage.Text("fout", "error", "Fehler") : t.errorString.Trim()) : null,
+                    Reason = t.error > 0 ? "Transmission: " + (string.IsNullOrWhiteSpace(t.errorString) ? DiscoverLanguage.T("dl.error") : t.errorString.Trim()) : null,
                     Stage = t.status == 1 || t.status == 2 ? "verifying" : null,
                     Speed = t.rateDownload,
                     Seeds = seeds,
@@ -318,11 +318,11 @@ namespace Emby.Plugins.Discover
 
         internal static async Task<string> Test(IJsonSerializer json, string url, string user, string pass, CancellationToken ct)
         {
-            if (string.IsNullOrWhiteSpace(url)) throw new InvalidOperationException(DiscoverLanguage.Text("Vul eerst een URL in.", "Enter a URL first.", "Zuerst eine URL eingeben."));
+            if (string.IsNullOrWhiteSpace(url)) throw new InvalidOperationException(DiscoverLanguage.T("dl.enter_a_url_first_2"));
             _session = null;
             var text = await Rpc(url, user, pass, "{\"method\":\"session-get\",\"arguments\":{\"fields\":[\"version\"]}}", ct).ConfigureAwait(false);
             if (text == null || text.IndexOf("\"success\"", StringComparison.OrdinalIgnoreCase) < 0)
-                throw new InvalidOperationException(DiscoverLanguage.Text("Transmission gaf geen geldig antwoord. Controleer de URL.", "Transmission gave no valid response. Check the URL.", "Transmission lieferte keine gültige Antwort. URL prüfen."));
+                throw new InvalidOperationException(DiscoverLanguage.T("dl.transmission_gave_no_valid_response_check"));
             var i = text.IndexOf("\"version\":\"", StringComparison.Ordinal);
             if (i < 0) return "";
             i += 11;
@@ -356,8 +356,8 @@ namespace Emby.Plugins.Discover
                 if (!string.IsNullOrWhiteSpace(user)) req.Headers.Authorization = new AuthenticationHeaderValue("Basic", DlHttp.Basic(user, pass));
                 using (var resp = await Http.SendAsync(req, ct).ConfigureAwait(false))
                 {
-                    if ((int)resp.StatusCode == 401) throw new InvalidOperationException(DiscoverLanguage.Text("NZBGet: gebruikersnaam of wachtwoord klopt niet (401).", "NZBGet: wrong username or password (401).", "NZBGet: Benutzername oder Passwort falsch (401)."));
-                    if (!resp.IsSuccessStatusCode) throw new InvalidOperationException(DiscoverLanguage.Text("NZBGet gaf HTTP ", "NZBGet returned HTTP ", "NZBGet antwortete mit HTTP ") + (int)resp.StatusCode + " " + resp.ReasonPhrase + ".");
+                    if ((int)resp.StatusCode == 401) throw new InvalidOperationException(DiscoverLanguage.T("dl.nzbget_wrong_username_or_password_401"));
+                    if (!resp.IsSuccessStatusCode) throw new InvalidOperationException(DiscoverLanguage.T("dl.nzbget_returned_http") + (int)resp.StatusCode + " " + resp.ReasonPhrase + ".");
                     return await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
                 }
             }
@@ -424,11 +424,11 @@ namespace Emby.Plugins.Discover
 
         internal static async Task<string> Test(IJsonSerializer json, string url, string user, string pass, CancellationToken ct)
         {
-            if (string.IsNullOrWhiteSpace(url)) throw new InvalidOperationException(DiscoverLanguage.Text("Vul eerst een URL in.", "Enter a URL first.", "Zuerst eine URL eingeben."));
+            if (string.IsNullOrWhiteSpace(url)) throw new InvalidOperationException(DiscoverLanguage.T("dl.enter_a_url_first_2"));
             var text = await Rpc(url, user, pass, "version", "[]", ct).ConfigureAwait(false);
             var v = json.DeserializeFromString<NzbVersionDto>(text);
             if (v == null || string.IsNullOrWhiteSpace(v.result))
-                throw new InvalidOperationException(DiscoverLanguage.Text("NZBGet gaf geen geldig antwoord. Controleer de URL.", "NZBGet gave no valid response. Check the URL.", "NZBGet lieferte keine gültige Antwort. URL prüfen."));
+                throw new InvalidOperationException(DiscoverLanguage.T("dl.nzbget_gave_no_valid_response_check_the"));
             return v.result.Trim();
         }
     }

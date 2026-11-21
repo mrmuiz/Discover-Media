@@ -27,13 +27,186 @@ function dcBottomBarOffset(self) {
     "use strict";
     var uiLanguage = "nl";
 
-    function text(dutch, english, german, norwegian) {
-        return uiLanguage === "de" ? german || english : uiLanguage === "no" ? norwegian || english : uiLanguage === "en" ? english : dutch
-    }
 
     function esc(s) {
         return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
     }
+    // Teksten komen van de server (Discover/Home of Discover/Status), op sleutel, in de taal van de kijker.
+    // Zonder tabel valt t() terug op de sleutel zelf; dat is lelijk maar breekt niets.
+    // <fallback-en> automatisch gevuld door tools/sync-js-fallback.py; niet met de hand aanpassen
+    var STR_EN = {
+        "api.networks": "Networks",
+        "api.recent_requests": "Recent requests",
+        "api.recently_added": "Recently added",
+        "api.upcoming_movies": "Upcoming Movies",
+        "api.upcoming_series": "Upcoming Series",
+        "btn.available": "Available",
+        "btn.delete": "Delete",
+        "btn.delete_failed_only_administrators_can_do": "Delete failed (only administrators can do this).",
+        "btn.downloading": "Downloading",
+        "btn.previous": "Previous",
+        "btn.queued": "Queued",
+        "btn.running_script": "Running script",
+        "btn.select_all": "Select all",
+        "btn.verifying": "Verifying",
+        "btn.waiting_for_processing": "Waiting for processing",
+        "btn.waiting_to_import": "Waiting to import",
+        "channel.all_seasons": "All seasons",
+        "channel.movie_genres": "Movie Genres",
+        "channel.no_trailer_available_for_this_title": "No trailer available for this title.",
+        "channel.popular_movies": "Popular Movies",
+        "channel.popular_series": "Popular Series",
+        "channel.request_2": "Request",
+        "channel.requested_2": "Requested",
+        "channel.season": "Season ",
+        "channel.series_genres": "Series Genres",
+        "channel.studios": "Studios",
+        "channel.trailer_2": "Trailer",
+        "continue.new_seasons": "New seasons",
+        "queue.my_requests": "My requests",
+        "ui.actor": "Actor",
+        "ui.age": "age ",
+        "ui.all": "All",
+        "ui.all_2": "all",
+        "ui.all_addresses_failed": " (all addresses failed)",
+        "ui.all_seasons_in_4k": "All seasons in 4K",
+        "ui.already_in_your_library_click_to_request": "Already in your library: click to request again",
+        "ui.and": "and ",
+        "ui.announced": "Announced",
+        "ui.announced_2": "Announced",
+        "ui.audience": "audience",
+        "ui.back": "Back",
+        "ui.back_to_top": "Back to top",
+        "ui.born": "Born: ",
+        "ui.cancel": "Cancel",
+        "ui.cancel_request": "Cancel request",
+        "ui.choose_a_season_to_request": "Choose a season to request",
+        "ui.collection": "Collection",
+        "ui.coming_soon": "coming soon",
+        "ui.confirm_cancel_request": "Cancel the request for \"{0}\" and remove it from {1}?",
+        "ui.confirm_delete_files": "Delete \"{0}\" from {1} AND delete its files from disk?",
+        "ui.continue": "Continue",
+        "ui.could_not_fetch_status": "could not fetch status",
+        "ui.details_and_trailer": "Details and trailer",
+        "ui.diagnostics_request_script_active_in_browser": "Diagnostics: request script active in browser: ",
+        "ui.died": "Died: ",
+        "ui.director": "Director",
+        "ui.director_2": "Director",
+        "ui.downloads": "downloads",
+        "ui.emby_player_not_available": "Emby player not available: ",
+        "ui.eps": "eps.",
+        "ui.extracting": "Extracting",
+        "ui.failed": "Failed: ",
+        "ui.fetching_trailer_failed": "Fetching trailer failed: ",
+        "ui.fetching_trailer_failed_2": "Fetching trailer failed.",
+        "ui.genre": "Genre",
+        "ui.h": "h",
+        "ui.h_2": "h ",
+        "ui.import_blocked": "Import blocked",
+        "ui.importing": "Importing",
+        "ui.in_cinemas": "In cinemas",
+        "ui.in_library": "In library",
+        "ui.in_your_library": "In your library",
+        "ui.kind_movie": "Movie",
+        "ui.kind_series": "Series",
+        "ui.language": "Language",
+        "ui.less": "Less",
+        "ui.limit": "limit ",
+        "ui.load_more": "Load more",
+        "ui.loaded_from_discover_page": "loaded from Discover page: ",
+        "ui.loading": "Loading...",
+        "ui.loading_failed": "Loading failed.",
+        "ui.loading_failed_check_that_the_plugin_is": "Loading failed. Check that the plugin is updated and Emby has been restarted.",
+        "ui.loading_script_failed": "loading script failed: ",
+        "ui.loading_title_failed": "Loading title failed.",
+        "ui.loading_trailer": "Loading trailer...",
+        "ui.minimum_availability_in_radarr_when_radarr": "Minimum availability in Radarr: when Radarr starts looking for this movie",
+        "ui.more": " more",
+        "ui.more_2": "More",
+        "ui.movie": "MOVIE",
+        "ui.movies": "Movies",
+        "ui.movies_2": "movies",
+        "ui.moving": "Moving",
+        "ui.n_failed": "{0} failed: ",
+        "ui.n_requested": "{0} requested",
+        "ui.network_error": "network error",
+        "ui.newest": "Newest",
+        "ui.next": "Next",
+        "ui.no": "NO",
+        "ui.no_description_available": "No description available.",
+        "ui.no_results": "No results.",
+        "ui.no_titles_found": "No titles found.",
+        "ui.no_version_number": "no version number",
+        "ui.no_youtube_player_available_players": "No YouTube player available. Players: ",
+        "ui.not_in_my_library": "Not in my library",
+        "ui.not_requested_yet": "Not requested yet",
+        "ui.not_tried_yet": "not tried yet",
+        "ui.nothing_found_for": "Nothing found for \"",
+        "ui.of": " of ",
+        "ui.ok_via_external_script": "OK via external script ",
+        "ui.old_0_14_6": "old (<0.14.6)",
+        "ui.open_in_emby": "Open in Emby",
+        "ui.outdated_script_stayed_active": "outdated script stayed active (",
+        "ui.paused": "Paused",
+        "ui.paused_2": "paused",
+        "ui.people": "People",
+        "ui.playing_trailer_failed": "Playing trailer failed: ",
+        "ui.plugin_resource": "plugin resource: ",
+        "ui.popular": "Popular",
+        "ui.problem": "Problem",
+        "ui.released": "Released",
+        "ui.repairing": "Repairing",
+        "ui.request_all": "Request all",
+        "ui.request_all_seasons": "Request all seasons",
+        "ui.request_collection_explain": "This requests all {0} movies from this collection that you don’t have yet, in one go. Counts towards your request limit.",
+        "ui.request_collection_n": "Request collection ({0} movies)",
+        "ui.request_failed": "Request failed.",
+        "ui.request_in_4k": "Request in 4K",
+        "ui.request_n_titles": "Request {0} titles?",
+        "ui.requested": "Requested: ",
+        "ui.requesting": "Requesting... ",
+        "ui.requesting_2": "Requesting...",
+        "ui.score": "Score",
+        "ui.script_already_active_v1_4_0_7": "script already active v1.4.0.7",
+        "ui.search_movies_and_series": "Search movies and series",
+        "ui.search_results": "Search results",
+        "ui.searching": "Searching...",
+        "ui.select_seasons": "Select seasons",
+        "ui.series": "SERIES",
+        "ui.series_2": "Series",
+        "ui.server": "server: ",
+        "ui.show_more": "Show more",
+        "ui.sort": "Sort",
+        "ui.specials": "Specials",
+        "ui.starts": "Starts ",
+        "ui.sure_request_n_movies": "Sure? Request {0} movies",
+        "ui.text": ".",
+        "ui.this_movie": "This movie",
+        "ui.title_not_found": "Title not found.",
+        "ui.top_rated": "Top rated",
+        "ui.trailer_not_playing_open_on_youtube": "Trailer not playing? Open on YouTube",
+        "ui.try_again": "Try again",
+        "ui.type": "Type",
+        "ui.unknown": "unknown",
+        "ui.unknown_error": "unknown error",
+        "ui.votes": "votes",
+        "ui.year": "Year",
+        "ui.yes_v": "YES v",
+        "watchlist.trakt_watchlist": "Trakt watchlist"
+    };
+    // </fallback-en>
+    var STR = {};
+    function t(key) {
+        var s = STR[key];
+        if (s == null) { s = STR_EN[key]; }   // nog geen antwoord van de server: Engels in plaats van de sleutel
+        if (s == null) { s = key; }
+        for (var i = 1; i < arguments.length; i++) { s = s.split('{' + (i - 1) + '}').join(String(arguments[i])); }
+        return s;
+    }
+    function viewerLang() {
+        try { return (document.documentElement && document.documentElement.lang) || navigator.language || ''; } catch (e) { return ''; }
+    }
+
 
     function api(type, path, query, data) {
         var url = ApiClient.getUrl(path, query || {});
@@ -49,7 +222,7 @@ function dcBottomBarOffset(self) {
         return ApiClient.ajax(opts)
     }
     var diag = {
-        load: text("nog niet geprobeerd", "not tried yet", "noch nicht versucht"),
+        load: t('ui.not_tried_yet'),
         status: ""
     };
     var diagEl = null;
@@ -58,24 +231,24 @@ function dcBottomBarOffset(self) {
         if (!diagEl) {
             return
         }
-        diagEl.textContent = text("Diagnose: knop-script actief in browser: ", "Diagnostics: request script active in browser: ", "Diagnose: Schaltfl\xe4chenskript im Browser aktiv: ") + (window.__discoverRequestButton ? text("JA v", "YES v", "JA v") + (window.__discoverRequestButtonVersion || text("oud (<0.14.6)", "old (<0.14.6)", "alt (<0.14.6)")) + " build " + (window.__discoverRequestButtonBuild || "?") : text("NEE", "NO", "NEIN")) + "\n" + text("laden vanaf Discover-pagina: ", "loaded from Discover page: ", "von der Discover-Seite geladen: ") + diag.load + "\n" + text("server: ", "server: ", "Server: ") + (diag.status || "...")
+        diagEl.textContent = t('ui.diagnostics_request_script_active_in_browser') + (window.__discoverRequestButton ? t('ui.yes_v') + (window.__discoverRequestButtonVersion || t('ui.old_0_14_6')) + " build " + (window.__discoverRequestButtonBuild || "?") : t('ui.no')) + "\n" + t('ui.loaded_from_discover_page') + diag.load + "\n" + t('ui.server') + (diag.status || "...")
     }
 
     function loadButtonScript() {
         if (window.__discoverRequestButtonVersion === "1.4.0.7") {
-            diag.load = text("script is al actief v1.4.0.7", "script already active v1.4.0.7", "Skript bereits aktiv v1.4.0.7");
+            diag.load = t('ui.script_already_active_v1_4_0_7');
             showDiag();
             return
         }
         var urls = [ApiClient.getUrl("web/ConfigurationPage", {
-            name: "discoverbuttonjs1438"
+            name: "discoverbuttonjs1439"
         }), ApiClient.getUrl("web/configurationpage", {
-            name: "discoverbuttonjs1438"
+            name: "discoverbuttonjs1439"
         }), ApiClient.getUrl("Plugins/Discover/Script")];
         var n = 0;
         (function next() {
             if (n >= urls.length) {
-                diag.load += text(" (alle adressen mislukt)", " (all addresses failed)", " (alle Adressen fehlgeschlagen)");
+                diag.load += t('ui.all_addresses_failed');
                 showDiag();
                 return
             }
@@ -86,16 +259,16 @@ function dcBottomBarOffset(self) {
             script.async = true;
             script.onload = function() {
                 if (window.__discoverRequestButtonVersion === "1.4.0.7") {
-                    diag.load = text("OK via extern script ", "OK via external script ", "OK \xfcber externes Skript ") + u;
+                    diag.load = t('ui.ok_via_external_script') + u;
                     showDiag()
                 } else {
-                    diag.load = text("verouderd script bleef actief (", "outdated script stayed active (", "veraltetes Skript blieb aktiv (") + (window.__discoverRequestButtonVersion || text("geen versienummer", "no version number", "keine Versionsnummer")) + "): " + u;
+                    diag.load = t('ui.outdated_script_stayed_active') + (window.__discoverRequestButtonVersion || t('ui.no_version_number')) + "): " + u;
                     script.parentNode.removeChild(script);
                     next()
                 }
             };
             script.onerror = function() {
-                diag.load = text("script laden mislukt: ", "loading script failed: ", "Skript laden fehlgeschlagen: ") + u;
+                diag.load = t('ui.loading_script_failed') + u;
                 if (script.parentNode) {
                     script.parentNode.removeChild(script)
                 }
@@ -104,7 +277,7 @@ function dcBottomBarOffset(self) {
             document.head.appendChild(script)
         })()
     }
-    var UI_PAGE = "discoverui1153";
+    var UI_PAGE = "discoverui1154";
     return function(view, params) {
         var embedded = !!(params && params.embedded);
         if (embedded) {
@@ -144,7 +317,8 @@ function dcBottomBarOffset(self) {
         diagEl = view.querySelector(".dcDiag");
         diagEl.style.display = "none";
         loadButtonScript();
-        api("GET", "Discover/Status").then(function(r) {
+        api("GET", "Discover/Status", { Lang: viewerLang() }).then(function(r) {
+            if (r && r.Strings) { STR = r.Strings; }
             diagEl.style.display = r.ShowDiagnostics ? "" : "none";
             showTrailer = r.ShowTrailerTile !== false;
             showSpecials = r.ShowSpecials !== false;
@@ -167,16 +341,16 @@ function dcBottomBarOffset(self) {
             window.__discoverRequestService = r.RequestService || "";
             radarrSet = !!r.RadarrSet;
             radarrAvail = r.RadarrMinimumAvailability || "released";
-            diag.status = "v" + (r.PluginVersion || "?") + " | " + text("pluginresource: ", "plugin resource: ", "Pluginressource: ") + (r.ButtonScript || text("onbekend", "unknown", "unbekannt"));
+            diag.status = "v" + (r.PluginVersion || "?") + " | " + t('ui.plugin_resource') + (r.ButtonScript || t('ui.unknown'));
             showDiag()
         }, function() {
-            diag.status = text("status ophalen mislukt", "could not fetch status", "Status konnte nicht abgerufen werden");
+            diag.status = t('ui.could_not_fetch_status');
             showDiag()
         });
         setTimeout(showDiag, 1500);
         var content = view.querySelector(".dcContent");
         var input = view.querySelector(".dcSearchInput");
-        input.placeholder = text("Films en series zoeken", "Search movies and series", "Filme und Serien suchen", "S\xf8k filmer og serier");
+        input.placeholder = t('ui.search_movies_and_series');
         var overlay = view.querySelector(".dcOverlay");
         var toast = view.querySelector(".dcToast");
         var items = {};
@@ -215,11 +389,11 @@ function dcBottomBarOffset(self) {
             QUEUE_IDLE = 15e3;
 
         function stageLabel(stage) {
-            return stage === "verifying" ? text("Verifi\xebren", "Verifying", "\xdcberpr\xfcfen", "Verifiserer") : stage === "repairing" ? text("Repareren", "Repairing", "Reparieren", "Reparerer") : stage === "extracting" ? text("Uitpakken", "Extracting", "Entpacken", "Pakker ut") : stage === "moving" ? text("Verplaatsen", "Moving", "Verschieben", "Flytter") : stage === "script" ? text("Script draaien", "Running script", "Skript l\xe4uft", "Kj\xf8rer skript") : text("Wacht op verwerking", "Waiting for processing", "Wartet auf Verarbeitung", "Venter p\xe5 behandling")
+            return stage === "verifying" ? t('btn.verifying') : stage === "repairing" ? t('ui.repairing') : stage === "extracting" ? t('ui.extracting') : stage === "moving" ? t('ui.moving') : stage === "script" ? t('btn.running_script') : t('btn.waiting_for_processing')
         }
 
         function stateLabel(st, stage) {
-            return st === "downloading" ? text("Downloaden", "Downloading", "L\xe4dt herunter", "Laster ned") : st === "paused" ? text("Gepauzeerd", "Paused", "Pausiert", "Pauset") : st === "processing" ? stageLabel(stage) : st === "importwait" ? text("Wacht op import", "Waiting to import", "Wartet auf Import", "Venter p\xe5 import") : st === "importing" ? text("Importeren", "Importing", "Wird importiert", "Importerer") : st === "importblocked" ? text("Import geblokkeerd", "Import blocked", "Import blockiert", "Import blokkert") : st === "stalled" ? text("Probleem", "Problem", "Problem", "Problem") : text("In wachtrij", "Queued", "In Warteschlange", "I k\xf8")
+            return st === "downloading" ? t('btn.downloading') : st === "paused" ? t('ui.paused') : st === "processing" ? stageLabel(stage) : st === "importwait" ? t('btn.waiting_to_import') : st === "importing" ? t('ui.importing') : st === "importblocked" ? t('ui.import_blocked') : st === "stalled" ? t('ui.problem') : t('btn.queued')
         }
 
         // Tekst op de balk: "Downloaden 73%"; bij importeren e.d. alleen de status (de balk is dan vol).
@@ -255,7 +429,7 @@ function dcBottomBarOffset(self) {
         }
 
         function decimal(v) {
-            return String(v).replace(".", text(",", ".", ",", ","))
+            return String(v).replace(".", t('ui.text'))
         }
 
         function rateText(bps) {
@@ -292,7 +466,7 @@ function dcBottomBarOffset(self) {
             }
             var done = total - (p.SizeLeft || 0);
             var partial = (p.State === "downloading" || p.State === "paused" || p.State === "queued" || p.State === "stalled") && p.SizeLeft > 0 && done > 0;
-            return partial ? f(done) + text(" van ", " of ", " von ", " av ") + f(total) + " " + u[i] : f(total) + " " + u[i]
+            return partial ? f(done) + t('ui.of') + f(total) + " " + u[i] : f(total) + " " + u[i]
         }
 
         function timeLeft(sec) {
@@ -311,9 +485,9 @@ function dcBottomBarOffset(self) {
             if (h >= 24) {
                 var d = Math.floor(h / 24);
                 h = h % 24;
-                return d + "d" + (h ? " " + h + text("u", "h", "h", "t") : "")
+                return d + "d" + (h ? " " + h + t('ui.h') : "")
             }
-            return h > 0 ? h + text("u ", "h ", "h ", "t ") + m + "m" : m + " min"
+            return h > 0 ? h + t('ui.h_2') + m + "m" : m + " min"
         }
 
         // Serie met meer afleveringen in de wachtrij: toon alleen de aflevering die nu aan de beurt is.
@@ -372,7 +546,7 @@ function dcBottomBarOffset(self) {
             if (!mine) {
                 return ""
             }
-            return i.Status === 2 ? '<div class="dcCapQ avail">✓ ' + text("Beschikbaar", "Available", "Verf\xfcgbar", "Tilgjengelig") + "</div>" : '<div class="dcCapQ req">' + text("Aangevraagd", "Requested", "Angefordert", "Forespurt") + "</div>"
+            return i.Status === 2 ? '<div class="dcCapQ avail">✓ ' + t('btn.available') + "</div>" : '<div class="dcCapQ req">' + t('channel.requested_2') + "</div>"
         }
 
         function applyQueueToCards() {
@@ -479,14 +653,14 @@ function dcBottomBarOffset(self) {
             }
             var out = [sabInfo.Name || "SABnzbd"];
             if (sabInfo.Paused) {
-                out.push(text("gepauzeerd", "paused", "pausiert", "pauset"))
+                out.push(t('ui.paused_2'))
             } else if (sabInfo.Speed > 0) {
                 out.push(rateText(sabInfo.Speed))
             }
             if (sabInfo.LimitBps > 0) {
-                out.push(text("limiet ", "limit ", "Limit ", "grense ") + rateText(sabInfo.LimitBps))
+                out.push(t('ui.limit') + rateText(sabInfo.LimitBps))
             } else if (sabInfo.LimitPct > 0) {
-                out.push(text("limiet ", "limit ", "Limit ", "grense ") + sabInfo.LimitPct + "%")
+                out.push(t('ui.limit') + sabInfo.LimitPct + "%")
             }
             return out.length > 1 ? out.join(" \xb7 ") : ""
         }
@@ -510,7 +684,7 @@ function dcBottomBarOffset(self) {
                 });
                 shown = dl.length ? dl : [curPart(e)]
             }
-            var html = '<div class="dcQHead">' + esc(stateLabel(e.State, e.Stage)) + (e.Count > 1 ? " \xb7 " + e.Count + " " + text("downloads", "downloads", "Downloads", "nedlastinger") : "") + "</div>";
+            var html = '<div class="dcQHead">' + esc(stateLabel(e.State, e.Stage)) + (e.Count > 1 ? " \xb7 " + e.Count + " " + t('ui.downloads') : "") + "</div>";
             var sab = sabLine(e);
             if (sab) {
                 html += '<div class="dcQSab">' + esc(sab) + "</div>"
@@ -552,7 +726,7 @@ function dcBottomBarOffset(self) {
                 }
             });
             if (e.Parts.length > Math.min(max, shown.length)) {
-                html += '<div class="dcQMore">' + text("en nog ", "and ", "und ", "og ") + (e.Parts.length - Math.min(max, shown.length)) + text(" meer", " more", " weitere", " til") + "</div>"
+                html += '<div class="dcQMore">' + t('ui.and') + (e.Parts.length - Math.min(max, shown.length)) + t('ui.more') + "</div>"
             }
             box.innerHTML = html;
             box.classList.add("show")
@@ -581,7 +755,7 @@ function dcBottomBarOffset(self) {
                 return
             }
             var scroll = old ? old.querySelector(".dcRow").scrollLeft : 0;
-            var html = '<div class="dcMine"><div class="dcRowTitle">' + esc(text("Mijn aanvragen", "My requests", "Meine Anfragen", "Mine foresp\xf8rsler")) + "</div>" + rowWrapHtml('<div class="dcRow" data-row="my_requests">' + list.map(function(i) {
+            var html = '<div class="dcMine"><div class="dcRowTitle">' + esc(t('queue.my_requests')) + "</div>" + rowWrapHtml('<div class="dcRow" data-row="my_requests">' + list.map(function(i) {
                 return cardHtml(i, true, null, list.length <= WIDE_MAX)
             }).join("") + "</div>") + "</div>";
             var hadFocus = old && old.contains(document.activeElement) ? document.activeElement.getAttribute("data-key") : null;
@@ -620,10 +794,10 @@ function dcBottomBarOffset(self) {
 
         function extraTitle(r) {
             if (r.Key === "continue_series") {
-                return text("Nieuwe seizoenen", "New seasons", "Neue Staffeln", "Nye sesonger")
+                return t('continue.new_seasons')
             }
             if (r.Key === "watch_trakt") {
-                return text("Trakt-watchlist", "Trakt watchlist", "Trakt-Merkliste", "Trakt-\xf8nskeliste")
+                return t('watchlist.trakt_watchlist')
             }
             return r.Title
         }
@@ -658,7 +832,7 @@ function dcBottomBarOffset(self) {
                 var open = r.Items.filter(function(i) {
                     return i.Status === 0
                 }).length;
-                var all = r.Key.indexOf("watch_") === 0 && open > 0 ? ' <button type="button" class="dcReqAll focusable" data-row="' + esc(r.Key) + '">' + esc(text("Alles aanvragen", "Request all", "Alle anfragen", "Be om alle")) + " (" + open + ")</button>" : "";
+                var all = r.Key.indexOf("watch_") === 0 && open > 0 ? ' <button type="button" class="dcReqAll focusable" data-row="' + esc(r.Key) + '">' + esc(t('ui.request_all')) + " (" + open + ")</button>" : "";
                 html += '<div class="dcExtra"><div class="dcRowTitle">' + esc(extraTitle(r)) + all + "</div>" + rowWrapHtml('<div class="dcRow" data-row="' + esc(r.Key) + '">' + r.Items.map(function(i) {
                     return cardHtml(i, false, null, r.Items.length <= WIDE_MAX)
                 }).join("") + "</div>") + "</div>"
@@ -686,7 +860,7 @@ function dcBottomBarOffset(self) {
             if (!todo.length) {
                 return
             }
-            if (!window.confirm(text(todo.length + " titels aanvragen?", "Request " + todo.length + " titles?", todo.length + " Titel anfragen?", "Be om " + todo.length + " titler?"))) {
+            if (!window.confirm(t('ui.request_n_titles', todo.length))) {
                 return
             }
             btn.disabled = true;
@@ -695,13 +869,13 @@ function dcBottomBarOffset(self) {
                 lastErr = "";
             (function next(n) {
                 if (n >= todo.length) {
-                    showToast(text(ok + " aangevraagd", ok + " requested", ok + " angefragt", ok + " forespurt") + (fail ? " \xb7 " + text(fail + " mislukt: ", fail + " failed: ", fail + " fehlgeschlagen: ", fail + " mislyktes: ") + lastErr : ""), fail > 0);
+                    showToast(t('ui.n_requested', ok) + (fail ? " \xb7 " + t('ui.n_failed', fail) + lastErr : ""), fail > 0);
                     afterRequest();
                     renderExtras();
                     return
                 }
                 var i = todo[n];
-                btn.textContent = text("Aanvragen... ", "Requesting... ", "Wird angefragt... ", "Ber om... ") + (n + 1) + "/" + todo.length;
+                btn.textContent = t('ui.requesting') + (n + 1) + "/" + todo.length;
                 api("POST", "Discover/RequestItem", null, {
                     Type: i.Type,
                     TmdbId: i.TmdbId
@@ -721,7 +895,7 @@ function dcBottomBarOffset(self) {
                     next(n + 1)
                 }, function() {
                     fail++;
-                    lastErr = text("netwerkfout", "network error", "Netzwerkfehler", "nettverksfeil");
+                    lastErr = t('ui.network_error');
                     next(n + 1)
                 })
             })(0)
@@ -732,35 +906,35 @@ function dcBottomBarOffset(self) {
         function rowTitle(k) {
             switch (k) {
                 case "recent_added":
-                    return text("Onlangs toegevoegd", "Recently added", "K\xfcrzlich hinzugef\xfcgt", "Nylig lagt til");
+                    return t('api.recently_added');
                 case "recent_requests":
-                    return text("Recente aanvragen", "Recent requests", "K\xfcrzlich angefragt", "Nylige foresp\xf8rsler");
+                    return t('api.recent_requests');
                 case "trending":
                     return "Trending";
                 case "popular_movie":
-                    return text("Populaire films", "Popular Movies", "Beliebte Filme", "Popul\xe6re filmer");
+                    return t('channel.popular_movies');
                 case "genres_movie":
-                    return text("Filmgenres", "Movie Genres", "Filmgenres", "Filmsjangre");
+                    return t('channel.movie_genres');
                 case "upcoming_movie":
-                    return text("Aankomende films", "Upcoming Movies", "Kommende Filme", "Kommende filmer");
+                    return t('api.upcoming_movies');
                 case "studios":
-                    return text("Studio's", "Studios", "Studios", "Studioer");
+                    return t('channel.studios');
                 case "popular_tv":
-                    return text("Populaire series", "Popular Series", "Beliebte Serien", "Popul\xe6re serier");
+                    return t('channel.popular_series');
                 case "genres_tv":
-                    return text("Seriegenres", "Series Genres", "Seriengenres", "Seriesjangre");
+                    return t('channel.series_genres');
                 case "upcoming_tv":
-                    return text("Aankomende series", "Upcoming Series", "Kommende Serien", "Kommende serier");
+                    return t('api.upcoming_series');
                 case "networks":
-                    return text("Netwerken", "Networks", "Sender", "Nettverk");
+                    return t('api.networks');
                 case "my_requests":
-                    return text("Mijn aanvragen", "My requests", "Meine Anfragen", "Mine foresp\xf8rsler")
+                    return t('queue.my_requests')
             }
             return null
         }
 
         function rowWrapHtml(inner) {
-            return '<div class="dcRowWrap">' + '<button type="button" class="dcArrow left dcHide" data-dir="-1" tabindex="-1" aria-label="' + esc(text("Vorige", "Previous", "Zur\xfcck", "Forrige")) + '">' + CHEV_L + "</button>" + inner + '<button type="button" class="dcArrow right" data-dir="1" tabindex="-1" aria-label="' + esc(text("Volgende", "Next", "Weiter", "Neste")) + '">' + CHEV_R + "</button>" + "</div>"
+            return '<div class="dcRowWrap">' + '<button type="button" class="dcArrow left dcHide" data-dir="-1" tabindex="-1" aria-label="' + esc(t('btn.previous')) + '">' + CHEV_L + "</button>" + inner + '<button type="button" class="dcArrow right" data-dir="1" tabindex="-1" aria-label="' + esc(t('ui.next')) + '">' + CHEV_R + "</button>" + "</div>"
         }
         content.addEventListener("mouseenter", function(e) {
             var w = e.target && e.target.classList && e.target.classList.contains("dcRowWrap") ? e.target : null;
@@ -802,9 +976,9 @@ function dcBottomBarOffset(self) {
             if (i.Year) {
                 sub.push('<span class="dcYear">' + i.Year + "</span>")
             }
-            var role = i.Role ? i.Role === "Director" ? text("Regie", "Director", "Regie", "Regi") : i.Role : "";
+            var role = i.Role ? i.Role === "Director" ? t('ui.director') : i.Role : "";
             var bgUrl = wide ? i.Backdrop || i.Poster || "" : "";
-            return '<div class="dcCard focusable' + (wide ? " dcWide" : "") + '" tabindex="0" role="button" data-key="' + key(i) + '"' + (mine === true ? ' data-mine="1"' : "") + (embyId ? ' data-emby="' + esc(embyId) + '"' : "") + ">" + (wide ? '<div class="dcWideBg' + (i.Backdrop ? "" : " blur") + '"' + (bgUrl ? ' style="background-image:url(&quot;' + esc(bgUrl) + '&quot;)"' : "") + '></div><div class="dcWideShade"></div>' : "") + '<div class="dcPoster">' + poster + (wide ? "" : '<span class="dcBadge ' + i.Type + '">' + (i.Type === "tv" ? text("SERIE", "SERIES", "SERIE") : text("FILM", "MOVIE", "FILM")) + "</span>") + '<span class="dcStatus s' + i.Status + '">' + statusIcon(i.Status) + "</span>" + queueHtml(i) + "</div>" + '<div class="dcCap">' + (wide ? '<span class="dcBadge ' + i.Type + '">' + (i.Type === "tv" ? text("SERIE", "SERIES", "SERIE") : text("FILM", "MOVIE", "FILM")) + "</span>" : "") + '<div class="dcCapT">' + esc(i.Title) + "</div>" + (sub.length ? '<div class="dcCapSub">' + sub.join("") + "</div>" : "") + (role ? '<div class="dcRole" title="' + esc(role) + '">' + esc(role) + "</div>" : "") + capQueueHtml(i, mine === true) + "</div></div>"
+            return '<div class="dcCard focusable' + (wide ? " dcWide" : "") + '" tabindex="0" role="button" data-key="' + key(i) + '"' + (mine === true ? ' data-mine="1"' : "") + (embyId ? ' data-emby="' + esc(embyId) + '"' : "") + ">" + (wide ? '<div class="dcWideBg' + (i.Backdrop ? "" : " blur") + '"' + (bgUrl ? ' style="background-image:url(&quot;' + esc(bgUrl) + '&quot;)"' : "") + '></div><div class="dcWideShade"></div>' : "") + '<div class="dcPoster">' + poster + (wide ? "" : '<span class="dcBadge ' + i.Type + '">' + (i.Type === "tv" ? t('ui.series') : t('ui.movie')) + "</span>") + '<span class="dcStatus s' + i.Status + '">' + statusIcon(i.Status) + "</span>" + queueHtml(i) + "</div>" + '<div class="dcCap">' + (wide ? '<span class="dcBadge ' + i.Type + '">' + (i.Type === "tv" ? t('ui.series') : t('ui.movie')) + "</span>" : "") + '<div class="dcCapT">' + esc(i.Title) + "</div>" + (sub.length ? '<div class="dcCapSub">' + sub.join("") + "</div>" : "") + (role ? '<div class="dcRole" title="' + esc(role) + '">' + esc(role) + "</div>" : "") + capQueueHtml(i, mine === true) + "</div></div>"
         }
         var imdbCache = {},
             imdbQueue = [],
@@ -1338,7 +1512,7 @@ function dcBottomBarOffset(self) {
         });
 
         function personHtml(p) {
-            var dep = p.Department === "Directing" ? text("Regisseur", "Director", "Regie") : p.Department === "Acting" ? text("Acteur", "Actor", "Schauspiel") : p.Department || "";
+            var dep = p.Department === "Directing" ? t('ui.director_2') : p.Department === "Acting" ? t('ui.actor') : p.Department || "";
             return '<div class="dcPerson focusable" tabindex="0" role="button" data-pid="' + p.Id + '" data-name="' + esc(p.Name) + '">' + '<div class="dcPersonPhoto"' + (p.Photo ? ' style="background-image:url(&quot;' + esc(p.Photo) + '&quot;)"' : "") + "></div>" + '<div class="dcPersonName">' + esc(p.Name) + "</div>" + (dep ? '<div class="dcPersonDep">' + esc(dep) + "</div>" : "") + "</div>"
         }
 
@@ -1525,7 +1699,7 @@ function dcBottomBarOffset(self) {
             }
             browse = null;
             homeShown = false;
-            content.innerHTML = '<div class="dcBrowseHead"><button type="button" class="dcBack">&#10094; ' + text("Terug", "Back", "Zur\xfcck", "Tilbake") + "</button></div>" + '<div class="dcPersonHead"><div class="dcPersonBig"></div><div class="dcPersonText"><h2 class="dcPersonTitle">' + esc(name || "") + "</h2>" + '<div class="dcPersonMeta"></div><div class="dcPersonBio"></div></div></div>' + '<div class="dcPersonRows">' + skeletonHtml(2) + "</div>";
+            content.innerHTML = '<div class="dcBrowseHead"><button type="button" class="dcBack">&#10094; ' + t('ui.back') + "</button></div>" + '<div class="dcPersonHead"><div class="dcPersonBig"></div><div class="dcPersonText"><h2 class="dcPersonTitle">' + esc(name || "") + "</h2>" + '<div class="dcPersonMeta"></div><div class="dcPersonBio"></div></div></div>' + '<div class="dcPersonRows">' + skeletonHtml(2) + "</div>";
             var root = view.querySelector(".dcRoot");
             if (root) {
                 root.scrollTop = 0
@@ -1547,10 +1721,10 @@ function dcBottomBarOffset(self) {
                 var meta = [];
                 if (p.Birthday) {
                     var age = ageOn(p.Birthday, p.Deathday);
-                    meta.push(text("Geboren: ", "Born: ", "Geboren: ", "F\xf8dt: ") + fmtDay(p.Birthday) + (age != null && !p.Deathday ? " (" + text("leeftijd ", "age ", "Alter ", "alder ") + age + ")" : ""))
+                    meta.push(t('ui.born') + fmtDay(p.Birthday) + (age != null && !p.Deathday ? " (" + t('ui.age') + age + ")" : ""))
                 }
                 if (p.Deathday) {
-                    meta.push(text("Overleden: ", "Died: ", "Gestorben: ", "D\xf8d: ") + fmtDay(p.Deathday) + (ageOn(p.Birthday, p.Deathday) != null ? " (" + ageOn(p.Birthday, p.Deathday) + ")" : ""))
+                    meta.push(t('ui.died') + fmtDay(p.Deathday) + (ageOn(p.Birthday, p.Deathday) != null ? " (" + ageOn(p.Birthday, p.Deathday) + ")" : ""))
                 }
                 if (p.PlaceOfBirth) {
                     meta.push(p.PlaceOfBirth)
@@ -1560,12 +1734,12 @@ function dcBottomBarOffset(self) {
                 }).join("");
                 var bio = content.querySelector(".dcPersonBio");
                 if (p.Biography) {
-                    bio.innerHTML = '<div class="dcBioText">' + esc(p.Biography) + '</div><button type="button" class="dcBioMore">' + text("Meer", "More", "Mehr", "Mer") + "</button>";
+                    bio.innerHTML = '<div class="dcBioText">' + esc(p.Biography) + '</div><button type="button" class="dcBioMore">' + t('ui.more_2') + "</button>";
                     var more = bio.querySelector(".dcBioMore");
                     setTimeout(updateBioMore, 0);
                     more.addEventListener("click", function() {
                         var open = bio.classList.toggle("open");
-                        more.textContent = open ? text("Minder", "Less", "Weniger", "Mindre") : text("Meer", "More", "Mehr", "Mer")
+                        more.textContent = open ? t('ui.less') : t('ui.more_2')
                     })
                 }
             }, function() {});
@@ -1637,8 +1811,8 @@ function dcBottomBarOffset(self) {
                     withEn = dir ? " by " : " with ",
                     withDe = dir ? " von " : " mit ",
                     withNo = dir ? " av " : " med ";
-                var html = personRow(text("In je bibliotheek", "In your library", "In deiner Bibliothek", "I biblioteket ditt"), "person_lib", mine, embyIds) + personRow(text("Meer films" + withNl + nm, "More movies" + withEn + nm, "Weitere Filme" + withDe + nm, "Flere filmer" + withNo + nm), "person_movie", films) + personRow(text("Meer series" + withNl + nm, "More series" + withEn + nm, "Weitere Serien" + withDe + nm, "Flere serier" + withNo + nm), "person_tv", series);
-                box.innerHTML = html || '<div class="dcMsg">' + text("Geen titels gevonden.", "No titles found.", "Keine Titel gefunden.") + "</div>";
+                var html = personRow(t('ui.in_your_library'), "person_lib", mine, embyIds) + personRow(t(dir ? 'ui.more_movies_by' : 'ui.more_movies_with', nm), "person_movie", films) + personRow(t(dir ? 'ui.more_series_by' : 'ui.more_series_with', nm), "person_tv", series);
+                box.innerHTML = html || '<div class="dcMsg">' + t('ui.no_titles_found') + "</div>";
                 setTimeout(updateAllArrows, 0);
                 var withBd = list.filter(function(i) {
                     return i.Backdrop
@@ -1657,7 +1831,7 @@ function dcBottomBarOffset(self) {
             }, function() {
                 var box = content.querySelector(".dcPersonRows");
                 if (box) {
-                    box.innerHTML = '<div class="dcMsg">' + text("Laden mislukt.", "Loading failed.", "Laden fehlgeschlagen.") + "</div>"
+                    box.innerHTML = '<div class="dcMsg">' + t('ui.loading_failed') + "</div>"
                 }
             })
         }
@@ -1711,17 +1885,17 @@ function dcBottomBarOffset(self) {
             var popular = rowKey === "popular_movie" || rowKey === "popular_tv";
             var serverFilters = "";
             if (!rowKey && (kind === "studio" || kind === "network" && STREAMING_NETWORKS.indexOf(Number(id)) >= 0)) {
-                serverFilters += "<label>" + text("Soort", "Type", "Art") + ' <select class="dcFMedia">' + '<option value="">' + text("Alles", "All", "Alle") + "</option>" + '<option value="movie">' + text("Films", "Movies", "Filme") + "</option>" + '<option value="tv">' + text("Series", "Series", "Serien") + "</option></select></label>"
+                serverFilters += "<label>" + t('ui.type') + ' <select class="dcFMedia">' + '<option value="">' + t('ui.all') + "</option>" + '<option value="movie">' + t('ui.movies') + "</option>" + '<option value="tv">' + t('ui.series_2') + "</option></select></label>"
             }
             if (popular) {
                 var gs = genreTiles(rowKey === "popular_tv");
-                serverFilters = "<label>" + text("Genre", "Genre", "Genre") + ' <select class="dcFGenre"><option value="0">' + text("alle", "all", "alle") + "</option>" + gs.map(function(g) {
+                serverFilters = "<label>" + t('ui.genre') + ' <select class="dcFGenre"><option value="0">' + t('ui.all_2') + "</option>" + gs.map(function(g) {
                     return '<option value="' + esc(g.Id) + '">' + esc(g.Name) + "</option>"
-                }).join("") + "</select></label>" + "<label>" + text("Sorteren", "Sort", "Sortieren") + ' <select class="dcFSort">' + '<option value="popular">' + text("Populair", "Popular", "Beliebt") + "</option>" + '<option value="new">' + text("Nieuwste", "Newest", "Neueste") + "</option>" + '<option value="top">' + text("Best beoordeeld", "Top rated", "Bestbewertet") + "</option></select></label>"
+                }).join("") + "</select></label>" + "<label>" + t('ui.sort') + ' <select class="dcFSort">' + '<option value="popular">' + t('ui.popular') + "</option>" + '<option value="new">' + t('ui.newest') + "</option>" + '<option value="top">' + t('ui.top_rated') + "</option></select></label>"
             }
-            content.innerHTML = '<div class="dcBrowseHead"><button type="button" class="dcBack">&#10094; ' + text("Terug", "Back", "Zur\xfcck") + "</button>" + '<span class="dcBrowseTitle">' + esc(name) + "</span></div>" + '<div class="dcFilters">' + serverFilters + "<label>" + text("Jaar", "Year", "Jahr") + ' <select class="dcFYear">' + years.map(function(y) {
-                return '<option value="' + y + '">' + (y ? y + (browse.upcoming ? "" : "+") : text("alle", "all", "alle")) + "</option>"
-            }).join("") + "</select></label>" + "<label>" + text("Score", "Score", "Bewertung") + ' <select class="dcFScore"><option value="0">' + text("alle", "all", "alle") + '</option><option value="6">6+</option><option value="7">7+</option><option value="8">8+</option></select></label>' + "<label>" + text("Taal", "Language", "Sprache") + ' <select class="dcFLang"><option value="">' + text("alle", "all", "alle") + "</option></select></label>" + '<label class="dcFCheck"><input type="checkbox" class="dcFOwned" /> ' + text("Niet in mijn bibliotheek", "Not in my library", "Nicht in meiner Bibliothek") + "</label>" + '<label class="dcFCheck"><input type="checkbox" class="dcFRequested" /> ' + text("Nog niet aangevraagd", "Not requested yet", "Noch nicht angefordert") + "</label>" + '<span class="dcFCount"></span>' + "</div>" + '<div class="dcGrid dcBrowseGrid"></div>' + '<div class="dcMore"><button type="button" class="dcBtn dcMoreBtn">' + text("Meer laden", "Load more", "Mehr laden") + "</button></div>";
+            content.innerHTML = '<div class="dcBrowseHead"><button type="button" class="dcBack">&#10094; ' + t('ui.back') + "</button>" + '<span class="dcBrowseTitle">' + esc(name) + "</span></div>" + '<div class="dcFilters">' + serverFilters + "<label>" + t('ui.year') + ' <select class="dcFYear">' + years.map(function(y) {
+                return '<option value="' + y + '">' + (y ? y + (browse.upcoming ? "" : "+") : t('ui.all_2')) + "</option>"
+            }).join("") + "</select></label>" + "<label>" + t('ui.score') + ' <select class="dcFScore"><option value="0">' + t('ui.all_2') + '</option><option value="6">6+</option><option value="7">7+</option><option value="8">8+</option></select></label>' + "<label>" + t('ui.language') + ' <select class="dcFLang"><option value="">' + t('ui.all_2') + "</option></select></label>" + '<label class="dcFCheck"><input type="checkbox" class="dcFOwned" /> ' + t('ui.not_in_my_library') + "</label>" + '<label class="dcFCheck"><input type="checkbox" class="dcFRequested" /> ' + t('ui.not_requested_yet') + "</label>" + '<span class="dcFCount"></span>' + "</div>" + '<div class="dcGrid dcBrowseGrid"></div>' + '<div class="dcMore"><button type="button" class="dcBtn dcMoreBtn">' + t('ui.load_more') + "</button></div>";
             tvFilterButtons();
             var root = view.querySelector(".dcRoot");
             if (root) {
@@ -1763,7 +1937,7 @@ function dcBottomBarOffset(self) {
             var btn = content.querySelector(".dcMoreBtn");
             if (btn) {
                 btn.disabled = true;
-                btn.textContent = text("Laden...", "Loading...", "Wird geladen...")
+                btn.textContent = t('ui.loading')
             }
             var call = b.row ? api("GET", "Discover/List", {
                 Key: b.row,
@@ -1817,7 +1991,7 @@ function dcBottomBarOffset(self) {
                 }
                 if (btn) {
                     btn.disabled = false;
-                    btn.textContent = text("Meer laden", "Load more", "Mehr laden")
+                    btn.textContent = t('ui.load_more')
                 }
                 updateLangOptions(b);
                 applyFilters(b);
@@ -1827,7 +2001,7 @@ function dcBottomBarOffset(self) {
                     moreObserver.observe(more)
                 }
                 if (b.done && !b.seenAny && !fresh.length && grid && !grid.children.length) {
-                    grid.innerHTML = '<div class="dcMsg">' + text("Geen resultaten.", "No results.", "Keine Ergebnisse.") + "</div>"
+                    grid.innerHTML = '<div class="dcMsg">' + t('ui.no_results') + "</div>"
                 }
             }, function() {
                 b.loading = false;
@@ -1837,7 +2011,7 @@ function dcBottomBarOffset(self) {
                         m.classList.remove("dcAuto")
                     }
                     btn.disabled = false;
-                    btn.textContent = text("Opnieuw proberen", "Try again", "Erneut versuchen")
+                    btn.textContent = t('ui.try_again')
                 }
             })
         }
@@ -1873,7 +2047,7 @@ function dcBottomBarOffset(self) {
                     return cardHtml(i)
                 }).join("") + "</div>")
             });
-            content.innerHTML = '<div class="dcTop"></div>' + (html || '<div class="dcMsg">' + text("Geen resultaten.", "No results.", "Keine Ergebnisse.") + "</div>");
+            content.innerHTML = '<div class="dcTop"></div>' + (html || '<div class="dcMsg">' + t('ui.no_results') + "</div>");
             homeShown = true;
             renderMine();
             renderExtras();
@@ -1929,10 +2103,11 @@ function dcBottomBarOffset(self) {
             loadMyRequests();
             loadExtras();
             scheduleQueue(0);
-            api("GET", "Discover/Home").then(function(r) {
+            api("GET", "Discover/Home", { Lang: viewerLang() }).then(function(r) {
+                if (r && r.Strings) { STR = r.Strings; }
                 var culture = String(r.LanguageAuto && document.documentElement.lang || r.Language || "").toLowerCase();
                 uiLanguage = culture.indexOf("nl") === 0 ? "nl" : culture.indexOf("de") === 0 ? "de" : culture.indexOf("nb") === 0 || culture.indexOf("nn") === 0 || culture.indexOf("no") === 0 ? "no" : "en";
-                input.placeholder = text("Films en series zoeken", "Search movies and series", "Filme und Serien suchen", "S\xf8k filmer og serier");
+                input.placeholder = t('ui.search_movies_and_series');
                 if (r.Message) {
                     content.innerHTML = '<div class="dcMsg">' + esc(r.Message) + "</div>";
                     return
@@ -1954,14 +2129,14 @@ function dcBottomBarOffset(self) {
                     focusFirstItem()
                 }
             }, function() {
-                content.innerHTML = '<div class="dcMsg">' + text("Laden mislukt. Controleer of de plugin is bijgewerkt en Emby opnieuw is gestart.", "Loading failed. Check that the plugin is updated and Emby has been restarted.", "Laden fehlgeschlagen. Pr\xfcfe, ob das Plugin aktualisiert und Emby neu gestartet wurde.") + "</div>"
+                content.innerHTML = '<div class="dcMsg">' + t('ui.loading_failed_check_that_the_plugin_is') + "</div>"
             })
         }
 
         function doSearch(q) {
             browse = null;
             homeShown = false;
-            content.innerHTML = '<div class="dcRowTitle">' + text("Zoeken...", "Searching...", "Suchen...") + '</div><div class="dcSkelRow">' + skelCards(8) + "</div>";
+            content.innerHTML = '<div class="dcRowTitle">' + t('ui.searching') + '</div><div class="dcSkelRow">' + skelCards(8) + "</div>";
             api("GET", "Discover/Search", {
                 Query: q
             }).then(function(r) {
@@ -1969,14 +2144,14 @@ function dcBottomBarOffset(self) {
                 var people = r.People || [];
                 var html = "";
                 if (people.length) {
-                    html += '<div class="dcRowTitle">' + text("Personen", "People", "Personen") + "</div>" + rowWrapHtml('<div class="dcRow dcPeopleRow">' + people.map(personHtml).join("") + "</div>")
+                    html += '<div class="dcRowTitle">' + t('ui.people') + "</div>" + rowWrapHtml('<div class="dcRow dcPeopleRow">' + people.map(personHtml).join("") + "</div>")
                 }
                 if (list.length) {
-                    html += '<div class="dcRowTitle">' + text("Zoekresultaten", "Search results", "Suchergebnisse") + '</div><div class="dcGrid">' + list.map(function(i) {
+                    html += '<div class="dcRowTitle">' + t('ui.search_results') + '</div><div class="dcGrid">' + list.map(function(i) {
                         return cardHtml(i)
                     }).join("") + "</div>"
                 }
-                content.innerHTML = html || '<div class="dcMsg">' + text('Niets gevonden voor "', 'Nothing found for "', 'Keine Ergebnisse f\xfcr "') + esc(q) + '".</div>';
+                content.innerHTML = html || '<div class="dcMsg">' + t('ui.nothing_found_for') + esc(q) + '".</div>';
                 setTimeout(updateAllArrows, 0)
             })
         }
@@ -2005,7 +2180,7 @@ function dcBottomBarOffset(self) {
             }
             var k4 = overlay.querySelector(".dcBtn4k");
             if (k4) {
-                k4.textContent = current.Type === "tv" ? text("Alle seizoenen in 4K", "All seasons in 4K", "Alle Staffeln in 4K") : text("4K aanvragen", "Request in 4K", "In 4K anfordern");
+                k4.textContent = current.Type === "tv" ? t('ui.all_seasons_in_4k') : t('ui.request_in_4k');
                 k4.title = k4.textContent;
                 k4.classList.toggle("show", !!fourK[current.Type === "tv" ? "tv" : "movie"]);
                 k4.disabled = false
@@ -2017,9 +2192,9 @@ function dcBottomBarOffset(self) {
                 if (showAv) {
                     av.innerHTML = "";
                     [
-                        ["announced", text("Bij aankondiging", "Announced", "Angekündigt", "Annonsert")],
-                        ["inCinemas", text("In de bioscoop", "In cinemas", "Im Kino", "På kino")],
-                        ["released", text("Uitgebracht", "Released", "Veröffentlicht", "Utgitt")]
+                        ["announced", t('ui.announced')],
+                        ["inCinemas", t('ui.in_cinemas')],
+                        ["released", t('ui.released')]
                     ].forEach(function(o) {
                         var op = document.createElement("option");
                         op.value = o[0];
@@ -2027,12 +2202,12 @@ function dcBottomBarOffset(self) {
                         av.appendChild(op)
                     });
                     av.value = radarrAvail;
-                    av.title = text("Minimale beschikbaarheid in Radarr: wanneer Radarr deze film gaat zoeken", "Minimum availability in Radarr: when Radarr starts looking for this movie", "Mindestverfügbarkeit in Radarr: ab wann Radarr nach diesem Film sucht", "Minimum tilgjengelighet i Radarr: når Radarr begynner å lete etter filmen")
+                    av.title = t('ui.minimum_availability_in_radarr_when_radarr')
                 }
                 av.classList.toggle("show", showAv)
             }
             var tb = overlay.querySelector(".dcBtnTrailer");
-            tb.textContent = text("Trailer", "Trailer", "Trailer", "Trailer");
+            tb.textContent = t('channel.trailer_2');
             tb.title = tb.textContent;
             tb.setAttribute("data-short", "Trailer");
             if (showTrailer) {
@@ -2045,28 +2220,28 @@ function dcBottomBarOffset(self) {
             d.classList.remove("armed");
             clearTimeout(delArmTimer);
             if (isAdmin && current.Status === 1) {
-                d.textContent = text("Aanvraag annuleren", "Cancel request", "Anfrage abbrechen");
+                d.textContent = t('ui.cancel_request');
                 d.title = d.textContent;
-                d.setAttribute("data-short", text("Annuleren", "Cancel", "Abbrechen", "Avbryt"));
+                d.setAttribute("data-short", t('ui.cancel'));
                 d.setAttribute("data-kind", "cancel");
                 d.classList.add("show")
             } else if (isAdmin && current.Status === 2) {
-                d.textContent = text("Verwijderen", "Delete", "L\xf6schen");
+                d.textContent = t('btn.delete');
                 d.title = d.textContent;
-                d.setAttribute("data-short", text("Verwijderen", "Delete", "L\xf6schen", "Slett"));
+                d.setAttribute("data-short", t('btn.delete'));
                 d.setAttribute("data-kind", "delete");
                 d.classList.add("show")
             } else {
                 d.classList.remove("show")
             }
             if (current.Status === 2) {
-                b.textContent = text("Beschikbaar", "Available", "Verf\xfcgbar");
+                b.textContent = t('btn.available');
                 b.disabled = true
             } else if (current.Status === 1) {
-                b.textContent = text("Aangevraagd", "Requested", "Angefordert");
+                b.textContent = t('channel.requested_2');
                 b.disabled = true
             } else {
-                b.textContent = text("Aanvragen", "Request", "Anfragen", "Foresp\xf8r");
+                b.textContent = t('channel.request_2');
                 b.disabled = false
             }
         }
@@ -2111,7 +2286,7 @@ function dcBottomBarOffset(self) {
                         afterRequest()
                     }
                 } else {
-                    showToast(text("Mislukt: ", "Failed: ", "Fehlgeschlagen: ") + (r && r.Message || text("onbekende fout", "unknown error", "unbekannter Fehler")), true)
+                    showToast(t('ui.failed') + (r && r.Message || t('ui.unknown_error')), true)
                 }
                 btn.disabled = false;
                 if (current === i) {
@@ -2119,7 +2294,7 @@ function dcBottomBarOffset(self) {
                     applySeasonStates(i)
                 }
             }, function() {
-                showToast(text("Aanvraag mislukt.", "Request failed.", "Anfrage fehlgeschlagen."), true);
+                showToast(t('ui.request_failed'), true);
                 btn.disabled = false
             })
         }
@@ -2143,7 +2318,7 @@ function dcBottomBarOffset(self) {
         }
 
         function seasonName(n) {
-            return n === 0 ? text("Specials", "Specials", "Specials") : text("Seizoen ", "Season ", "Staffel ") + n
+            return n === 0 ? t('ui.specials') : t('channel.season') + n
         }
 
         function seasonUsable(s) {
@@ -2168,12 +2343,12 @@ function dcBottomBarOffset(self) {
             }
             var label = document.createElement("div");
             label.className = "dcSeasonLabel";
-            label.textContent = text("Kies een seizoen om aan te vragen", "Choose a season to request", "Staffel zum Anfordern w\xe4hlen");
+            label.textContent = t('ui.choose_a_season_to_request');
             box.appendChild(label);
             var all = document.createElement("button");
             all.type = "button";
             all.className = "dcBtnSeason all";
-            all.textContent = text("Alle seizoenen", "All seasons", "Alle Staffeln");
+            all.textContent = t('channel.all_seasons');
             all.addEventListener("click", function() {
                 requestSeasons(current, null, all)
             });
@@ -2186,11 +2361,11 @@ function dcBottomBarOffset(self) {
                 b.setAttribute("data-year", ym0 ? ym0[0] : "");
                 b.setAttribute("data-season", s.Number);
                 b.innerHTML = seasonHtml(s.Number, ym0 ? ym0[0] : "", false);
-                b.title = s.EpisodeCount ? s.EpisodeCount + " " + text("afl.", "eps.", "Folgen") : "";
+                b.title = s.EpisodeCount ? s.EpisodeCount + " " + t('ui.eps') : "";
                 if (s.Upcoming) {
                     b.classList.add("dcSoon");
-                    b.insertAdjacentHTML("beforeend", '<span class="dcSoonTag">' + esc(s.AirDate ? text("binnenkort", "coming soon", "demn\xe4chst", "snart") : "TBA") + "</span>");
-                    b.title = s.AirDate ? text("Start ", "Starts ", "Start ", "Start ") + s.AirDate : text("Aangekondigd", "Announced", "Angek\xfcndigt", "Annonsert")
+                    b.insertAdjacentHTML("beforeend", '<span class="dcSoonTag">' + esc(s.AirDate ? t('ui.coming_soon') : "TBA") + "</span>");
+                    b.title = s.AirDate ? t('ui.starts') + s.AirDate : t('ui.announced_2')
                 }
                 b.addEventListener("click", function() {
                     requestSeasons(current, [s.Number], b)
@@ -2220,7 +2395,7 @@ function dcBottomBarOffset(self) {
                 rateEl = boxEl
             }
             var v = ratingState.votes;
-            rateEl.innerHTML = (ratingState.tmdb ? '<span class="dcRate tmdb" title="TMDB' + (v ? " \xb7 " + esc(v) + " " + esc(text("stemmen", "votes", "Stimmen", "stemmer")) : "") + '"><b>TMDB</b>' + esc(ratingState.tmdb) + (v ? " <i>(" + esc(v) + ")</i>" : "") + "</span>" : "") + ratingState.omdb
+            rateEl.innerHTML = (ratingState.tmdb ? '<span class="dcRate tmdb" title="TMDB' + (v ? " \xb7 " + esc(v) + " " + esc(t('ui.votes')) : "") + '"><b>TMDB</b>' + esc(ratingState.tmdb) + (v ? " <i>(" + esc(v) + ")</i>" : "") + "</span>" : "") + ratingState.omdb
             if (boxEl) {
                 // In het infoblok: de labels van IMDb, TMDB, Trakt, Letterboxd en Metacritic worden het icoontje van die site.
                 var map = { imdb: "IMDb", tmdb: "TMDB", trakt: "Trakt", lb: "Letterboxd", mc: "Metacritic" };
@@ -2263,11 +2438,11 @@ function dcBottomBarOffset(self) {
                 if (have[n]) {
                     btns[k].innerHTML = seasonHtml(n, yr, true);
                     btns[k].disabled = false;
-                    btns[k].title = text("Al in je bibliotheek: klik om opnieuw aan te vragen", "Already in your library: click to request again", "Bereits in deiner Bibliothek: erneut anfordern")
+                    btns[k].title = t('ui.already_in_your_library_click_to_request')
                 } else {
                     btns[k].innerHTML = seasonHtml(n, yr, false);
                     if (btns[k].classList.contains("dcSoon")) {
-                        btns[k].insertAdjacentHTML("beforeend", '<span class="dcSoonTag">' + esc(yr ? text("binnenkort", "coming soon", "demn\xe4chst", "snart") : "TBA") + "</span>")
+                        btns[k].insertAdjacentHTML("beforeend", '<span class="dcSoonTag">' + esc(yr ? t('ui.coming_soon') : "TBA") + "</span>")
                     }
                     btns[k].disabled = false
                 }
@@ -2416,7 +2591,7 @@ function dcBottomBarOffset(self) {
             a.className = "dcTLink emby";
             a.href = "#";
             a.innerHTML = favImg("Emby");
-            a.title = text("Openen in Emby", "Open in Emby", "In Emby \xf6ffnen");
+            a.title = t('ui.open_in_emby');
             a.addEventListener("click", function(e) {
                 e.preventDefault();
                 ob.click()
@@ -2428,7 +2603,7 @@ function dcBottomBarOffset(self) {
         // Lange lijsten (studio's) en een lange tabel klappen in achter "Meer tonen", zodat de popup past.
         function renderInfoTable(i, infoEl, r) {
             var MAX_ROWS = 999,
-                more = text("Meer tonen", "Show more", "Mehr anzeigen", "Vis mer"),
+                more = t('ui.show_more'),
                 h = '<div class="dcIScores"></div>';
             if (r.Tagline) {
                 h += '<div class="dcTTag">\u201c' + esc(r.Tagline) + '\u201d</div>'
@@ -2537,12 +2712,12 @@ function dcBottomBarOffset(self) {
             var have = libSeasons[i.TmdbId] || {};
             var rows = list.map(function(s) {
                 var ym = String(s.AirDate || "").match(/\d{4}/);
-                var tag = s.Upcoming ? text("binnenkort", "coming soon", "demn\xe4chst", "snart") : have[s.Number] ? text("In bibliotheek", "In library", "In Bibliothek") : "";
-                return '<label class="dcPkOpt"><input type="checkbox" class="dcPkRow" value="' + s.Number + '"><span class="dcPkChk"></span><span class="dcPkLbl"><span>' + esc(seasonName(s.Number)) + "</span>" + ((ym || s.EpisodeCount) ? '<span class="dcPkEp">' + (ym ? ym[0] : "") + (ym && s.EpisodeCount ? " \xb7 " : "") + (s.EpisodeCount ? s.EpisodeCount + " " + esc(text("afl.", "eps.", "Folgen")) : "") + "</span>" : "") + "</span>" + (tag ? '<span class="dcPkTag">' + esc(tag) + "</span>" : "") + "</label>"
+                var tag = s.Upcoming ? t('ui.coming_soon') : have[s.Number] ? t('ui.in_library') : "";
+                return '<label class="dcPkOpt"><input type="checkbox" class="dcPkRow" value="' + s.Number + '"><span class="dcPkChk"></span><span class="dcPkLbl"><span>' + esc(seasonName(s.Number)) + "</span>" + ((ym || s.EpisodeCount) ? '<span class="dcPkEp">' + (ym ? ym[0] : "") + (ym && s.EpisodeCount ? " \xb7 " : "") + (s.EpisodeCount ? s.EpisodeCount + " " + esc(t('ui.eps')) : "") + "</span>" : "") + "</span>" + (tag ? '<span class="dcPkTag">' + esc(tag) + "</span>" : "") + "</label>"
             }).join("");
             var root = document.createElement("div");
             root.className = "dcPk";
-            root.innerHTML = '<div class="dcPkBack"></div><div class="dcPkPanel" role="dialog"><div class="dcPkHead"><h3>' + esc(text("Seizoenen kiezen", "Select seasons", "Staffeln w\xe4hlen")) + '</h3><button type="button" class="dcPkX">&#10005;</button></div>' + '<div class="dcPkList"><label class="dcPkOpt dcPkAll"><input type="checkbox" class="dcPkAllBox"><span class="dcPkChk"></span><span class="dcPkLbl">' + esc(text("Alles selecteren", "Select all", "Alle ausw\xe4hlen")) + "</span></label>" + rows + "</div>" + '<div class="dcPkFoot"><button type="button" class="dcPkGo" disabled>' + esc(text("Doorgaan", "Continue", "Weiter")) + "</button></div></div>";
+            root.innerHTML = '<div class="dcPkBack"></div><div class="dcPkPanel" role="dialog"><div class="dcPkHead"><h3>' + esc(t('ui.select_seasons')) + '</h3><button type="button" class="dcPkX">&#10005;</button></div>' + '<div class="dcPkList"><label class="dcPkOpt dcPkAll"><input type="checkbox" class="dcPkAllBox"><span class="dcPkChk"></span><span class="dcPkLbl">' + esc(t('btn.select_all')) + "</span></label>" + rows + "</div>" + '<div class="dcPkFoot"><button type="button" class="dcPkGo" disabled>' + esc(t('ui.continue')) + "</button></div></div>";
             document.body.appendChild(root);
             var boxes = root.querySelectorAll(".dcPkRow"),
                 allBox = root.querySelector(".dcPkAllBox"),
@@ -2808,9 +2983,9 @@ function dcBottomBarOffset(self) {
             titleEl.textContent = i.Title + (i.Year ? " (" + i.Year + ")" : "");
             titleEl.classList.remove("dcHasLogo");
             var embyLogoP = embyLogo(i);
-            overlay.querySelector(".dcMeta").textContent = text(i.Type === "tv" ? "Serie" : "Film", i.Type === "tv" ? "Series" : "Movie", i.Type === "tv" ? "Serie" : "Film") + (i.Rating && !modernUi() ? "  •  ★ " + i.Rating.toFixed(1) : "");
+            overlay.querySelector(".dcMeta").textContent = (i.Type === "tv" ? t('ui.kind_series') : t('ui.kind_movie')) + (i.Rating && !modernUi() ? "  •  ★ " + i.Rating.toFixed(1) : "");
             var ovEl = overlay.querySelector(".dcOverview");
-            ovEl.textContent = i.Overview || text("Geen beschrijving beschikbaar.", "No description available.", "Keine Beschreibung verf\xfcgbar.", "Ingen beskrivelse tilgjengelig.");
+            ovEl.textContent = i.Overview || t('ui.no_description_available');
             ovEl.scrollTop = 0;
             ovEl.onscroll = function() {
                 updateOverviewHint(ovEl)
@@ -2844,7 +3019,7 @@ function dcBottomBarOffset(self) {
                     }
                     var h = "";
                     if (r.Imdb) {
-                        h += '<span class="dcRate imdb" title="IMDb' + (r.ImdbVotes ? " \xb7 " + esc(r.ImdbVotes) + " " + esc(text("stemmen", "votes", "Stimmen", "stemmer")) : "") + '"><b>IMDb</b>' + esc(r.Imdb) + "</span>"
+                        h += '<span class="dcRate imdb" title="IMDb' + (r.ImdbVotes ? " \xb7 " + esc(r.ImdbVotes) + " " + esc(t('ui.votes')) : "") + '"><b>IMDb</b>' + esc(r.Imdb) + "</span>"
                     }
                     if (r.RottenTomatoes) {
                         h += '<span class="dcRate rt" title="Rotten Tomatoes"><b>RT</b>' + esc(r.RottenTomatoes) + "</span>"
@@ -2854,7 +3029,7 @@ function dcBottomBarOffset(self) {
                         h += '<span class="dcRate mc' + (mc < 40 ? " low" : mc < 61 ? " mid" : "") + '" title="Metacritic"><b>MC</b>' + esc(r.Metacritic) + "</span>"
                     }
                     if (r.Audience) {
-                        h += '<span class="dcRate pop" title="Rotten Tomatoes \xb7 ' + esc(text("publiek", "audience", "Publikum", "publikum")) + '"><b>POP</b>' + esc(r.Audience) + "</span>"
+                        h += '<span class="dcRate pop" title="Rotten Tomatoes \xb7 ' + esc(t('ui.audience')) + '"><b>POP</b>' + esc(r.Audience) + "</span>"
                     }
                     if (r.Letterboxd) {
                         h += '<span class="dcRate lb" title="Letterboxd (/5)"><b>LB</b>' + esc(r.Letterboxd) + "</span>"
@@ -2901,7 +3076,7 @@ function dcBottomBarOffset(self) {
             var ob = overlay.querySelector(".dcBtnOpen");
             ob.classList.remove("show");
             ob.removeAttribute("data-id");
-            ob.textContent = text("Openen in Emby", "Open in Emby", "In Emby \xf6ffnen");
+            ob.textContent = t('ui.open_in_emby');
             ob.title = ob.textContent;
             ob.setAttribute("data-short", "Emby");
             loadSeasonButtons(i);
@@ -3212,7 +3387,7 @@ function dcBottomBarOffset(self) {
         }
 
         function playTrailerOnTv(i, btn) {
-            var noTrailer = text("Geen trailer beschikbaar voor deze titel.", "No trailer available for this title.", "Kein Trailer f\xfcr diesen Titel verf\xfcgbar.");
+            var noTrailer = t('channel.no_trailer_available_for_this_title');
 
             function finish() {
                 btn.disabled = false
@@ -3240,7 +3415,7 @@ function dcBottomBarOffset(self) {
                             }
                         });
                         if (!canPlay.length) {
-                            fail(text("Geen YouTube-speler beschikbaar. Spelers: ", "No YouTube player available. Players: ", "Kein YouTube-Player verf\xfcgbar. Player: ") + players.map(function(p) {
+                            fail(t('ui.no_youtube_player_available_players') + players.map(function(p) {
                                 return p.id || p.name
                             }).join(", "));
                             return
@@ -3258,19 +3433,19 @@ function dcBottomBarOffset(self) {
                         });
                         if (res && typeof res.then === "function") {
                             res.then(finish, function(e) {
-                                fail(text("Trailer afspelen mislukt: ", "Playing trailer failed: ", "Trailer-Wiedergabe fehlgeschlagen: ") + reason(e))
+                                fail(t('ui.playing_trailer_failed') + reason(e))
                             })
                         } else {
                             finish()
                         }
                     } catch (e) {
-                        fail(text("Trailer afspelen mislukt: ", "Playing trailer failed: ", "Trailer-Wiedergabe fehlgeschlagen: ") + reason(e))
+                        fail(t('ui.playing_trailer_failed') + reason(e))
                     }
                 }, function(e) {
-                    fail(text("Emby-speler niet beschikbaar: ", "Emby player not available: ", "Emby-Player nicht verf\xfcgbar: ") + reason(e))
+                    fail(t('ui.emby_player_not_available') + reason(e))
                 })
             }
-            showToast(text("Trailer laden...", "Loading trailer...", "Trailer wird geladen..."), false);
+            showToast(t('ui.loading_trailer'), false);
             api("GET", "Discover/TrailerKey", {
                 Type: i.Type,
                 TmdbId: i.TmdbId
@@ -3281,7 +3456,7 @@ function dcBottomBarOffset(self) {
                 }
                 playRemote(r.Key)
             }, function(e) {
-                fail(text("Trailer ophalen mislukt: ", "Fetching trailer failed: ", "Trailer abrufen fehlgeschlagen: ") + reason(e))
+                fail(t('ui.fetching_trailer_failed') + reason(e))
             })
         }
         var pageBd = {
@@ -3384,7 +3559,7 @@ function dcBottomBarOffset(self) {
 
         function openQuick(i, x, y) {
             var canRequest = i.Status === 0 || i.Type === "tv" && i.Status !== 1;
-            quick.innerHTML = '<div class="dcQuickTitle">' + esc(i.Title) + (i.Year ? " (" + i.Year + ")" : "") + "</div>" + '<button type="button" class="req"' + (canRequest ? "" : " disabled") + ">" + (i.Type === "tv" ? text("Alle seizoenen aanvragen", "Request all seasons", "Alle Staffeln anfordern") : text("Aanvragen", "Request", "Anfordern")) + (i.Status === 2 && i.Type !== "tv" ? " ✓" : i.Status === 1 ? " ⏳" : "") + "</button>" + '<button type="button" class="det">' + text("Details en trailer", "Details and trailer", "Details und Trailer") + "</button>";
+            quick.innerHTML = '<div class="dcQuickTitle">' + esc(i.Title) + (i.Year ? " (" + i.Year + ")" : "") + "</div>" + '<button type="button" class="req"' + (canRequest ? "" : " disabled") + ">" + (i.Type === "tv" ? t('ui.request_all_seasons') : t('channel.request_2')) + (i.Status === 2 && i.Type !== "tv" ? " ✓" : i.Status === 1 ? " ⏳" : "") + "</button>" + '<button type="button" class="det">' + t('ui.details_and_trailer') + "</button>";
             quick.querySelector(".req").addEventListener("click", function() {
                 closeQuick();
                 requestSeasons(i, null, {
@@ -3599,15 +3774,15 @@ function dcBottomBarOffset(self) {
         }
 
         function colAllLabel(n) {
-            return text("Collectie aanvragen (" + n + " films)", "Request collection (" + n + " movies)", "Sammlung anfragen (" + n + " Filme)", "Be om samlingen (" + n + " filmer)")
+            return t('ui.request_collection_n', n)
         }
 
         function colBadgeHtml(f) {
             if (f.Status === 2) {
-                return '<span class="dcColBadge have" title="' + esc(text("In bibliotheek", "In library", "In Bibliothek", "I biblioteket")) + '">✓</span>'
+                return '<span class="dcColBadge have" title="' + esc(t('ui.in_library')) + '">✓</span>'
             }
             if (f.Status === 1) {
-                return '<span class="dcColBadge req" title="' + esc(text("Aangevraagd", "Requested", "Angefragt", "Forespurt")) + '">⏳</span>'
+                return '<span class="dcColBadge req" title="' + esc(t('channel.requested_2')) + '">⏳</span>'
             }
             return ""
         }
@@ -3616,7 +3791,7 @@ function dcBottomBarOffset(self) {
             if (f.Status !== 0 || f.TmdbId === i.TmdbId) {
                 return ""
             }
-            var t = text("Aanvragen", "Request", "Anfragen", "Foresp\xf8r") + ": " + f.Title;
+            var t = t('channel.request_2') + ": " + f.Title;
             return '<button type="button" class="dcColAdd" data-req="' + f.TmdbId + '" title="' + esc(t) + '" aria-label="' + esc(t) + '">+</button>'
         }
 
@@ -3634,8 +3809,8 @@ function dcBottomBarOffset(self) {
             var open = list.filter(function(f) {
                 return f.Status === 0
             }).length;
-            box.innerHTML = '<div class="dcColHead"><span class="dcColTitle">' + esc(r.CollectionName || text("Collectie", "Collection", "Sammlung", "Samling")) + " \xb7 " + list.length + " " + esc(text("films", "movies", "Filme", "filmer")) + "</span>" + (open ? '<button type="button" class="dcColAll" data-n="' + open + '">' + esc(colAllLabel(open)) + "</button>" : "") + "</div>" + (open ? '<div class="dcColWarn">⚠ ' + esc(text("Hiermee vraag je in \xe9\xe9n keer alle " + open + " films uit deze collectie aan die je nog niet hebt. Telt mee voor je aanvraaglimiet.", "This requests all " + open + " movies from this collection that you don’t have yet, in one go. Counts towards your request limit.", "Damit fragst du alle " + open + " Filme dieser Sammlung, die du noch nicht hast, auf einmal an. Z\xe4hlt zu deinem Anfragelimit.", "Dette ber om alle " + open + " filmer i denne samlingen som du ikke har enn\xe5, p\xe5 \xe9n gang. Teller mot foresp\xf8rselsgrensen.")) + "</div>" : "") + '<div class="dcColRow">' + list.map(function(f) {
-                return '<div class="dcColItem' + (f.TmdbId === i.TmdbId ? " cur" : "") + '" data-tmdb="' + f.TmdbId + '">' + '<button type="button" class="dcColPoster" data-open="' + f.TmdbId + '" title="' + esc(f.Title + (f.Year ? " (" + f.Year + ")" : "")) + '"' + (f.Poster ? ' style="background-image:url(&quot;' + esc(f.Poster) + '&quot;)"' : "") + ">" + colBadgeHtml(f) + "</button>" + colAddHtml(f, i) + '<div class="dcColName">' + esc(f.Title) + (f.Year ? " (" + f.Year + ")" : "") + "</div>" + (f.TmdbId === i.TmdbId ? '<div class="dcColCur">' + esc(text("Deze film", "This movie", "Dieser Film", "Denne filmen")) + "</div>" : "") + "</div>"
+            box.innerHTML = '<div class="dcColHead"><span class="dcColTitle">' + esc(r.CollectionName || t('ui.collection')) + " \xb7 " + list.length + " " + esc(t('ui.movies_2')) + "</span>" + (open ? '<button type="button" class="dcColAll" data-n="' + open + '">' + esc(colAllLabel(open)) + "</button>" : "") + "</div>" + (open ? '<div class="dcColWarn">⚠ ' + esc(t('ui.request_collection_explain', open)) + "</div>" : "") + '<div class="dcColRow">' + list.map(function(f) {
+                return '<div class="dcColItem' + (f.TmdbId === i.TmdbId ? " cur" : "") + '" data-tmdb="' + f.TmdbId + '">' + '<button type="button" class="dcColPoster" data-open="' + f.TmdbId + '" title="' + esc(f.Title + (f.Year ? " (" + f.Year + ")" : "")) + '"' + (f.Poster ? ' style="background-image:url(&quot;' + esc(f.Poster) + '&quot;)"' : "") + ">" + colBadgeHtml(f) + "</button>" + colAddHtml(f, i) + '<div class="dcColName">' + esc(f.Title) + (f.Year ? " (" + f.Year + ")" : "") + "</div>" + (f.TmdbId === i.TmdbId ? '<div class="dcColCur">' + esc(t('ui.this_movie')) + "</div>" : "") + "</div>"
             }).join("") + "</div>"
         }
 
@@ -3701,7 +3876,7 @@ function dcBottomBarOffset(self) {
                 var cur = current;
                 requestColFilm(f).then(function(res) {
                     if (res.ok) {
-                        showToast(text("Aangevraagd: ", "Requested: ", "Angefragt: ", "Forespurt: ") + f.Title, false);
+                        showToast(t('ui.requested') + f.Title, false);
                         afterRequest()
                     } else {
                         showToast(res.msg, true)
@@ -3724,7 +3899,7 @@ function dcBottomBarOffset(self) {
                 }
                 if (!all.classList.contains("confirm")) {
                     all.classList.add("confirm");
-                    all.textContent = text("Zeker? " + todo.length + " films aanvragen", "Sure? Request " + todo.length + " movies", "Sicher? " + todo.length + " Filme anfragen", "Sikker? Be om " + todo.length + " filmer");
+                    all.textContent = t('ui.sure_request_n_movies', todo.length);
                     clearTimeout(all._t);
                     all._t = setTimeout(function() {
                         if (!all.disabled) {
@@ -3741,7 +3916,7 @@ function dcBottomBarOffset(self) {
                     lastErr = "";
                 (function next(n) {
                     if (n >= todo.length) {
-                        showToast(text(ok + " aangevraagd", ok + " requested", ok + " angefragt", ok + " forespurt") + (fail ? " \xb7 " + text(fail + " mislukt: ", fail + " failed: ", fail + " fehlgeschlagen: ", fail + " mislyktes: ") + lastErr : ""), fail > 0);
+                        showToast(t('ui.n_requested', ok) + (fail ? " \xb7 " + t('ui.n_failed', fail) + lastErr : ""), fail > 0);
                         afterRequest();
                         if (current === curItem) {
                             renderCollection(curItem, r);
@@ -3749,7 +3924,7 @@ function dcBottomBarOffset(self) {
                         }
                         return
                     }
-                    all.textContent = text("Aanvragen... ", "Requesting... ", "Wird angefragt... ", "Ber om... ") + (n + 1) + "/" + todo.length;
+                    all.textContent = t('ui.requesting') + (n + 1) + "/" + todo.length;
                     requestColFilm(todo[n]).then(function(res) {
                         if (res.ok) {
                             ok++
@@ -3847,10 +4022,10 @@ function dcBottomBarOffset(self) {
                 TmdbId: i.TmdbId,
                 Is4k: true
             }).then(function(r) {
-                showToast(r && r.Success ? i.Title + ": " + r.Message : text("Mislukt: ", "Failed: ", "Fehlgeschlagen: ") + (r && r.Message || "?"), !(r && r.Success));
+                showToast(r && r.Success ? i.Title + ": " + r.Message : t('ui.failed') + (r && r.Message || "?"), !(r && r.Success));
                 b.disabled = false
             }, function() {
-                showToast(text("Aanvraag mislukt.", "Request failed.", "Anfrage fehlgeschlagen."), true);
+                showToast(t('ui.request_failed'), true);
                 b.disabled = false
             })
         });
@@ -3861,7 +4036,7 @@ function dcBottomBarOffset(self) {
             }
             var b = this;
             b.disabled = true;
-            b.textContent = text("Aanvragen...", "Requesting...", "Wird angefragt...");
+            b.textContent = t('ui.requesting_2');
             api("POST", "Discover/RequestItem", null, {
                 Type: i.Type,
                 TmdbId: i.TmdbId
@@ -3872,11 +4047,11 @@ function dcBottomBarOffset(self) {
                     showToast(i.Title + ": " + r.Message, false);
                     afterRequest()
                 } else {
-                    showToast(text("Mislukt: ", "Failed: ", "Fehlgeschlagen: ") + (r && r.Message || text("onbekende fout", "unknown error", "unbekannter Fehler")), true)
+                    showToast(t('ui.failed') + (r && r.Message || t('ui.unknown_error')), true)
                 }
                 updateButton()
             }, function() {
-                showToast(text("Aanvraag mislukt.", "Request failed.", "Anfrage fehlgeschlagen."), true);
+                showToast(t('ui.request_failed'), true);
                 updateButton()
             })
         });
@@ -3887,12 +4062,12 @@ function dcBottomBarOffset(self) {
             }
             var arr = window.__discoverRequestService || (i.Type === "tv" ? "Sonarr" : "Radarr");
             var withFiles = i.Status === 2;
-            var q = withFiles ? text('"' + i.Title + '" verwijderen uit ' + arr + " EN de bestanden van schijf verwijderen?", 'Delete "' + i.Title + '" from ' + arr + " AND delete its files from disk?", '"' + i.Title + '" aus ' + arr + " entfernen UND die Dateien von der Festplatte l\xf6schen?") : text('De aanvraag voor "' + i.Title + '" annuleren en verwijderen uit ' + arr + "?", 'Cancel the request for "' + i.Title + '" and remove it from ' + arr + "?", 'Die Anfrage f\xfcr "' + i.Title + '" abbrechen und aus ' + arr + " entfernen?");
+            var q = withFiles ? t('ui.confirm_delete_files', i.Title, arr) : t('ui.confirm_cancel_request', i.Title, arr);
             var d = this;
             if (!delArmed) {
                 delArmed = true;
                 d.classList.add("armed");
-                d.textContent = withFiles ? text("Bevestig: verwijderen + bestanden", "Confirm: delete + files", "Best\xe4tigen: l\xf6schen + Dateien") : text("Bevestig: aanvraag annuleren", "Confirm: cancel request", "Best\xe4tigen: Anfrage abbrechen");
+                d.textContent = withFiles ? t('ui.confirm_delete_files') : t('ui.confirm_cancel_request');
                 showToast(q, false);
                 clearTimeout(delArmTimer);
                 delArmTimer = setTimeout(function() {
@@ -3918,11 +4093,11 @@ function dcBottomBarOffset(self) {
                     loadMyRequests();
                     showToast(i.Title + ": " + r.Message, false)
                 } else {
-                    showToast(text("Mislukt: ", "Failed: ", "Fehlgeschlagen: ") + (r && r.Message || text("onbekende fout", "unknown error", "unbekannter Fehler")), true)
+                    showToast(t('ui.failed') + (r && r.Message || t('ui.unknown_error')), true)
                 }
                 updateButton()
             }, function() {
-                showToast(text("Verwijderen mislukt (alleen beheerders mogen dit).", "Delete failed (only administrators can do this).", "L\xf6schen fehlgeschlagen (nur Administratoren d\xfcrfen dies)."), true);
+                showToast(t('btn.delete_failed_only_administrators_can_do'), true);
                 updateButton()
             })
         });
@@ -4035,19 +4210,19 @@ function dcBottomBarOffset(self) {
             }).then(function(r) {
                 b.disabled = false;
                 if (!r || !r.Key) {
-                    showToast(text("Geen trailer beschikbaar voor deze titel.", "No trailer available for this title.", "Kein Trailer f\xfcr diesen Titel verf\xfcgbar."), true);
+                    showToast(t('channel.no_trailer_available_for_this_title'), true);
                     return
                 }
                 trailerFrame.src = "https://www.youtube-nocookie.com/embed/" + encodeURIComponent(r.Key) + "?autoplay=1&rel=0&playsinline=1&enablejsapi=1&origin=" + encodeURIComponent(window.location.origin);
                 trailerLink.href = "https://www.youtube.com/watch?v=" + encodeURIComponent(r.Key);
-                trailerLink.textContent = text("Werkt de trailer niet? Open op YouTube", "Trailer not playing? Open on YouTube", "Trailer l\xe4dt nicht? Auf YouTube \xf6ffnen");
+                trailerLink.textContent = t('ui.trailer_not_playing_open_on_youtube');
                 trailerOverlay.classList.add("open");
                 setTimeout(function() {
                     trailerOverlay.querySelector(".dcTrailerClose").focus()
                 }, 60)
             }, function() {
                 b.disabled = false;
-                showToast(text("Trailer ophalen mislukt.", "Fetching trailer failed.", "Trailer abrufen fehlgeschlagen."), true)
+                showToast(t('ui.fetching_trailer_failed_2'), true)
             })
         });
         view.addEventListener("focusin", function(e) {
@@ -4503,7 +4678,7 @@ function dcBottomBarOffset(self) {
                 TmdbId: tmdbId
             }).then(function(r) {
                 if (!r || !r.Found || !r.Item) {
-                    showToast(text("Titel niet gevonden.", "Title not found.", "Titel nicht gefunden."), true);
+                    showToast(t('ui.title_not_found'), true);
                     return
                 }
                 items[key(r.Item)] = r.Item;
@@ -4512,7 +4687,7 @@ function dcBottomBarOffset(self) {
                     scheduleQueue(0)
                 }, 300)
             }, function() {
-                showToast(text("Titel laden mislukt.", "Loading title failed.", "Titel konnte nicht geladen werden."), true)
+                showToast(t('ui.loading_title_failed'), true)
             })
         }
         if (embedded) {
@@ -4578,7 +4753,7 @@ function dcBottomBarOffset(self) {
         topBtn.type = "button";
         topBtn.className = "dcToTop";
         topBtn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path transform="rotate(-90 12 12)" d="M9.3 6.3a1 1 0 0 0 0 1.4l4.3 4.3-4.3 4.3a1 1 0 1 0 1.4 1.4l5-5a1 1 0 0 0 0-1.4l-5-5a1 1 0 0 0-1.4 0z"/></svg>';
-        topBtn.title = topBtn.ariaLabel = text("Naar boven", "Back to top", "Nach oben", "Til toppen");
+        topBtn.title = topBtn.ariaLabel = t('ui.back_to_top');
         var topCss = document.createElement("style");
         topCss.textContent = ".dcRoot.dcGutter{padding-right:3.8em!important}.dcToTop{position:fixed;right:.7em;top:50%;transform:translateY(-50%);width:2.6em;height:6em;padding:0;border-radius:100em;border:0;background:#fff;color:#000;cursor:pointer;display:none;align-items:center;justify-content:center;z-index:50;box-shadow:0 .2em .8em rgba(0,0,0,.5);opacity:.92}" + ".dcToTop svg{width:2.2em;height:2.2em;fill:currentColor}.dcToTop.show{display:flex}body:not(.dcDiscoverActive) .dcToTop{display:none!important}.dcToTop:hover,.dcToTop:focus{outline:0;box-shadow:0 0 0 3px var(--dc-accent,#ffb400),0 .2em .8em rgba(0,0,0,.5)}" + ".dcGrid{display:grid;grid-template-columns:repeat(auto-fill,170px);justify-content:space-between}.dcGrid>.dcMsg{grid-column:1/-1}@media (max-width:600px){.dcGrid{grid-template-columns:repeat(auto-fill,130px)}}" + "@media (max-width:800px){.dcRoot.dcGutter{padding-right:3.2em!important}.dcToTop{right:.3em;width:2.4em;height:5em}}";
         view.appendChild(topCss);
@@ -4725,13 +4900,13 @@ function dcBottomBarOffset(self) {
                 TmdbId: parseInt(m[2], 10)
             }).then(function(r) {
                 if (!r || !r.Found || !r.Item) {
-                    showToast(text("Titel niet gevonden.", "Title not found.", "Titel nicht gefunden."), true);
+                    showToast(t('ui.title_not_found'), true);
                     return
                 }
                 items[key(r.Item)] = r.Item;
                 openItem(r.Item)
             }, function() {
-                showToast(text("Titel laden mislukt.", "Loading title failed.", "Titel konnte nicht geladen werden."), true)
+                showToast(t('ui.loading_title_failed'), true)
             })
         }
         view.addEventListener("viewshow", function() {

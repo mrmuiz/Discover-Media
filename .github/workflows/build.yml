@@ -28,6 +28,12 @@ jobs:
       - name: Build
         run: dotnet build EmbyDiscover/EmbyDiscover.csproj -c Release
 
+      - name: Check the English fallback in the browser scripts
+        run: python3 tools/sync-js-fallback.py
+
+      - name: Check the language files
+        run: python3 tools/check-languages.py
+
       - name: Collect plugin DLL
         run: |
           mkdir -p artifacts

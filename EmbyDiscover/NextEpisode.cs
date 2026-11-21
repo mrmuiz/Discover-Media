@@ -63,7 +63,7 @@ namespace Emby.Plugins.Discover
             catch (Exception ex)
             {
                 if (ex is OperationCanceledException) throw;
-                DiscoverDiagnostics.Add("TVmaze volgende aflevering " + tmdbId + " mislukt: " + ex.Message);
+                DiscoverDiagnostics.Add("log.next.tvmaze_volgende_aflevering_mislukt", tmdbId, ex.Message);
             }
             Next[tmdbId] = Tuple.Create(DateTime.UtcNow, code, when);
             return code == null ? null : Tuple.Create(code, when);
@@ -90,7 +90,7 @@ namespace Emby.Plugins.Discover
                         bool hasDate = DateTime.TryParse(ep.airstamp, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out when)
                                        || DateTime.TryParse(ep.airdate, CultureInfo.InvariantCulture, DateTimeStyles.None, out when);
                         var code = "S" + ep.season.ToString("00") + "E" + ep.number.ToString("00");
-                        line = DiscoverLanguage.Text("Volgende aflevering: ", "Next episode: ", "Nächste Folge: ", "Neste episode: ") + code +
+                        line = DiscoverLanguage.T("api.next_episode") + code +
                                (hasDate ? " · " + InfoText.LongDate(when.Kind == DateTimeKind.Utc ? when.ToLocalTime() : when) : "");
                     }
                 }
@@ -98,7 +98,7 @@ namespace Emby.Plugins.Discover
             catch (Exception ex)
             {
                 if (ex is OperationCanceledException) throw;
-                DiscoverDiagnostics.Add("TVmaze volgende aflevering " + tmdbId + " mislukt: " + ex.Message);
+                DiscoverDiagnostics.Add("log.next.tvmaze_volgende_aflevering_mislukt", tmdbId, ex.Message);
             }
             Lines[key] = Tuple.Create(DateTime.UtcNow, line);
             return line;

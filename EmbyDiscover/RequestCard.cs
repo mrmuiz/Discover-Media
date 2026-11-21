@@ -137,13 +137,13 @@ namespace Emby.Plugins.Discover
             string arr = tv ? "Sonarr" : "Radarr";
             string title = tv ? (t.name ?? t.title ?? "?") : (t.title ?? t.name ?? "?");
             string badge = alreadyThere
-                ? DiscoverLanguage.Text("Staat al in ", "Already in ", "Bereits in ") + arr
-                : DiscoverLanguage.Text("Aangevraagd", "Requested", "Angefordert");
+                ? DiscoverLanguage.T("requestc.already_in") + arr
+                : DiscoverLanguage.T("channel.requested_2");
             string what = season > 0
-                ? DiscoverLanguage.Text("Seizoen " + season, "Season " + season, "Staffel " + season)
+                ? DiscoverLanguage.T("card.season_number", season)
                 : tv
-                    ? DiscoverLanguage.Text("Serie \u00B7 alle seizoenen", "Series \u00B7 all seasons", "Serie \u00B7 alle Staffeln")
-                    : DiscoverLanguage.Text("Film", "Movie", "Film");
+                    ? DiscoverLanguage.T("requestc.series_u00b7_all_seasons")
+                    : DiscoverLanguage.T("requestc.movie");
             string boxColor = alreadyThere ? "0x2F6FDB" : "0x22A559";
 
             if (hasPoster)
@@ -285,20 +285,14 @@ namespace Emby.Plugins.Discover
             if (tv)
             {
                 if (x.number_of_seasons > 0)
-                    return x.number_of_seasons + DiscoverLanguage.Text(
-                        x.number_of_seasons == 1 ? " seizoen" : " seizoenen",
-                        x.number_of_seasons == 1 ? " season" : " seasons",
-                        x.number_of_seasons == 1 ? " Staffel" : " Staffeln");
+                    return x.number_of_seasons + (x.number_of_seasons == 1 ? DiscoverLanguage.T("info.seasons_one_suffix") : DiscoverLanguage.T("info.seasons_many_suffix"));
                 return null;
             }
             if (x.runtime <= 0) return null;
             int h = x.runtime / 60, m = x.runtime % 60;
             return h > 0
-                ? DiscoverLanguage.Text(
-                    h + " u " + m.ToString("00", CultureInfo.InvariantCulture) + " min",
-                    h + " hr " + m.ToString("00", CultureInfo.InvariantCulture) + " min",
-                    h + " Std. " + m.ToString("00", CultureInfo.InvariantCulture) + " Min.")
-                : DiscoverLanguage.Text(m + " min", m + " min", m + " Min.");
+                ? DiscoverLanguage.T("card.hours_minutes", h, m.ToString("00", CultureInfo.InvariantCulture))
+                : DiscoverLanguage.T("card.minutes", m);
         }
 
         // Breedte per teken (in em) van Poppins, ASCII 32..126 (gemeten uit de lettertypes in de DLL).
@@ -387,7 +381,7 @@ namespace Emby.Plugins.Discover
             }
             catch (Exception ex)
             {
-                DiscoverDiagnostics.Add("afbeelding voor kaartclip niet opgehaald: " + ex.Message);
+                DiscoverDiagnostics.Add("log.card.afbeelding_voor_kaartclip_niet_opgehaald", ex.Message);
                 return false;
             }
         }

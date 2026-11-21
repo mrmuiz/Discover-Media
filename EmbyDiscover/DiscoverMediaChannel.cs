@@ -63,10 +63,7 @@ namespace Emby.Plugins.Discover
 
         // ---------- IChannel ----------
         public string Name => "Discover Media";
-        public string Description => DiscoverLanguage.Text(
-            "Ontdek films en series en vraag ze aan.",
-            "Discover movies and series and request them.",
-            "Entdecke Filme und Serien und fordere sie an.");
+        public string Description => DiscoverLanguage.T("channel.discover_movies_and_series_and_request_them");
         public string HomePageUrl => "";
 
         // Ophogen als Emby oude (bewaarde) kanaalinhoud blijft tonen.
@@ -121,8 +118,7 @@ namespace Emby.Plugins.Discover
 
             DiscoverDiagnostics.CountCall();
             var tmdbLanguage = TmdbClient.Language();
-            DiscoverDiagnostics.Add(string.Format("opgevraagd: map={0} start={1} limit={2} key={3} taal={4}",
-                folder, query.StartIndex, query.Limit, hasKey, tmdbLanguage));
+            DiscoverDiagnostics.Add("log.channel.opgevraagd_map_start_limit_key_taal", folder, query.StartIndex, query.Limit, hasKey, tmdbLanguage);
             _logger.Info("Discover: channel opened, folder '{0}', TMDB key set: {1}, TMDB language: {2}, Radarr: {3}, Sonarr: {4}, start: {5}, limit: {6}, user: {7}",
                 folder, hasKey, tmdbLanguage, ArrClient.RadarrConfigured, ArrClient.SonarrConfigured, query.StartIndex, query.Limit, query.UserId);
 
@@ -131,12 +127,9 @@ namespace Emby.Plugins.Discover
             // waardoor "niet ingesteld" of een tijdelijke netwerkfout blijft staan na het instellen/herstellen.
             if (!hasKey)
             {
-                DiscoverDiagnostics.Add("FOUT: geen TMDB-key ingesteld");
+                DiscoverDiagnostics.Add("log.channel.fout_geen_tmdb_key_ingesteld");
                 throw new InvalidOperationException(
-                    DiscoverLanguage.Text(
-                        "Discover is nog niet ingesteld: vul de TMDB API key in bij Dashboard > Plugins > Discover.",
-                        "Discover is not configured: enter the TMDB API key under Dashboard > Plugins > Discover.",
-                        "Discover ist noch nicht eingerichtet: Gib den TMDB-API-Schlüssel unter Dashboard > Plugins > Discover ein."));
+                    DiscoverLanguage.T("channel.discover_is_not_configured_enter_the_tmdb"));
             }
 
             if (string.IsNullOrEmpty(id)) return await Root(ct).ConfigureAwait(false);
@@ -160,18 +153,17 @@ namespace Emby.Plugins.Discover
 
                 if (res != null)
                 {
-                    DiscoverDiagnostics.Add(string.Format("teruggegeven: map={0} items={1} totaal={2}",
-                        id, res.Items == null ? 0 : res.Items.Count(), res.TotalRecordCount));
+                    DiscoverDiagnostics.Add("log.channel.teruggegeven_map_items_totaal", id, res.Items == null ? 0 : res.Items.Count(), res.TotalRecordCount);
                     return res;
                 }
             }
             catch (Exception ex)
             {
                 _logger.Error("Discover: loading failed: {0}", ex.Message);
-                DiscoverDiagnostics.Add("FOUT bij map " + id + ": " + ex.Message);
+                DiscoverDiagnostics.Add("log.channel.fout_bij_map", id, ex.Message);
                 throw;
             }
-            DiscoverDiagnostics.Add("onbekende map, leeg teruggegeven: " + id);
+            DiscoverDiagnostics.Add("log.channel.onbekende_map_leeg_teruggegeven", id);
             return new ChannelItemResult { Items = new List<ChannelItemInfo>(), TotalRecordCount = 0 };
         }
 
@@ -199,7 +191,7 @@ namespace Emby.Plugins.Discover
             bool tv = rest.StartsWith("t:");
             int tmdbId;
             if (rest.Length < 3 || !int.TryParse(rest.Substring(2), out tmdbId))
-                throw new InvalidOperationException(DiscoverLanguage.Text("Onbekend aanvraagitem: ", "Unknown request item: ", "Unbekanntes Anfrage-Element: ") + rest);
+                throw new InvalidOperationException(DiscoverLanguage.T("channel.unknown_request_item") + rest);
 
             // Eerst de al geladen lijst (geen extra TMDB-call), anders de details bij TMDB.
             TmdbItem t = FindInCache(tv, tmdbId);
@@ -213,13 +205,13 @@ namespace Emby.Plugins.Discover
                 catch (Exception ex)
                 {
                     if (ex is OperationCanceledException) throw;
-                    DiscoverDiagnostics.Add("titel voor aanvraag-item " + rest + " mislukt: " + ex.Message);
+                    DiscoverDiagnostics.Add("log.channel.titel_voor_aanvraag_item_mislukt", rest, ex.Message);
                 }
             }
             // Bewust een exception en geen leeg item: Emby bewaart een normaal resultaat, en dan blijft
             // "Aanvragen" zonder poster en info staan, ook als TMDB daarna weer werkt.
             if (t == null)
-                throw new InvalidOperationException(DiscoverLanguage.Text("Titelgegevens van TMDB niet beschikbaar voor ", "Title details from TMDB not available for ", "Titeldaten von TMDB nicht verfügbar für ") + rest + DiscoverLanguage.Text("; probeer het zo opnieuw.", "; try again in a moment.", "; versuche es gleich noch einmal."));
+                throw new InvalidOperationException(DiscoverLanguage.T("channel.title_details_from_tmdb_not_available_for") + rest + DiscoverLanguage.T("channel.try_again_in_a_moment"));
 
             string title = TitleOf(t, tv);
             string arr = ArrClient.ServiceName(tv);
@@ -241,21 +233,13 @@ namespace Emby.Plugins.Discover
 
             string action;
             if (status == 2 && tv && ArrClient.IsPartial(tmdbId))
-                action = DiscoverLanguage.Text("\u2713 Gedeeltelijk beschikbaar: een deel van de afleveringen staat al in je bibliotheek.",
-                    "\u2713 Partially available: some episodes are already in your library.",
-                    "\u2713 Teilweise verfügbar: Einige Folgen befinden sich bereits in deiner Bibliothek.");
+                action = DiscoverLanguage.T("channel.u2713_partially_available_some_episodes");
             else if (status == 2)
-                action = DiscoverLanguage.Text("\u2713 Deze titel is al beschikbaar in je bibliotheek.",
-                    "\u2713 This title is already available in your library.",
-                    "\u2713 Dieser Titel ist bereits in deiner Bibliothek verfügbar.");
+                action = DiscoverLanguage.T("channel.u2713_this_title_is_already_available_in");
             else if (status == 1)
-                action = DiscoverLanguage.Text("\u23F3 Deze titel is al aangevraagd en staat in " + arr + ".",
-                    "\u23F3 This title has already been requested from " + arr + ".",
-                    "\u23F3 Dieser Titel wurde bereits bei " + arr + " angefordert.");
+                action = DiscoverLanguage.T("channel.title_already_requested", arr);
             else
-                action = DiscoverLanguage.Text("DRUK OP DE \u25B6 KNOP OM AAN TE VRAGEN.",
-                    "PRESS THE \u25B6 BUTTON TO REQUEST.",
-                    "DRÜCKE AUF DIE \u25B6-TASTE, UM DEN TITEL ANZUFORDERN.");
+                action = DiscoverLanguage.T("channel.press_the_u25b6_button_to_request");
 
             var date = tv ? t.first_air_date : t.release_date;
             var y = YearOf(date);
@@ -269,7 +253,7 @@ namespace Emby.Plugins.Discover
             var item = new ChannelItemInfo
             {
                 Id = AskPrefix + rest,
-                Name = DiscoverLanguage.Text("Aanvragen: ", "Request: ", "Anfragen: ", "Forespør: ") + title,
+                Name = DiscoverLanguage.T("channel.request") + title,
                 Type = ChannelItemType.Media,
                 MediaType = ChannelMediaType.Video,
                 ContentType = ChannelMediaContentType.Clip,
@@ -293,14 +277,12 @@ namespace Emby.Plugins.Discover
             var trailer = new ChannelItemInfo
             {
                 Id = TrailerPrefix + rest,
-                Name = DiscoverLanguage.Text("Trailer: ", "Trailer: ", "Trailer: ") + title,
+                Name = DiscoverLanguage.T("channel.trailer") + title,
                 Type = ChannelItemType.Media,
                 MediaType = ChannelMediaType.Video,
                 ContentType = ChannelMediaContentType.Clip,
                 ImageUrl = item.ImageUrl,
-                Overview = DiscoverLanguage.Text("Druk op de \u25B6 knop om de trailer te bekijken.",
-                    "Press the \u25B6 button to watch the trailer.",
-                    "Drücke auf die \u25B6-Taste, um den Trailer anzusehen.")
+                Overview = DiscoverLanguage.T("channel.press_the_u25b6_button_to_watch_the_trailer")
                            + (info == null ? "" : "\n\n" + info)
                            + (string.IsNullOrWhiteSpace(t.overview) ? "" : "\n\n" + t.overview.Trim()),
                 ProviderIds = item.ProviderIds,
@@ -318,10 +300,10 @@ namespace Emby.Plugins.Discover
             if (!string.IsNullOrEmpty(t.backdrop_path) && (userBrowsing || Plugin.GetCurrentConfiguration().PrecreateCards))
             {
                 var tileKey = "rq" + (tv ? "t" : "m") + tmdbId;
-                var askTile = FolderTile.Create(tileKey + "ask", DiscoverLanguage.Text("Aanvragen", "Request", "Anfragen", "Forespør"),
+                var askTile = FolderTile.Create(tileKey + "ask", DiscoverLanguage.T("channel.request_2"),
                     item.ImageUrl, CancellationToken.None);
                 var trailerTile = showTrailerTile
-                    ? FolderTile.Create(tileKey + "tr", DiscoverLanguage.Text("Trailer", "Trailer", "Trailer"),
+                    ? FolderTile.Create(tileKey + "tr", DiscoverLanguage.T("channel.trailer_2"),
                         item.ImageUrl, CancellationToken.None)
                     : null;
                 var askFile = await TileWithin(askTile, TimeSpan.FromSeconds(8)).ConfigureAwait(false);
@@ -335,10 +317,10 @@ namespace Emby.Plugins.Discover
                 // Anders zet Emby bij elke verversing de gewone foto terug en verdwijnt de tekst "Aanvragen"/"Trailer".
                 var tileKey = "rq" + (tv ? "t" : "m") + tmdbId;
                 var bgUrl = item.ImageUrl;
-                var askFile = FolderTile.Existing(tileKey + "ask", DiscoverLanguage.Text("Aanvragen", "Request", "Anfragen", "Forespør"), bgUrl);
-                var trailerFile = showTrailerTile ? FolderTile.Existing(tileKey + "tr", DiscoverLanguage.Text("Trailer", "Trailer", "Trailer"), bgUrl) : null;
-                if (askFile == null) FolderTile.EnsureInBackground(tileKey + "ask", DiscoverLanguage.Text("Aanvragen", "Request", "Anfragen", "Forespør"), bgUrl);
-                if (showTrailerTile && trailerFile == null) FolderTile.EnsureInBackground(tileKey + "tr", DiscoverLanguage.Text("Trailer", "Trailer", "Trailer"), bgUrl);
+                var askFile = FolderTile.Existing(tileKey + "ask", DiscoverLanguage.T("channel.request_2"), bgUrl);
+                var trailerFile = showTrailerTile ? FolderTile.Existing(tileKey + "tr", DiscoverLanguage.T("channel.trailer_2"), bgUrl) : null;
+                if (askFile == null) FolderTile.EnsureInBackground(tileKey + "ask", DiscoverLanguage.T("channel.request_2"), bgUrl);
+                if (showTrailerTile && trailerFile == null) FolderTile.EnsureInBackground(tileKey + "tr", DiscoverLanguage.T("channel.trailer_2"), bgUrl);
                 if (askFile != null) { item.ImageUrl = askFile; item.Id += TileMark; }
                 if (trailerFile != null) { trailer.ImageUrl = trailerFile; trailer.Id += TileMark; }
             }
@@ -349,11 +331,9 @@ namespace Emby.Plugins.Discover
                 // Ook de seizoensmap ("Request: serie") krijgt met de tegel met tekst een nieuw id, anders houdt Emby de oude foto.
                 bool askHasTile = item.Id.EndsWith(TileMark, StringComparison.Ordinal);
                 var seasonFolder = Folder(AskSeasonFolderPrefix + rest + (askHasTile ? TileMark : ""),
-                    DiscoverLanguage.Text("Aanvragen: ", "Request: ", "Anfragen: ", "Forespør: ") + title,
+                    DiscoverLanguage.T("channel.request") + title,
                     item.ImageUrl,
-                    DiscoverLanguage.Text("Kies een seizoen om alleen dat seizoen aan te vragen.",
-                        "Choose a season to request only that season.",
-                        "Wähle eine Staffel aus, um nur diese anzufordern."));
+                    DiscoverLanguage.T("channel.choose_a_season_to_request_only_that_season"));
                 return showTrailerTile
                     ? new List<ChannelItemInfo> { trailer, seasonFolder }
                     : new List<ChannelItemInfo> { seasonFolder };
@@ -369,11 +349,11 @@ namespace Emby.Plugins.Discover
             var parts = rest.Split(':');
             int tmdbId;
             if (parts.Length != 2 || parts[0] != "t" || !int.TryParse(parts[1], out tmdbId))
-                throw new InvalidOperationException(DiscoverLanguage.Text("Onbekend serie-id voor seizoenskeuze: ", "Unknown series id for season selection: ", "Unbekannte Serien-ID für die Staffelauswahl: ") + rest);
+                throw new InvalidOperationException(DiscoverLanguage.T("channel.unknown_series_id_for_season_selection") + rest);
 
             var detail = await _tmdb.GetTvDetail(tmdbId, ct).ConfigureAwait(false);
             if (detail == null || detail.seasons == null)
-                throw new InvalidOperationException(DiscoverLanguage.Text("Seizoenen van TMDB niet beschikbaar voor serie ", "Seasons from TMDB not available for series ", "Staffeln von TMDB nicht verfügbar für Serie ") + tmdbId);
+                throw new InvalidOperationException(DiscoverLanguage.T("channel.seasons_from_tmdb_not_available_for_series") + tmdbId);
 
             var seasons = detail.seasons
                 .Where(s => s != null && s.season_number > 0)
@@ -387,7 +367,7 @@ namespace Emby.Plugins.Discover
                 try { sonarrSeasons = await _arr.GetSeasonStates(tmdbId, ct).ConfigureAwait(false); }
                 catch (Exception ex)
                 {
-                    DiscoverDiagnostics.Add("seizoensstatus uit Sonarr ophalen mislukt voor " + tmdbId + ": " + ex.Message);
+                    DiscoverDiagnostics.Add("log.channel.seizoensstatus_uit_sonarr_ophalen_mislukt", tmdbId, ex.Message);
                 }
             }
             string background = !string.IsNullOrEmpty(detail.backdrop_path)
@@ -403,10 +383,9 @@ namespace Emby.Plugins.Discover
                 // Tegel: achtergrondfoto van de serie met het logo (of de naam), "Alle seizoenen" en het aantal seizoenen.
                 // Geen achtergrondfoto: dan de serieposter als achtergrond. Lukt het helemaal niet, dan de oude grijze tegel.
                 var allImage = !string.IsNullOrEmpty(detail.poster_path) ? TmdbClient.PosterUrl(detail.poster_path) : background;
-                var allLabel = DiscoverLanguage.Text("Alle seizoenen", "All seasons", "Alle Staffeln");
+                var allLabel = DiscoverLanguage.T("channel.all_seasons");
                 int seasonCount = seasons.Count;
-                var allSub = DiscoverLanguage.Text(seasonCount == 1 ? "1 seizoen" : seasonCount + " seizoenen",
-                    seasonCount == 1 ? "1 season" : seasonCount + " seasons", seasonCount == 1 ? "1 Staffel" : seasonCount + " Staffeln");
+                var allSub = seasonCount == 1 ? DiscoverLanguage.T("channel.seasons_one") : DiscoverLanguage.T("channel.seasons_many", seasonCount);
                 string allTile = null;
                 bool allTileNew = false;
                 if (Plugin.GetCurrentConfiguration().TileTextImages)
@@ -425,20 +404,11 @@ namespace Emby.Plugins.Discover
                             TimeSpan.FromSeconds(20)).ConfigureAwait(false);
                 }
                 if (allTile != null) allImage = allTile;
-                string allOverview = DiscoverLanguage.Text(
-                    "Druk op \u25B6 om alle seizoenen in \u00E9\u00E9n keer aan te vragen, ook seizoenen die later uitkomen.",
-                    "Press \u25B6 to request all seasons at once, including seasons released later.",
-                    "Drücke auf \u25B6, um alle Staffeln auf einmal anzufordern, auch später erscheinende Staffeln.");
+                string allOverview = DiscoverLanguage.T("channel.press_u25b6_to_request_all_seasons_at_once");
                 if (sonarrSeasons.Count > 0 && RequestHub.External)
-                    allOverview += "\n\n" + DiscoverLanguage.Text(
-                        "\u23F3 Deze serie is al aangevraagd in " + RequestHub.Name + ". Opnieuw aanvragen vraagt de seizoenen aan die nog niet zijn aangevraagd.",
-                        "\u23F3 This series has already been requested in " + RequestHub.Name + ". Requesting again requests the seasons that have not been requested yet.",
-                        "\u23F3 Diese Serie wurde bereits in " + RequestHub.Name + " angefordert. Eine erneute Anfrage fordert die noch nicht angeforderten Staffeln an.");
+                    allOverview += "\n\n" + DiscoverLanguage.T("channel.series_already_requested", RequestHub.Name);
                 else if (sonarrSeasons.Count > 0)
-                    allOverview += "\n\n" + DiscoverLanguage.Text(
-                        "\u23F3 Deze serie staat al in Sonarr. Opnieuw aanvragen zet alle seizoenen (behalve specials) op gemonitord en zoekt naar ontbrekende afleveringen.",
-                        "\u23F3 This series is already in Sonarr. Requesting again monitors all seasons (except specials) and searches for missing episodes.",
-                        "\u23F3 Diese Serie ist bereits in Sonarr. Eine erneute Anfrage überwacht alle Staffeln (außer Specials) und sucht nach fehlenden Folgen.");
+                    allOverview += "\n\n" + DiscoverLanguage.T("channel.u23f3_this_series_is_already_in_sonarr_requesting");
                 // Seriesinfo zoals op de trailerpagina (ook zichtbaar in de tv- en mobiele apps).
                 try
                 {
@@ -453,7 +423,7 @@ namespace Emby.Plugins.Discover
                 {
                     // Met de nieuwe tegel een ander id, zodat Emby het item opnieuw aanmaakt (oude grijze tegel weg).
                     Id = AskAllPrefix + "t:" + tmdbId + (allTileNew ? TileMark : ""),
-                    Name = DiscoverLanguage.Text("Alle seizoenen", "All seasons", "Alle Staffeln"),
+                    Name = DiscoverLanguage.T("channel.all_seasons"),
                     Type = ChannelItemType.Media,
                     MediaType = ChannelMediaType.Video,
                     ContentType = ChannelMediaContentType.Clip,
@@ -483,8 +453,7 @@ namespace Emby.Plugins.Discover
                     catch (Exception ex)
                     {
                         if (ex is OperationCanceledException) throw;
-                        DiscoverDiagnostics.Add("seizoensbeschrijving ophalen mislukt voor " + tmdbId +
-                            "/seizoen " + seasonNumber + ": " + ex.Message);
+                        DiscoverDiagnostics.Add("log.channel.seizoensbeschrijving_ophalen_mislukt_voor", tmdbId, seasonNumber, ex.Message);
                     }
                 }
                 // De seizoenslijst van de serie mist soms een poster die het seizoen zelf wel heeft: dan het seizoen rechtstreeks opvragen.
@@ -494,12 +463,12 @@ namespace Emby.Plugins.Discover
                     {
                         var seasonPoster = await _tmdb.GetSeasonPosterPath(tmdbId, seasonNumber, ct).ConfigureAwait(false);
                         if (!string.IsNullOrWhiteSpace(seasonPoster)) season.poster_path = seasonPoster;
-                        else DiscoverDiagnostics.Add("geen seizoensposter bij TMDB voor " + tmdbId + "/seizoen " + seasonNumber + " (serieposter gebruikt)");
+                        else DiscoverDiagnostics.Add("log.channel.geen_seizoensposter_bij_tmdb_voor_seizoen", tmdbId, seasonNumber);
                     }
                     catch (Exception ex)
                     {
                         if (ex is OperationCanceledException) throw;
-                        DiscoverDiagnostics.Add("seizoensposter ophalen mislukt voor " + tmdbId + "/seizoen " + seasonNumber + ": " + ex.Message);
+                        DiscoverDiagnostics.Add("log.channel.seizoensposter_ophalen_mislukt_voor_seizoen", tmdbId, seasonNumber, ex.Message);
                     }
                 }
                 // Seizoenstegels zijn staand (2:3): is er echt geen seizoensposter, dan de serieposter, pas daarna de liggende achtergrond.
@@ -507,35 +476,20 @@ namespace Emby.Plugins.Discover
                     ? TmdbClient.PosterUrl(season.poster_path)
                     : (!string.IsNullOrEmpty(detail.poster_path) ? TmdbClient.PosterUrl(detail.poster_path) : background);
                 var countText = season.episode_count > 0
-                    ? DiscoverLanguage.Text(
-                        season.episode_count == 1 ? "1 aflevering" : season.episode_count + " afleveringen",
-                        season.episode_count == 1 ? "1 episode" : season.episode_count + " episodes",
-                        season.episode_count == 1 ? "1 Folge" : season.episode_count + " Folgen")
+                    ? season.episode_count == 1 ? DiscoverLanguage.T("channel.episodes_one") : DiscoverLanguage.T("channel.episodes_many", season.episode_count)
                     : null;
                 // Staat het seizoen al in Sonarr, dan zeg dat erbij; opnieuw aanvragen kan nog steeds.
                 bool allFiles = hasFiles && sonarrSeason.statistics.episodeCount > 0 &&
                     sonarrSeason.statistics.episodeFileCount >= sonarrSeason.statistics.episodeCount;
                 string overview;
                 if (allFiles)
-                    overview = DiscoverLanguage.Text(
-                        "\u2713 Dit seizoen staat al in je bibliotheek. Druk op \u25B6 om het opnieuw aan te vragen.",
-                        "\u2713 This season is already in your library. Press \u25B6 to request it again.",
-                        "\u2713 Diese Staffel ist bereits in deiner Bibliothek. Drücke auf \u25B6, um sie erneut anzufordern.");
+                    overview = DiscoverLanguage.T("channel.u2713_this_season_is_already_in_your_library");
                 else if (hasFiles)
-                    overview = DiscoverLanguage.Text(
-                        "\u2713 Gedeeltelijk beschikbaar: een deel van de afleveringen staat al in je bibliotheek. Druk op \u25B6 om het seizoen opnieuw aan te vragen.",
-                        "\u2713 Partially available: some episodes are already in your library. Press \u25B6 to request the season again.",
-                        "\u2713 Teilweise verfügbar: Einige Folgen befinden sich bereits in deiner Bibliothek. Drücke auf \u25B6, um die Staffel erneut anzufordern.");
+                    overview = DiscoverLanguage.T("channel.u2713_partially_available_some_episodes_2");
                 else if (showHourglass)
-                    overview = DiscoverLanguage.Text(
-                        "\u23F3 Dit seizoen is al aangevraagd en staat in " + ArrClient.ServiceName(true) + ". Druk op \u25B6 om het opnieuw aan te vragen.",
-                        "\u23F3 This season has already been requested from " + ArrClient.ServiceName(true) + ". Press \u25B6 to request it again.",
-                        "\u23F3 Diese Staffel wurde bereits bei " + ArrClient.ServiceName(true) + " angefordert. Drücke auf \u25B6, um sie erneut anzufordern.");
+                    overview = DiscoverLanguage.T("channel.season_already_requested", ArrClient.ServiceName(true));
                 else
-                    overview = DiscoverLanguage.Text(
-                        "Druk op \u25B6 om alleen seizoen " + seasonNumber + " aan te vragen.",
-                        "Press \u25B6 to request season " + seasonNumber + " only.",
-                        "Drücke auf \u25B6, um nur Staffel " + seasonNumber + " anzufordern.");
+                    overview = DiscoverLanguage.T("channel.press_play_season_only", seasonNumber);
                 // Aangekondigd seizoen (nog niet begonnen of nog zonder datum): "Binnenkort", aanvragen kan al.
                 DateTime seasonStart;
                 bool hasStart = InfoText.TryDate(season.air_date, out seasonStart);
@@ -543,21 +497,18 @@ namespace Emby.Plugins.Discover
                 if (upcoming)
                 {
                     overview += "\n" + (hasStart
-                        ? DiscoverLanguage.Text("Binnenkort: vanaf " + InfoText.LongDate(seasonStart) + ".", "Coming soon: from " + InfoText.LongDate(seasonStart) + ".", "Demnächst: ab " + InfoText.LongDate(seasonStart) + ".")
-                        : DiscoverLanguage.Text("Aangekondigd, nog zonder startdatum.", "Announced, no start date yet.", "Angekündigt, noch ohne Startdatum."));
-                    overview += " " + DiscoverLanguage.Text(
-                        "Je kunt het nu al aanvragen; het wordt gedownload zodra de afleveringen uitkomen.",
-                        "You can request it now; it is downloaded as soon as the episodes come out.",
-                        "Du kannst sie jetzt schon anfordern; sie wird heruntergeladen, sobald die Folgen erscheinen.");
+                        ? DiscoverLanguage.T("channel.coming_soon_from", InfoText.LongDate(seasonStart))
+                        : DiscoverLanguage.T("channel.announced_no_start_date_yet"));
+                    overview += " " + DiscoverLanguage.T("channel.you_can_request_it_now_it_is_downloaded");
                 }
                 else if (hasStart)
-                    overview += "\n" + DiscoverLanguage.Text("Uitgezonden vanaf ", "Aired from ", "Ausgestrahlt ab ") + InfoText.LongDate(seasonStart) + ".";
+                    overview += "\n" + DiscoverLanguage.T("channel.aired_from") + InfoText.LongDate(seasonStart) + ".";
                 if (!string.IsNullOrWhiteSpace(countText)) overview += "\n" + countText + ".";
                 if (!string.IsNullOrWhiteSpace(season.overview)) overview += "\n\n" + season.overview.Trim();
 
-                var displayName = DiscoverLanguage.Text("Seizoen ", "Season ", "Staffel ") +
+                var displayName = DiscoverLanguage.T("channel.season") +
                     seasonNumber.ToString(CultureInfo.InvariantCulture);
-                if (upcoming && !showHourglass) displayName += DiscoverLanguage.Text(" \u00B7 Binnenkort", " \u00B7 Coming soon", " \u00B7 Demnächst");
+                if (upcoming && !showHourglass) displayName += DiscoverLanguage.T("channel.u00b7_coming_soon");
                 if (allFiles) displayName += " \u2713";
                 else if (showHourglass) displayName += " \u23F3";
 
@@ -582,7 +533,7 @@ namespace Emby.Plugins.Discover
             }
 
             if (items.Count == 0)
-                throw new InvalidOperationException(DiscoverLanguage.Text("TMDB heeft geen aanvraagbare seizoenen voor serie ", "TMDB has no requestable seasons for series ", "TMDB hat keine anfragbaren Staffeln für Serie ") + tmdbId);
+                throw new InvalidOperationException(DiscoverLanguage.T("channel.tmdb_has_no_requestable_seasons_for_series") + tmdbId);
 
             return new ChannelItemResult { Items = items, TotalRecordCount = items.Count };
         }
@@ -593,7 +544,7 @@ namespace Emby.Plugins.Discover
             catch (Exception ex)
             {
                 if (ex is OperationCanceledException) throw;
-                DiscoverDiagnostics.Add("seizoensposter voor kaart " + tmdbId + "/seizoen " + season + ": " + ex.Message);
+                DiscoverDiagnostics.Add("log.channel.seizoensposter_voor_kaart_seizoen", tmdbId, season, ex.Message);
                 return null;
             }
         }
@@ -604,7 +555,7 @@ namespace Emby.Plugins.Discover
             catch (Exception ex)
             {
                 if (ex is OperationCanceledException) throw;
-                DiscoverDiagnostics.Add("extra info " + tmdbId + " mislukt: " + ex.Message);
+                DiscoverDiagnostics.Add("log.channel.extra_info_mislukt", tmdbId, ex.Message);
                 return null;
             }
         }
@@ -617,7 +568,7 @@ namespace Emby.Plugins.Discover
             Task.Run(async () =>
             {
                 try { await RequestCard.Create(t, extra, tv, alreadyThere, CancellationToken.None, season, posterPath, true).ConfigureAwait(false); }
-                catch (Exception ex) { DiscoverDiagnostics.Add("kaart vooraf maken mislukt: " + ex.Message); }
+                catch (Exception ex) { DiscoverDiagnostics.Add("log.channel.kaart_vooraf_maken_mislukt", ex.Message); }
             });
         }
 
@@ -659,13 +610,13 @@ namespace Emby.Plugins.Discover
                 try { tops = await topTask.ConfigureAwait(false); }
                 catch (Exception ex)
                 {
-                    DiscoverDiagnostics.Add("achtergrondlijst ophalen mislukt: " + ex.Message);
+                    DiscoverDiagnostics.Add("log.channel.achtergrondlijst_ophalen_mislukt", ex.Message);
                     tops = paths.Select(x => new List<string>()).ToArray();
                 }
             }
             else
             {
-                DiscoverDiagnostics.Add("root-artwork na 5 seconden uitgesteld; kanaal wordt direct teruggegeven");
+                DiscoverDiagnostics.Add("log.channel.root_artwork_na_5_seconden_uitgesteld_kanaal");
                 _ = ObserveTopBackdrops(topTask);
                 tops = paths.Select(x => new List<string>()).ToArray();
             }
@@ -688,15 +639,15 @@ namespace Emby.Plugins.Discover
             // Keep the existing pick() order so tiles still use distinct titles.
             var specs = new[]
             {
-                new TileSpec(AskListPrefix + "trending_movie", DiscoverLanguage.Text("Trending films", "Trending Movies", "Aktuelle Filme", "Trendende filmer"), "orange", pick(0, 3)),
-                new TileSpec(AskListPrefix + "popular_movie", DiscoverLanguage.Text("Populaire films", "Popular Movies", "Beliebte Filme", "Populære filmer"), "red", pick(1, 3)),
-                new TileSpec(AskListPrefix + "upcoming_movie", DiscoverLanguage.Text("Verwachte films", "Upcoming Movies", "Kommende Filme", "Kommende filmer"), "purple", pick(2, 3)),
-                new TileSpec(AskGenrePrefix + "movie", DiscoverLanguage.Text("Filmgenres", "Movie Genres", "Filmgenres", "Filmsjangre"), "green", pick(1, 8)),
-                new TileSpec(AskListPrefix + "trending_tv", DiscoverLanguage.Text("Trending series", "Trending Series", "Aktuelle Serien", "Trendende serier"), "yellow", pick(3, 3)),
-                new TileSpec(AskListPrefix + "popular_tv", DiscoverLanguage.Text("Populaire series", "Popular Series", "Beliebte Serien", "Populære serier"), "pink", pick(4, 3)),
-                new TileSpec(AskListPrefix + "upcoming_tv", DiscoverLanguage.Text("Verwachte series", "Upcoming Series", "Kommende Serien", "Kommende serier"), "blue", pick(5, 3)),
-                new TileSpec(AskGenrePrefix + "tv", DiscoverLanguage.Text("Seriegenres", "Series Genres", "Seriengenres", "Seriesjangre"), "lightgreen", pick(4, 8)),
-                new TileSpec(AskStudioRoot, DiscoverLanguage.Text("Studio's", "Studios", "Studios", "Studioer"), "black", pick(0, 8))
+                new TileSpec(AskListPrefix + "trending_movie", DiscoverLanguage.T("channel.trending_movies"), "orange", pick(0, 3)),
+                new TileSpec(AskListPrefix + "popular_movie", DiscoverLanguage.T("channel.popular_movies"), "red", pick(1, 3)),
+                new TileSpec(AskListPrefix + "upcoming_movie", DiscoverLanguage.T("channel.upcoming_movies"), "purple", pick(2, 3)),
+                new TileSpec(AskGenrePrefix + "movie", DiscoverLanguage.T("channel.movie_genres"), "green", pick(1, 8)),
+                new TileSpec(AskListPrefix + "trending_tv", DiscoverLanguage.T("channel.trending_series"), "yellow", pick(3, 3)),
+                new TileSpec(AskListPrefix + "popular_tv", DiscoverLanguage.T("channel.popular_series"), "pink", pick(4, 3)),
+                new TileSpec(AskListPrefix + "upcoming_tv", DiscoverLanguage.T("channel.upcoming_series"), "blue", pick(5, 3)),
+                new TileSpec(AskGenrePrefix + "tv", DiscoverLanguage.T("channel.series_genres"), "lightgreen", pick(4, 8)),
+                new TileSpec(AskStudioRoot, DiscoverLanguage.T("channel.studios"), "black", pick(0, 8))
             };
 
             // Start every tile together, then allow one shared time budget for the text artwork.
@@ -718,7 +669,7 @@ namespace Emby.Plugins.Discover
                 if (creations[i].IsCompleted)
                 {
                     try { files[creationOrder[i].Id] = await creations[i].ConfigureAwait(false); }
-                    catch (Exception ex) { DiscoverDiagnostics.Add("tegelafbeelding '" + creationOrder[i].Caption + "' mislukt: " + ex.Message); }
+                    catch (Exception ex) { DiscoverDiagnostics.Add("log.channel.tegelafbeelding_mislukt", creationOrder[i].Caption, ex.Message); }
                 }
                 else
                 {
@@ -761,7 +712,7 @@ namespace Emby.Plugins.Discover
             }
             catch (Exception ex)
             {
-                DiscoverDiagnostics.Add("tegelafbeelding aanvraag/trailer mislukt: " + ex.Message);
+                DiscoverDiagnostics.Add("log.channel.tegelafbeelding_aanvraag_trailer_mislukt", ex.Message);
             }
             return null;
         }
@@ -769,13 +720,13 @@ namespace Emby.Plugins.Discover
         private static async Task ObserveTileCreation(Task<string> creation, string text)
         {
             try { await creation.ConfigureAwait(false); }
-            catch (Exception ex) { DiscoverDiagnostics.Add("tegelafbeelding '" + text + "' mislukt: " + ex.Message); }
+            catch (Exception ex) { DiscoverDiagnostics.Add("log.channel.tegelafbeelding_mislukt", text, ex.Message); }
         }
 
         private static async Task ObserveTopBackdrops(Task<List<string>[]> loading)
         {
             try { await loading.ConfigureAwait(false); }
-            catch (Exception ex) { DiscoverDiagnostics.Add("achtergrondlijst ophalen mislukt: " + ex.Message); }
+            catch (Exception ex) { DiscoverDiagnostics.Add("log.channel.achtergrondlijst_ophalen_mislukt", ex.Message); }
         }
 
         // ---------- genre-, studio- en netwerktegels (zoals Seerr) ----------
@@ -849,7 +800,7 @@ namespace Emby.Plugins.Discover
             catch (Exception ex)
             {
                 if (ex is OperationCanceledException) throw;
-                DiscoverDiagnostics.Add("achtergronden " + path + " mislukt: " + ex.Message);
+                DiscoverDiagnostics.Add("log.channel.achtergronden_mislukt", path, ex.Message);
                 return new List<string>();
             }
         }
@@ -876,7 +827,7 @@ namespace Emby.Plugins.Discover
             catch (Exception ex)
             {
                 if (ex is OperationCanceledException) throw;
-                DiscoverDiagnostics.Add("genre-achtergrond " + key + " mislukt: " + ex.Message);
+                DiscoverDiagnostics.Add("log.channel.genre_achtergrond_mislukt", key, ex.Message);
                 return null;
             }
             lock (GenreBackdropCache) { GenreBackdropCache[key] = new KeyValuePair<DateTime, string>(DateTime.UtcNow, chosen); }
@@ -899,7 +850,7 @@ namespace Emby.Plugins.Discover
             for (int i = 0; i < creations.Length; i++)
             {
                 try { files[i] = await creations[i].ConfigureAwait(false); }
-                catch (Exception ex) { DiscoverDiagnostics.Add("genretegel '" + names[i] + "' mislukt: " + ex.Message); }
+                catch (Exception ex) { DiscoverDiagnostics.Add("log.channel.genretegel_mislukt", names[i], ex.Message); }
             }
 
             var items = new List<ChannelItemInfo>();
@@ -972,7 +923,7 @@ namespace Emby.Plugins.Discover
             }
             catch (Exception ex)
             {
-                DiscoverDiagnostics.Add("FOUT TMDB " + path + ": " + ex.Message);
+                DiscoverDiagnostics.Add("log.channel.fout_tmdb", path, ex.Message);
                 throw;
             }
             lock (ListCache) { ListCache[cacheKey] = new KeyValuePair<DateTime, List<TmdbItem>>(DateTime.UtcNow, list); }
@@ -1084,7 +1035,7 @@ namespace Emby.Plugins.Discover
         // ---------- Afspelen = YouTube-trailer (aanvragen gebeurt via de aparte knop / API) ----------
         public async Task<IEnumerable<MediaSourceInfo>> GetChannelItemMediaInfo(string id, CancellationToken ct)
         {
-            DiscoverDiagnostics.Add("trailer afspelen: " + id);
+            DiscoverDiagnostics.Add("log.channel.trailer_afspelen", id);
             id = StripTileMark(id);
             bool isSeasonReq = id.StartsWith(AskSeasonPrefix);
             bool isAllReq = id.StartsWith(AskAllPrefix);
@@ -1097,7 +1048,7 @@ namespace Emby.Plugins.Discover
                 if (seasonParts.Length != 4 || seasonParts[0] != "t" || seasonParts[2] != "s" ||
                     !int.TryParse(seasonParts[1], out tmdbSeasonId) ||
                     !int.TryParse(seasonParts[3], out requestedSeason) || requestedSeason <= 0)
-                    throw new InvalidOperationException(DiscoverLanguage.Text("Onbekend seizoensaanvraagitem: ", "Unknown season request item: ", "Unbekanntes Staffel-Anfrage-Element: ") + id);
+                    throw new InvalidOperationException(DiscoverLanguage.T("channel.unknown_season_request_item") + id);
                 id = seasonParts[0] + ":" + tmdbSeasonId;
             }
             else if (isAllReq) id = id.Substring(AskAllPrefix.Length);
@@ -1112,12 +1063,12 @@ namespace Emby.Plugins.Discover
                 // Het id komt van de client, dus een rare waarde mag geen harde fout geven.
                 if (!int.TryParse(id.Substring(2), NumberStyles.Integer, CultureInfo.InvariantCulture, out tmdbId) || tmdbId <= 0)
                 {
-                    throw new InvalidOperationException(DiscoverLanguage.Text("Onbekend Discover-item: ", "Unknown Discover item: ", "Unbekanntes Discover-Element: ") + id);
+                    throw new InvalidOperationException(DiscoverLanguage.T("channel.unknown_discover_item") + id);
                 }
             }
             else
             {
-                throw new InvalidOperationException(DiscoverLanguage.Text("Onbekend Discover-item: ", "Unknown Discover item: ", "Unbekanntes Discover-Element: ") + id);
+                throw new InvalidOperationException(DiscoverLanguage.T("channel.unknown_discover_item") + id);
             }
 
             if (isReq)
@@ -1127,9 +1078,8 @@ namespace Emby.Plugins.Discover
                 // (zie RequestOnPlay). De kaart toont de situatie van nu: "Aangevraagd" of "Staat al in Radarr/Sonarr".
                 try
                 {
-                    DiscoverDiagnostics.Add(isSeasonReq
-                        ? "seizoensaanvraagclip voor seizoen " + requestedSeason
-                        : "aanvraagclip voor alle seizoenen");
+                    if (isSeasonReq) { DiscoverDiagnostics.Add("log.channel.season_request_clip", requestedSeason); }
+                    else { DiscoverDiagnostics.Add("log.channel.request_clip_all_seasons"); }
                     TmdbItem info = FindInCache(tv, tmdbId);
                     if (info == null)
                         info = tv ? await _tmdb.GetTv(tmdbId, ct).ConfigureAwait(false)
@@ -1158,13 +1108,13 @@ namespace Emby.Plugins.Discover
                         throw new TimeoutException("card not ready yet");
                     }
                     var card = await cardTask.ConfigureAwait(false);
-                    DiscoverDiagnostics.Add("kaartclip: " + card);
+                    DiscoverDiagnostics.Add("log.channel.kaartclip", card);
                     return new List<MediaSourceInfo>
                     {
                         new MediaSourceInfo
                         {
                             Id = "discover-requested-" + (tv ? "t" : "m") + tmdbId,
-                            Name = DiscoverLanguage.Text("Aangevraagd", "Requested", "Angefragt", "Forespurt"),
+                            Name = DiscoverLanguage.T("channel.requested"),
                             Path = card,
                             Protocol = MediaProtocol.File,
                             Container = "mp4",
@@ -1179,7 +1129,7 @@ namespace Emby.Plugins.Discover
                 {
                     if (ex is OperationCanceledException) throw;
                     _logger.Error("Discover: card clip failed for {0}: {1}", id, ex.Message);
-                    DiscoverDiagnostics.Add("kaartclip " + id + ": " + ex.Message + " (vaste clip gebruikt)");
+                    DiscoverDiagnostics.Add("log.channel.kaartclip_vaste_clip_gebruikt", id, ex.Message);
                 }
             }
 
@@ -1196,19 +1146,19 @@ namespace Emby.Plugins.Discover
                 {
                     if (ex is OperationCanceledException) throw;
                     _logger.Error("Discover: fetching trailer failed for {0}: {1}", id, ex.Message);
-                    DiscoverDiagnostics.Add("FOUT trailer " + id + ": " + ex.Message);
-                    throw new InvalidOperationException(DiscoverLanguage.Text("Trailer ophalen mislukt: ", "Fetching the trailer failed: ", "Trailer konnte nicht abgerufen werden: ") + ex.Message);
+                    DiscoverDiagnostics.Add("log.channel.fout_trailer", id, ex.Message);
+                    throw new InvalidOperationException(DiscoverLanguage.T("channel.fetching_the_trailer_failed") + ex.Message);
                 }
 
                 if (string.IsNullOrEmpty(ytKey))
                 {
-                    DiscoverDiagnostics.Add("geen YouTube-trailer voor " + id);
+                    DiscoverDiagnostics.Add("log.channel.geen_youtube_trailer_voor", id);
                     _logger.Info("Discover: no YouTube trailer for {0}", id);
-                    throw new InvalidOperationException(DiscoverLanguage.Text("Geen trailer beschikbaar voor deze titel.", "No trailer available for this title.", "Kein Trailer für diesen Titel verfügbar."));
+                    throw new InvalidOperationException(DiscoverLanguage.T("channel.no_trailer_available_for_this_title"));
                 }
 
                 var path = "https://www.youtube.com/watch?v=" + ytKey;
-                DiscoverDiagnostics.Add("trailer: " + id + " -> " + path);
+                DiscoverDiagnostics.Add("log.channel.trailer", id, path);
                 _logger.Info("Discover: trailer for {0}: {1}", id, path);
                 return new List<MediaSourceInfo>
                 {
@@ -1236,8 +1186,8 @@ namespace Emby.Plugins.Discover
             catch (Exception ex)
             {
                 _logger.Error("Discover: clip not available: {0}", ex.Message);
-                DiscoverDiagnostics.Add("FOUT clip: " + ex.Message);
-                throw new InvalidOperationException(DiscoverLanguage.Text("Geen trailer beschikbaar voor deze titel.", "No trailer available for this title.", "Kein Trailer für diesen Titel verfügbar."));
+                DiscoverDiagnostics.Add("log.channel.fout_clip", ex.Message);
+                throw new InvalidOperationException(DiscoverLanguage.T("channel.no_trailer_available_for_this_title"));
             }
 
             return new List<MediaSourceInfo>
@@ -1245,7 +1195,7 @@ namespace Emby.Plugins.Discover
                 new MediaSourceInfo
                 {
                     Id = "discover-requested",
-                    Name = DiscoverLanguage.Text("Aangevraagd", "Requested", "Angefragt", "Forespurt"),
+                    Name = DiscoverLanguage.T("channel.requested"),
                     Path = clip,
                     Protocol = MediaProtocol.File,
                     Container = "mp4",
@@ -1270,7 +1220,7 @@ namespace Emby.Plugins.Discover
                 if (tvdbId <= 0 && RequestHub.NeedsTvdbId)
                     tvdbId = await arr.ResolveTvdbId(tmdbId, ext?.imdb_id, t.name ?? t.title, t.first_air_date, ct).ConfigureAwait(false);
                 if (tvdbId <= 0 && RequestHub.NeedsTvdbId)
-                    throw new InvalidOperationException(DiscoverLanguage.Text("Deze serie staat niet op TheTVDB; Sonarr kan hem daarom niet toevoegen.", "This series is not on TheTVDB, so Sonarr cannot add it.", "Diese Serie ist nicht bei TheTVDB; Sonarr kann sie daher nicht hinzufügen.", "Denne serien finnes ikke på TheTVDB, så Sonarr kan ikke legge den til."));
+                    throw new InvalidOperationException(DiscoverLanguage.T("channel.this_series_is_not_on_thetvdb_so_sonarr"));
                 added = await arr.AddSeries(tmdbId, tvdbId, t.name ?? t.title, seasons, ct, embyUserId, alias).ConfigureAwait(false);
             }
             else
@@ -1281,9 +1231,9 @@ namespace Emby.Plugins.Discover
             DiscoverDiagnostics.CountRequest(true);
             return added
                 ? (seasons != null && seasons.Length > 0
-                    ? DiscoverLanguage.Text("Aangevraagd seizoen ", "Requested season ", "Angeforderte Staffel ") + string.Join(", ", seasons)
-                    : DiscoverLanguage.Text("Aangevraagd", "Requested", "Angefordert"))
-                : DiscoverLanguage.Text("Stond al in ", "Already in ", "War bereits in ") + ArrClient.ServiceName(tv);
+                    ? DiscoverLanguage.T("channel.requested_season") + string.Join(", ", seasons)
+                    : DiscoverLanguage.T("channel.requested_2"))
+                : DiscoverLanguage.T("channel.already_in") + ArrClient.ServiceName(tv);
         }
 
         // ---------- Koppeling met het knop-script ----------
@@ -1378,7 +1328,7 @@ namespace Emby.Plugins.Discover
             catch (Exception ex)
             {
                 _logger.Error("Discover: fetching status failed: {0}", ex.Message);
-                DiscoverDiagnostics.Add("FOUT status " + (tv ? "Sonarr" : "Radarr") + ": " + ex.Message);
+                DiscoverDiagnostics.Add("log.channel.fout_status", (tv ? "Sonarr" : "Radarr"), ex.Message);
                 return new Dictionary<int, bool>();
             }
         }

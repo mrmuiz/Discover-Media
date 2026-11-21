@@ -47,16 +47,16 @@ namespace Emby.Plugins.Discover
                     }
                     else
                     {
-                        DiscoverDiagnostics.Add("old cached items cleanup incomplete; will retry next startup");
+                        DiscoverDiagnostics.Add("log.cleanup.old_cached_items_cleanup_incomplete_will");
                     }
                     _logger.Info("Discover: removed {0} cached channel items", removed);
                     if (removed > 0) ChannelRefresher.Request("cached items removed");
-                    DiscoverDiagnostics.Add("cached channel items removed: " + removed);
+                    DiscoverDiagnostics.Add("log.cleanup.cached_channel_items_removed", removed);
                 }
                 catch (Exception ex)
                 {
                     _logger.Error("Discover: removing old cached cards failed: {0}", ex.Message);
-                    DiscoverDiagnostics.Add("removing old cached cards failed: " + ex.Message);
+                    DiscoverDiagnostics.Add("log.cleanup.removing_old_cached_cards_failed", ex.Message);
                 }
             });
         }
@@ -86,7 +86,7 @@ namespace Emby.Plugins.Discover
                     catch (Exception ex)
                     {
                         complete = false;
-                        DiscoverDiagnostics.Add("removing cached card failed: " + ex.Message);
+                        DiscoverDiagnostics.Add("log.cleanup.removing_cached_card_failed", ex.Message);
                     }
                 }
             }

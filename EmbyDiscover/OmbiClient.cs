@@ -351,7 +351,7 @@ namespace Emby.Plugins.Discover
         /// <returns>true = aangevraagd, false = stond al aangevraagd / niets nieuws om aan te vragen.</returns>
         internal static async Task<bool> Request(IJsonSerializer json, bool tv, int tmdbId, int[] seasons, string alias, CancellationToken ct, bool is4k = false)
         {
-            if (!Configured) throw new InvalidOperationException(DiscoverLanguage.Text("Ombi is niet ingesteld.", "Ombi is not configured.", "Ombi ist nicht eingerichtet.", "Ombi er ikke satt opp."));
+            if (!Configured) throw new InvalidOperationException(DiscoverLanguage.T("ombi.ombi_is_not_configured"));
 
             string path, body;
             if (tv)
@@ -368,8 +368,7 @@ namespace Emby.Plugins.Discover
                     var wanted = seasons.Where(n => n >= 0).Distinct().OrderBy(n => n).ToList();
                     if (wanted.Count == 0)
                     {
-                        throw new InvalidOperationException(DiscoverLanguage.Text(
-                            "Geen geldig seizoen gekozen.", "No valid season chosen.", "Keine gültige Staffel gewählt.", "Ingen gyldig sesong valgt."));
+                        throw new InvalidOperationException(DiscoverLanguage.T("ombi.no_valid_season_chosen"));
                     }
                     // Lege episodes-lijst = het hele seizoen.
                     var parts = wanted.Select(n => "{\"seasonNumber\":" + n + ",\"episodes\":[]}");
@@ -390,7 +389,7 @@ namespace Emby.Plugins.Discover
             {
                 if (AlreadyRequested(res))
                 {
-                    DiscoverDiagnostics.Add("Ombi " + (tv ? "serie " : "film ") + tmdbId + ": " + MessageOf(json, r));
+                    DiscoverDiagnostics.Add("log.ombi.ombi", DiscoverDiagnostics.W(tv ? "word.serie" : "word.film"), tmdbId, MessageOf(json, r));
                     return false;
                 }
                 throw new InvalidOperationException("Ombi: " + MessageOf(json, r));
@@ -405,12 +404,12 @@ namespace Emby.Plugins.Discover
                 catch (Exception ex) { if (ex is OperationCanceledException) throw; }
             }
             _pending[(tv ? "t:" : "m:") + tmdbId] = pending;
-            if (is4k && !tv) DiscoverDiagnostics.Add("Ombi: 4K request for movie " + tmdbId);
+            if (is4k && !tv) DiscoverDiagnostics.Add("log.ombi.ombi_4k_request_for_movie", tmdbId);
             Invalidate();
             DownloadQueue.Invalidate();
-            DiscoverDiagnostics.Add("Ombi " + (tv ? "serie " : "film ") + tmdbId + " aangevraagd" +
-                (string.IsNullOrWhiteSpace(alias) ? "" : " namens " + alias) +
-                (pending ? " (wacht op goedkeuring)" : ""));
+            var waiting = DiscoverDiagnostics.W(pending ? "word.awaiting_approval" : "word.none");
+            if (string.IsNullOrWhiteSpace(alias)) { DiscoverDiagnostics.Add("log.ombi.requested", DiscoverDiagnostics.W(tv ? "word.series" : "word.movie"), tmdbId, waiting); }
+            else { DiscoverDiagnostics.Add("log.ombi.requested_for", DiscoverDiagnostics.W(tv ? "word.series" : "word.movie"), tmdbId, alias, waiting); }
             return true;
         }
 
@@ -441,7 +440,7 @@ namespace Emby.Plugins.Discover
         /// <returns>true = verwijderd, false = Ombi kende de titel niet.</returns>
         internal static async Task<bool> Remove(IJsonSerializer json, bool tv, int tmdbId, CancellationToken ct)
         {
-            if (!Configured) throw new InvalidOperationException(DiscoverLanguage.Text("Ombi is niet ingesteld.", "Ombi is not configured.", "Ombi ist nicht eingerichtet.", "Ombi er ikke satt opp."));
+            if (!Configured) throw new InvalidOperationException(DiscoverLanguage.T("ombi.ombi_is_not_configured"));
             int id = 0;
             if (tv)
             {
@@ -484,7 +483,7 @@ namespace Emby.Plugins.Discover
                         _has4kMovie = s != null && s.radarr4K != null && s.radarr4K.enabled;
                         _4kAt = DateTime.UtcNow;
                     }
-                    catch (Exception ex) { DiscoverDiagnostics.Add("Ombi 4K-server opvragen mislukt: " + ex.Message); _4kAt = DateTime.UtcNow; }
+                    catch (Exception ex) { DiscoverDiagnostics.Add("log.ombi.ombi_4k_server_opvragen_mislukt", ex.Message); _4kAt = DateTime.UtcNow; }
                     finally { Interlocked.Exchange(ref _4kBusy, 0); }
                 });
             }
@@ -496,21 +495,21 @@ namespace Emby.Plugins.Discover
         /// <returns>"versie|aantal Radarr-servers|aantal Sonarr-servers", net als bij Seerr.</returns>
         internal static async Task<string> Test(IJsonSerializer json, string url, string apiKey, CancellationToken ct)
         {
-            if (string.IsNullOrWhiteSpace(url)) throw new InvalidOperationException(DiscoverLanguage.Text("Vul eerst een URL in.", "Enter a URL first.", "Zuerst eine URL eingeben.", "Skriv inn en URL først."));
-            if (string.IsNullOrWhiteSpace(apiKey)) throw new InvalidOperationException(DiscoverLanguage.Text("Vul eerst een API key in.", "Enter an API key first.", "Zuerst einen API-Schlüssel eingeben.", "Skriv inn en API-nøkkel først."));
+            if (string.IsNullOrWhiteSpace(url)) throw new InvalidOperationException(DiscoverLanguage.T("dl.enter_a_url_first"));
+            if (string.IsNullOrWhiteSpace(apiKey)) throw new InvalidOperationException(DiscoverLanguage.T("ombi.enter_an_api_key_first"));
 
             // Status/info mag zonder sleutel, dus dit zegt alleen of Ombi bereikbaar is.
             var st = await Send(HttpMethod.Get, url, apiKey, "/api/v1/Status/info", null, null, ct).ConfigureAwait(false);
             if (st.Code < 200 || st.Code > 299)
-                throw new InvalidOperationException(DiscoverLanguage.Text("Ombi niet bereikbaar op ", "Ombi not reachable at ", "Ombi nicht erreichbar unter ", "Ombi ikke tilgjengelig på ") + NormalizeBase(url) + " (" + MessageOf(json, st) + ").");
+                throw new InvalidOperationException(DiscoverLanguage.T("ombi.ombi_not_reachable_at") + NormalizeBase(url) + " (" + MessageOf(json, st) + ").");
             var version = (st.Text ?? "").Trim().Trim('"');
             if (version.Length > 40) version = version.Substring(0, 40);
 
             // Deze vraagt wel om de sleutel.
             var count = await Send(HttpMethod.Get, url, apiKey, "/api/v1/Request/count", null, null, ct).ConfigureAwait(false);
             if (count.Code == 401 || count.Code == 403)
-                throw new InvalidOperationException(DiscoverLanguage.Text("Ombi weigert de API key (", "Ombi rejects the API key (", "Ombi lehnt den API-Schlüssel ab (", "Ombi avviser API-nøkkelen (") + count.Code +
-                    DiscoverLanguage.Text("). Gebruik de API key uit Ombi > Settings > Configuration > General.", "). Use the API key from Ombi > Settings > Configuration > General.", "). Verwende den API-Schlüssel aus Ombi > Settings > Configuration > General.", "). Bruk API-nøkkelen fra Ombi > Settings > Configuration > General."));
+                throw new InvalidOperationException(DiscoverLanguage.T("ombi.ombi_rejects_the_api_key") + count.Code +
+                    DiscoverLanguage.T("ombi.use_the_api_key_from_ombi_settings_configuration"));
             if (count.Code < 200 || count.Code > 299)
                 throw new InvalidOperationException("Ombi: " + MessageOf(json, count));
 

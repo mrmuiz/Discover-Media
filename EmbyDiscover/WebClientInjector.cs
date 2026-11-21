@@ -61,7 +61,7 @@ namespace Emby.Plugins.Discover
             try { Apply(); }
             catch (Exception ex)
             {
-                DiscoverDiagnostics.WebInject = DiscoverLanguage.Text("fout: ", "error: ", "Fehler: ") + ex.Message;
+                DiscoverDiagnostics.WebInject = DiscoverLanguage.T("web.error") + ex.Message;
                 try { _logger.Error("Discover: applying the web client loader failed: {0}", ex.Message); } catch { }
             }
         }
@@ -90,13 +90,13 @@ namespace Emby.Plugins.Discover
             string indexPath = FindIndexHtml(configuredPath);
             if (indexPath == null)
             {
-                DiscoverDiagnostics.WebInject = DiscoverLanguage.Text("webclient niet gevonden; vul het pad van de webclient-map (met index.html) in bij de instellingen", "web client not found; enter the web client folder path (containing index.html) in the settings", "Web-Client nicht gefunden; trage den Pfad des Web-Client-Ordners (mit index.html) in den Einstellungen ein");
+                DiscoverDiagnostics.WebInject = DiscoverLanguage.T("web.web_client_not_found_enter_the_web_client");
                 return;
             }
 
             // The loader always stays injected: it reads the "tile opens Discover" switch from the server at runtime
             // (/Discover/LoaderConfig), so toggling takes effect at once without a restart or a changed index.html.
-            DiscoverDiagnostics.WebInject = ApplyLoader(indexPath, true) + (loaderOn ? DiscoverLanguage.Text(" (tegel -> Discover: aan)", " (tile -> Discover: on)", " (Kachel -> Discover: an)") : DiscoverLanguage.Text(" (tegel -> Discover: uit)", " (tile -> Discover: off)", " (Kachel -> Discover: aus)"));
+            DiscoverDiagnostics.WebInject = ApplyLoader(indexPath, true) + (loaderOn ? DiscoverLanguage.T("web.tile_discover_on") : DiscoverLanguage.T("web.tile_discover_off"));
             string ns = RemoveNativeShell(indexPath);
             try { _logger.Info("Discover: webclient-lader {0}; oude app-modus-shim {1}", DiscoverDiagnostics.WebInject, ns); } catch { }
         }
@@ -110,13 +110,13 @@ namespace Emby.Plugins.Discover
             {
                 bool removed = RemoveFromIndex(indexPath);
                 try { if (File.Exists(loaderPath)) File.Delete(loaderPath); } catch { }
-                return removed ? DiscoverLanguage.Text("verwijderd uit ", "removed from ", "entfernt aus ") + indexPath : DiscoverLanguage.Text("uit", "off", "aus");
+                return removed ? DiscoverLanguage.T("web.removed_from") + indexPath : DiscoverLanguage.T("web.off");
             }
             try
             {
                 using (var src = GetType().Assembly.GetManifestResourceStream(GetType().Namespace + ".Resources." + LoaderFile))
                 {
-                    if (src == null) { return DiscoverLanguage.Text("fout: lader ontbreekt in de DLL", "error: loader missing in the DLL", "Fehler: Loader fehlt in der DLL"); }
+                    if (src == null) { return DiscoverLanguage.T("web.error_loader_missing_in_the_dll"); }
                     var tmp = loaderPath + "." + Guid.NewGuid().ToString("N") + ".tmp";
                     try
                     {
@@ -127,14 +127,14 @@ namespace Emby.Plugins.Discover
                     catch { try { if (File.Exists(tmp)) File.Delete(tmp); } catch { } throw; }
                 }
                 bool added = AddToIndex(indexPath);
-                return (added ? DiscoverLanguage.Text("actief in ", "active in ", "aktiv in ") : DiscoverLanguage.Text("al actief in ", "already active in ", "bereits aktiv in ")) + indexPath;
+                return (added ? DiscoverLanguage.T("web.active_in") : DiscoverLanguage.T("web.already_active_in")) + indexPath;
             }
             catch (Exception ex) when (ex is UnauthorizedAccessException || ex is IOException)
             {
-                return DiscoverLanguage.Text("alleen-lezen: webclient-map '", "read-only: web client folder '", "schreibgeschützt: Web-Client-Ordner '") + dir + DiscoverLanguage.Text("' is niet beschrijfbaar (", "' is not writable (", "' ist nicht beschreibbaar (") + ex.Message + DiscoverLanguage.Text("); lader niet geplaatst. ", "); loader not placed. ", "); Loader nicht platziert. ") +
-                    DiscoverLanguage.Text("Discover-pagina en knoppen werken wel nadat je Discover hebt geopend. Maak de map beschrijfbaar (bij Docker: volume-mount zonder :ro) of vul bij de instellingen een beschrijfbaar 'Pad webclient' in.", "The Discover page and buttons still work after you have opened Discover once. Make the folder writable (Docker: volume mount without :ro) or enter a writable 'Web client path' in the settings.", "Die Discover-Seite und die Schaltflächen funktionieren trotzdem, nachdem du Discover geöffnet hast. Mache den Ordner beschreibbar (Docker: Volume-Mount ohne :ro) oder trage in den Einstellungen einen beschreibbaren 'Web-Client-Pfad' ein.");
+                return DiscoverLanguage.T("web.read_only_web_client_folder") + dir + DiscoverLanguage.T("web.is_not_writable") + ex.Message + DiscoverLanguage.T("web.loader_not_placed") +
+                    DiscoverLanguage.T("web.the_discover_page_and_buttons_still_work");
             }
-            catch (Exception ex) { return DiscoverLanguage.Text("fout: ", "error: ", "Fehler: ") + ex.Message; }
+            catch (Exception ex) { return DiscoverLanguage.T("web.error") + ex.Message; }
         }
 
         // De webOS app-modus (NativeShell-shim, 1.3.6.0) is geschrapt. Stond die nog in de index.html,
@@ -146,11 +146,11 @@ namespace Emby.Plugins.Discover
                 bool bom;
                 string html = ReadText(indexPath, out bom);
                 string cleaned = StripBlock(html, NsStart, NsEnd);
-                if (cleaned == html) { return DiscoverLanguage.Text("niet aanwezig", "not present", "nicht vorhanden"); }
+                if (cleaned == html) { return DiscoverLanguage.T("web.not_present"); }
                 WriteText(indexPath, cleaned, bom);
-                return DiscoverLanguage.Text("verwijderd uit ", "removed from ", "entfernt aus ") + indexPath;
+                return DiscoverLanguage.T("web.removed_from") + indexPath;
             }
-            catch (Exception ex) { return DiscoverLanguage.Text("fout: ", "error: ", "Fehler: ") + ex.Message; }
+            catch (Exception ex) { return DiscoverLanguage.T("web.error") + ex.Message; }
         }
 
         private string StripBlock(string html, string start, string end)

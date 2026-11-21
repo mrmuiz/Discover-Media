@@ -223,7 +223,7 @@ namespace Emby.Plugins.Discover
             catch (Exception ex)
             {
                 if (ex is OperationCanceledException) throw;
-                DiscoverDiagnostics.Add("achtergronden voor de startpagina mislukt: " + ex.Message);
+                DiscoverDiagnostics.Add("log.related.achtergronden_voor_de_startpagina_mislukt", ex.Message);
                 if (cached != null) res.Urls = cached;
             }
             return res;
@@ -269,7 +269,7 @@ namespace Emby.Plugins.Discover
                     }
                 }
             }
-            catch (Exception ex) { DiscoverDiagnostics.Add("kanaal opzoeken mislukt: " + ex.Message); }
+            catch (Exception ex) { DiscoverDiagnostics.Add("log.related.kanaal_opzoeken_mislukt", ex.Message); }
             lock (ChannelGate) { if (res.Id != null) { _channel = res; _channelAt = DateTime.UtcNow; } }
             return res;
         }
@@ -312,7 +312,7 @@ namespace Emby.Plugins.Discover
                     res.Ours = ch != null && ch.Id == item.InternalId.ToString(System.Globalization.CultureInfo.InvariantCulture);
                 }
             }
-            catch (Exception ex) { DiscoverDiagnostics.Add("item controleren mislukt: " + ex.Message); }
+            catch (Exception ex) { DiscoverDiagnostics.Add("log.related.item_controleren_mislukt", ex.Message); }
             return res;
         }
 
@@ -363,7 +363,7 @@ namespace Emby.Plugins.Discover
             catch (Exception ex)
             {
                 if (ex is OperationCanceledException) throw;
-                DiscoverDiagnostics.Add("cast item " + request.Id + ": " + ex.Message);
+                DiscoverDiagnostics.Add("log.related.cast_item", request.Id, ex.Message);
             }
             return res;
         }
@@ -400,7 +400,7 @@ namespace Emby.Plugins.Discover
             catch (Exception ex)
             {
                 if (ex is OperationCanceledException) throw;
-                DiscoverDiagnostics.Add("achtergrond item " + request.Id + ": " + ex.Message);
+                DiscoverDiagnostics.Add("log.related.achtergrond_item", request.Id, ex.Message);
             }
             return res;
         }
@@ -441,7 +441,7 @@ namespace Emby.Plugins.Discover
             catch (Exception ex)
             {
                 if (ex is OperationCanceledException) throw;
-                DiscoverDiagnostics.Add("FOUT persoon " + request.Id + ": " + ex.Message);
+                DiscoverDiagnostics.Add("log.related.fout_persoon", request.Id, ex.Message);
             }
             return res;
         }
@@ -456,7 +456,7 @@ namespace Emby.Plugins.Discover
                 if (personId <= 0) personId = await _tmdb.FindPersonId(request.Name, CancellationToken.None).ConfigureAwait(false);
                 if (personId <= 0)
                 {
-                    DiscoverDiagnostics.Add("persoon: geen TMDB-id gevonden voor '" + request.Name + "'");
+                    DiscoverDiagnostics.Add("log.related.persoon_geen_tmdb_id_gevonden_voor", request.Name);
                     return row;
                 }
                 row.TmdbPersonId = personId;
@@ -485,7 +485,7 @@ namespace Emby.Plugins.Discover
             {
                 if (ex is OperationCanceledException) throw;
                 _logger.Error("Discover: person credits failed: {0}", ex.Message);
-                DiscoverDiagnostics.Add("FOUT persoonscredits '" + request.Name + "': " + ex.Message);
+                DiscoverDiagnostics.Add("log.related.fout_persoonscredits", request.Name, ex.Message);
             }
             return row;
         }
@@ -549,7 +549,7 @@ namespace Emby.Plugins.Discover
             {
                 if (ex is OperationCanceledException) throw;
                 _logger.Error("Discover: recommendations failed: {0}", ex.Message);
-                DiscoverDiagnostics.Add("FOUT aanbevelingen " + request.Type + "/" + request.TmdbId + ": " + ex.Message);
+                DiscoverDiagnostics.Add("log.related.fout_aanbevelingen", request.Type, request.TmdbId, ex.Message);
             }
             return res;
         }
@@ -570,7 +570,7 @@ namespace Emby.Plugins.Discover
                         {
                             Number = s.season_number,
                             Name = string.IsNullOrWhiteSpace(s.name)
-                                ? DiscoverLanguage.Text("Seizoen ", "Season ", "Staffel ") + s.season_number
+                                ? DiscoverLanguage.T("channel.season") + s.season_number
                                 : s.name,
                             EpisodeCount = s.episode_count,
                             AirDate = s.air_date,
@@ -583,7 +583,7 @@ namespace Emby.Plugins.Discover
             catch (Exception ex)
             {
                 if (ex is OperationCanceledException) throw;
-                DiscoverDiagnostics.Add("FOUT seizoenen " + request.TmdbId + ": " + ex.Message);
+                DiscoverDiagnostics.Add("log.related.fout_seizoenen", request.TmdbId, ex.Message);
             }
             return res;
         }
@@ -594,7 +594,7 @@ namespace Emby.Plugins.Discover
             catch (Exception ex)
             {
                 if (ex is OperationCanceledException) throw;
-                DiscoverDiagnostics.Add("TMDB collectie bij film " + movieId + " mislukt: " + ex.Message);
+                DiscoverDiagnostics.Add("log.related.tmdb_collectie_bij_film_mislukt", movieId, ex.Message);
                 return null;
             }
         }
@@ -609,7 +609,7 @@ namespace Emby.Plugins.Discover
             }
             catch (Exception ex)
             {
-                DiscoverDiagnostics.Add("FOUT status " + (tv ? "Sonarr" : "Radarr") + ": " + ex.Message);
+                DiscoverDiagnostics.Add("log.related.fout_status", (tv ? "Sonarr" : "Radarr"), ex.Message);
                 return new Dictionary<int, bool>();
             }
         }

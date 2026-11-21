@@ -68,7 +68,7 @@ namespace Emby.Plugins.Discover
             Task.Run(async () =>
             {
                 try { await make().ConfigureAwait(false); }
-                catch (Exception ex) { DiscoverDiagnostics.Add("plaatje op de achtergrond vernieuwen mislukt: " + ex.Message); }
+                catch (Exception ex) { DiscoverDiagnostics.Add("log.tile.plaatje_op_de_achtergrond_vernieuwen_mislukt", ex.Message); }
                 finally { lock (Building) { Building.Remove(final); } }
             });
         }
@@ -112,7 +112,7 @@ namespace Emby.Plugins.Discover
                     }
                     finally { BackgroundLane.Release(); }
                 }
-                catch (Exception ex) { DiscoverDiagnostics.Add("tegel op de achtergrond mislukt: " + ex.Message); }
+                catch (Exception ex) { DiscoverDiagnostics.Add("log.tile.tegel_op_de_achtergrond_mislukt", ex.Message); }
                 finally
                 {
                     bool drained;
@@ -154,7 +154,7 @@ namespace Emby.Plugins.Discover
                 var ffmpeg = RequestCard.FindFfmpeg();
                 if (ffmpeg == null)
                 {
-                    DiscoverDiagnostics.Add("mapplaatje '" + text + "': ffmpeg niet gevonden (plaatje zonder tekst gebruikt)");
+                    DiscoverDiagnostics.Add("log.tile.mapplaatje_ffmpeg_niet_gevonden_plaatje", text);
                     return null;
                 }
 
@@ -196,12 +196,12 @@ namespace Emby.Plugins.Discover
                         }
                         else if (!string.IsNullOrEmpty(fallbackColor))
                         {
-                            DiscoverDiagnostics.Add("mapplaatje '" + text + "': effen achtergrond gebruikt");
+                            DiscoverDiagnostics.Add("log.tile.mapplaatje_effen_achtergrond_gebruikt", text);
                             input = "-f lavfi -i color=c=0x" + fallbackColor.TrimStart('#') + ":s=" + tw + "x" + th + ":d=1";
                         }
                         else
                         {
-                            DiscoverDiagnostics.Add("mapplaatje '" + text + "': achtergrond niet opgehaald (plaatje zonder tekst gebruikt)");
+                            DiscoverDiagnostics.Add("log.tile.mapplaatje_achtergrond_niet_opgehaald_plaatje", text);
                             return null;
                         }
                         CopyResource("Poppins-Bold.ttf", Path.Combine(work, "bold.ttf"));
@@ -243,7 +243,7 @@ namespace Emby.Plugins.Discover
                             {
                                 if (fx is OperationCanceledException) throw;
                                 lastError = fx;
-                                DiscoverDiagnostics.Add("mapplaatje '" + text + "': opmaak " + (v + 1) + " mislukt: " + fx.Message);
+                                DiscoverDiagnostics.Add("log.tile.mapplaatje_opmaak_mislukt", text, (v + 1), fx.Message);
                             }
                         }
                         if (lastError != null) throw lastError;
@@ -253,7 +253,7 @@ namespace Emby.Plugins.Discover
                             throw new InvalidOperationException("ffmpeg produced no file");
                         if (File.Exists(final)) File.Delete(final);
                         File.Move(made, final);
-                        DiscoverDiagnostics.Add("mapplaatje '" + text + "' gemaakt: " + final);
+                        DiscoverDiagnostics.Add("log.tile.mapplaatje_gemaakt", text, final);
                     }
                     finally
                     {
@@ -269,7 +269,7 @@ namespace Emby.Plugins.Discover
             catch (Exception ex)
             {
                 if (ex is OperationCanceledException) throw;
-                DiscoverDiagnostics.Add("mapplaatje '" + text + "' mislukt: " + ex.Message + " (plaatje zonder tekst gebruikt)");
+                DiscoverDiagnostics.Add("log.tile.mapplaatje_mislukt_plaatje_zonder_tekst", text, ex.Message);
                 return null;
             }
         }
@@ -360,7 +360,7 @@ namespace Emby.Plugins.Discover
                             catch (Exception lex) when (hasLogo)
                             {
                                 // Logo onleesbaar (bv. een formaat dat ffmpeg niet kent): dan de naam als tekst.
-                                DiscoverDiagnostics.Add("logo voor 'alle seizoenen' onbruikbaar, naam als tekst: " + lex.Message);
+                                DiscoverDiagnostics.Add("log.tile.logo_voor_alle_seizoenen_onbruikbaar_naam", lex.Message);
                                 var nm2 = string.IsNullOrWhiteSpace(name) ? label : name.Trim();
                                 File.WriteAllText(Path.Combine(work, "name.txt"), nm2, new UTF8Encoding(false));
                                 int ns2 = 84;
@@ -377,7 +377,7 @@ namespace Emby.Plugins.Discover
                             if (!File.Exists(made) || new FileInfo(made).Length == 0) throw new InvalidOperationException("ffmpeg produced no file");
                             if (File.Exists(final)) File.Delete(final);
                             File.Move(made, final);
-                            DiscoverDiagnostics.Add("tegel 'alle seizoenen' gemaakt: " + final);
+                            DiscoverDiagnostics.Add("log.tile.tegel_alle_seizoenen_gemaakt", final);
                         }
                         finally { try { Directory.Delete(work, true); } catch { } }
                         return final;
@@ -393,7 +393,7 @@ namespace Emby.Plugins.Discover
             catch (Exception ex)
             {
                 if (ex is OperationCanceledException) throw;
-                DiscoverDiagnostics.Add("tegel 'alle seizoenen' mislukt: " + ex.Message);
+                DiscoverDiagnostics.Add("log.tile.tegel_alle_seizoenen_mislukt", ex.Message);
                 return null;
             }
         }
@@ -479,7 +479,7 @@ namespace Emby.Plugins.Discover
             catch (Exception ex)
             {
                 if (ex is OperationCanceledException) throw;
-                DiscoverDiagnostics.Add("logotegel '" + key + "' mislukt: " + ex.Message + " (logo zonder opmaak gebruikt)");
+                DiscoverDiagnostics.Add("log.tile.logotegel_mislukt_logo_zonder_opmaak_gebruikt", key, ex.Message);
                 return null;
             }
         }
@@ -556,7 +556,7 @@ namespace Emby.Plugins.Discover
             catch (Exception ex)
             {
                 if (ex is OperationCanceledException) throw;
-                DiscoverDiagnostics.Add("achtergrond voor mapplaatje niet opgehaald: " + ex.Message);
+                DiscoverDiagnostics.Add("log.tile.achtergrond_voor_mapplaatje_niet_opgehaald", ex.Message);
                 return false;
             }
         }

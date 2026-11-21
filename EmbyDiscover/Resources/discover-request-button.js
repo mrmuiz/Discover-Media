@@ -54,9 +54,6 @@
     console.log('[Discover] request-button script loaded v1.4.0.7 build ' + DC_BUILD);
 
     var uiLanguage = 'nl';
-    function text(dutch, english, german, norwegian) {
-        return uiLanguage === 'de' ? (german || english) : uiLanguage === 'no' ? (norwegian || english) : uiLanguage === 'en' ? english : dutch;
-    }
     var diagnosticsEnabled = false;
     var lastDiagnostic = null;
     var diagnosticsLoaded = false;
@@ -436,12 +433,89 @@
     function clientLanguage() {
         try { return (document.documentElement && document.documentElement.lang) || navigator.language || ''; } catch (e) { return ''; }
     }
+    // Teksten komen van de server (Discover/Home of Discover/Status), op sleutel, in de taal van de kijker.
+    // Zonder tabel valt t() terug op de sleutel zelf; dat is lelijk maar breekt niets.
+    // <fallback-en> automatisch gevuld door tools/sync-js-fallback.py; niet met de hand aanpassen
+    var STR_EN = {
+        "btn.aired": "Aired",
+        "btn.available": "Available",
+        "btn.cancel_request": "Cancel request",
+        "btn.cast": "Cast",
+        "btn.choose_which_seasons_to_request": "Choose which seasons to request.",
+        "btn.could_not_load_seasons": "Could not load seasons.",
+        "btn.currently_streaming_on": "Currently Streaming On",
+        "btn.delete": "Delete",
+        "btn.delete_failed_only_administrators_can_do": "Delete failed (only administrators can do this).",
+        "btn.downloading": "Downloading",
+        "btn.first_air_date": "First Air Date",
+        "btn.more_like_this_not_in_your_library": "More like this · not in your library",
+        "btn.network": "Network",
+        "btn.not_found": "Not found",
+        "btn.original_language": "Original Language",
+        "btn.previous": "Previous",
+        "btn.production_country": "Production Country",
+        "btn.queued": "Queued",
+        "btn.request_again": "Request again",
+        "btn.request_selected": "Request selected",
+        "btn.running_script": "Running script",
+        "btn.season_data_is_unavailable_nothing_was_requested": "Season data is unavailable; nothing was requested.",
+        "btn.seasons": "Seasons: ",
+        "btn.select_all": "Select all",
+        "btn.select_at_least_one_season": "Select at least one season.",
+        "btn.series": "Series",
+        "btn.status": "Status",
+        "btn.title": "Title",
+        "btn.title_fallback": "Title",
+        "btn.verifying": "Verifying",
+        "btn.waiting_for_processing": "Waiting for processing",
+        "btn.waiting_to_import": "Waiting to import",
+        "channel.request": "Request: ",
+        "channel.request_2": "Request",
+        "channel.requested_2": "Requested",
+        "channel.season": "Season ",
+        "channel.trailer_2": "Trailer",
+        "requestc.movie": "Movie",
+        "ui.cancel": "Cancel",
+        "ui.collection": "Collection",
+        "ui.confirm_cancel_request": "Cancel the request for \"{0}\" and remove it from {1}?",
+        "ui.confirm_delete_files": "Delete \"{0}\" from {1} AND delete its files from disk?",
+        "ui.director": "Director",
+        "ui.eps": "eps.",
+        "ui.extracting": "Extracting",
+        "ui.failed": "Failed: ",
+        "ui.import_blocked": "Import blocked",
+        "ui.importing": "Importing",
+        "ui.less": "Less",
+        "ui.more_2": "More",
+        "ui.more_movies_with": "More movies with {0}",
+        "ui.more_series_with": "More series with {0}",
+        "ui.moving": "Moving",
+        "ui.next": "Next",
+        "ui.paused": "Paused",
+        "ui.problem": "Problem",
+        "ui.repairing": "Repairing",
+        "ui.request_all_seasons": "Request all seasons",
+        "ui.request_failed": "Request failed.",
+        "ui.requesting_2": "Requesting...",
+        "ui.unknown_error": "unknown error"
+    };
+    // </fallback-en>
+    var STR = {};
+    function t(key) {
+        var s = STR[key];
+        if (s == null) { s = STR_EN[key]; }   // nog geen antwoord van de server: Engels in plaats van de sleutel
+        if (s == null) { s = key; }
+        for (var i = 1; i < arguments.length; i++) { s = s.split('{' + (i - 1) + '}').join(String(arguments[i])); }
+        return s;
+    }
+
 
     function loadDiagnosticsSetting() {
         var client = api();
         if (!client || !client.ajax || !client.getUrl || diagnosticsRequest || Date.now() < diagnosticsRetryAfter) { return; }
         diagnosticsRequest = true;
-        client.ajax({ type: 'GET', url: client.getUrl('Discover/Status'), dataType: 'json' }).then(function (status) {
+        client.ajax({ type: 'GET', url: client.getUrl('Discover/Status', { Lang: clientLanguage() }), dataType: 'json' }).then(function (status) {
+            if (status && status.Strings) { STR = status.Strings; }
             diagnosticsEnabled = !!(status && status.ShowDiagnostics);
             window.__discoverRequestService = (status && status.RequestService) || '';
             window.__discoverShowSpecials = !(status && status.ShowSpecials === false);
@@ -779,8 +853,8 @@
         rm.style.setProperty('display', show ? 'inline-flex' : 'none', 'important');
         rm.disabled = false;
         var t = info.Status === 2
-            ? text('Verwijderen', 'Delete', 'Löschen')
-            : text('Annuleren', 'Cancel request', 'Anfrage abbrechen');
+            ? t('btn.delete')
+            : t('btn.cancel_request');
         var span = rm.querySelector('.detailButton-text');
         if (span) { span.textContent = t; }
         rm.setAttribute('title', t);
@@ -789,10 +863,10 @@
     function render(btn, info) {
         btn._info = info;
         updateRm(btn, info);
-        if (!info.Found) { setLabel(btn, text('Niet gevonden', 'Not found', 'Nicht gefunden'), 'help_outline'); btn.disabled = true; }
-        else if (info.Status === 2) { setLabel(btn, text('Beschikbaar', 'Available', 'Verfügbar'), 'check'); btn.disabled = true; }
-        else if (info.Status === 1) { setLabel(btn, text('Aangevraagd', 'Requested', 'Angefordert'), 'check'); btn.disabled = true; }
-        else { setLabel(btn, text('Aanvragen', 'Request', 'Anfragen', 'Forespør'), 'add'); btn.disabled = false; }
+        if (!info.Found) { setLabel(btn, t('btn.not_found'), 'help_outline'); btn.disabled = true; }
+        else if (info.Status === 2) { setLabel(btn, t('btn.available'), 'check'); btn.disabled = true; }
+        else if (info.Status === 1) { setLabel(btn, t('channel.requested_2'), 'check'); btn.disabled = true; }
+        else { setLabel(btn, t('channel.request_2'), 'add'); btn.disabled = false; }
     }
 
     function closeModal(overlay) {
@@ -802,9 +876,7 @@
     function showSeasonPicker(info, onConfirm) {
         var seasons = (info.Seasons || []).filter(function (s) { return s.Number > 0 || (s.EpisodeCount > 0 && window.__discoverShowSpecials !== false); });
         if (seasons.length === 0) {
-            toast(text('Seizoensgegevens niet beschikbaar; er is niets aangevraagd.',
-                'Season data is unavailable; nothing was requested.',
-                'Staffeldaten nicht verfügbar; es wurde nichts angefordert.'), true);
+            toast(t('btn.season_data_is_unavailable_nothing_was_requested'), true);
             return;
         }
 
@@ -819,14 +891,12 @@
 
         var header = document.createElement('div');
         header.style.cssText = 'padding:1.2em 1.4em .6em;font-size:1.15em;font-weight:600;';
-        header.textContent = text('Seizoenen: ', 'Seasons: ', 'Staffeln: ') + (info.Title || '');
+        header.textContent = t('btn.seasons') + (info.Title || '');
         card.appendChild(header);
 
         var sub = document.createElement('div');
         sub.style.cssText = 'padding:0 1.4em .8em;opacity:.7;font-size:.9em;';
-        sub.textContent = text('Kies welke seizoenen je wilt aanvragen.',
-            'Choose which seasons to request.',
-            'Wähle aus, welche Staffeln angefordert werden sollen.');
+        sub.textContent = t('btn.choose_which_seasons_to_request');
         card.appendChild(sub);
 
         var list = document.createElement('div');
@@ -848,9 +918,9 @@
 
             var label = document.createElement('span');
             label.style.cssText = 'flex:1;';
-            var name = s.Name || (text('Seizoen ', 'Season ', 'Staffel ') + s.Number);
+            var name = s.Name || (t('channel.season') + s.Number);
             if (s.Number === 0 && name.toLowerCase().indexOf('special') < 0) { name = 'Specials'; }
-            label.textContent = name + (s.EpisodeCount ? ' (' + s.EpisodeCount + ' ' + text('afl.', 'eps.', 'Folgen') + ')' : '');
+            label.textContent = name + (s.EpisodeCount ? ' (' + s.EpisodeCount + ' ' + t('ui.eps') + ')' : '');
 
             row.appendChild(cb);
             row.appendChild(label);
@@ -870,25 +940,25 @@
             return b;
         }
 
-        var btnAll = mkBtn(text('Alles selecteren', 'Select all', 'Alle auswählen'), false);
+        var btnAll = mkBtn(t('btn.select_all'), false);
         btnAll.onclick = function () { checks.forEach(function (c) { c.checked = true; }); };
 
         // Een klik: de hele serie aanvragen. Zonder seizoenslijst monitort Sonarr alles, ook seizoenen die later uitkomen.
-        var btnEvery = mkBtn(text('Alle seizoenen aanvragen', 'Request all seasons', 'Alle Staffeln anfordern'), true);
+        var btnEvery = mkBtn(t('ui.request_all_seasons'), true);
         btnEvery.onclick = function () {
             closeModal(overlay);
             onConfirm(null);
         };
 
-        var btnCancel = mkBtn(text('Annuleren', 'Cancel', 'Abbrechen'), false);
+        var btnCancel = mkBtn(t('ui.cancel'), false);
         btnCancel.onclick = function () { closeModal(overlay); };
 
-        var btnOk = mkBtn(text('Geselecteerde aanvragen', 'Request selected', 'Auswahl anfordern'), false);
+        var btnOk = mkBtn(t('btn.request_selected'), false);
         btnOk.onclick = function () {
             var selected = [];
             checks.forEach(function (c) { if (c.checked) { selected.push(parseInt(c.value, 10)); } });
             if (selected.length === 0) {
-                toast(text('Kies minstens één seizoen.', 'Select at least one season.', 'Wähle mindestens eine Staffel aus.'), true);
+                toast(t('btn.select_at_least_one_season'), true);
                 return;
             }
             closeModal(overlay);
@@ -907,7 +977,7 @@
 
     function doRequest(btn, info, seasons) {
         btn.disabled = true;
-        setLabel(btn, text('Aanvragen...', 'Requesting...', 'Wird angefragt...'), 'add');
+        setLabel(btn, t('ui.requesting_2'), 'add');
         var c = api();
         var body = { Type: info.Type, TmdbId: info.TmdbId };
         if (seasons && seasons.length) { body.Seasons = seasons; }
@@ -918,14 +988,14 @@
         }).then(function (r) {
             if (r && r.Success) {
                 info.Status = 1;
-                toast((info.Title || text('Titel', 'Title', 'Titel')) + ': ' + r.Message, false);
+                toast((info.Title || t('btn.title')) + ': ' + r.Message, false);
             } else {
-                toast(text('Mislukt: ', 'Failed: ', 'Fehlgeschlagen: ') +
-                    ((r && r.Message) || text('onbekende fout', 'unknown error', 'unbekannter Fehler')), true);
+                toast(t('ui.failed') +
+                    ((r && r.Message) || t('ui.unknown_error')), true);
             }
             render(btn, info);
         }, function () {
-            toast(text('Aanvraag mislukt.', 'Request failed.', 'Anfrage fehlgeschlagen.'), true);
+            toast(t('ui.request_failed'), true);
             render(btn, info);
         });
     }
@@ -1012,12 +1082,8 @@
             var arr = window.__discoverRequestService || (cur.Type === 'tv' ? 'Sonarr' : 'Radarr');
             var withFiles = cur.Status === 2;
             var q = withFiles
-                ? text('"' + (cur.Title || 'Titel') + '" verwijderen uit ' + arr + ' EN de bestanden van schijf verwijderen?',
-                    'Delete "' + (cur.Title || 'Title') + '" from ' + arr + ' AND delete its files from disk?',
-                    '"' + (cur.Title || 'Titel') + '" aus ' + arr + ' entfernen UND die Dateien von der Festplatte löschen?')
-                : text('De aanvraag voor "' + (cur.Title || 'titel') + '" annuleren en verwijderen uit ' + arr + '?',
-                    'Cancel the request for "' + (cur.Title || 'title') + '" and remove it from ' + arr + '?',
-                    'Die Anfrage für "' + (cur.Title || 'Titel') + '" abbrechen und aus ' + arr + ' entfernen?');
+                ? t('ui.confirm_delete_files', cur.Title || t('btn.title_fallback'), arr)
+                : t('ui.confirm_cancel_request', cur.Title || t('btn.title_fallback'), arr);
             if (!window.confirm(q)) { return; }
             rm.disabled = true;
             var c = api();
@@ -1028,16 +1094,14 @@
             }).then(function (r) {
                 if (r && r.Success) {
                     cur.Status = 0;
-                    toast((cur.Title || text('Titel', 'Title', 'Titel')) + ': ' + r.Message, false);
+                    toast((cur.Title || t('btn.title')) + ': ' + r.Message, false);
                 } else {
-                    toast(text('Mislukt: ', 'Failed: ', 'Fehlgeschlagen: ') +
-                        ((r && r.Message) || text('onbekende fout', 'unknown error', 'unbekannter Fehler')), true);
+                    toast(t('ui.failed') +
+                        ((r && r.Message) || t('ui.unknown_error')), true);
                 }
                 render(btn, cur);
             }, function () {
-                toast(text('Verwijderen mislukt (alleen beheerders mogen dit).',
-                    'Delete failed (only administrators can do this).',
-                    'Löschen fehlgeschlagen (nur Administratoren dürfen dies).'), true);
+                toast(t('btn.delete_failed_only_administrators_can_do'), true);
                 render(btn, cur);
             });
         }, true);
@@ -1184,12 +1248,12 @@
 
     function seasonInfoLabel(key) {
         var labels = {
-            status: text('Status', 'Status', 'Status'),
-            firstAirDate: text('Eerste uitzenddatum', 'First Air Date', 'Erstausstrahlung'),
-            originalLanguage: text('Oorspronkelijke taal', 'Original Language', 'Originalsprache'),
-            productionCountry: text('Productieland', 'Production Country', 'Produktionsland'),
-            network: text('Netwerk', 'Network', 'Sender'),
-            streamingOn: text('Nu te streamen', 'Currently Streaming On', 'Derzeit im Stream')
+            status: t('btn.status'),
+            firstAirDate: t('btn.first_air_date'),
+            originalLanguage: t('btn.original_language'),
+            productionCountry: t('btn.production_country'),
+            network: t('btn.network'),
+            streamingOn: t('btn.currently_streaming_on')
         };
         return labels[key];
     }
@@ -1258,7 +1322,7 @@
             // De seizoensbeschrijving staat al in de tekst onder de knop Request; hier alleen de extra's.
             // Het aantal afleveringen staat al in de beschrijving erboven.
             if (info.SeasonAirDate) {
-                appendSeasonInfoRow(card, text('Uitgezonden', 'Aired', 'Ausgestrahlt', 'Sendt'),
+                appendSeasonInfoRow(card, t('btn.aired'),
                     info.SeasonAirDate + (info.SeasonLastAirDate ? ' \u2013 ' + info.SeasonLastAirDate : ''));
             }
             appendSeasonInfoRow(card, seasonInfoLabel('status'), info.Status);
@@ -1446,9 +1510,9 @@
                 var h1 = document.querySelector('.itemDetailPage h1') || document.querySelector('h1');
                 var already = /\u23f3/.test((h1 && h1.textContent) || document.title || '');
                 var label = renamePlay === 'ask'
-                    ? (already ? text('Opnieuw aanvragen', 'Request again', 'Erneut anfragen', 'Forespør igjen')
-                               : text('Aanvragen', 'Request', 'Anfragen', 'Forespør'))
-                    : text('Trailer', 'Trailer', 'Trailer', 'Trailer');
+                    ? (already ? t('btn.request_again')
+                               : t('channel.request_2'))
+                    : t('channel.trailer_2');
                 if (span && span.textContent !== label) { span.textContent = label; }
                 play.setAttribute('title', label);
                 play.setAttribute('aria-label', label);
@@ -1585,7 +1649,7 @@
         var requestedInSonarr = /^\s*\u23F3|\u23F3\s*$/.test(info.name || '');
         var prefix = availableInEmby ? '\u2713 ' : requestedInSonarr ? '\u23F3 ' : '';
         var leadingWhitespace = /^\s*/.exec(card.__discoverOriginalSeasonLabel)[0];
-        node.nodeValue = leadingWhitespace + prefix + text('Seizoen ', 'Season ', 'Staffel ') + seasonNumber;
+        node.nodeValue = leadingWhitespace + prefix + t('channel.season') + seasonNumber;
     }
 
     // Alleen gewone film- en seriebibliotheken, niet de Live TV-opnames (OTA/DVR). tv: true / false / null (beide).
@@ -1712,7 +1776,7 @@
             card.__discoverTileLabelNode = node;
             card.__discoverOriginalTileLabel = node.nodeValue;
         }
-        var prefix = text('Aanvragen: ', 'Request: ', 'Anfragen: ');
+        var prefix = t('channel.request');
         node.nodeValue = card.__discoverOriginalTileLabel.replace(/^(\s*)Trailer:\s*/i, '$1' + prefix);
     }
 
@@ -1931,36 +1995,36 @@
     }
 
     function rowStatusText(st) {
-        return st === 2 ? text('Beschikbaar', 'Available', 'Verfügbar') :
-            st === 1 ? text('Aangevraagd', 'Requested', 'Angefordert') :
-            text('Aanvragen', 'Request', 'Anfragen', 'Forespør');
+        return st === 2 ? t('btn.available') :
+            st === 1 ? t('channel.requested_2') :
+            t('channel.request_2');
     }
 
     function rowRoleText(role) {
         if (!role) { return ''; }
-        return role === 'Director' ? text('Regie', 'Director', 'Regie') : role;
+        return role === 'Director' ? t('ui.director') : role;
     }
 
     // ---- Downloadvoortgang (Radarr/Sonarr-wachtrij) voor de rijen ----
     var rowQueue = {};           // 'movie:123' -> wachtrij-item
     var rowQueueTimer = null, rowQueueBusy = false, rowQueueUntil = 0;
     function rowStageLabel(stage) {
-        return stage === 'verifying' ? text('Verifiëren', 'Verifying', 'Überprüfen', 'Verifiserer') :
-            stage === 'repairing' ? text('Repareren', 'Repairing', 'Reparieren', 'Reparerer') :
-            stage === 'extracting' ? text('Uitpakken', 'Extracting', 'Entpacken', 'Pakker ut') :
-            stage === 'moving' ? text('Verplaatsen', 'Moving', 'Verschieben', 'Flytter') :
-            stage === 'script' ? text('Script draaien', 'Running script', 'Skript läuft', 'Kjører skript') :
-            text('Wacht op verwerking', 'Waiting for processing', 'Wartet auf Verarbeitung', 'Venter på behandling');
+        return stage === 'verifying' ? t('btn.verifying') :
+            stage === 'repairing' ? t('ui.repairing') :
+            stage === 'extracting' ? t('ui.extracting') :
+            stage === 'moving' ? t('ui.moving') :
+            stage === 'script' ? t('btn.running_script') :
+            t('btn.waiting_for_processing');
     }
     function rowStateLabel(st, stage) {
-        return st === 'downloading' ? text('Downloaden', 'Downloading', 'Lädt herunter', 'Laster ned') :
-            st === 'paused' ? text('Gepauzeerd', 'Paused', 'Pausiert', 'Pauset') :
+        return st === 'downloading' ? t('btn.downloading') :
+            st === 'paused' ? t('ui.paused') :
             st === 'processing' ? rowStageLabel(stage) :
-            st === 'importwait' ? text('Wacht op import', 'Waiting to import', 'Wartet auf Import', 'Venter på import') :
-            st === 'importing' ? text('Importeren', 'Importing', 'Wird importiert', 'Importerer') :
-            st === 'importblocked' ? text('Import geblokkeerd', 'Import blocked', 'Import blockiert', 'Import blokkert') :
-            st === 'stalled' ? text('Probleem', 'Problem', 'Problem', 'Problem') :
-            text('In wachtrij', 'Queued', 'In Warteschlange', 'I kø');
+            st === 'importwait' ? t('btn.waiting_to_import') :
+            st === 'importing' ? t('ui.importing') :
+            st === 'importblocked' ? t('ui.import_blocked') :
+            st === 'stalled' ? t('ui.problem') :
+            t('btn.queued');
     }
     function rowQueueText(e) {
         if (e.State === 'processing' && e.Stage === 'script' && e.Action) { return e.Action; }
@@ -2034,7 +2098,7 @@
         var c = api();
         function send(seasons) {
             btn.disabled = true;
-            btn.textContent = text('Aanvragen...', 'Requesting...', 'Wird angefragt...');
+            btn.textContent = t('ui.requesting_2');
             var body = { Type: item.Type, TmdbId: item.TmdbId };
             if (seasons && seasons.length) { body.Seasons = seasons; }
             c.ajax({
@@ -2047,12 +2111,12 @@
                     rowQueueUntil = Date.now() + 5 * 60 * 1000;
                     startRowQueue(5000);
                 } else {
-                    toast(text('Mislukt: ', 'Failed: ', 'Fehlgeschlagen: ') +
-                        ((r && r.Message) || text('onbekende fout', 'unknown error', 'unbekannter Fehler')), true);
+                    toast(t('ui.failed') +
+                        ((r && r.Message) || t('ui.unknown_error')), true);
                 }
                 refreshRowButtons(item);
             }, function () {
-                toast(text('Aanvraag mislukt.', 'Request failed.', 'Anfrage fehlgeschlagen.'), true);
+                toast(t('ui.request_failed'), true);
                 refreshRowButtons(item);
             });
         }
@@ -2064,7 +2128,7 @@
             showSeasonPicker({ Seasons: (info && info.Seasons) || [] }, send);
         }, function () {
             styleRowButton(btn, item);
-            toast(text('Seizoenen ophalen mislukt.', 'Could not load seasons.', 'Staffeln konnten nicht geladen werden.'), true);
+            toast(t('btn.could_not_load_seasons'), true);
         });
     }
 
@@ -2100,7 +2164,7 @@
         var link = document.createElement('a');
         link.className = 'discover-row-poster';
         // Klik op de poster: de Discover-popup met info en trailer.
-        link.href = '#!/configurationpage?name=discoverui1153&openType=' + item.Type + '&openId=' + item.TmdbId;
+        link.href = '#!/configurationpage?name=discoverui1154&openType=' + item.Type + '&openId=' + item.TmdbId;
         link.setAttribute('aria-label', item.Title);   // geen title: dat gaf een tooltip-vakje over de poster
         // Gewone klik: de popup hier op de pagina openen (Ctrl/middenklik volgt de link naar Discover).
         link.addEventListener('click', function (e) {
@@ -2119,7 +2183,7 @@
         name.title = item.Title;
         var meta = document.createElement('div');
         meta.className = 'discover-row-meta';
-        var kind = item.Type === 'tv' ? text('Serie', 'Series', 'Serie', 'Serie') : text('Film', 'Movie', 'Film', 'Film');
+        var kind = item.Type === 'tv' ? t('btn.series') : t('requestc.movie');
         var role = rowRoleText(item.Role);
         meta.appendChild(document.createTextNode(kind));
         if (item.Year) { var ys = document.createElement('span'); ys.className = 'discover-row-year'; ys.textContent = ' · ' + item.Year; meta.appendChild(ys); }
@@ -2146,7 +2210,7 @@
         b.type = 'button';
         b.tabIndex = -1;
         b.className = 'discover-row-arrow';
-        b.setAttribute('aria-label', dir < 0 ? text('Vorige', 'Previous', 'Zurück', 'Forrige') : text('Volgende', 'Next', 'Weiter', 'Neste'));
+        b.setAttribute('aria-label', dir < 0 ? t('btn.previous') : t('ui.next'));
         b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="' + (dir < 0 ? 'M14.7 6.3a1 1 0 0 1 0 1.4L10.4 12l4.3 4.3a1 1 0 0 1-1.4 1.4l-5-5a1 1 0 0 1 0-1.4l5-5a1 1 0 0 1 1.4 0z' : 'M9.3 6.3a1 1 0 0 0 0 1.4l4.3 4.3-4.3 4.3a1 1 0 1 0 1.4 1.4l5-5a1 1 0 0 0 0-1.4l-5-5a1 1 0 0 0-1.4 0z') + '"/></svg>';
         box.appendChild(b);
         b.addEventListener('click', function (e) {
@@ -2344,11 +2408,11 @@
         if (d.Overview) {
             var ov = document.createElement('div'); ov.className = 'discover-ib-ov'; ov.textContent = d.Overview; box.appendChild(ov);
             var more = document.createElement('button'); more.type = 'button'; more.className = 'discover-ib-more';
-            more.textContent = text('Meer', 'More', 'Mehr', 'Mer');
+            more.textContent = t('ui.more_2');
             more.addEventListener('click', function (e) {
                 e.preventDefault(); e.stopPropagation();
                 var open = box.classList.toggle('open');
-                more.textContent = open ? text('Minder', 'Less', 'Weniger', 'Mindre') : text('Meer', 'More', 'Mehr', 'Mer');
+                more.textContent = open ? t('ui.less') : t('ui.more_2');
             });
             box.appendChild(more);
             setTimeout(function () { if (ov.scrollHeight <= ov.clientHeight + 2) { more.style.display = 'none'; } }, 0);
@@ -2394,7 +2458,7 @@
         sec.setAttribute('data-itemid', id);
         var h = document.createElement('h2');
         h.className = 'sectionTitle sectionTitle-cards padded-left padded-left-page padded-right';
-        h.textContent = text('Cast', 'Cast', 'Besetzung', 'Rolleliste');
+        h.textContent = t('btn.cast');
         sec.appendChild(h);
         var row = document.createElement('div');
         row.className = 'discover-cast-row padded-left padded-left-page padded-right';
@@ -2407,7 +2471,7 @@
     // ---- De Discover-popup boven de huidige pagina ----
     // Laadt de Discover-pagina één keer onzichtbaar (alleen de popup wordt gebruikt) met dezelfde controller
     // als de echte pagina, in "embedded"-modus. Zo is de popup overal gelijk: info, cast, seizoenen, trailer, aanvragen.
-    var DC_UI_PAGE = 'discoverui1153', DC_UI_JS = 'discoveruijs1456';
+    var DC_UI_PAGE = 'discoverui1154', DC_UI_JS = 'discoveruijs1457';
     var embedPromise = null;
     function pageText(c, name) {
         var url = c.getUrl('web/ConfigurationPage', { name: name });
@@ -2532,7 +2596,7 @@
             if (!row.querySelector('.discover-film-badge')) {
                 var b = document.createElement('span');
                 b.className = 'discover-film-badge';
-                b.textContent = text('Aanvragen', 'Request', 'Anfragen', 'Forespør');
+                b.textContent = t('channel.request_2');
                 (row.querySelector('.listItemBodyText') || row).appendChild(b);
             }
             (function (type, tmdb) {
@@ -2557,9 +2621,9 @@
                 var nm = item.Name || '';
                 return [
                     // Zelfde namen als op de persoonspagina in Discover: "Meer films met <naam>" (alleen wat je nog niet hebt).
-                    { key: 'person_movie', title: text('Meer films met ' + nm, 'More movies with ' + nm, 'Weitere Filme mit ' + nm, 'Flere filmer med ' + nm),
+                    { key: 'person_movie', title: t('ui.more_movies_with', nm),
                         items: all.filter(function (x) { return x.Type !== 'tv'; }) },
-                    { key: 'person_tv', title: text('Meer series met ' + nm, 'More series with ' + nm, 'Weitere Serien mit ' + nm, 'Flere serier med ' + nm),
+                    { key: 'person_tv', title: t('ui.more_series_with', nm),
                         items: all.filter(function (x) { return x.Type === 'tv'; }) }
                 ];
             });
@@ -2575,10 +2639,9 @@
                 var self = (r && r.TmdbId) || tmdb;
                 if (r && r.Collection) { r.Collection = r.Collection.filter(function (x) { return x.TmdbId !== self; }); }
                 if (r && r.Collection && r.Collection.length) {
-                    out.push({ key: 'collection', title: r.CollectionName || text('Collectie', 'Collection', 'Sammlung'), items: r.Collection });
+                    out.push({ key: 'collection', title: r.CollectionName || t('ui.collection'), items: r.Collection });
                 }
-                out.push({ key: 'related', title: text('Meer zoals dit \u00B7 nog niet in je bibliotheek', 'More like this \u00B7 not in your library',
-                    'Mehr wie dies \u00B7 nicht in deiner Bibliothek', 'Mer som dette \u00B7 ikke i biblioteket ditt'),
+                out.push({ key: 'related', title: t('btn.more_like_this_not_in_your_library'),
                     items: (r && r.Recommendations) || [] });
                 return out;
             });

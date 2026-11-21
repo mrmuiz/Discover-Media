@@ -79,12 +79,12 @@ namespace Emby.Plugins.Discover
                         catch (Exception ex)
                         {
                             _lastFail = DateTime.UtcNow;
-                            DiscoverDiagnostics.Add("IMDb-dataset downloaden mislukt: " + ex.Message);
+                            DiscoverDiagnostics.Add("log.imdb.imdb_dataset_downloaden_mislukt", ex.Message);
                         }
                     }
                     if (File.Exists(path)) Load(path);
                 }
-                catch (Exception ex) { DiscoverDiagnostics.Add("IMDb-dataset laden mislukt: " + ex.Message); }
+                catch (Exception ex) { DiscoverDiagnostics.Add("log.imdb.imdb_dataset_laden_mislukt", ex.Message); }
                 finally { lock (Gate) { _busy = false; } }
             });
         }
@@ -101,7 +101,7 @@ namespace Emby.Plugins.Discover
             }
             if (File.Exists(path)) File.Delete(path);
             File.Move(tmp, path);
-            DiscoverDiagnostics.Add("IMDb-dataset ververst");
+            DiscoverDiagnostics.Add("log.imdb.imdb_dataset_ververst");
         }
 
         private static void Load(string path)
@@ -133,7 +133,7 @@ namespace Emby.Plugins.Discover
             Array.Sort(ia, va);
             _ids = ia; _vals = va; _loadedFrom = stamp;
             Info = ia.Length + " titels (" + stamp.ToLocalTime().ToString("yyyy-MM-dd") + ")";
-            DiscoverDiagnostics.Add("IMDb-dataset geladen: " + Info);
+            DiscoverDiagnostics.Add("log.imdb.imdb_dataset_geladen", Info);
         }
 
         public static bool TryGet(string imdbId, out string rating, out int votes)
@@ -184,7 +184,7 @@ namespace Emby.Plugins.Discover
                     lock (ImdbIds) { ImdbIds[k] = imdb ?? ""; }
                 }
             }
-            catch (Exception ex) { DiscoverDiagnostics.Add("IMDb-id " + request.Type + "/" + request.TmdbId + ": " + ex.Message); return res; }
+            catch (Exception ex) { DiscoverDiagnostics.Add("log.imdb.imdb_id", request.Type, request.TmdbId, ex.Message); return res; }
             string rating; int votes;
             if (!string.IsNullOrEmpty(imdb) && ImdbDataset.TryGet(imdb, out rating, out votes))
             {

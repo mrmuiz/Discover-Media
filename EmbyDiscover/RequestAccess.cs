@@ -40,18 +40,12 @@ namespace Emby.Plugins.Discover
             var dates = RequestStore.DatesSince(json, userId, since);
             if (dates.Count < cfg.RequestLimit) return null;
             var again = dates[dates.Count - cfg.RequestLimit].AddDays(days).ToLocalTime();
-            return DiscoverLanguage.Text(
-                "Je limiet is bereikt (" + cfg.RequestLimit + " per " + days + " dagen). Weer mogelijk vanaf " + again.ToString("d MMM HH:mm", new CultureInfo("nl-NL")) + ".",
-                "You have reached your limit (" + cfg.RequestLimit + " per " + days + " days). Possible again from " + again.ToString("d MMM HH:mm", CultureInfo.InvariantCulture) + ".",
-                "Dein Limit ist erreicht (" + cfg.RequestLimit + " pro " + days + " Tage). Wieder möglich ab " + again.ToString("d. MMM HH:mm", new CultureInfo("de-DE")) + ".");
+            return DiscoverLanguage.T("req.limit_reached", cfg.RequestLimit, days, again.ToString("d MMM HH:mm", DiscoverLanguage.Culture));
         }
 
         internal static string DeniedMessage()
         {
-            return DiscoverLanguage.Text(
-                "Je hebt geen toestemming om aan te vragen. Vraag het aan de beheerder.",
-                "You are not allowed to make requests. Ask the administrator.",
-                "Du darfst nichts anfordern. Frage den Administrator.");
+            return DiscoverLanguage.T("requesta.you_are_not_allowed_to_make_requests_ask");
         }
     }
 }

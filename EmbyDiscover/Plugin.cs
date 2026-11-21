@@ -28,7 +28,7 @@ namespace Emby.Plugins.Discover
             get
             {
                 try { return typeof(Plugin).Assembly.GetName().Version.ToString(); }
-                catch { return "1.4.0.24"; }
+                catch { return "1.4.0.25"; }
             }
         }
 
@@ -42,6 +42,20 @@ namespace Emby.Plugins.Discover
             _xmlSerializer = xmlSerializer;
             _serverConfigurationManager = serverConfigurationManager;
             Instance = this;
+        }
+
+        /// <summary>
+        /// Map waarin een gebruiker eigen taalbestanden kan zetten (es.json, pt-br.json, ...). Die
+        /// overschrijven de meegeleverde teksten en kunnen ook een nieuwe taal toevoegen, zonder build.
+        /// De map wordt niet aangemaakt; hij hoeft er alleen te zijn als iemand hem gebruikt.
+        /// </summary>
+        public string LanguageFolder
+        {
+            get
+            {
+                try { return Path.Combine(_paths.DataPath, "discover-languages"); }
+                catch { return null; }
+            }
         }
 
         /// <summary>Path of the ffmpeg that Emby itself uses (Settings > Transcoding), when one is set. Read without a compile-time reference.</summary>
@@ -101,7 +115,7 @@ namespace Emby.Plugins.Discover
             }
             catch (Exception ex)
             {
-                DiscoverDiagnostics.Add("FOUT opgeslagen plugininstellingen laden: " + ex.Message);
+                DiscoverDiagnostics.Add("log.plugin.fout_opgeslagen_plugininstellingen_laden", ex.Message);
             }
 
             return Configuration;
@@ -138,14 +152,14 @@ namespace Emby.Plugins.Discover
             {
                 new PluginPageInfo
                 {
-                    Name = "discoverconfig1113",
+                    Name = "discoverconfig1114",
                     EmbeddedResourcePath = GetType().Namespace + ".Configuration.configPage.html",
                     EnableInMainMenu = true,
                     IsMainConfigPage = true
                 },
                 new PluginPageInfo
                 {
-                    Name = "discoverui1153",
+                    Name = "discoverui1154",
                     DisplayName = "Discover",
                     EmbeddedResourcePath = GetType().Namespace + ".Configuration.discoverPage.html",
                     EnableInMainMenu = true,
@@ -154,12 +168,12 @@ namespace Emby.Plugins.Discover
                 },
                 new PluginPageInfo
                 {
-                    Name = "discoveruijs1456",
+                    Name = "discoveruijs1457",
                     EmbeddedResourcePath = GetType().Namespace + ".Configuration.discoverPage.js"
                 },
                 new PluginPageInfo
                 {
-                    Name = "discoverbuttonjs1438",
+                    Name = "discoverbuttonjs1439",
                     EmbeddedResourcePath = GetType().Namespace + ".Resources.discover-request-button.js"
                 },
                 new PluginPageInfo
@@ -169,12 +183,12 @@ namespace Emby.Plugins.Discover
                 },
                 new PluginPageInfo
                 {
-                    Name = "discoverstatusjs1105",
+                    Name = "discoverstatusjs1106",
                     EmbeddedResourcePath = GetType().Namespace + ".Configuration.statusPage.js"
                 },
                 new PluginPageInfo
                 {
-                    Name = "discoverconfigjs1394",
+                    Name = "discoverconfigjs1395",
                     EmbeddedResourcePath = GetType().Namespace + ".Configuration.configPage.js"
                 }
             };
@@ -205,7 +219,7 @@ namespace Emby.Plugins.Discover
                 catch (Exception ex)
                 {
                     last = ex;
-                    DiscoverDiagnostics.Add("map '" + dir + "' niet beschrijfbaar: " + ex.Message);
+                    DiscoverDiagnostics.Add("log.plugin.map_niet_beschrijfbaar", dir, ex.Message);
                 }
             }
             throw new InvalidOperationException("No writable folder for the card clips: " + (last == null ? "no folder available" : last.Message));
@@ -266,7 +280,7 @@ namespace Emby.Plugins.Discover
                 catch (Exception ex)
                 {
                     last = ex;
-                    DiscoverDiagnostics.Add("clip schrijven mislukt in '" + dir + "': " + ex.Message);
+                    DiscoverDiagnostics.Add("log.plugin.clip_schrijven_mislukt_in", dir, ex.Message);
                 }
             }
             throw new InvalidOperationException(

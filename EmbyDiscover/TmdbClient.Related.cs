@@ -205,7 +205,7 @@ namespace Emby.Plugins.Discover
             catch (Exception ex)
             {
                 if (ex is OperationCanceledException) throw;
-                DiscoverDiagnostics.Add("TMDB aanbevelingen " + basePath + " mislukt: " + ex.Message);
+                DiscoverDiagnostics.Add("log.tmdb.tmdb_aanbevelingen_mislukt", basePath, ex.Message);
             }
             if (list.Count < 8)
             {
@@ -217,7 +217,7 @@ namespace Emby.Plugins.Discover
                 catch (Exception ex)
                 {
                     if (ex is OperationCanceledException) throw;
-                    DiscoverDiagnostics.Add("TMDB vergelijkbaar " + basePath + " mislukt: " + ex.Message);
+                    DiscoverDiagnostics.Add("log.tmdb.tmdb_vergelijkbaar_mislukt", basePath, ex.Message);
                 }
             }
             var seen = new HashSet<int>();

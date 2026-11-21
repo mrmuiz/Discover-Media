@@ -151,7 +151,7 @@ namespace Emby.Plugins.Discover
                 bool tilesRemoved = tiles.Any(t => { try { t.Refresh(); return !t.Exists; } catch { return false; } });
                 if (tilesRemoved) BumpEpoch();
                 var msg = "cleanup: " + removed + " files removed (" + (freed / 1048576) + " MB)";
-                DiscoverDiagnostics.Add(msg);
+                DiscoverDiagnostics.Add("log.cache.log", msg);
                 return msg;
             }
         }
@@ -167,7 +167,7 @@ namespace Emby.Plugins.Discover
             _timer = new Timer(_ =>
             {
                 try { CacheCleaner.Run(false); }
-                catch (Exception ex) { DiscoverDiagnostics.Add("FOUT opruimen: " + ex.Message); }
+                catch (Exception ex) { DiscoverDiagnostics.Add("log.cache.fout_opruimen", ex.Message); }
             }, null, TimeSpan.FromMinutes(2), TimeSpan.FromHours(24));
         }
 

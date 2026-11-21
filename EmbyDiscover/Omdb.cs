@@ -195,7 +195,7 @@ namespace Emby.Plugins.Discover
                 }
                 catch (Exception ex)
                 {
-                    DiscoverDiagnostics.Add("FOUT MDBList " + request.Type + "/" + request.TmdbId + ": " + ex.Message);
+                    DiscoverDiagnostics.Add("log.omdb.fout_mdblist", request.Type, request.TmdbId, ex.Message);
                 }
             }
             if (string.IsNullOrWhiteSpace(cfg.OmdbApiKey)) return res;
@@ -220,13 +220,13 @@ namespace Emby.Plugins.Discover
                 }
                 else
                 {
-                    DiscoverDiagnostics.Add("OMDb " + imdb + ": " + (r.Error ?? "geen resultaat"));
+                    DiscoverDiagnostics.Add("log.omdb.omdb", imdb, (object)(r.Error) ?? DiscoverDiagnostics.W("word.geen_resultaat"));
                 }
                 lock (Cache) { Cache[imdb] = new KeyValuePair<DateTime, DiscoverRatingsResult>(DateTime.UtcNow, res); }
             }
             catch (Exception ex)
             {
-                DiscoverDiagnostics.Add("FOUT OMDb " + request.Type + "/" + request.TmdbId + ": " + ex.Message);
+                DiscoverDiagnostics.Add("log.omdb.fout_omdb", request.Type, request.TmdbId, ex.Message);
             }
             return res;
         }
@@ -237,14 +237,14 @@ namespace Emby.Plugins.Discover
             try
             {
                 if (string.IsNullOrWhiteSpace(request.Key))
-                    throw new InvalidOperationException(DiscoverLanguage.Text("Vul eerst een MDBList-sleutel in.", "Enter an MDBList key first.", "Zuerst einen MDBList-Schlüssel eingeben."));
+                    throw new InvalidOperationException(DiscoverLanguage.T("omdb.enter_an_mdblist_key_first"));
                 // Vaste testtitel: The Shawshank Redemption (TMDB 278).
                 var r = await FetchMdb(request.Key, false, 278).ConfigureAwait(false);
                 var m = FromMdb(r);
                 res.Success = m != null;
                 res.Message = res.Success
-                    ? DiscoverLanguage.Text("MDBList werkt: ", "MDBList works: ", "MDBList funktioniert: ") + (r.title ?? "The Shawshank Redemption") + " · IMDb " + (m.Imdb ?? "?")
-                    : "MDBList: " + DiscoverLanguage.Text("geen scores ontvangen", "no scores received", "keine Bewertungen erhalten");
+                    ? DiscoverLanguage.T("omdb.mdblist_works") + (r.title ?? "The Shawshank Redemption") + " · IMDb " + (m.Imdb ?? "?")
+                    : "MDBList: " + DiscoverLanguage.T("omdb.no_scores_received");
             }
             catch (Exception ex)
             {
@@ -260,12 +260,12 @@ namespace Emby.Plugins.Discover
             try
             {
                 if (string.IsNullOrWhiteSpace(request.Key))
-                    throw new InvalidOperationException(DiscoverLanguage.Text("Vul eerst een OMDb-sleutel in.", "Enter an OMDb key first.", "Zuerst einen OMDb-Schlüssel eingeben."));
+                    throw new InvalidOperationException(DiscoverLanguage.T("omdb.enter_an_omdb_key_first"));
                 // Vaste testtitel: The Shawshank Redemption.
                 var r = await Fetch(request.Key, "tt0111161").ConfigureAwait(false);
                 res.Success = string.Equals(r.Response, "True", StringComparison.OrdinalIgnoreCase);
                 res.Message = res.Success
-                    ? DiscoverLanguage.Text("OMDb werkt: ", "OMDb works: ", "OMDb funktioniert: ") + r.Title + " · IMDb " + (Clean(r.imdbRating) ?? "?")
+                    ? DiscoverLanguage.T("omdb.omdb_works") + r.Title + " · IMDb " + (Clean(r.imdbRating) ?? "?")
                     : "OMDb: " + (r.Error ?? "?");
             }
             catch (Exception ex)
