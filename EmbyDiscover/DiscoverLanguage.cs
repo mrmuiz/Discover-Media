@@ -79,6 +79,9 @@ namespace Emby.Plugins.Discover
         public static string CultureOf(string code)
         {
             if (string.IsNullOrWhiteSpace(code)) { return English; }
+            // Een taalbestand mag zijn eigen cultuurcode meebrengen (language.culture).
+            var own = DiscoverStrings.Own(code, "language.culture");
+            if (!string.IsNullOrWhiteSpace(own)) { return own; }
             foreach (var info in Known)
             {
                 if (string.Equals(info.Code, code, StringComparison.OrdinalIgnoreCase)) { return info.Culture; }
@@ -92,6 +95,9 @@ namespace Emby.Plugins.Discover
         /// <summary>Naam van een taal in de taal zelf; voor een onbekende taal de code.</summary>
         public static string NameOf(string code)
         {
+            // Een taalbestand mag zijn eigen naam meebrengen (language.name), in die taal zelf.
+            var own = DiscoverStrings.Own(code, "language.name");
+            if (!string.IsNullOrWhiteSpace(own)) { return own; }
             foreach (var info in Known)
             {
                 if (string.Equals(info.Code, code, StringComparison.OrdinalIgnoreCase)) { return info.Name; }

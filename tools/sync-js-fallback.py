@@ -11,7 +11,7 @@ daarvoor al op het scherm komt, zou anders een sleutel laten zien. Dit blok vang
 import json, re, sys, os
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'EmbyDiscover')
-FILES = ['Configuration/discoverPage.js', 'Configuration/statusPage.js', 'Resources/discover-request-button.js']
+FILES = ['Configuration/discoverPage.js', 'Configuration/configPage.js', 'Configuration/statusPage.js', 'Resources/discover-request-button.js']
 BEGIN = '    // <fallback-en> automatisch gevuld door tools/sync-js-fallback.py; niet met de hand aanpassen'
 END = '    // </fallback-en>'
 

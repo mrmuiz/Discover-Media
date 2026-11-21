@@ -53,6 +53,16 @@ namespace Emby.Plugins.Discover
             foreach (var k in en.Keys) { if (t.ContainsKey(k)) { translated++; } }
         }
 
+        /// <summary>De waarde van een sleutel in precies deze taal, zonder terugval op Engels.</summary>
+        internal static string Own(string code, string key)
+        {
+            Ensure();
+            Dictionary<string, string> table;
+            string value;
+            if (code != null && _tables.TryGetValue(code.ToLowerInvariant(), out table) && table.TryGetValue(key, out value)) { return value; }
+            return null;
+        }
+
         /// <summary>De tekst bij een sleutel in de gevraagde taal, met terugval op Engels en op de sleutel.</summary>
         internal static string Get(string code, string key)
         {

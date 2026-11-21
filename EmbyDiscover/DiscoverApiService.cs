@@ -195,6 +195,8 @@ namespace Emby.Plugins.Discover
         public string PluginVersion { get; set; }
         /// <summary>Alle teksten van de schermen, op sleutel, in de taal van de kijker.</summary>
         public Dictionary<string, string> Strings { get; set; }
+        /// <summary>De talen die er zijn, voor de keuzelijst in de instellingen.</summary>
+        public List<DiscoverLanguageInfo> Languages { get; set; }
         public bool PluginLanguageAuto { get; set; }
         public bool TmdbKeySet { get; set; }
         public bool ShowDiagnostics { get; set; }
@@ -299,6 +301,14 @@ namespace Emby.Plugins.Discover
         public string Department { get; set; }
         /// <summary>Rol (personage), alleen bij de cast in de popup.</summary>
         public string Character { get; set; }
+    }
+
+    public class DiscoverLanguageInfo
+    {
+        public string Code { get; set; }
+        public string Culture { get; set; }
+        /// <summary>Naam van de taal in die taal zelf.</summary>
+        public string Name { get; set; }
     }
 
     public class DiscoverHomeResponse
@@ -494,6 +504,8 @@ namespace Emby.Plugins.Discover
             return new DiscoverStatusResponse
             {
                 Strings = DiscoverStrings.Table(viewer),
+                Languages = DiscoverLanguage.Available()
+                    .Select(x => new DiscoverLanguageInfo { Code = x.Code, Culture = x.Culture, Name = x.Name }).ToList(),
                 PluginVersion = typeof(Plugin).Assembly.GetName().Version.ToString(),
                 TmdbKeySet = !string.IsNullOrWhiteSpace(cfg.TmdbApiKey),
                 ShowDiagnostics = cfg.ShowDiagnostics,

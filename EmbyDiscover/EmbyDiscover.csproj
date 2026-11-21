@@ -15,10 +15,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="Lang\en.json" />
-    <EmbeddedResource Include="Lang\nl.json" />
-    <EmbeddedResource Include="Lang\de.json" />
-    <EmbeddedResource Include="Lang\nb.json" />
+    <!-- Elke taal die in Lang staat, gaat automatisch mee in de DLL. -->
+    <EmbeddedResource Include="Lang\*.json" />
     <EmbeddedResource Include="Configuration\configPage.html" />
     <EmbeddedResource Include="Configuration\configPage.js" />
     <EmbeddedResource Include="Configuration\discoverPage.html" />
