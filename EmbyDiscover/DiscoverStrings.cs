@@ -113,7 +113,8 @@ namespace Emby.Plugins.Discover
                         var at = name.IndexOf(ResourceMarker, StringComparison.OrdinalIgnoreCase);
                         if (at < 0 || !name.EndsWith(".json", StringComparison.OrdinalIgnoreCase)) { continue; }
                         var code = name.Substring(at + ResourceMarker.Length);
-                        code = code.Substring(0, code.Length - 5).ToLowerInvariant();
+                        // MSBuild mag een streepje in een resourcenaam vervangen door een liggend streepje.
+                        code = code.Substring(0, code.Length - 5).ToLowerInvariant().Replace('_', '-');
                         try
                         {
                             using (var stream = asm.GetManifestResourceStream(name))
