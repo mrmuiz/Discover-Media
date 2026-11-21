@@ -118,8 +118,7 @@ namespace Emby.Plugins.Discover
 
             DiscoverDiagnostics.CountCall();
             var tmdbLanguage = TmdbClient.Language();
-            DiscoverDiagnostics.Add(string.Format("opgevraagd: map={0} start={1} limit={2} key={3} taal={4}",
-                folder, query.StartIndex, query.Limit, hasKey, tmdbLanguage));
+            DiscoverDiagnostics.Add("log.channel.opgevraagd_map_start_limit_key_taal", folder, query.StartIndex, query.Limit, hasKey, tmdbLanguage);
             _logger.Info("Discover: channel opened, folder '{0}', TMDB key set: {1}, TMDB language: {2}, Radarr: {3}, Sonarr: {4}, start: {5}, limit: {6}, user: {7}",
                 folder, hasKey, tmdbLanguage, ArrClient.RadarrConfigured, ArrClient.SonarrConfigured, query.StartIndex, query.Limit, query.UserId);
 
@@ -128,7 +127,7 @@ namespace Emby.Plugins.Discover
             // waardoor "niet ingesteld" of een tijdelijke netwerkfout blijft staan na het instellen/herstellen.
             if (!hasKey)
             {
-                DiscoverDiagnostics.Add("FOUT: geen TMDB-key ingesteld");
+                DiscoverDiagnostics.Add("log.channel.fout_geen_tmdb_key_ingesteld");
                 throw new InvalidOperationException(
                     DiscoverLanguage.T("channel.discover_is_not_configured_enter_the_tmdb"));
             }
@@ -154,18 +153,17 @@ namespace Emby.Plugins.Discover
 
                 if (res != null)
                 {
-                    DiscoverDiagnostics.Add(string.Format("teruggegeven: map={0} items={1} totaal={2}",
-                        id, res.Items == null ? 0 : res.Items.Count(), res.TotalRecordCount));
+                    DiscoverDiagnostics.Add("log.channel.teruggegeven_map_items_totaal", id, res.Items == null ? 0 : res.Items.Count(), res.TotalRecordCount);
                     return res;
                 }
             }
             catch (Exception ex)
             {
                 _logger.Error("Discover: loading failed: {0}", ex.Message);
-                DiscoverDiagnostics.Add("FOUT bij map " + id + ": " + ex.Message);
+                DiscoverDiagnostics.Add("log.channel.fout_bij_map", id, ex.Message);
                 throw;
             }
-            DiscoverDiagnostics.Add("onbekende map, leeg teruggegeven: " + id);
+            DiscoverDiagnostics.Add("log.channel.onbekende_map_leeg_teruggegeven", id);
             return new ChannelItemResult { Items = new List<ChannelItemInfo>(), TotalRecordCount = 0 };
         }
 
@@ -207,7 +205,7 @@ namespace Emby.Plugins.Discover
                 catch (Exception ex)
                 {
                     if (ex is OperationCanceledException) throw;
-                    DiscoverDiagnostics.Add("titel voor aanvraag-item " + rest + " mislukt: " + ex.Message);
+                    DiscoverDiagnostics.Add("log.channel.titel_voor_aanvraag_item_mislukt", rest, ex.Message);
                 }
             }
             // Bewust een exception en geen leeg item: Emby bewaart een normaal resultaat, en dan blijft
@@ -369,7 +367,7 @@ namespace Emby.Plugins.Discover
                 try { sonarrSeasons = await _arr.GetSeasonStates(tmdbId, ct).ConfigureAwait(false); }
                 catch (Exception ex)
                 {
-                    DiscoverDiagnostics.Add("seizoensstatus uit Sonarr ophalen mislukt voor " + tmdbId + ": " + ex.Message);
+                    DiscoverDiagnostics.Add("log.channel.seizoensstatus_uit_sonarr_ophalen_mislukt", tmdbId, ex.Message);
                 }
             }
             string background = !string.IsNullOrEmpty(detail.backdrop_path)
@@ -455,8 +453,7 @@ namespace Emby.Plugins.Discover
                     catch (Exception ex)
                     {
                         if (ex is OperationCanceledException) throw;
-                        DiscoverDiagnostics.Add("seizoensbeschrijving ophalen mislukt voor " + tmdbId +
-                            "/seizoen " + seasonNumber + ": " + ex.Message);
+                        DiscoverDiagnostics.Add("log.channel.seizoensbeschrijving_ophalen_mislukt_voor", tmdbId, seasonNumber, ex.Message);
                     }
                 }
                 // De seizoenslijst van de serie mist soms een poster die het seizoen zelf wel heeft: dan het seizoen rechtstreeks opvragen.
@@ -466,12 +463,12 @@ namespace Emby.Plugins.Discover
                     {
                         var seasonPoster = await _tmdb.GetSeasonPosterPath(tmdbId, seasonNumber, ct).ConfigureAwait(false);
                         if (!string.IsNullOrWhiteSpace(seasonPoster)) season.poster_path = seasonPoster;
-                        else DiscoverDiagnostics.Add("geen seizoensposter bij TMDB voor " + tmdbId + "/seizoen " + seasonNumber + " (serieposter gebruikt)");
+                        else DiscoverDiagnostics.Add("log.channel.geen_seizoensposter_bij_tmdb_voor_seizoen", tmdbId, seasonNumber);
                     }
                     catch (Exception ex)
                     {
                         if (ex is OperationCanceledException) throw;
-                        DiscoverDiagnostics.Add("seizoensposter ophalen mislukt voor " + tmdbId + "/seizoen " + seasonNumber + ": " + ex.Message);
+                        DiscoverDiagnostics.Add("log.channel.seizoensposter_ophalen_mislukt_voor_seizoen", tmdbId, seasonNumber, ex.Message);
                     }
                 }
                 // Seizoenstegels zijn staand (2:3): is er echt geen seizoensposter, dan de serieposter, pas daarna de liggende achtergrond.
@@ -547,7 +544,7 @@ namespace Emby.Plugins.Discover
             catch (Exception ex)
             {
                 if (ex is OperationCanceledException) throw;
-                DiscoverDiagnostics.Add("seizoensposter voor kaart " + tmdbId + "/seizoen " + season + ": " + ex.Message);
+                DiscoverDiagnostics.Add("log.channel.seizoensposter_voor_kaart_seizoen", tmdbId, season, ex.Message);
                 return null;
             }
         }
@@ -558,7 +555,7 @@ namespace Emby.Plugins.Discover
             catch (Exception ex)
             {
                 if (ex is OperationCanceledException) throw;
-                DiscoverDiagnostics.Add("extra info " + tmdbId + " mislukt: " + ex.Message);
+                DiscoverDiagnostics.Add("log.channel.extra_info_mislukt", tmdbId, ex.Message);
                 return null;
             }
         }
@@ -571,7 +568,7 @@ namespace Emby.Plugins.Discover
             Task.Run(async () =>
             {
                 try { await RequestCard.Create(t, extra, tv, alreadyThere, CancellationToken.None, season, posterPath, true).ConfigureAwait(false); }
-                catch (Exception ex) { DiscoverDiagnostics.Add("kaart vooraf maken mislukt: " + ex.Message); }
+                catch (Exception ex) { DiscoverDiagnostics.Add("log.channel.kaart_vooraf_maken_mislukt", ex.Message); }
             });
         }
 
@@ -613,13 +610,13 @@ namespace Emby.Plugins.Discover
                 try { tops = await topTask.ConfigureAwait(false); }
                 catch (Exception ex)
                 {
-                    DiscoverDiagnostics.Add("achtergrondlijst ophalen mislukt: " + ex.Message);
+                    DiscoverDiagnostics.Add("log.channel.achtergrondlijst_ophalen_mislukt", ex.Message);
                     tops = paths.Select(x => new List<string>()).ToArray();
                 }
             }
             else
             {
-                DiscoverDiagnostics.Add("root-artwork na 5 seconden uitgesteld; kanaal wordt direct teruggegeven");
+                DiscoverDiagnostics.Add("log.channel.root_artwork_na_5_seconden_uitgesteld_kanaal");
                 _ = ObserveTopBackdrops(topTask);
                 tops = paths.Select(x => new List<string>()).ToArray();
             }
@@ -672,7 +669,7 @@ namespace Emby.Plugins.Discover
                 if (creations[i].IsCompleted)
                 {
                     try { files[creationOrder[i].Id] = await creations[i].ConfigureAwait(false); }
-                    catch (Exception ex) { DiscoverDiagnostics.Add("tegelafbeelding '" + creationOrder[i].Caption + "' mislukt: " + ex.Message); }
+                    catch (Exception ex) { DiscoverDiagnostics.Add("log.channel.tegelafbeelding_mislukt", creationOrder[i].Caption, ex.Message); }
                 }
                 else
                 {
@@ -715,7 +712,7 @@ namespace Emby.Plugins.Discover
             }
             catch (Exception ex)
             {
-                DiscoverDiagnostics.Add("tegelafbeelding aanvraag/trailer mislukt: " + ex.Message);
+                DiscoverDiagnostics.Add("log.channel.tegelafbeelding_aanvraag_trailer_mislukt", ex.Message);
             }
             return null;
         }
@@ -723,13 +720,13 @@ namespace Emby.Plugins.Discover
         private static async Task ObserveTileCreation(Task<string> creation, string text)
         {
             try { await creation.ConfigureAwait(false); }
-            catch (Exception ex) { DiscoverDiagnostics.Add("tegelafbeelding '" + text + "' mislukt: " + ex.Message); }
+            catch (Exception ex) { DiscoverDiagnostics.Add("log.channel.tegelafbeelding_mislukt", text, ex.Message); }
         }
 
         private static async Task ObserveTopBackdrops(Task<List<string>[]> loading)
         {
             try { await loading.ConfigureAwait(false); }
-            catch (Exception ex) { DiscoverDiagnostics.Add("achtergrondlijst ophalen mislukt: " + ex.Message); }
+            catch (Exception ex) { DiscoverDiagnostics.Add("log.channel.achtergrondlijst_ophalen_mislukt", ex.Message); }
         }
 
         // ---------- genre-, studio- en netwerktegels (zoals Seerr) ----------
@@ -803,7 +800,7 @@ namespace Emby.Plugins.Discover
             catch (Exception ex)
             {
                 if (ex is OperationCanceledException) throw;
-                DiscoverDiagnostics.Add("achtergronden " + path + " mislukt: " + ex.Message);
+                DiscoverDiagnostics.Add("log.channel.achtergronden_mislukt", path, ex.Message);
                 return new List<string>();
             }
         }
@@ -830,7 +827,7 @@ namespace Emby.Plugins.Discover
             catch (Exception ex)
             {
                 if (ex is OperationCanceledException) throw;
-                DiscoverDiagnostics.Add("genre-achtergrond " + key + " mislukt: " + ex.Message);
+                DiscoverDiagnostics.Add("log.channel.genre_achtergrond_mislukt", key, ex.Message);
                 return null;
             }
             lock (GenreBackdropCache) { GenreBackdropCache[key] = new KeyValuePair<DateTime, string>(DateTime.UtcNow, chosen); }
@@ -853,7 +850,7 @@ namespace Emby.Plugins.Discover
             for (int i = 0; i < creations.Length; i++)
             {
                 try { files[i] = await creations[i].ConfigureAwait(false); }
-                catch (Exception ex) { DiscoverDiagnostics.Add("genretegel '" + names[i] + "' mislukt: " + ex.Message); }
+                catch (Exception ex) { DiscoverDiagnostics.Add("log.channel.genretegel_mislukt", names[i], ex.Message); }
             }
 
             var items = new List<ChannelItemInfo>();
@@ -926,7 +923,7 @@ namespace Emby.Plugins.Discover
             }
             catch (Exception ex)
             {
-                DiscoverDiagnostics.Add("FOUT TMDB " + path + ": " + ex.Message);
+                DiscoverDiagnostics.Add("log.channel.fout_tmdb", path, ex.Message);
                 throw;
             }
             lock (ListCache) { ListCache[cacheKey] = new KeyValuePair<DateTime, List<TmdbItem>>(DateTime.UtcNow, list); }
@@ -1038,7 +1035,7 @@ namespace Emby.Plugins.Discover
         // ---------- Afspelen = YouTube-trailer (aanvragen gebeurt via de aparte knop / API) ----------
         public async Task<IEnumerable<MediaSourceInfo>> GetChannelItemMediaInfo(string id, CancellationToken ct)
         {
-            DiscoverDiagnostics.Add("trailer afspelen: " + id);
+            DiscoverDiagnostics.Add("log.channel.trailer_afspelen", id);
             id = StripTileMark(id);
             bool isSeasonReq = id.StartsWith(AskSeasonPrefix);
             bool isAllReq = id.StartsWith(AskAllPrefix);
@@ -1081,9 +1078,8 @@ namespace Emby.Plugins.Discover
                 // (zie RequestOnPlay). De kaart toont de situatie van nu: "Aangevraagd" of "Staat al in Radarr/Sonarr".
                 try
                 {
-                    DiscoverDiagnostics.Add(isSeasonReq
-                        ? "seizoensaanvraagclip voor seizoen " + requestedSeason
-                        : "aanvraagclip voor alle seizoenen");
+                    if (isSeasonReq) { DiscoverDiagnostics.Add("log.channel.season_request_clip", requestedSeason); }
+                    else { DiscoverDiagnostics.Add("log.channel.request_clip_all_seasons"); }
                     TmdbItem info = FindInCache(tv, tmdbId);
                     if (info == null)
                         info = tv ? await _tmdb.GetTv(tmdbId, ct).ConfigureAwait(false)
@@ -1112,7 +1108,7 @@ namespace Emby.Plugins.Discover
                         throw new TimeoutException("card not ready yet");
                     }
                     var card = await cardTask.ConfigureAwait(false);
-                    DiscoverDiagnostics.Add("kaartclip: " + card);
+                    DiscoverDiagnostics.Add("log.channel.kaartclip", card);
                     return new List<MediaSourceInfo>
                     {
                         new MediaSourceInfo
@@ -1133,7 +1129,7 @@ namespace Emby.Plugins.Discover
                 {
                     if (ex is OperationCanceledException) throw;
                     _logger.Error("Discover: card clip failed for {0}: {1}", id, ex.Message);
-                    DiscoverDiagnostics.Add("kaartclip " + id + ": " + ex.Message + " (vaste clip gebruikt)");
+                    DiscoverDiagnostics.Add("log.channel.kaartclip_vaste_clip_gebruikt", id, ex.Message);
                 }
             }
 
@@ -1150,19 +1146,19 @@ namespace Emby.Plugins.Discover
                 {
                     if (ex is OperationCanceledException) throw;
                     _logger.Error("Discover: fetching trailer failed for {0}: {1}", id, ex.Message);
-                    DiscoverDiagnostics.Add("FOUT trailer " + id + ": " + ex.Message);
+                    DiscoverDiagnostics.Add("log.channel.fout_trailer", id, ex.Message);
                     throw new InvalidOperationException(DiscoverLanguage.T("channel.fetching_the_trailer_failed") + ex.Message);
                 }
 
                 if (string.IsNullOrEmpty(ytKey))
                 {
-                    DiscoverDiagnostics.Add("geen YouTube-trailer voor " + id);
+                    DiscoverDiagnostics.Add("log.channel.geen_youtube_trailer_voor", id);
                     _logger.Info("Discover: no YouTube trailer for {0}", id);
                     throw new InvalidOperationException(DiscoverLanguage.T("channel.no_trailer_available_for_this_title"));
                 }
 
                 var path = "https://www.youtube.com/watch?v=" + ytKey;
-                DiscoverDiagnostics.Add("trailer: " + id + " -> " + path);
+                DiscoverDiagnostics.Add("log.channel.trailer", id, path);
                 _logger.Info("Discover: trailer for {0}: {1}", id, path);
                 return new List<MediaSourceInfo>
                 {
@@ -1190,7 +1186,7 @@ namespace Emby.Plugins.Discover
             catch (Exception ex)
             {
                 _logger.Error("Discover: clip not available: {0}", ex.Message);
-                DiscoverDiagnostics.Add("FOUT clip: " + ex.Message);
+                DiscoverDiagnostics.Add("log.channel.fout_clip", ex.Message);
                 throw new InvalidOperationException(DiscoverLanguage.T("channel.no_trailer_available_for_this_title"));
             }
 
@@ -1332,7 +1328,7 @@ namespace Emby.Plugins.Discover
             catch (Exception ex)
             {
                 _logger.Error("Discover: fetching status failed: {0}", ex.Message);
-                DiscoverDiagnostics.Add("FOUT status " + (tv ? "Sonarr" : "Radarr") + ": " + ex.Message);
+                DiscoverDiagnostics.Add("log.channel.fout_status", (tv ? "Sonarr" : "Radarr"), ex.Message);
                 return new Dictionary<int, bool>();
             }
         }

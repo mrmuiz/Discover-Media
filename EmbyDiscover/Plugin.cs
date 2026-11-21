@@ -115,7 +115,7 @@ namespace Emby.Plugins.Discover
             }
             catch (Exception ex)
             {
-                DiscoverDiagnostics.Add("FOUT opgeslagen plugininstellingen laden: " + ex.Message);
+                DiscoverDiagnostics.Add("log.plugin.fout_opgeslagen_plugininstellingen_laden", ex.Message);
             }
 
             return Configuration;
@@ -219,7 +219,7 @@ namespace Emby.Plugins.Discover
                 catch (Exception ex)
                 {
                     last = ex;
-                    DiscoverDiagnostics.Add("map '" + dir + "' niet beschrijfbaar: " + ex.Message);
+                    DiscoverDiagnostics.Add("log.plugin.map_niet_beschrijfbaar", dir, ex.Message);
                 }
             }
             throw new InvalidOperationException("No writable folder for the card clips: " + (last == null ? "no folder available" : last.Message));
@@ -280,7 +280,7 @@ namespace Emby.Plugins.Discover
                 catch (Exception ex)
                 {
                     last = ex;
-                    DiscoverDiagnostics.Add("clip schrijven mislukt in '" + dir + "': " + ex.Message);
+                    DiscoverDiagnostics.Add("log.plugin.clip_schrijven_mislukt_in", dir, ex.Message);
                 }
             }
             throw new InvalidOperationException(

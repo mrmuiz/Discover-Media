@@ -195,7 +195,7 @@ namespace Emby.Plugins.Discover
                 }
                 catch (Exception ex)
                 {
-                    DiscoverDiagnostics.Add("FOUT MDBList " + request.Type + "/" + request.TmdbId + ": " + ex.Message);
+                    DiscoverDiagnostics.Add("log.omdb.fout_mdblist", request.Type, request.TmdbId, ex.Message);
                 }
             }
             if (string.IsNullOrWhiteSpace(cfg.OmdbApiKey)) return res;
@@ -220,13 +220,13 @@ namespace Emby.Plugins.Discover
                 }
                 else
                 {
-                    DiscoverDiagnostics.Add("OMDb " + imdb + ": " + (r.Error ?? "geen resultaat"));
+                    DiscoverDiagnostics.Add("log.omdb.omdb", imdb, (object)(r.Error) ?? DiscoverDiagnostics.W("word.geen_resultaat"));
                 }
                 lock (Cache) { Cache[imdb] = new KeyValuePair<DateTime, DiscoverRatingsResult>(DateTime.UtcNow, res); }
             }
             catch (Exception ex)
             {
-                DiscoverDiagnostics.Add("FOUT OMDb " + request.Type + "/" + request.TmdbId + ": " + ex.Message);
+                DiscoverDiagnostics.Add("log.omdb.fout_omdb", request.Type, request.TmdbId, ex.Message);
             }
             return res;
         }

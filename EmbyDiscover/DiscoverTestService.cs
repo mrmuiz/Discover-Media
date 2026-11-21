@@ -219,7 +219,7 @@ namespace Emby.Plugins.Discover
         private static void LogTmdbLanguageFailure(TestConnectionRequest request, string error)
         {
             if (request != null && string.Equals(request.Type, "TmdbLanguages", StringComparison.OrdinalIgnoreCase))
-                DiscoverDiagnostics.Add("FOUT TMDB-talenlijst: " + error);
+                DiscoverDiagnostics.Add("log.test.fout_tmdb_talenlijst", error);
         }
 
         private async Task<List<TmdbLanguageOption>> GetTmdbLanguages(string apiKey)
@@ -289,7 +289,7 @@ namespace Emby.Plugins.Discover
                 options = options
                     .OrderBy(x => x.EnglishName, StringComparer.CurrentCultureIgnoreCase)
                     .ToList();
-                DiscoverDiagnostics.Add("TMDB-talenlijst geladen: " + options.Count + " talen");
+                DiscoverDiagnostics.Add("log.test.tmdb_talenlijst_geladen_talen", options.Count);
                 return options;
             }
         }

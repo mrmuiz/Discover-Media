@@ -154,7 +154,7 @@ namespace Emby.Plugins.Discover
                         catch (Exception ex)
                         {
                             if (ex is OperationCanceledException) throw;
-                            DiscoverDiagnostics.Add("FOUT wachtrij Radarr/Sonarr naast Seerr: " + ex.Message);
+                            DiscoverDiagnostics.Add("log.queue.fout_wachtrij_radarr_sonarr_naast_seerr", ex.Message);
                         }
                     }
                     if (Plugin.GetCurrentConfiguration().SeerrArrStatus) NudgeArr(json, seerrParts);
@@ -203,7 +203,7 @@ namespace Emby.Plugins.Discover
                 if (doMovie && wantMovie) { _nudgeMovieAt = now; Refresh(false); }
                 if (doTv && wantTv) { _nudgeTvAt = now; Refresh(true); }
             }
-            catch (Exception ex) { DiscoverDiagnostics.Add("FOUT wachtrij verversen: " + ex.Message); }
+            catch (Exception ex) { DiscoverDiagnostics.Add("log.queue.fout_wachtrij_verversen", ex.Message); }
         }
 
         private static readonly TimeSpan PendingWindow = TimeSpan.FromHours(6);
@@ -225,7 +225,7 @@ namespace Emby.Plugins.Discover
                     res.Add(r);
                 }
             }
-            catch (Exception ex) { DiscoverDiagnostics.Add("FOUT recente aanvragen lezen: " + ex.Message); }
+            catch (Exception ex) { DiscoverDiagnostics.Add("log.queue.fout_recente_aanvragen_lezen", ex.Message); }
             return res;
         }
 
@@ -238,7 +238,7 @@ namespace Emby.Plugins.Discover
                     await ArrClient.PostRaw(sonarr, "/api/v3/command", "{\"name\":\"RefreshMonitoredDownloads\"}", CancellationToken.None).ConfigureAwait(false);
                     Invalidate();
                 }
-                catch (Exception ex) { DiscoverDiagnostics.Add("FOUT " + (sonarr ? "Sonarr" : "Radarr") + " RefreshMonitoredDownloads: " + ex.Message); }
+                catch (Exception ex) { DiscoverDiagnostics.Add("log.queue.fout_refreshmonitoreddownloads", (sonarr ? "Sonarr" : "Radarr"), ex.Message); }
             });
         }
 
@@ -336,7 +336,7 @@ namespace Emby.Plugins.Discover
                 catch (Exception ex)
                 {
                     if (ex is OperationCanceledException) throw;
-                    DiscoverDiagnostics.Add("FOUT " + f.Item1 + " lezen: " + ex.Message);
+                    DiscoverDiagnostics.Add("log.queue.fout_lezen", f.Item1, ex.Message);
                 }
             }
         }
@@ -355,7 +355,7 @@ namespace Emby.Plugins.Discover
             catch (Exception ex)
             {
                 if (ex is OperationCanceledException) throw;
-                DiscoverDiagnostics.Add("FOUT wachtrij " + (sonarr ? "Sonarr" : "Radarr") + " lezen: " + ex.Message);
+                DiscoverDiagnostics.Add("log.queue.fout_wachtrij_lezen", (sonarr ? "Sonarr" : "Radarr"), ex.Message);
                 return new List<ArrQueueFullItemDto>();
             }
         }
@@ -576,7 +576,7 @@ namespace Emby.Plugins.Discover
                 if (File.Exists(path))
                     _data = json.DeserializeFromString<StoredRequestFile>(File.ReadAllText(path));
             }
-            catch (Exception ex) { DiscoverDiagnostics.Add("aanvragenlijst lezen mislukt: " + ex.Message); }
+            catch (Exception ex) { DiscoverDiagnostics.Add("log.queue.aanvragenlijst_lezen_mislukt", ex.Message); }
             if (_data == null) _data = new StoredRequestFile();
             if (_data.Requests == null) _data.Requests = new List<StoredRequest>();
             return _data;
@@ -592,7 +592,7 @@ namespace Emby.Plugins.Discover
                 if (File.Exists(path)) File.Delete(path);
                 File.Move(tmp, path);
             }
-            catch (Exception ex) { DiscoverDiagnostics.Add("aanvragenlijst opslaan mislukt: " + ex.Message); }
+            catch (Exception ex) { DiscoverDiagnostics.Add("log.queue.aanvragenlijst_opslaan_mislukt", ex.Message); }
         }
 
         internal static void Add(IJsonSerializer json, object userId, bool tv, TmdbItem item, int tmdbId)
@@ -626,7 +626,7 @@ namespace Emby.Plugins.Discover
                     Save(json);
                 }
             }
-            catch (Exception ex) { DiscoverDiagnostics.Add("aanvraag onthouden mislukt: " + ex.Message); }
+            catch (Exception ex) { DiscoverDiagnostics.Add("log.queue.aanvraag_onthouden_mislukt", ex.Message); }
         }
 
         /// <summary>Aanvragen van deze gebruiker sinds een moment, oudste datum eerst (voor de limiet).</summary>
@@ -721,7 +721,7 @@ namespace Emby.Plugins.Discover
                 res.Items = DownloadQueue.Group(parts, admin);
                 res.Sab = SabClient.Info();
             }
-            catch (Exception ex) { DiscoverDiagnostics.Add("FOUT wachtrij: " + ex.Message); }
+            catch (Exception ex) { DiscoverDiagnostics.Add("log.queue.fout_wachtrij", ex.Message); }
             return res;
         }
 
@@ -736,7 +736,7 @@ namespace Emby.Plugins.Discover
                 if (all.Any(r => r.Type == "movie")) ms = await _arr.GetMovieStates(CancellationToken.None).ConfigureAwait(false);
                 if (all.Any(r => r.Type == "tv")) ts = await _arr.GetSeriesStates(CancellationToken.None).ConfigureAwait(false);
             }
-            catch (Exception ex) { DiscoverDiagnostics.Add("FOUT status voor aanvragenoverzicht: " + ex.Message); }
+            catch (Exception ex) { DiscoverDiagnostics.Add("log.queue.fout_status_voor_aanvragenoverzicht", ex.Message); }
             foreach (var r in all)
             {
                 var states = r.Type == "tv" ? ts : ms;
@@ -771,7 +771,7 @@ namespace Emby.Plugins.Discover
                 if (mine.Any(r => r.Type == "movie")) ms = await _arr.GetMovieStates(CancellationToken.None).ConfigureAwait(false);
                 if (mine.Any(r => r.Type == "tv")) ts = await _arr.GetSeriesStates(CancellationToken.None).ConfigureAwait(false);
             }
-            catch (Exception ex) { DiscoverDiagnostics.Add("FOUT status voor Mijn aanvragen: " + ex.Message); }
+            catch (Exception ex) { DiscoverDiagnostics.Add("log.queue.fout_status_voor_mijn_aanvragen", ex.Message); }
 
             foreach (var r in mine)
             {

@@ -73,7 +73,7 @@ namespace Emby.Plugins.Discover
             }
             catch (Exception ex)
             {
-                DiscoverDiagnostics.Add("FOUT rij Nieuwe seizoenen: " + ex.Message);
+                DiscoverDiagnostics.Add("log.continue.fout_rij_nieuwe_seizoenen", ex.Message);
                 return row;
             }
             finally { Build.Release(); }
@@ -143,13 +143,13 @@ namespace Emby.Plugins.Discover
                     };
                     lock (found) found.Add(new KeyValuePair<DateTime, DiscoverItemDto>(airDate, dto));
                 }
-                catch (Exception ex) { DiscoverDiagnostics.Add("Nieuwe seizoenen: " + kv.Key.Name + " mislukt: " + ex.Message); }
+                catch (Exception ex) { DiscoverDiagnostics.Add("log.continue.nieuwe_seizoenen_mislukt", kv.Key.Name, ex.Message); }
                 finally { gate.Release(); }
             }).ToList();
             await Task.WhenAll(tasks).ConfigureAwait(false);
 
             row.Items = found.OrderByDescending(f => f.Key).Select(f => f.Value).Take(MaxShown).ToList();
-            DiscoverDiagnostics.Add("rij Nieuwe seizoenen: " + row.Items.Count + " van " + candidates.Count + " series");
+            DiscoverDiagnostics.Add("log.continue.rij_nieuwe_seizoenen_van_series", row.Items.Count, candidates.Count);
             return row;
         }
     }

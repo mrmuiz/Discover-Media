@@ -152,7 +152,7 @@ namespace Emby.Plugins.Discover
                     catch (Exception ex)
                     {
                         if (ex is OperationCanceledException) throw;
-                        DiscoverDiagnostics.Add("ERROR Radarr next to Ombi: " + ex.Message);
+                        DiscoverDiagnostics.Add("log.arr.error_radarr_next_to_ombi", ex.Message);
                     }
                 }
                 return states;
@@ -206,7 +206,7 @@ namespace Emby.Plugins.Discover
                     catch (Exception ex)
                     {
                         if (ex is OperationCanceledException) throw;
-                        DiscoverDiagnostics.Add("ERROR Sonarr next to Ombi: " + ex.Message);
+                        DiscoverDiagnostics.Add("log.arr.error_sonarr_next_to_ombi", ex.Message);
                     }
                 }
                 lock (_seriesCacheLock) { _seriesPartial = partial; }
@@ -254,7 +254,7 @@ namespace Emby.Plugins.Discover
                 else noTmdb++;
             }
             if (noTmdb > 0)
-                DiscoverDiagnostics.Add("Sonarr: " + noTmdb + " serie(s) zonder tmdbId, die krijgen geen status op de Discover-pagina (ververs ze in Sonarr).");
+                DiscoverDiagnostics.Add("log.arr.sonarr_serie_s_zonder_tmdbid_die_krijgen", noTmdb);
             _seriesTvdbIds = tvdbIds;
             lock (_seriesCacheLock)
             {
@@ -290,7 +290,7 @@ namespace Emby.Plugins.Discover
                     catch (Exception ex)
                     {
                         if (ex is OperationCanceledException) throw;
-                        DiscoverDiagnostics.Add("ERROR Sonarr seasons next to Ombi: " + ex.Message);
+                        DiscoverDiagnostics.Add("log.arr.error_sonarr_seasons_next_to_ombi", ex.Message);
                     }
                 }
                 return seasons;
@@ -357,7 +357,7 @@ namespace Emby.Plugins.Discover
             }
             catch (Exception ex)
             {
-                DiscoverDiagnostics.Add("Sonarr-cache bijwerken mislukt, cache gewist: " + ex.Message);
+                DiscoverDiagnostics.Add("log.arr.sonarr_cache_bijwerken_mislukt_cache_gewist", ex.Message);
                 return false;
             }
         }
@@ -451,7 +451,7 @@ namespace Emby.Plugins.Discover
             catch (Exception ex)
             {
                 if (ex is OperationCanceledException) throw;
-                DiscoverDiagnostics.Add("Radarr film opzoeken (" + title + "): " + ex.Message);
+                DiscoverDiagnostics.Add("log.arr.radarr_film_opzoeken", title, ex.Message);
             }
             if (movie == null || movie.id <= 0) { InvalidateCaches(); return false; }
             if (movie.hasFile) return false;
@@ -468,7 +468,7 @@ namespace Emby.Plugins.Discover
                 catch (Exception ex)
                 {
                     if (ex is OperationCanceledException) throw;
-                    DiscoverDiagnostics.Add("Radarr film monitoren (" + title + "): " + ex.Message);
+                    DiscoverDiagnostics.Add("log.arr.radarr_film_monitoren", title, ex.Message);
                 }
             }
             try
@@ -480,10 +480,10 @@ namespace Emby.Plugins.Discover
             catch (Exception ex)
             {
                 if (ex is OperationCanceledException) throw;
-                DiscoverDiagnostics.Add("Radarr zoeken (" + title + "): " + ex.Message);
+                DiscoverDiagnostics.Add("log.arr.radarr_zoeken", title, ex.Message);
             }
             if (changed) InvalidateCaches();
-            DiscoverDiagnostics.Add("Radarr " + title + " (stond al in Radarr, geen bestand): " + (movie.monitored ? "al gemonitord" : "nu gemonitord") + ", zoekopdracht gestart");
+            DiscoverDiagnostics.Add("log.arr.radarr_stond_al_in_radarr_geen_bestand_zoekopdracht", title, DiscoverDiagnostics.W(movie.monitored ? "word.al_gemonitord" : "word.nu_gemonitord"));
             return changed;
         }
 
@@ -516,25 +516,25 @@ namespace Emby.Plugins.Discover
                 catch (Exception ex)
                 {
                     if (ex is OperationCanceledException) throw;
-                    DiscoverDiagnostics.Add("Sonarr lookup '" + term + "' failed: " + ex.Message);
+                    DiscoverDiagnostics.Add("log.arr.sonarr_lookup_failed", term, ex.Message);
                     return new List<SonarrSeriesDto>();
                 }
             }
             var byTmdb = (await Lookup("tmdb:" + tmdbId).ConfigureAwait(false)).FirstOrDefault(x => x.tvdbId > 0 && (x.tmdbId == tmdbId || x.tmdbId == 0));
-            if (byTmdb != null) { DiscoverDiagnostics.Add("TVDB id " + byTmdb.tvdbId + " for TMDB " + tmdbId + " found via Sonarr (tmdb lookup)"); return byTmdb.tvdbId; }
+            if (byTmdb != null) { DiscoverDiagnostics.Add("log.arr.tvdb_id_for_tmdb_found_via_sonarr_tmdb_lookup", byTmdb.tvdbId, tmdbId); return byTmdb.tvdbId; }
             if (!string.IsNullOrWhiteSpace(imdbId))
             {
                 var byImdb = (await Lookup("imdb:" + imdbId.Trim()).ConfigureAwait(false)).FirstOrDefault(x => x.tvdbId > 0);
-                if (byImdb != null) { DiscoverDiagnostics.Add("TVDB id " + byImdb.tvdbId + " for TMDB " + tmdbId + " found via Sonarr (imdb lookup)"); return byImdb.tvdbId; }
+                if (byImdb != null) { DiscoverDiagnostics.Add("log.arr.tvdb_id_for_tmdb_found_via_sonarr_imdb_lookup", byImdb.tvdbId, tmdbId); return byImdb.tvdbId; }
             }
             if (!string.IsNullOrWhiteSpace(title))
             {
                 var list = await Lookup(title.Trim()).ConfigureAwait(false);
                 var hit = list.FirstOrDefault(x => x.tvdbId > 0 && x.tmdbId == tmdbId)
                           ?? list.FirstOrDefault(x => x.tvdbId > 0 && year > 0 && x.year == year && string.Equals((x.title ?? "").Trim(), title.Trim(), StringComparison.OrdinalIgnoreCase));
-                if (hit != null) { DiscoverDiagnostics.Add("TVDB id " + hit.tvdbId + " for TMDB " + tmdbId + " found via Sonarr (title lookup)"); return hit.tvdbId; }
+                if (hit != null) { DiscoverDiagnostics.Add("log.arr.tvdb_id_for_tmdb_found_via_sonarr_title", hit.tvdbId, tmdbId); return hit.tvdbId; }
             }
-            DiscoverDiagnostics.Add("No TVDB id for TMDB " + tmdbId + " (" + title + "): not on TMDB and not found by Sonarr");
+            DiscoverDiagnostics.Add("log.arr.no_tvdb_id_for_tmdb_not_on_tmdb_and_not", tmdbId, title);
             return 0;
         }
 
@@ -586,7 +586,7 @@ namespace Emby.Plugins.Discover
                 catch (Exception ex)
                 {
                     if (ex is OperationCanceledException) throw;
-                    DiscoverDiagnostics.Add("Sonarr seizoenen opzoeken mislukt (alleen gekozen seizoenen meegestuurd): " + ex.Message);
+                    DiscoverDiagnostics.Add("log.arr.sonarr_seizoenen_opzoeken_mislukt_alleen", ex.Message);
                 }
                 var parts = new List<string>();
                 foreach (var n in all)
@@ -598,7 +598,7 @@ namespace Emby.Plugins.Discover
                 if (sonarrKnows.Count > 0 && selected.Any(n => !sonarrKnows.Contains(n)))
                 {
                     monitorNew = "all";
-                    DiscoverDiagnostics.Add("Sonarr kent seizoen " + string.Join(",", selected.Where(n => !sonarrKnows.Contains(n))) + " van " + title + " nog niet: nieuwe seizoenen worden gemonitord");
+                    DiscoverDiagnostics.Add("log.arr.sonarr_kent_seizoen_van_nog_niet_nieuwe", string.Join(",", selected.Where(n => !sonarrKnows.Contains(n))), title);
                 }
             }
 
@@ -624,7 +624,7 @@ namespace Emby.Plugins.Discover
                     var chosen = seasons.Distinct().ToArray();
                     var ignored = Task.Run(() => FinishSeasonRequest(newId, chosen, title));
                 }
-                else DiscoverDiagnostics.Add("Sonarr gaf geen serie-id terug voor " + title + "; seizoenen niet extra gecontroleerd");
+                else DiscoverDiagnostics.Add("log.arr.sonarr_gaf_geen_serie_id_terug_voor_seizoenen", title);
             }
             return true;
         }
@@ -694,7 +694,7 @@ namespace Emby.Plugins.Discover
                     await SendApi(HttpMethod.Put, "/series/editor", "{\"seriesIds\":[" + existing.id + "],\"monitored\":true}").ConfigureAwait(false);
                     changed = true;
                 }
-                catch (Exception ex) { DiscoverDiagnostics.Add("Sonarr serie monitoren (" + title + "): " + ex.Message); }
+                catch (Exception ex) { DiscoverDiagnostics.Add("log.arr.sonarr_serie_monitoren", title, ex.Message); }
             }
 
             // Seizoensvlag (alleen Sonarr v5 heeft dit endpoint; bij een fout gaan we gewoon door met de afleveringen).
@@ -711,10 +711,10 @@ namespace Emby.Plugins.Discover
                 {
                     await SendApi(HttpMethod.Put, "/series/editor", "{\"seriesIds\":[" + existing.id + "],\"monitorNewItems\":\"all\"}").ConfigureAwait(false);
                     if (unknown.Count > 0) changed = true;
-                    DiscoverDiagnostics.Add(all ? "Sonarr: nieuwe seizoenen van " + title + " worden gemonitord"
-                        : "Sonarr kent seizoen " + string.Join(",", unknown) + " van " + title + " nog niet: nieuwe seizoenen worden gemonitord");
+                    if (all) { DiscoverDiagnostics.Add("log.arr.new_seasons_monitored", title); }
+                    else { DiscoverDiagnostics.Add("log.arr.season_unknown_new_monitored", string.Join(",", unknown), title); }
                 }
-                catch (Exception ex) { DiscoverDiagnostics.Add("Sonarr nieuwe seizoenen monitoren (" + title + "): " + ex.Message); }
+                catch (Exception ex) { DiscoverDiagnostics.Add("log.arr.sonarr_nieuwe_seizoenen_monitoren", title, ex.Message); }
             }
             foreach (var n in target)
             {
@@ -726,7 +726,7 @@ namespace Emby.Plugins.Discover
                     await SendApi(HttpMethod.Put, "/series/" + existing.id + "/season", "{\"seasonNumber\":" + n + ",\"monitored\":true}").ConfigureAwait(false);
                     changed = true;
                 }
-                catch (Exception ex) { DiscoverDiagnostics.Add("Sonarr seizoen " + n + " monitoren (" + title + "): " + ex.Message); }
+                catch (Exception ex) { DiscoverDiagnostics.Add("log.arr.sonarr_seizoen_monitoren", n, title, ex.Message); }
             }
 
             List<SonarrEpisodeDto> eps = null;
@@ -735,10 +735,10 @@ namespace Emby.Plugins.Discover
                 var t = await SendApi(HttpMethod.Get, "/episode?seriesId=" + existing.id, null).ConfigureAwait(false);
                 eps = _json.DeserializeFromString<List<SonarrEpisodeDto>>(t);
             }
-            catch (Exception ex) { DiscoverDiagnostics.Add("Sonarr afleveringen ophalen (" + title + "): " + ex.Message); }
+            catch (Exception ex) { DiscoverDiagnostics.Add("log.arr.sonarr_afleveringen_ophalen", title, ex.Message); }
             if (eps == null || eps.Count == 0)
             {
-                DiscoverDiagnostics.Add("Sonarr kent de afleveringen van " + title + " niet; alleen de seizoensvlaggen zijn bijgewerkt");
+                DiscoverDiagnostics.Add("log.arr.sonarr_kent_de_afleveringen_van_niet_alleen", title);
                 if (changed) InvalidateCaches();
                 return changed;
             }
@@ -752,7 +752,7 @@ namespace Emby.Plugins.Discover
                     await SendApi(HttpMethod.Put, "/episode/monitor", "{\"episodeIds\":[" + string.Join(",", on) + "],\"monitored\":true}").ConfigureAwait(false);
                     changed = true;
                 }
-                catch (Exception ex) { DiscoverDiagnostics.Add("Sonarr afleveringen monitoren (" + title + "): " + ex.Message); }
+                catch (Exception ex) { DiscoverDiagnostics.Add("log.arr.sonarr_afleveringen_monitoren", title, ex.Message); }
             }
 
             // Zoeken alleen als er uitgezonden afleveringen zonder bestand zijn; wat nog niet is uitgezonden pakt Sonarr zelf op.
@@ -771,12 +771,16 @@ namespace Emby.Plugins.Discover
                             await SendApi(HttpMethod.Post, "/command", "{\"name\":\"SeasonSearch\",\"seriesId\":" + existing.id + ",\"seasonNumber\":" + n + "}").ConfigureAwait(false);
                     changed = true;
                 }
-                catch (Exception ex) { DiscoverDiagnostics.Add("Sonarr zoeken (" + title + "): " + ex.Message); }
+                catch (Exception ex) { DiscoverDiagnostics.Add("log.arr.sonarr_zoeken", title, ex.Message); }
             }
 
             if (changed) InvalidateCaches();
-            DiscoverDiagnostics.Add("Sonarr " + title + " (stond al in Sonarr): seizoen " + string.Join(", ", target) + " gemonitord (" + on.Count +
-                " afleveringen aangezet), zoekopdracht voor " + (missing.Count == 0 ? "niets (geen ontbrekende uitgezonden afleveringen)" : (all ? "de hele serie" : "seizoen " + string.Join(", ", missing))));
+            // Waar de zoekopdracht voor is, staat in twee stukken: een vertaald woord plus eventueel de seizoensnummers.
+            object searchFor = missing.Count == 0
+                ? (object)DiscoverDiagnostics.W("word.nothing_missing_aired")
+                : all ? (object)DiscoverDiagnostics.W("word.the_whole_series") : DiscoverDiagnostics.W("word.season_prefix");
+            var searchSeasons = missing.Count == 0 || all ? "" : string.Join(", ", missing);
+            DiscoverDiagnostics.Add("log.arr.already_in_sonarr_monitored", title, string.Join(", ", target), on.Count, searchFor, searchSeasons);
             return changed;
         }
 
@@ -808,12 +812,12 @@ namespace Emby.Plugins.Discover
                         var t = await SendApi(HttpMethod.Get, "/episode?seriesId=" + seriesId, null).ConfigureAwait(false);
                         eps = _json.DeserializeFromString<List<SonarrEpisodeDto>>(t);
                     }
-                    catch (Exception ex) { DiscoverDiagnostics.Add("Sonarr afleveringen ophalen (" + title + "): " + ex.Message); }
+                    catch (Exception ex) { DiscoverDiagnostics.Add("log.arr.sonarr_afleveringen_ophalen", title, ex.Message); }
                     if (eps != null && eps.Count > 0) break;
                 }
                 if (eps == null || eps.Count == 0)
                 {
-                    DiscoverDiagnostics.Add("Sonarr kent de afleveringen van " + title + " nog niet; monitoring niet gecontroleerd");
+                    DiscoverDiagnostics.Add("log.arr.sonarr_kent_de_afleveringen_van_nog_niet", title);
                     return;
                 }
 
@@ -821,7 +825,7 @@ namespace Emby.Plugins.Discover
                 foreach (var n in selected)
                 {
                     try { await SendApi(HttpMethod.Put, "/series/" + seriesId + "/season", "{\"seasonNumber\":" + n + ",\"monitored\":true}").ConfigureAwait(false); }
-                    catch (Exception ex) { DiscoverDiagnostics.Add("Sonarr seizoen " + n + " monitoren (" + title + "): " + ex.Message); }
+                    catch (Exception ex) { DiscoverDiagnostics.Add("log.arr.sonarr_seizoen_monitoren", n, title, ex.Message); }
                 }
 
                 var on = eps.Where(e => selected.Contains(e.seasonNumber) && !e.monitored).Select(e => e.id).ToList();
@@ -833,19 +837,18 @@ namespace Emby.Plugins.Discover
                     if (off.Count > 0)
                         await SendApi(HttpMethod.Put, "/episode/monitor", "{\"episodeIds\":[" + string.Join(",", off) + "],\"monitored\":false}").ConfigureAwait(false);
                 }
-                catch (Exception ex) { DiscoverDiagnostics.Add("Sonarr afleveringen monitoren (" + title + "): " + ex.Message); }
+                catch (Exception ex) { DiscoverDiagnostics.Add("log.arr.sonarr_afleveringen_monitoren", title, ex.Message); }
 
                 // SeriesSearch zoekt alleen de gemonitorde afleveringen: dat zijn nu precies de gekozen seizoenen.
                 try { await SendApi(HttpMethod.Post, "/command", "{\"name\":\"SeriesSearch\",\"seriesId\":" + seriesId + "}").ConfigureAwait(false); }
-                catch (Exception ex) { DiscoverDiagnostics.Add("Sonarr zoeken (" + title + "): " + ex.Message); }
+                catch (Exception ex) { DiscoverDiagnostics.Add("log.arr.sonarr_zoeken", title, ex.Message); }
 
                 InvalidateCaches();
-                DiscoverDiagnostics.Add("Sonarr " + title + ": seizoen " + string.Join(", ", selected.OrderBy(x => x)) +
-                    " gemonitord (" + on.Count + " afleveringen aangezet, " + off.Count + " uitgezet) en zoekopdracht (SeriesSearch) gestart");
+                DiscoverDiagnostics.Add("log.arr.sonarr_seizoen_gemonitord_afleveringen_aangezet", title, string.Join(", ", selected.OrderBy(x => x)), on.Count, off.Count);
             }
             catch (Exception ex)
             {
-                DiscoverDiagnostics.Add("FOUT seizoensmonitoring " + title + ": " + ex.Message);
+                DiscoverDiagnostics.Add("log.arr.fout_seizoensmonitoring", title, ex.Message);
             }
         }
 
@@ -876,16 +879,16 @@ namespace Emby.Plugins.Discover
                     catch (Exception ex)
                     {
                         if (ex is OperationCanceledException) throw;
-                        DiscoverDiagnostics.Add("FOUT wachtrij-item " + it.id + " verwijderen in " + name + ": " + ex.Message);
+                        DiscoverDiagnostics.Add("log.arr.fout_wachtrij_item_verwijderen_in", it.id, name, ex.Message);
                     }
                 }
                 if (items.Count > 0)
-                    DiscoverDiagnostics.Add(name + ": " + items.Count + " download(s) uit de wachtrij en downloadclient gehaald");
+                    DiscoverDiagnostics.Add("log.arr.download_s_uit_de_wachtrij_en_downloadclient", name, items.Count);
             }
             catch (Exception ex)
             {
                 if (ex is OperationCanceledException) throw;
-                DiscoverDiagnostics.Add("FOUT wachtrij opruimen in " + name + ": " + ex.Message);
+                DiscoverDiagnostics.Add("log.arr.fout_wachtrij_opruimen_in", name, ex.Message);
             }
         }
 
@@ -902,7 +905,7 @@ namespace Emby.Plugins.Discover
                     catch (Exception ex)
                     {
                         if (ex is OperationCanceledException) throw;
-                        DiscoverDiagnostics.Add("ERROR Radarr removal next to Ombi: " + ex.Message);
+                        DiscoverDiagnostics.Add("log.arr.error_radarr_removal_next_to_ombi", ex.Message);
                     }
                 }
                 return gone;
@@ -941,7 +944,7 @@ namespace Emby.Plugins.Discover
                     catch (Exception ex)
                     {
                         if (ex is OperationCanceledException) throw;
-                        DiscoverDiagnostics.Add("ERROR Sonarr removal next to Ombi: " + ex.Message);
+                        DiscoverDiagnostics.Add("log.arr.error_sonarr_removal_next_to_ombi", ex.Message);
                     }
                 }
                 return gone;

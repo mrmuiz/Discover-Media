@@ -126,7 +126,7 @@ namespace Emby.Plugins.Discover
                             }, CancellationToken.None).ConfigureAwait(false);
                             delivered.Add(sid);
                         }
-                        catch (Exception ex) { DiscoverDiagnostics.Add("melding beschikbaar mislukt: " + ex.Message); }
+                        catch (Exception ex) { DiscoverDiagnostics.Add("log.notify.melding_beschikbaar_mislukt", ex.Message); }
                     }
                     if (delivered.Count > 0)
                     {
@@ -146,12 +146,11 @@ namespace Emby.Plugins.Discover
                             return true;
                         });
                     }
-                    DiscoverDiagnostics.Add(delivered.Count == kv.Value.Count
-                        ? "melding beschikbaar verstuurd: " + title
-                        : "melding beschikbaar deels verstuurd; resterende sessies worden opnieuw geprobeerd: " + title);
+                    if (delivered.Count == kv.Value.Count) { DiscoverDiagnostics.Add("log.notify.available_sent", title); }
+                    else { DiscoverDiagnostics.Add("log.notify.available_partly_sent", title); }
                 }
             }
-            catch (Exception ex) { DiscoverDiagnostics.Add("FOUT controle beschikbare aanvragen: " + ex.Message); }
+            catch (Exception ex) { DiscoverDiagnostics.Add("log.notify.fout_controle_beschikbare_aanvragen", ex.Message); }
             finally { Interlocked.Exchange(ref _busy, 0); }
         }
     }

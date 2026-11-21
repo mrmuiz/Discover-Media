@@ -381,7 +381,7 @@ namespace Emby.Plugins.Discover
             }
             catch (Exception ex)
             {
-                DiscoverDiagnostics.Add("afbeelding voor kaartclip niet opgehaald: " + ex.Message);
+                DiscoverDiagnostics.Add("log.card.afbeelding_voor_kaartclip_niet_opgehaald", ex.Message);
                 return false;
             }
         }

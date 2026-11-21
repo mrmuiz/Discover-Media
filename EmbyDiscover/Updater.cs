@@ -112,7 +112,7 @@ namespace Emby.Plugins.Discover
             catch (Exception ex)
             {
                 info.Error = ex.Message;
-                DiscoverDiagnostics.Add("update: kijken mislukt: " + ex.Message);
+                DiscoverDiagnostics.Add("log.update.update_kijken_mislukt", ex.Message);
             }
             if (info.Error == null) { _cache = info; _cacheAt = DateTime.UtcNow; _cacheBeta = beta; }
             return Finish(info);
@@ -194,7 +194,7 @@ namespace Emby.Plugins.Discover
                 }
 
                 PendingVersion = pick.Version;
-                DiscoverDiagnostics.Add("update: " + pick.Version + " geïnstalleerd in " + target + ", herstart nodig");
+                DiscoverDiagnostics.Add("log.update.update_ge_nstalleerd_in_herstart_nodig", pick.Version, target);
                 try { Host?.NotifyPendingRestart(); } catch { }
                 return pick.Version;
             }
@@ -219,12 +219,12 @@ namespace Emby.Plugins.Discover
             var m = Host.GetType().GetMethods(BindingFlags.Public | BindingFlags.Instance)
                 .FirstOrDefault(x => x.Name == "Restart" && x.GetParameters().Length == 0);
             if (m == null) throw new InvalidOperationException("Emby cannot restart itself here. Restart it from the dashboard.");
-            DiscoverDiagnostics.Add("update: Emby herstart");
+            DiscoverDiagnostics.Add("log.update.update_emby_herstart");
             Task.Run(async () =>
             {
                 await Task.Delay(1500).ConfigureAwait(false);   // eerst het antwoord naar de browser laten gaan
                 try { var r = m.Invoke(Host, null); if (r is Task t) await t.ConfigureAwait(false); }
-                catch (Exception ex) { DiscoverDiagnostics.Add("update: herstart mislukt: " + (ex.InnerException?.Message ?? ex.Message)); }
+                catch (Exception ex) { DiscoverDiagnostics.Add("log.update.update_herstart_mislukt", (ex.InnerException?.Message ?? ex.Message)); }
             });
         }
     }
@@ -368,7 +368,7 @@ namespace Emby.Plugins.Discover
             if (info.Available && cfg.UpdateAutoInstall)
             {
                 try { await Updater.Install(ct).ConfigureAwait(false); }
-                catch (Exception ex) { DiscoverDiagnostics.Add("update: automatisch installeren mislukt: " + ex.Message); }
+                catch (Exception ex) { DiscoverDiagnostics.Add("log.update.update_automatisch_installeren_mislukt", ex.Message); }
             }
             progress.Report(60);
             if (Updater.PendingVersion != null && cfg.UpdateAutoInstall && cfg.UpdateAutoRestart)

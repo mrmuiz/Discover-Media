@@ -389,7 +389,7 @@ namespace Emby.Plugins.Discover
             {
                 if (AlreadyRequested(res))
                 {
-                    DiscoverDiagnostics.Add("Ombi " + (tv ? "serie " : "film ") + tmdbId + ": " + MessageOf(json, r));
+                    DiscoverDiagnostics.Add("log.ombi.ombi", DiscoverDiagnostics.W(tv ? "word.serie" : "word.film"), tmdbId, MessageOf(json, r));
                     return false;
                 }
                 throw new InvalidOperationException("Ombi: " + MessageOf(json, r));
@@ -404,12 +404,12 @@ namespace Emby.Plugins.Discover
                 catch (Exception ex) { if (ex is OperationCanceledException) throw; }
             }
             _pending[(tv ? "t:" : "m:") + tmdbId] = pending;
-            if (is4k && !tv) DiscoverDiagnostics.Add("Ombi: 4K request for movie " + tmdbId);
+            if (is4k && !tv) DiscoverDiagnostics.Add("log.ombi.ombi_4k_request_for_movie", tmdbId);
             Invalidate();
             DownloadQueue.Invalidate();
-            DiscoverDiagnostics.Add("Ombi " + (tv ? "serie " : "film ") + tmdbId + " aangevraagd" +
-                (string.IsNullOrWhiteSpace(alias) ? "" : " namens " + alias) +
-                (pending ? " (wacht op goedkeuring)" : ""));
+            var waiting = DiscoverDiagnostics.W(pending ? "word.awaiting_approval" : "word.none");
+            if (string.IsNullOrWhiteSpace(alias)) { DiscoverDiagnostics.Add("log.ombi.requested", DiscoverDiagnostics.W(tv ? "word.series" : "word.movie"), tmdbId, waiting); }
+            else { DiscoverDiagnostics.Add("log.ombi.requested_for", DiscoverDiagnostics.W(tv ? "word.series" : "word.movie"), tmdbId, alias, waiting); }
             return true;
         }
 
@@ -483,7 +483,7 @@ namespace Emby.Plugins.Discover
                         _has4kMovie = s != null && s.radarr4K != null && s.radarr4K.enabled;
                         _4kAt = DateTime.UtcNow;
                     }
-                    catch (Exception ex) { DiscoverDiagnostics.Add("Ombi 4K-server opvragen mislukt: " + ex.Message); _4kAt = DateTime.UtcNow; }
+                    catch (Exception ex) { DiscoverDiagnostics.Add("log.ombi.ombi_4k_server_opvragen_mislukt", ex.Message); _4kAt = DateTime.UtcNow; }
                     finally { Interlocked.Exchange(ref _4kBusy, 0); }
                 });
             }
