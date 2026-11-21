@@ -1,49 +1,31 @@
-## Version 1.4.0.30 (beta)
-
-- Fix: picking another **plugin language** did not change anything on screen. Since 1.4.0.25 the texts come from the server, so the settings page now fetches them again when you pick a language — you see the language right away, before saving.
-- Change: page names bumped (`discoverconfig1119`, `discoverconfigjs1400`).
-
-## Version 1.4.0.29 (beta)
-
-- New: the **user list** no longer grows into one endless column. It is laid out in columns, scrolls once it gets long, and has a search box above it with a counter ("12 of 14 may request"). With a search term, *Allow everyone* and *Allow no one* only apply to the users you see.
-- Fix: the **theme colour** dropdown had a dark colour baked in, so on Emby's light theme it was a dark box in a white page. It follows the theme now, like the language list.
-- Change: page names bumped (`discoverconfig1118`, `discoverconfigjs1399`).
-
-## Version 1.4.0.28 (beta)
-
-- Fix: on Emby's light theme the language list was a dark panel with dark text, so it could not be read. The list now measures the background of the page and follows the theme. Checked on a live server, on the light theme.
-- Change: page names bumped (`discoverconfig1117`, `discoverconfigjs1398`).
-
-## Version 1.4.0.27 (beta)
-
-- Fix: in the **Plugin language** list, Emby's own dropdown arrow stayed visible next to the new list with flags, and the list did not use the full width of the field. Checked on a live server this time.
-- Change: page names bumped (`discoverconfig1116`, `discoverconfigjs1397`).
-
-## Version 1.4.0.26 (beta)
-
-- New: the **Plugin language** list now shows a small flag next to every language, drawn by the plugin itself (no emoji, so it also works on Windows, and no images are fetched from outside). If the list cannot be built for any reason, the plain dropdown stays.
-- Change: the texts that sit in the settings and status pages as plain HTML are now English instead of Dutch. They are replaced by the chosen language as soon as the page loads, so you only ever saw them for a split second — but Dutch was the wrong thing to fall back to.
-- Change: page names bumped (`discoverconfig1115`, `discoverconfigjs1396`, `discoverstatusjs1107`).
-
-## Version 1.4.0.25 (beta)
+## Version 1.4.1.0
 
 **Discover speaks 15 languages**
 
 Nederlands, English, Deutsch, Norsk, Español, Français, Italiano, Português (Brasil), Polski, Svenska, Dansk, Čeština, Русский, 简体中文, 繁體中文 and 日本語.
 
-The plugin follows the language of your Emby server, or you pick one under *Plugin language*; each viewer of the Discover page sees it in the language of their own Emby app when the setting is on "Follow Emby server language". The list of languages in the settings is built from the languages that are actually installed.
+The plugin follows the language of your Emby server, or you pick one under *Plugin language*; with "Follow Emby server language" each viewer sees the Discover page in the language of their own Emby app. The list is built from the languages that are actually installed and shows a small flag next to each one, drawn by the plugin itself (no emoji, so it also works on Windows, and nothing is fetched from outside).
 
 **Under the hood: one place for every text**
 
-All 843 texts now live in language files (`Lang/*.json`) under a key, instead of being written out per language in the code. That matters for three reasons:
+All 845 texts now live in language files (`Lang/*.json`) under a key, instead of being written out per language in the code. That matters for three reasons:
 
 - The **recent activity list on the status page** is now produced by the server in the language of whoever is looking, instead of being translated back from Dutch in the browser with 218 regular expressions. A reworded message can no longer quietly break a translation.
 - Adding a language is **one file and no code change**. A file carries its own name ("Italiano") and appears in the settings by itself.
-- You can **add or correct a language yourself** without waiting for a release: drop a `.json` file in the `discover-languages` folder next to the plugin data (for example `es.json` to fix a word, or `fi.json` for a new language). Those files win over the ones shipped in the plugin. Send a good one in and it will go into the next release.
+- You can **add or correct a language yourself** without waiting for a release: drop a `.json` file in the `discover-languages` folder next to the plugin data (for example `es.json` to fix a word, or `fi.json` for a new language). Those files win over the ones shipped in the plugin. Send a good one in and it goes into the next release — see the README.
 
 The ~210 diagnostic lines on the status page are translated into Dutch, English and German; in the other languages they stay English, which is also the language to paste on the forum.
 
-- Change: page names bumped (`discoverui1154`, `discoveruijs1457`, `discoverbuttonjs1439`, `discoverconfig1114`, `discoverconfigjs1395`, `discoverstatusjs1106`).
+**Settings page**
+
+- The **user list** no longer grows into one endless column. It is laid out in columns, scrolls once it gets long, and has a search box above it with a counter ("12 of 14 may request"). With a search term, *Allow everyone* and *Allow no one* only apply to the users you see.
+- Picking another plugin language now changes the page right away, before saving.
+- The language list and the theme-colour dropdown follow Emby's light and dark theme instead of being dark either way.
+- Texts that sit in the page as plain HTML are English now; they are replaced by the chosen language as the page loads.
+
+Known gap: the confirmation clip exists in Dutch, English, German and Norwegian. The twelve new languages get the English clip for now.
+
+- Change: page names bumped (`discoverui1154`, `discoveruijs1457`, `discoverbuttonjs1439`, `discoverconfig1119`, `discoverconfigjs1400`, `discoverstatusjs1107`).
 
 ## Version 1.4.0.24
 
