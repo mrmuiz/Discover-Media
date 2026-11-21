@@ -277,7 +277,7 @@ function dcBottomBarOffset(self) {
             document.head.appendChild(script)
         })()
     }
-    var UI_PAGE = "discoverui1154";
+    var UI_PAGE = "discoverui1155";
     return function(view, params) {
         var embedded = !!(params && params.embedded);
         if (embedded) {

@@ -34,6 +34,9 @@ jobs:
       - name: Check the language files
         run: python3 tools/check-languages.py
 
+      - name: Check that every page name is registered
+        run: python3 tools/check-pagenames.py
+
       - name: Collect plugin DLL
         run: |
           mkdir -p artifacts

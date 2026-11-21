@@ -1,3 +1,9 @@
+## Version 1.4.1.1
+
+- Fix: **the Discover page did not open** and the tile fell back to the channel tiles. The page asked for its own script under a name the plugin no longer registered (`discoveruijs1456` against 1457), so the script was never found and the page stayed empty. One file was missed when the page names were bumped in 1.4.0.25.
+- The build now checks that every page name used in the HTML and JavaScript is actually registered, so this cannot happen again unnoticed.
+- Change: page names bumped (`discoverui1155`, `discoveruijs1458`).
+
 ## Version 1.4.1.0
 
 **Discover speaks 15 languages**
