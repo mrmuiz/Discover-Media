@@ -49,6 +49,7 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         "cfg.loading_users_failed_the_existing_setting": "Loading users failed; the existing setting stays unchanged.",
         "cfg.looking_for_updates": "Looking for updates…",
         "cfg.movie": "movie",
+        "cfg.n_of_m_may_request": "{0} of {1} may request",
         "cfg.new_version_available": "New version available: ",
         "cfg.newer_than_the_latest_release": "newer than the latest release",
         "cfg.no_profiles_found": "No profiles found",
@@ -76,6 +77,7 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         "cfg.saved_2": "saved",
         "cfg.saving": "Saving...",
         "cfg.saving_failed": "Saving failed: ",
+        "cfg.search_users": "Search users",
         "cfg.seerr_radarr_sonarr_for_the_status": "Seerr + Radarr & Sonarr (for the status)",
         "cfg.series": "series",
         "cfg.server_s_set_up_in": "server(s) set up in ",
@@ -276,18 +278,39 @@ var FLAGS = {
 
     // Emby heeft een licht en een donker thema. Meet de achtergrond van de pagina en pas de lijst aan,
     // anders staat er donkere tekst op een donkere lijst (of andersom).
-    function paintTheme(picker, list) {
-        var node = picker.parentNode, bg = '';
+    // Emby heeft een licht en een donker thema, en dat staat niet in een media query. Meet dus de
+    // achtergrond van de pagina: alles wat de plugin zelf tekent, richt zich daarnaar.
+    function pageBackground(from) {
+        var node = from || document.body;
         while (node && node.nodeType === 1) {
             var c = window.getComputedStyle(node).backgroundColor;
-            if (c && c !== 'transparent' && c.replace(/\s/g, '') !== 'rgba(0,0,0,0)') { bg = c; break; }
+            if (c && c !== 'transparent' && c.replace(/\s/g, '') !== 'rgba(0,0,0,0)') { return c; }
             node = node.parentNode;
         }
-        if (!bg) { bg = window.getComputedStyle(document.body).backgroundColor || '#ffffff'; }
-        var rgb = (bg.match(/\d+/g) || [255, 255, 255]).map(Number);
-        var light = (0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2]) / 255 > 0.55;
-        picker.classList.toggle('dcLightUi', light);
+        return window.getComputedStyle(document.body).backgroundColor || '#1b1f24';
+    }
+
+    function isLight(color) {
+        var rgb = (String(color).match(/\d+/g) || [27, 31, 36]).map(Number);
+        return (0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2]) / 255 > 0.55;
+    }
+
+    // De gewone <select> voor de themakleur heeft geen Emby-opmaak, dus die kleuren we zelf.
+    function paintPlainSelects(view) {
+        var bg = pageBackground(view);
+        var light = isLight(bg);
+        Array.prototype.forEach.call(view.querySelectorAll('.dcPlainSelect'), function (sel) {
+            sel.style.backgroundColor = light ? '#ffffff' : '#2b2b2b';
+            sel.style.color = light ? 'rgba(0,0,0,.87)' : '#ffffff';
+            sel.style.borderColor = light ? 'rgba(0,0,0,.35)' : '#888888';
+        });
+    }
+
+    function paintTheme(picker, list, button) {
+        var bg = pageBackground(picker.parentNode);
+        picker.classList.toggle('dcLightUi', isLight(bg));
         list.style.backgroundColor = bg;
+        if (button) { button.style.backgroundColor = ''; button.style.color = ''; button.style.borderColor = ''; }
     }
 
     function flagFor(code) {
@@ -394,7 +417,7 @@ var FLAGS = {
             }, true);
         }
 
-        paintTheme(picker, list);
+        paintTheme(picker, list, button);
         paint();
         open(false);
         select.classList.add('dcHiddenSelect');
@@ -920,6 +943,43 @@ var FLAGS = {
     function normId(id) { return String(id || '').replace(/-/g, '').toLowerCase(); }
 
     // ---- Gebruikers: vinkje = mag aanvragen; bewaard wordt de lijst van wie NIET mag ----
+    // Met veel gebruikers wordt een platte lijst onwerkbaar: zoekveld, teller en kolommen erbij.
+    function setupUserTools(view, list, total) {
+        var box = view.querySelector('.dcUserTools');
+        if (!box) {
+            box = document.createElement('div');
+            box.className = 'dcUserTools';
+            box.innerHTML = '<input type="text" class="dcUserFilter emby-input" /><span class="dcUserCount"></span>';
+            list.parentNode.insertBefore(box, list);
+        }
+        var filter = box.querySelector('.dcUserFilter');
+        var count = box.querySelector('.dcUserCount');
+        filter.placeholder = t('cfg.search_users');
+
+        function refresh() {
+            var term = (filter.value || '').trim().toLowerCase();
+            var shown = 0, on = 0;
+            [].forEach.call(list.children, function (row) {
+                var box2 = row.querySelector('.chkUser');
+                var name = (row.textContent || '').toLowerCase();
+                var hit = !term || name.indexOf(term) !== -1;
+                row.style.display = hit ? '' : 'none';
+                if (hit) { shown++; }
+                if (box2 && box2.checked) { on++; }
+            });
+            count.textContent = t('cfg.n_of_m_may_request', on, total) + (term ? ' \u00b7 ' + shown : '');
+        }
+
+        if (!box.dataset.wired) {
+            box.dataset.wired = '1';
+            filter.addEventListener('input', refresh);
+            list.addEventListener('change', refresh);
+            list.addEventListener('click', function () { setTimeout(refresh, 0); });
+        }
+        view.__refreshUserCount = refresh;
+        refresh();
+    }
+
     function loadUsers(view, state, blockedCsv) {
         var list = el(view, 'userList');
         var status = el(view, 'statusUsers');
@@ -945,6 +1005,8 @@ var FLAGS = {
                     '</label></div>';
             });
             list.innerHTML = html;
+            list.classList.add('dcUserGrid');
+            setupUserTools(view, list, users.length);
             setTimeout(function () { fixCheckboxes(view); }, 100);
             state.usersLoaded = true;
             status.textContent = '';
@@ -964,8 +1026,14 @@ var FLAGS = {
     }
 
     function setAllUsers(view, state, value) {
-        Array.prototype.forEach.call(view.querySelectorAll('.chkUser'), function (box) { box.checked = value; });
+        // Met een zoekterm geldt de knop alleen voor wat er nu staat; anders voor iedereen.
+        Array.prototype.forEach.call(view.querySelectorAll('.chkUser'), function (box) {
+            var row = box.closest ? box.closest('.checkboxContainer') : null;
+            if (row && row.style.display === 'none') { return; }
+            box.checked = value;
+        });
         state.dirty = true;
+        if (view.__refreshUserCount) { view.__refreshUserCount(); }
     }
 
     // ---- Test van de watchlist-bronnen ----
@@ -1146,6 +1214,7 @@ var FLAGS = {
 
     function load(view, state) {
         setTimeout(function () { fixCheckboxes(view); }, 300);
+        paintPlainSelects(view);
         // Nooit niet-opgeslagen invoer overschrijven
         if (state.dirty) { return; }
         showLoading();

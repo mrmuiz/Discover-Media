@@ -1,3 +1,9 @@
+## Version 1.4.0.29 (beta)
+
+- New: the **user list** no longer grows into one endless column. It is laid out in columns, scrolls once it gets long, and has a search box above it with a counter ("12 of 14 may request"). With a search term, *Allow everyone* and *Allow no one* only apply to the users you see.
+- Fix: the **theme colour** dropdown had a dark colour baked in, so on Emby's light theme it was a dark box in a white page. It follows the theme now, like the language list.
+- Change: page names bumped (`discoverconfig1118`, `discoverconfigjs1399`).
+
 ## Version 1.4.0.28 (beta)
 
 - Fix: on Emby's light theme the language list was a dark panel with dark text, so it could not be read. The list now measures the background of the page and follows the theme. Checked on a live server, on the light theme.

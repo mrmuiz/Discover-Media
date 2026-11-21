@@ -5,7 +5,7 @@
     <title>Discover</title>
 </head>
 <body>
-<div data-role="page" class="page type-interior pluginConfigurationPage discoverConfigPage" data-require="emby-input,emby-button,emby-select,emby-checkbox" data-controller="__plugin/discoverconfigjs1398">
+<div data-role="page" class="page type-interior pluginConfigurationPage discoverConfigPage" data-require="emby-input,emby-button,emby-select,emby-checkbox" data-controller="__plugin/discoverconfigjs1399">
     <style>
         .discoverConfigPage .keyWrap { position: relative; }
         .discoverConfigPage .keyWrap input { padding-right: 2.8em; }
@@ -49,6 +49,16 @@
         .discoverConfigPage .dcLightUi .dcLangList { border-color: rgba(0, 0, 0, .28); box-shadow: 0 .6em 1.6em rgba(0, 0, 0, .25); }
         .discoverConfigPage .dcLangOpt { border: 0; border-radius: .2em; background: transparent; }
         .discoverConfigPage .dcLangOpt.dcOn { background: rgba(255, 255, 255, .12); font-weight: 600; }
+        /* Gebruikerslijst: kolommen en een zoekveld, anders wordt het een eindeloze rij. */
+        .discoverConfigPage .dcUserTools { display: flex; align-items: center; gap: 1em; margin: .8em 0 .4em; }
+        .discoverConfigPage .dcUserFilter { flex: 1 1 18em; max-width: 24em; padding: .5em .7em; }
+        .discoverConfigPage .dcUserCount { opacity: .75; white-space: nowrap; }
+        .discoverConfigPage .dcUserGrid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(17em, 1fr)); gap: .1em 1.5em;
+            max-height: 26em; overflow-y: auto; padding-right: .3em;
+        }
+        /* Gewone <select> (emby-select rendert op sommige tv's leeg); kleuren worden per thema gezet. */
+        .discoverConfigPage .dcPlainSelect { background: #2b2b2b; color: #fff; border: 2px solid #888; }
         .discoverConfigPage .dcPanel { display: none; }
         .discoverConfigPage .dcPanel.active { display: block; }
         .discoverConfigPage .dcPanel h3:first-child { margin-top: 0; }
@@ -198,7 +208,7 @@
                 <div class="selectContainer">
                     <label class="selectLabel" id="lbl_selAccent" style="display:block">Theme colour (buttons, focus and accents)</label>
                     <div style="display:flex;align-items:center;gap:.8em;margin:.5em 0">
-                    <select id="selAccent" style="background:#2b2b2b;color:#fff;border:2px solid #888;border-radius:.4em;font-size:1.2em;min-height:2.8em;padding:.4em .8em;min-width:14em">
+                    <select id="selAccent" class="dcPlainSelect" style="border-radius:.4em;font-size:1.2em;min-height:2.8em;padding:.4em .8em;min-width:14em">
                         <option value="ffb400" id="optAccent0" style="background:#222;color:#fff">Yellow (default)</option>
                         <option value="52b54b" id="optAccent1" style="background:#222;color:#fff">Emby green</option>
                         <option value="2f80ed" id="optAccent2" style="background:#222;color:#fff">Blue</option>
