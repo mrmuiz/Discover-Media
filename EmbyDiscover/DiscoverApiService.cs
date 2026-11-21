@@ -13,7 +13,11 @@ namespace Emby.Plugins.Discover
 {
     [Route("/Discover/Home", "GET", Summary = "Rows for the Discover page")]
     [Authenticated]
-    public class DiscoverHomeRequest : IReturn<DiscoverHomeResponse> { }
+    public class DiscoverHomeRequest : IReturn<DiscoverHomeResponse>
+    {
+        /// <summary>Taal van de Emby-app van de kijker; telt alleen als de plugin op Automatisch staat.</summary>
+        public string Lang { get; set; }
+    }
 
     [Route("/Discover/List", "GET", Summary = "Next page of a row")]
     [Authenticated]
@@ -180,11 +184,17 @@ namespace Emby.Plugins.Discover
 
     [Route("/Discover/Status", "GET", Summary = "Status and recent channel activity")]
     [Authenticated]
-    public class DiscoverStatusRequest : IReturn<DiscoverStatusResponse> { }
+    public class DiscoverStatusRequest : IReturn<DiscoverStatusResponse>
+    {
+        /// <summary>Taal van de Emby-app van de kijker; telt alleen als de plugin op Automatisch staat.</summary>
+        public string Lang { get; set; }
+    }
 
     public class DiscoverStatusResponse
     {
         public string PluginVersion { get; set; }
+        /// <summary>Alle teksten van de schermen, op sleutel, in de taal van de kijker.</summary>
+        public Dictionary<string, string> Strings { get; set; }
         public bool PluginLanguageAuto { get; set; }
         public bool TmdbKeySet { get; set; }
         public bool ShowDiagnostics { get; set; }
@@ -293,6 +303,8 @@ namespace Emby.Plugins.Discover
 
     public class DiscoverHomeResponse
     {
+        /// <summary>Alle teksten van de schermen, op sleutel, in de taal van de kijker.</summary>
+        public Dictionary<string, string> Strings { get; set; }
         public string Language { get; set; }
         public bool LanguageAuto { get; set; }
         public string Message { get; set; }
@@ -463,13 +475,25 @@ namespace Emby.Plugins.Discover
             return System.Text.RegularExpressions.Regex.IsMatch(c, "^#[0-9a-fA-F]{6}$") ? c.ToLowerInvariant() : "#ffb400";
         }
 
+        /// <summary>
+        /// De taal voor de teksten die naar de browser gaan. Staat de plugin op Automatisch, dan volgt hij
+        /// de Emby-app van de kijker (die stuurt zijn taal mee); anders geldt de ingestelde taal.
+        /// </summary>
+        private static string ViewerCode(string lang)
+        {
+            if (DiscoverLanguage.IsAuto && !string.IsNullOrWhiteSpace(lang)) { return DiscoverLanguage.ResolveCode(lang); }
+            return DiscoverLanguage.Code;
+        }
+
         public object Get(DiscoverStatusRequest request)
         {
             var cfg = Plugin.GetCurrentConfiguration();
             string clipError;
             var clipPath = ClipPathOrError(out clipError);
+            var viewer = ViewerCode(request == null ? null : request.Lang);
             return new DiscoverStatusResponse
             {
+                Strings = DiscoverStrings.Table(viewer),
                 PluginVersion = typeof(Plugin).Assembly.GetName().Version.ToString(),
                 TmdbKeySet = !string.IsNullOrWhiteSpace(cfg.TmdbApiKey),
                 ShowDiagnostics = cfg.ShowDiagnostics,
@@ -496,8 +520,8 @@ namespace Emby.Plugins.Discover
                 RequestErrors = DiscoverDiagnostics.RequestErrors,
                 ClipPath = clipPath,
                 ClipError = clipError,
-                ButtonScript = DiscoverLanguage.T("api.ok_emby_plugin_resource_open_discover_to"),
-                WebInject = string.IsNullOrEmpty(DiscoverDiagnostics.WebInject) ? DiscoverLanguage.T("web.off") : DiscoverDiagnostics.WebInject,
+                ButtonScript = DiscoverStrings.Get(viewer, "api.ok_emby_plugin_resource_open_discover_to"),
+                WebInject = string.IsNullOrEmpty(DiscoverDiagnostics.WebInject) ? DiscoverStrings.Get(viewer, "web.off") : DiscoverDiagnostics.WebInject,
                 ScriptBuild = EmbeddedScriptBuild(),
                 DllBuilt = DllBuildTime(),
                 Events = DiscoverDiagnostics.Snapshot()
@@ -506,7 +530,12 @@ namespace Emby.Plugins.Discover
 
         public async Task<object> Get(DiscoverHomeRequest request)
         {
-            var resp = new DiscoverHomeResponse { Language = DiscoverLanguage.PluginLanguage, LanguageAuto = DiscoverLanguage.IsAuto };
+            var resp = new DiscoverHomeResponse
+            {
+                Strings = DiscoverStrings.Table(ViewerCode(request == null ? null : request.Lang)),
+                Language = DiscoverLanguage.PluginLanguage,
+                LanguageAuto = DiscoverLanguage.IsAuto
+            };
             if (string.IsNullOrWhiteSpace(Plugin.GetCurrentConfiguration().TmdbApiKey))
             {
                 resp.Message = DiscoverLanguage.T("api.enter_your_tmdb_api_key_in_the_plugin_settings");
