@@ -80,10 +80,31 @@ jobs:
           [ "$PRE" = true ] || PRE=false
           echo "prerelease=$PRE" >> "$GITHUB_OUTPUT"
           echo "pre-release: $PRE"
+      - name: Take the release notes from the CHANGELOG
+        id: notes
+        env:
+          TAG: ${{ github.event.inputs.release_tag || github.ref_name }}
+        run: |
+          # Everything between this version's heading and the next one, plus the Ko-fi line.
+          VER="${TAG#v}"; VER="${VER#V}"
+          python3 - "$VER" <<'PY' > release-notes.md
+          import re, sys
+          ver = sys.argv[1]
+          text = open('CHANGELOG.md', encoding='utf-8').read()
+          m = re.search(r'^## Version %s.*?$(.*?)(?=^## Version |\Z)' % re.escape(ver), text, re.S | re.M)
+          body = (m.group(1).strip() if m else '')
+          if body:
+              print(body)
+              print()
+          print('If you like Discover, you can support it here: https://ko-fi.com/mrmuiz')
+          PY
+          echo "--- release notes ---"; cat release-notes.md
+
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event.inputs.release_tag || github.ref_name }}
           files: Emby.Plugins.Discover.dll
+          body_path: release-notes.md
           generate_release_notes: false
           prerelease: ${{ steps.pre.outputs.prerelease }}
           # A pre-release must never become the "latest" that the updater offers to everyone.

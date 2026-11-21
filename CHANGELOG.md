@@ -25,6 +25,7 @@ The ~210 diagnostic lines on the status page are translated into Dutch, English 
 
 Known gap: the confirmation clip exists in Dutch, English, German and Norwegian. The twelve new languages get the English clip for now.
 
+- Fix: Emby's own dropdown arrow no longer sits next to the new language list, and the list uses the full width of the field.
 - Change: page names bumped (`discoverui1154`, `discoveruijs1457`, `discoverbuttonjs1439`, `discoverconfig1119`, `discoverconfigjs1400`, `discoverstatusjs1107`).
 
 ## Version 1.4.0.24
