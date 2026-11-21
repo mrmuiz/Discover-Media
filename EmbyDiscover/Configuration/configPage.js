@@ -418,6 +418,7 @@ var FLAGS = {
         }
 
         paintTheme(picker, list, button);
+        view.__repaintLanguages = paint;
         paint();
         open(false);
         select.classList.add('dcHiddenSelect');
@@ -1541,10 +1542,22 @@ var FLAGS = {
             state.languageRequest++;
         });
         el(view, 'selPluginLanguage').addEventListener('change', function () {
-            applyLanguage(view, this.value === 'auto'
-                ? (window.navigator && navigator.language)
-                : this.value);
-            updateAutoTmdbOption(view, state);
+            var wanted = this.value === 'auto' ? ((window.navigator && navigator.language) || 'en-US') : this.value;
+            // De teksten komen van de server, dus die moeten opnieuw opgehaald worden; anders blijft het
+            // scherm in de oude taal staan tot je opslaat en de pagina herlaadt.
+            ApiClient.ajax({
+                type: 'GET',
+                url: ApiClient.getUrl('Discover/Status', { Lang: wanted, Force: true }),
+                dataType: 'json'
+            }).then(function (r) {
+                if (r && r.Strings) { STR = r.Strings; }
+                applyLanguage(view, wanted);
+                updateAutoTmdbOption(view, state);
+                if (view.__repaintLanguages) { view.__repaintLanguages(); }
+            }, function () {
+                applyLanguage(view, wanted);
+                updateAutoTmdbOption(view, state);
+            });
         });
 
         form.addEventListener('submit', function (e) {

@@ -188,6 +188,8 @@ namespace Emby.Plugins.Discover
     {
         /// <summary>Taal van de Emby-app van de kijker; telt alleen als de plugin op Automatisch staat.</summary>
         public string Lang { get; set; }
+        /// <summary>Voor de instellingenpagina: laat de meegestuurde taal altijd gelden, om een taal voor te kunnen vertonen.</summary>
+        public bool Force { get; set; }
     }
 
     public class DiscoverStatusResponse
@@ -489,9 +491,9 @@ namespace Emby.Plugins.Discover
         /// De taal voor de teksten die naar de browser gaan. Staat de plugin op Automatisch, dan volgt hij
         /// de Emby-app van de kijker (die stuurt zijn taal mee); anders geldt de ingestelde taal.
         /// </summary>
-        private static string ViewerCode(string lang)
+        private static string ViewerCode(string lang, bool force = false)
         {
-            if (DiscoverLanguage.IsAuto && !string.IsNullOrWhiteSpace(lang)) { return DiscoverLanguage.ResolveCode(lang); }
+            if (!string.IsNullOrWhiteSpace(lang) && (force || DiscoverLanguage.IsAuto)) { return DiscoverLanguage.ResolveCode(lang); }
             return DiscoverLanguage.Code;
         }
 
@@ -500,7 +502,7 @@ namespace Emby.Plugins.Discover
             var cfg = Plugin.GetCurrentConfiguration();
             string clipError;
             var clipPath = ClipPathOrError(out clipError);
-            var viewer = ViewerCode(request == null ? null : request.Lang);
+            var viewer = ViewerCode(request == null ? null : request.Lang, request != null && request.Force);
             return new DiscoverStatusResponse
             {
                 Strings = DiscoverStrings.Table(viewer),

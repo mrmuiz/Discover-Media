@@ -1,3 +1,8 @@
+## Version 1.4.0.30 (beta)
+
+- Fix: picking another **plugin language** did not change anything on screen. Since 1.4.0.25 the texts come from the server, so the settings page now fetches them again when you pick a language — you see the language right away, before saving.
+- Change: page names bumped (`discoverconfig1119`, `discoverconfigjs1400`).
+
 ## Version 1.4.0.29 (beta)
 
 - New: the **user list** no longer grows into one endless column. It is laid out in columns, scrolls once it gets long, and has a search box above it with a counter ("12 of 14 may request"). With a search term, *Allow everyone* and *Allow no one* only apply to the users you see.
