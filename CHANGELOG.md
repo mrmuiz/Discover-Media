@@ -1,3 +1,23 @@
+## Version 1.5.0.0 (beta)
+
+**Discover speaks 15 languages**
+
+Nederlands, English, Deutsch, Norsk, Español, Français, Italiano, Português (Brasil), Polski, Svenska, Dansk, Čeština, Русский, 简体中文, 繁體中文 and 日本語.
+
+The plugin follows the language of your Emby server, or you pick one under *Plugin language*; each viewer of the Discover page sees it in the language of their own Emby app when the setting is on "Follow Emby server language". The list of languages in the settings is built from the languages that are actually installed.
+
+**Under the hood: one place for every text**
+
+All 843 texts now live in language files (`Lang/*.json`) under a key, instead of being written out per language in the code. That matters for three reasons:
+
+- The **recent activity list on the status page** is now produced by the server in the language of whoever is looking, instead of being translated back from Dutch in the browser with 218 regular expressions. A reworded message can no longer quietly break a translation.
+- Adding a language is **one file and no code change**. A file carries its own name ("Italiano") and appears in the settings by itself.
+- You can **add or correct a language yourself** without waiting for a release: drop a `.json` file in the `discover-languages` folder next to the plugin data (for example `es.json` to fix a word, or `fi.json` for a new language). Those files win over the ones shipped in the plugin. Send a good one in and it will go into the next release.
+
+The ~210 diagnostic lines on the status page are translated into Dutch, English and German; in the other languages they stay English, which is also the language to paste on the forum.
+
+- Change: page names bumped (`discoverui1154`, `discoveruijs1457`, `discoverbuttonjs1439`, `discoverconfig1114`, `discoverconfigjs1395`, `discoverstatusjs1106`).
+
 ## Version 1.4.0.24
 
 - New: **Background photo on the Discover page** can be switched off, under *Appearance*. That is the large photo behind the page which changes along with the title you are on. Off gives a calm, plain background and saves loading work on a TV. Emby's own "Backdrops" display setting still applies on top of this, as before.

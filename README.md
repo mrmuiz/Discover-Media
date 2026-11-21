@@ -210,7 +210,7 @@ The settings are split over tabs: **General**, **Appearance**, **Sources**, **Re
 
 | Setting | Tab | Purpose |
 |---|---|---|
-| Plugin language | General | Defaults to following Emby's server UI language; English, Dutch, German and Norwegian can also be selected manually. |
+| Plugin language | General | Defaults to following Emby's server UI language; any installed language can also be selected manually. See [Languages](#languages). |
 | Tile opens the Discover page | Appearance | Web client only. A tap on the **Discover Media** tile opens the Discover page directly, and the Request button works on detail pages without opening Discover first. Adds a small loader to the web client's `index.html`, re-applied on every server start. It stays in place and reads this switch live, so turning it on or off works right after saving (off = the tile opens the channel tiles). **On by default.** |
 | Show the Trailer tile | Appearance | Shows the "Trailer: title" tile next to "Request" in the channel. **On by default.** |
 | Rows on the Discover page | Appearance | Switch **Recently added**, **Recent requests**, **My requests** and **New seasons** on or off. |
@@ -235,6 +235,37 @@ The settings are split over tabs: **General**, **Appearance**, **Sources**, **Re
 | Show Diagnostics | Diagnostics | Optional yellow debug message and technical media information on item pages. Off by default. |
 
 API keys are stored in the plugin configuration and masked in the settings form by default.
+
+## Languages
+
+Discover ships with Nederlands, English, Deutsch, Norsk, Español, Français, Italiano, Português (Brasil),
+Polski, Svenska, Dansk, Čeština, Русский, 简体中文, 繁體中文 and 日本語.
+
+With **Plugin language** on "Follow Emby server language", each viewer sees the Discover page, the buttons and
+the messages in the language of their own Emby app; the settings and status pages follow the language of the
+admin looking at them. Any language that is not translated falls back to English, never to a blank screen.
+
+Every text lives under a key in `EmbyDiscover/Lang/<code>.json`, with `en.json` as the source. The diagnostic
+lines on the status page are translated into Dutch, English and German; in other languages they stay English.
+
+### Add or correct a language yourself
+
+You do not have to wait for a release. Put a `.json` file in the `discover-languages` folder next to Emby's
+plugin data (it is created by you, not by the plugin) and restart Emby:
+
+```
+<emby data>/discover-languages/es.json      corrects or completes Spanish
+<emby data>/discover-languages/fi.json      adds Finnish
+```
+
+The file is a flat JSON object of `"key": "text"` pairs; copy the keys you want from
+[`EmbyDiscover/Lang/en.json`](EmbyDiscover/Lang/en.json). Keys you leave out keep their shipped translation,
+or English. Two keys are special: `language.name` (the name of the language in that language, shown in the
+dropdown) and `language.culture` (for example `fi-FI`). Keep `{0}`, `{1}` and the spaces at the start and end
+of a text exactly as they are in English — they are placeholders and glue between sentences.
+
+A pull request with a language file is very welcome. `python3 tools/check-languages.py` checks the files for
+unknown keys, missing placeholders and stray spaces, and the build runs it too.
 
 ## Troubleshooting
 
