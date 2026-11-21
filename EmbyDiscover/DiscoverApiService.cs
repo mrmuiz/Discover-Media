@@ -202,6 +202,8 @@ namespace Emby.Plugins.Discover
         public string RadarrMinimumAvailability { get; set; }
         /// <summary>Weergave: jaar / TMDB-score onder de posters, themakleur, OMDb-scores in de popup.</summary>
         public bool PosterShowYear { get; set; } = true;
+        /// <summary>Grote achtergrondfoto op de Discover-pagina.</summary>
+        public bool PageBackdrops { get; set; } = true;
         public bool ShowSpecials { get; set; } = true;
         public bool PosterShowScore { get; set; } = true;
         public string PosterScoreSource { get; set; }
@@ -482,6 +484,7 @@ namespace Emby.Plugins.Discover
                 Seerr4kTv = RequestHub.Has4k(_json, true),
                 RadarrMinimumAvailability = ArrClient.MinimumAvailability(null),
                 PosterShowYear = cfg.PosterShowYear,
+                PageBackdrops = cfg.PageBackdrops,
                 ShowSpecials = cfg.ShowSpecials,
                 PosterShowScore = cfg.EffPosterScoreSource != "none",
                 PosterScoreSource = cfg.EffPosterScoreSource,

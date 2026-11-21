@@ -68,9 +68,9 @@ function dcBottomBarOffset(self) {
             return
         }
         var urls = [ApiClient.getUrl("web/ConfigurationPage", {
-            name: "discoverbuttonjs1436"
+            name: "discoverbuttonjs1437"
         }), ApiClient.getUrl("web/configurationpage", {
-            name: "discoverbuttonjs1436"
+            name: "discoverbuttonjs1437"
         }), ApiClient.getUrl("Plugins/Discover/Script")];
         var n = 0;
         (function next() {
@@ -104,7 +104,7 @@ function dcBottomBarOffset(self) {
             document.head.appendChild(script)
         })()
     }
-    var UI_PAGE = "discoverui1152";
+    var UI_PAGE = "discoverui1153";
     return function(view, params) {
         var embedded = !!(params && params.embedded);
         if (embedded) {
@@ -139,6 +139,8 @@ function dcBottomBarOffset(self) {
         } catch (e) {}
         var omdbOn = false;
         var scoreSource = "tmdb";
+        // Grote achtergrondfoto achter de pagina. Uit te zetten in de plugin-instellingen.
+        var pageBdOn = true;
         diagEl = view.querySelector(".dcDiag");
         diagEl.style.display = "none";
         loadButtonScript();
@@ -147,6 +149,10 @@ function dcBottomBarOffset(self) {
             showTrailer = r.ShowTrailerTile !== false;
             showSpecials = r.ShowSpecials !== false;
             applyAccent(r.AccentColor);
+            pageBdOn = r.PageBackdrops !== false;
+            if (!pageBdOn) {
+                clearPageBackdrop()
+            }
             document.documentElement.classList.toggle("dcNoYear", r.PosterShowYear === false);
             document.documentElement.classList.toggle("dcNoScore", r.PosterShowScore === false);
             omdbOn = !!r.OmdbRatings;
@@ -3286,7 +3292,19 @@ function dcBottomBarOffset(self) {
             seq: 0
         };
 
+        function clearPageBackdrop() {
+            pageBd.cur = "";
+            pageBd.seq++;
+            for (var i = 0; i < pageBd.layers.length; i++) {
+                pageBd.layers[i].classList.remove("on");
+                pageBd.layers[i].style.backgroundImage = ""
+            }
+        }
+
         function pageBdAllowed() {
+            if (!pageBdOn) {
+                return false
+            }
             try {
                 for (var i = 0; i < localStorage.length; i++) {
                     var k = localStorage.key(i);

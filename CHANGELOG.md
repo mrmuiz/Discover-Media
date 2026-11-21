@@ -1,3 +1,8 @@
+## Version 1.4.0.24 (beta)
+
+- New: **Background photo on the Discover page** can be switched off, under *Appearance*. That is the large photo behind the page which changes along with the title you are on. Off gives a calm, plain background and saves loading work on a TV. Emby's own "Backdrops" display setting still applies on top of this, as before.
+- Change: page names bumped (`discoverui1153`, `discoveruijs1456`, `discoverbuttonjs1437`, `discoverconfig1113`, `discoverconfigjs1394`).
+
 ## Version 1.4.0.23
 
 - New: **Ombi** can now be used as the request service, next to Radarr/Sonarr and Seerr. Pick it under *Requests > Request through*, fill in the URL and the API key from Ombi's *Settings > Configuration > General*, and press **Test connection**. Movies, series and single seasons are requested through Ombi's own API, and the request status fills the marks on the Discover page and the channel.

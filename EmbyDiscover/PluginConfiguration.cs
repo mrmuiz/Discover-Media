@@ -85,6 +85,8 @@ namespace Emby.Plugins.Discover
         public bool ShowNextEpisode { get; set; } = true;
         /// <summary>Jaar onder de posters.</summary>
         public bool PosterShowYear { get; set; } = true;
+        /// <summary>Grote achtergrondfoto op de Discover-pagina, die meewisselt met de titel waar je op staat.</summary>
+        public bool PageBackdrops { get; set; } = true;
         /// <summary>Specials (seizoen 0) als keuze bij de seizoenen van een serie.</summary>
         public bool ShowSpecials { get; set; } = true;
         /// <summary>TMDB-score onder de posters.</summary>

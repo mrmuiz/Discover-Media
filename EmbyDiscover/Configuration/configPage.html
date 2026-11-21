@@ -5,7 +5,7 @@
     <title>Discover</title>
 </head>
 <body>
-<div data-role="page" class="page type-interior pluginConfigurationPage discoverConfigPage" data-require="emby-input,emby-button,emby-select,emby-checkbox" data-controller="__plugin/discoverconfigjs1393">
+<div data-role="page" class="page type-interior pluginConfigurationPage discoverConfigPage" data-require="emby-input,emby-button,emby-select,emby-checkbox" data-controller="__plugin/discoverconfigjs1394">
     <style>
         .discoverConfigPage .keyWrap { position: relative; }
         .discoverConfigPage .keyWrap input { padding-right: 2.8em; }
@@ -180,6 +180,17 @@
                     </div>
                     <div class="fieldDescription" id="desc_selAccent">Geldt voor iedereen op deze server: de Discover-pagina, de popup en de rijen op Emby's eigen pagina's.</div>
                 </div>
+                <div class="checkboxContainer">
+                    <label class="emby-checkbox-label">
+                        <input is="emby-checkbox" type="checkbox" id="chkPageBackdrops" />
+                        <span class="checkboxLabel" id="lbl_chkPageBackdrops">Achtergrondfoto op de Discover-pagina</span>
+                        <span class="emby-checkbox-outline">
+                            <span class="emby-checkbox-on"><i class="md-icon">check</i></span>
+                            <span class="emby-checkbox-off"></span>
+                        </span>
+                    </label>
+                </div>
+                <div class="fieldDescription" id="desc_chkPageBackdrops" style="margin:-0.8em 0 1.2em;">De grote foto achter de pagina, die meewisselt met de titel waar je op staat. Uit geeft een rustige, egale achtergrond en scheelt laadwerk op een tv. Emby's eigen instelling "Achtergronden" blijft hier bovenop gelden.</div>
                 <div class="checkboxContainer">
                     <label class="emby-checkbox-label">
                         <input is="emby-checkbox" type="checkbox" id="chkPosterYear" />

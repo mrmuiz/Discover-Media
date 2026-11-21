@@ -57,6 +57,11 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         optAccent6: ['Rood', 'Red', 'Rot'],
         optAccent7: ['Oranje', 'Orange', 'Orange'],
         optAccent8: ['Wit', 'White', 'Weiß'],
+        lbl_chkPageBackdrops: ['Achtergrondfoto op de Discover-pagina', 'Background photo on the Discover page', 'Hintergrundfoto auf der Discover-Seite'],
+        desc_chkPageBackdrops: [
+            'De grote foto achter de pagina, die meewisselt met de titel waar je op staat. Uit geeft een rustige, egale achtergrond en scheelt laadwerk op een tv. Emby\'s eigen instelling "Achtergronden" blijft hier bovenop gelden.',
+            'The large photo behind the page, which changes along with the title you are on. Off gives a calm, plain background and saves loading work on a TV. Emby\'s own "Backdrops" setting still applies on top of this.',
+            'Das große Foto hinter der Seite, das mit dem Titel wechselt, auf dem du stehst. Aus ergibt einen ruhigen, einfarbigen Hintergrund und spart Ladearbeit auf einem Fernseher. Embys eigene Einstellung „Hintergründe" gilt weiterhin zusätzlich.'],
         lbl_chkPosterYear: ['Jaar onder de posters', 'Year below the posters', 'Jahr unter den Postern'],
         lbl_chkShowSpecials: ['Specials tonen bij de seizoenkeuze', 'Show Specials in the season choice', 'Specials bei der Staffelauswahl anzeigen'],
         lbl_chkShowTitleLogo: ['Titellogo bovenaan de popup (anders de titel als tekst)', 'Title logo at the top of the popup (otherwise the title as text)', 'Titellogo oben im Popup (sonst der Titel als Text)'],
@@ -991,6 +996,7 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             el(view, 'numRequestLimit').value = c.RequestLimit != null ? c.RequestLimit : 0;
             el(view, 'chkShowNewSeasons').checked = c.ShowNewSeasons !== false;
             el(view, 'chkShowMyRequests').checked = c.ShowMyRequests !== false;
+            el(view, 'chkPageBackdrops').checked = c.PageBackdrops !== false;
             el(view, 'chkPosterYear').checked = c.PosterShowYear !== false;
             el(view, 'chkShowSpecials').checked = c.ShowSpecials !== false;
             el(view, 'chkShowTitleLogo').checked = c.ShowTitleLogo !== false;
@@ -1105,6 +1111,7 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             c.RequestLimit = intValue(view, 'numRequestLimit', 0);
             c.ShowNewSeasons = el(view, 'chkShowNewSeasons').checked;
             c.ShowMyRequests = el(view, 'chkShowMyRequests').checked;
+            c.PageBackdrops = el(view, 'chkPageBackdrops').checked;
             c.PosterShowYear = el(view, 'chkPosterYear').checked;
             c.ShowSpecials = el(view, 'chkShowSpecials').checked;
             c.ShowTitleLogo = el(view, 'chkShowTitleLogo').checked;

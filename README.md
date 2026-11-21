@@ -216,6 +216,7 @@ The settings are split over tabs: **General**, **Appearance**, **Sources**, **Re
 | Rows on the Discover page | Appearance | Switch **Recently added**, **Recent requests**, **My requests** and **New seasons** on or off. |
 | TMDB list / Trakt watchlist | Appearance | Optional extra rows: a TMDB list (id or link) and a public Trakt watchlist (username + Client ID), each with a test button. |
 | Theme colour | Appearance | Colour of buttons, focus and accents (yellow, Emby green, blue, turquoise, purple, pink, red, orange, white). |
+| Background photo on the Discover page | Appearance | The large photo behind the page, which changes along with the title you are on. Off gives a plain background and saves loading work on a TV. **On by default.** Emby's own "Backdrops" setting still applies on top of it. |
 | Year / score under posters | Appearance | Show or hide the year and the TMDB score under the posters. |
 | Title logo / next episode | Appearance | Show the title logo instead of the title text, and the next episode of running series. **On by default.** |
 | TMDB API key | Sources | Provides titles, artwork and metadata. |

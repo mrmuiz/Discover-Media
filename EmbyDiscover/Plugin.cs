@@ -28,7 +28,7 @@ namespace Emby.Plugins.Discover
             get
             {
                 try { return typeof(Plugin).Assembly.GetName().Version.ToString(); }
-                catch { return "1.4.0.23"; }
+                catch { return "1.4.0.24"; }
             }
         }
 
@@ -138,14 +138,14 @@ namespace Emby.Plugins.Discover
             {
                 new PluginPageInfo
                 {
-                    Name = "discoverconfig1112",
+                    Name = "discoverconfig1113",
                     EmbeddedResourcePath = GetType().Namespace + ".Configuration.configPage.html",
                     EnableInMainMenu = true,
                     IsMainConfigPage = true
                 },
                 new PluginPageInfo
                 {
-                    Name = "discoverui1152",
+                    Name = "discoverui1153",
                     DisplayName = "Discover",
                     EmbeddedResourcePath = GetType().Namespace + ".Configuration.discoverPage.html",
                     EnableInMainMenu = true,
@@ -154,12 +154,12 @@ namespace Emby.Plugins.Discover
                 },
                 new PluginPageInfo
                 {
-                    Name = "discoveruijs1455",
+                    Name = "discoveruijs1456",
                     EmbeddedResourcePath = GetType().Namespace + ".Configuration.discoverPage.js"
                 },
                 new PluginPageInfo
                 {
-                    Name = "discoverbuttonjs1436",
+                    Name = "discoverbuttonjs1437",
                     EmbeddedResourcePath = GetType().Namespace + ".Resources.discover-request-button.js"
                 },
                 new PluginPageInfo
@@ -174,7 +174,7 @@ namespace Emby.Plugins.Discover
                 },
                 new PluginPageInfo
                 {
-                    Name = "discoverconfigjs1393",
+                    Name = "discoverconfigjs1394",
                     EmbeddedResourcePath = GetType().Namespace + ".Configuration.configPage.js"
                 }
             };
