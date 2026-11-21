@@ -285,7 +285,7 @@ namespace Emby.Plugins.Discover
             if (tv)
             {
                 if (x.number_of_seasons > 0)
-                    return x.number_of_seasons + x.number_of_seasons == 1 ? DiscoverLanguage.T("info.seasons_one_suffix") : DiscoverLanguage.T("info.seasons_many_suffix");
+                    return x.number_of_seasons + (x.number_of_seasons == 1 ? DiscoverLanguage.T("info.seasons_one_suffix") : DiscoverLanguage.T("info.seasons_many_suffix"));
                 return null;
             }
             if (x.runtime <= 0) return null;

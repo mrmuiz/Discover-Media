@@ -79,8 +79,8 @@ namespace Emby.Plugins.Discover
             if (!TryDate(date, out d)) return null;
             bool future = d.Date > DateTime.UtcNow.Date;
             if (tv)
-                return future ? DiscoverLanguage.T("info.first_episode_on") : DiscoverLanguage.T("info.started_on") + LongDate(d);
-            return future ? DiscoverLanguage.T("info.coming_on") : DiscoverLanguage.T("info.released_on") + LongDate(d);
+                return (future ? DiscoverLanguage.T("info.first_episode_on") : DiscoverLanguage.T("info.started_on")) + LongDate(d);
+            return (future ? DiscoverLanguage.T("info.coming_on") : DiscoverLanguage.T("info.released_on")) + LongDate(d);
         }
 
         private static string Names(List<TmdbNamed> list, int max)
@@ -128,9 +128,9 @@ namespace Emby.Plugins.Discover
             if (tv)
             {
                 if (x.number_of_seasons > 0)
-                    parts.Add(x.number_of_seasons + x.number_of_seasons == 1 ? DiscoverLanguage.T("info.seasons_one_suffix") : DiscoverLanguage.T("info.seasons_many_suffix"));
+                    parts.Add(x.number_of_seasons + (x.number_of_seasons == 1 ? DiscoverLanguage.T("info.seasons_one_suffix") : DiscoverLanguage.T("info.seasons_many_suffix")));
                 if (x.number_of_episodes > 0)
-                    parts.Add(x.number_of_episodes + x.number_of_episodes == 1 ? DiscoverLanguage.T("info.episodes_one_suffix") : DiscoverLanguage.T("info.episodes_many_suffix"));
+                    parts.Add(x.number_of_episodes + (x.number_of_episodes == 1 ? DiscoverLanguage.T("info.episodes_one_suffix") : DiscoverLanguage.T("info.episodes_many_suffix")));
                 int ep = x.episode_run_time != null ? x.episode_run_time.FirstOrDefault(m => m > 0) : 0;
                 if (ep > 0) parts.Add(DiscoverLanguage.T("info.min_per_episode", ep));
             }
@@ -154,7 +154,7 @@ namespace Emby.Plugins.Discover
 
             var studio = Names(tv ? x.networks : x.production_companies, 3);
             if (studio != null)
-                lines.Add(tv ? DiscoverLanguage.T("info.network_label") : DiscoverLanguage.T("info.studio_label") + studio);
+                lines.Add((tv ? DiscoverLanguage.T("info.network_label") : DiscoverLanguage.T("info.studio_label")) + studio);
             if (tv)
             {
                 var by = Names(x.created_by, 3);
