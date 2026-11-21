@@ -1,4 +1,4 @@
-## Version 1.5.0.0 (beta)
+## Version 1.4.0.25 (beta)
 
 **Discover speaks 15 languages**
 
