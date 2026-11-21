@@ -75,7 +75,7 @@ namespace Emby.Plugins.Discover
             if (!trakt && listId.Length == 0) return res;
             if (string.IsNullOrWhiteSpace(cfg.TmdbApiKey)) return res;
 
-            var key = (trakt ? cfg.TraktUser.Trim() + "|" + cfg.TraktClientId.Trim() : "") + "|" + listId + "|" + DiscoverLanguage.Text("nl", "en", "de");
+            var key = (trakt ? cfg.TraktUser.Trim() + "|" + cfg.TraktClientId.Trim() : "") + "|" + listId + "|" + DiscoverLanguage.T("continue.en");
             List<DiscoverRow> rows = null;
             lock (CacheGate)
             {
@@ -134,8 +134,8 @@ namespace Emby.Plugins.Discover
                 using (var resp = await Http.SendAsync(req).ConfigureAwait(false))
                 {
                     int code = (int)resp.StatusCode;
-                    if (code == 401 || code == 403) throw new InvalidOperationException(DiscoverLanguage.Text("Trakt weigert de toegang (", "Trakt denies access (", "Trakt verweigert den Zugriff (") + code + DiscoverLanguage.Text("). Klopt de Client ID, en is het profiel openbaar?", "). Is the Client ID correct, and is the profile public?", "). Stimmt die Client-ID, und ist das Profil öffentlich?"));
-                    if (code == 404) throw new InvalidOperationException(DiscoverLanguage.Text("Trakt-gebruiker niet gevonden (404).", "Trakt user not found (404).", "Trakt-Benutzer nicht gefunden (404)."));
+                    if (code == 401 || code == 403) throw new InvalidOperationException(DiscoverLanguage.T("watchlist.trakt_denies_access") + code + DiscoverLanguage.T("watchlist.is_the_client_id_correct_and_is_the_profile"));
+                    if (code == 404) throw new InvalidOperationException(DiscoverLanguage.T("watchlist.trakt_user_not_found_404"));
                     resp.EnsureSuccessStatusCode();
                     return await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
                 }
@@ -152,7 +152,7 @@ namespace Emby.Plugins.Discover
             }
             // Nieuwst toegevoegd eerst (ISO-datums sorteren als tekst).
             list = list.OrderByDescending(e => e.listed_at ?? "").ToList();
-            var row = new DiscoverRow { Key = "watch_trakt", Title = DiscoverLanguage.Text("Trakt-watchlist", "Trakt watchlist", "Trakt-Merkliste") };
+            var row = new DiscoverRow { Key = "watch_trakt", Title = DiscoverLanguage.T("watchlist.trakt_watchlist") };
             var picks = list.Select(e => new { tv = e.type == "show", m = e.type == "show" ? e.show : e.movie })
                 .Where(e => e.m != null && e.m.ids != null && e.m.ids.tmdb.HasValue && e.m.ids.tmdb.Value > 0)
                 .Take(MaxItems).ToList();
@@ -183,7 +183,7 @@ namespace Emby.Plugins.Discover
         {
             var page = await _tmdb.GetList(listId, CancellationToken.None).ConfigureAwait(false);
             if (page == null) return null;
-            var row = new DiscoverRow { Key = "watch_tmdb", Title = string.IsNullOrWhiteSpace(page.name) ? DiscoverLanguage.Text("TMDB-lijst", "TMDB list", "TMDB-Liste") : page.name };
+            var row = new DiscoverRow { Key = "watch_tmdb", Title = string.IsNullOrWhiteSpace(page.name) ? DiscoverLanguage.T("watchlist.tmdb_list") : page.name };
             foreach (var i in page.items)
             {
                 if (i == null || i.adult) continue;
@@ -203,19 +203,19 @@ namespace Emby.Plugins.Discover
                 if (string.Equals(request.Kind, "trakt", StringComparison.OrdinalIgnoreCase))
                 {
                     if (string.IsNullOrWhiteSpace(request.User) || string.IsNullOrWhiteSpace(request.ClientId))
-                        throw new InvalidOperationException(DiscoverLanguage.Text("Vul gebruikersnaam en Client ID in.", "Fill in username and Client ID.", "Benutzername und Client-ID eingeben."));
+                        throw new InvalidOperationException(DiscoverLanguage.T("watchlist.fill_in_username_and_client_id"));
                     var list = _json.DeserializeFromString<List<TraktEntry>>(await TraktGet(request.User.Trim(), request.ClientId.Trim(), "/watchlist/movies?page=1&limit=100").ConfigureAwait(false)) ?? new List<TraktEntry>();
                     res.Success = true;
-                    res.Message = DiscoverLanguage.Text("Verbonden: ", "Connected: ", "Verbunden: ") + list.Count + DiscoverLanguage.Text(" films op de watchlist (eerste pagina).", " movies on the watchlist (first page).", " Filme auf der Merkliste (erste Seite).");
+                    res.Message = DiscoverLanguage.T("watchlist.connected") + list.Count + DiscoverLanguage.T("watchlist.movies_on_the_watchlist_first_page");
                 }
                 else
                 {
                     var id = ListIdOf(request.ListId);
-                    if (id.Length == 0) throw new InvalidOperationException(DiscoverLanguage.Text("Geen geldig lijst-id of link.", "Not a valid list id or link.", "Keine gültige Listen-ID oder Link."));
+                    if (id.Length == 0) throw new InvalidOperationException(DiscoverLanguage.T("watchlist.not_a_valid_list_id_or_link"));
                     var page = await _tmdb.GetList(id, CancellationToken.None).ConfigureAwait(false);
-                    if (page == null) throw new InvalidOperationException(DiscoverLanguage.Text("Lijst niet gevonden of niet openbaar.", "List not found or not public.", "Liste nicht gefunden oder nicht öffentlich."));
+                    if (page == null) throw new InvalidOperationException(DiscoverLanguage.T("watchlist.list_not_found_or_not_public"));
                     res.Success = true;
-                    res.Message = "\u201C" + (page.name ?? id) + "\u201D: " + (page.items == null ? 0 : page.items.Count) + DiscoverLanguage.Text(" titels.", " titles.", " Titel.");
+                    res.Message = "\u201C" + (page.name ?? id) + "\u201D: " + (page.items == null ? 0 : page.items.Count) + DiscoverLanguage.T("watchlist.titles");
                 }
             }
             catch (Exception ex) { res.Success = false; res.Message = ex.Message; }

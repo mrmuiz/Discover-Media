@@ -377,7 +377,7 @@ namespace Emby.Plugins.Discover
             if (configured > 0) return configured;
             var text = await Send(HttpMethod.Get, url, key, "/api/v3/qualityprofile", null, ct).ConfigureAwait(false);
             var list = _json.DeserializeFromString<List<ArrIdDto>>(text);
-            if (list == null || list.Count == 0) throw new InvalidOperationException(DiscoverLanguage.Text("Geen quality profile gevonden.", "No quality profile found.", "Kein Qualitätsprofil gefunden.", "Fant ingen kvalitetsprofil."));
+            if (list == null || list.Count == 0) throw new InvalidOperationException(DiscoverLanguage.T("arr.no_quality_profile_found"));
             return list[0].id;
         }
 
@@ -386,7 +386,7 @@ namespace Emby.Plugins.Discover
             if (!string.IsNullOrWhiteSpace(configured)) return configured;
             var text = await Send(HttpMethod.Get, url, key, "/api/v3/rootfolder", null, ct).ConfigureAwait(false);
             var list = _json.DeserializeFromString<List<ArrRootDto>>(text);
-            if (list == null || list.Count == 0) throw new InvalidOperationException(DiscoverLanguage.Text("Geen root folder gevonden.", "No root folder found.", "Kein Stammordner gefunden.", "Fant ingen rotmappe."));
+            if (list == null || list.Count == 0) throw new InvalidOperationException(DiscoverLanguage.T("arr.no_root_folder_found"));
             return list[0].path;
         }
 
@@ -414,7 +414,7 @@ namespace Emby.Plugins.Discover
                 bool searched = RadarrDirect && await ExtendExistingMovie(tmdbId, title, ct).ConfigureAwait(false);
                 return retried || searched;
             }
-            if (!RadarrConfigured) throw new InvalidOperationException(DiscoverLanguage.Text("Radarr is niet ingesteld.", "Radarr is not configured.", "Radarr ist nicht eingerichtet."));
+            if (!RadarrConfigured) throw new InvalidOperationException(DiscoverLanguage.T("arr.radarr_is_not_configured"));
             var cfg = Plugin.GetCurrentConfiguration();
 
             var states = await GetMovieStates(ct).ConfigureAwait(false);
@@ -549,7 +549,7 @@ namespace Emby.Plugins.Discover
                 bool searched = SonarrDirect && await ExtendExistingSeries(tmdbId, tvdbId, title, seasons, ct).ConfigureAwait(false);
                 return retried || searched;
             }
-            if (!SonarrConfigured) throw new InvalidOperationException(DiscoverLanguage.Text("Sonarr is niet ingesteld.", "Sonarr is not configured.", "Sonarr ist nicht eingerichtet."));
+            if (!SonarrConfigured) throw new InvalidOperationException(DiscoverLanguage.T("arr.sonarr_is_not_configured"));
             var cfg = Plugin.GetCurrentConfiguration();
 
             var states = await GetSeriesStates(ct).ConfigureAwait(false);
@@ -912,7 +912,7 @@ namespace Emby.Plugins.Discover
 
         private async Task<bool> RemoveMovieDirect(int tmdbId, bool deleteFiles, CancellationToken ct)
         {
-            if (!RadarrDirect) throw new InvalidOperationException(DiscoverLanguage.Text("Radarr is niet ingesteld.", "Radarr is not configured.", "Radarr ist nicht eingerichtet."));
+            if (!RadarrDirect) throw new InvalidOperationException(DiscoverLanguage.T("arr.radarr_is_not_configured"));
             var cfg = Plugin.GetCurrentConfiguration();
 
             var text = await Send(HttpMethod.Get, cfg.RadarrUrl, cfg.RadarrApiKey, "/api/v3/movie", null, ct).ConfigureAwait(false);
@@ -951,7 +951,7 @@ namespace Emby.Plugins.Discover
 
         private async Task<bool> RemoveSeriesDirect(int tmdbId, bool deleteFiles, CancellationToken ct)
         {
-            if (!SonarrDirect) throw new InvalidOperationException(DiscoverLanguage.Text("Sonarr is niet ingesteld.", "Sonarr is not configured.", "Sonarr ist nicht eingerichtet."));
+            if (!SonarrDirect) throw new InvalidOperationException(DiscoverLanguage.T("arr.sonarr_is_not_configured"));
             var cfg = Plugin.GetCurrentConfiguration();
 
             var text = await Send(HttpMethod.Get, cfg.SonarrUrl, cfg.SonarrApiKey, "/api/v3/series", null, ct).ConfigureAwait(false);

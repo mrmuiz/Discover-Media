@@ -570,7 +570,7 @@ namespace Emby.Plugins.Discover
                         {
                             Number = s.season_number,
                             Name = string.IsNullOrWhiteSpace(s.name)
-                                ? DiscoverLanguage.Text("Seizoen ", "Season ", "Staffel ") + s.season_number
+                                ? DiscoverLanguage.T("channel.season") + s.season_number
                                 : s.name,
                             EpisodeCount = s.episode_count,
                             AirDate = s.air_date,

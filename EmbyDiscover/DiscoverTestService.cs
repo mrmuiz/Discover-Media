@@ -87,7 +87,7 @@ namespace Emby.Plugins.Discover
                 if (string.Equals(request.Type, "TmdbLanguages", StringComparison.OrdinalIgnoreCase))
                 {
                     if (string.IsNullOrWhiteSpace(request.ApiKey))
-                        throw new InvalidOperationException(DiscoverLanguage.Text("Vul eerst een API key in.", "Enter an API key first.", "Bitte zuerst einen API-Schlüssel eingeben.", "Skriv inn en API-nøkkel først."));
+                        throw new InvalidOperationException(DiscoverLanguage.T("test.enter_an_api_key_first"));
 
                     result.Languages = await GetTmdbLanguages(request.ApiKey).ConfigureAwait(false);
                     result.Success = true;
@@ -98,14 +98,14 @@ namespace Emby.Plugins.Discover
                 if (string.Equals(request.Type, "Tmdb", StringComparison.OrdinalIgnoreCase))
                 {
                     if (string.IsNullOrWhiteSpace(request.ApiKey))
-                        throw new InvalidOperationException(DiscoverLanguage.Text("Vul eerst een API key in.", "Enter an API key first.", "Bitte zuerst einen API-Schlüssel eingeben.", "Skriv inn en API-nøkkel først."));
+                        throw new InvalidOperationException(DiscoverLanguage.T("test.enter_an_api_key_first"));
 
                     using (var resp = await Http.GetAsync(
                         "https://api.themoviedb.org/3/configuration?api_key=" + Uri.EscapeDataString(request.ApiKey.Trim()))
                         .ConfigureAwait(false))
                     {
                         if ((int)resp.StatusCode == 401)
-                            throw new InvalidOperationException(DiscoverLanguage.Text("TMDB weigert de key (401). Gebruik de 'API Key' (v3), niet het Read Access Token.", "TMDB rejects the key (401). Use the 'API Key' (v3), not the Read Access Token.", "TMDB lehnt den Schlüssel ab (401). Verwende den 'API Key' (v3), nicht das Read Access Token."));
+                            throw new InvalidOperationException(DiscoverLanguage.T("test.tmdb_rejects_the_key_401_use_the_api_key"));
                         resp.EnsureSuccessStatusCode();
                     }
 
@@ -165,9 +165,9 @@ namespace Emby.Plugins.Discover
                 }
 
                 if (string.IsNullOrWhiteSpace(request.Url))
-                    throw new InvalidOperationException(DiscoverLanguage.Text("Vul eerst een URL in.", "Enter a URL first.", "Bitte zuerst eine URL eingeben.", "Skriv inn en URL først."));
+                    throw new InvalidOperationException(DiscoverLanguage.T("test.enter_a_url_first"));
                 if (string.IsNullOrWhiteSpace(request.ApiKey))
-                    throw new InvalidOperationException(DiscoverLanguage.Text("Vul eerst een API key in.", "Enter an API key first.", "Bitte zuerst einen API-Schlüssel eingeben.", "Skriv inn en API-nøkkel først."));
+                    throw new InvalidOperationException(DiscoverLanguage.T("test.enter_an_api_key_first"));
 
                 var baseUrl = request.Url.Trim().TrimEnd('/');
                 if (!baseUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
@@ -195,15 +195,15 @@ namespace Emby.Plugins.Discover
             }
             catch (TaskCanceledException)
             {
-                result.Error = DiscoverLanguage.Text("Time-out: geen antwoord binnen 10 seconden. Controleer de URL en poort.", "Time-out: no answer within 10 seconds. Check the URL and port.", "Zeitüberschreitung: keine Antwort innerhalb von 10 Sekunden. URL und Port prüfen.", "Tidsavbrudd: ikke svar innen 10 sekunder. Sjekk URL og port.");
+                result.Error = DiscoverLanguage.T("test.time_out_no_answer_within_10_seconds_check");
                 LogTmdbLanguageFailure(request, result.Error);
             }
             catch (HttpRequestException ex)
             {
                 var why = ex.InnerException?.Message ?? ex.Message;
-                result.Error = DiscoverLanguage.Text("Kan geen verbinding maken: ", "Cannot connect: ", "Keine Verbindung möglich: ", "Kan ikke koble til: ") + why +
+                result.Error = DiscoverLanguage.T("test.cannot_connect") + why +
                     (why.IndexOf("certificate", StringComparison.OrdinalIgnoreCase) >= 0
-                        ? DiscoverLanguage.Text(" (zelfondertekend certificaat? Zet 'Zelfondertekende certificaten accepteren' aan op het tabblad Aanvragen.)", " (self-signed certificate? Turn on 'Accept self-signed certificates' on the Requests tab.)", " (selbstsigniertes Zertifikat? 'Selbstsignierte Zertifikate akzeptieren' auf der Registerkarte Anfragen einschalten.)", " (selvsignert sertifikat? Slå på 'Godta selvsignerte sertifikater' på fanen Forespørsler.)")
+                        ? DiscoverLanguage.T("test.self_signed_certificate_turn_on_accept_self")
                         : "");
                 LogTmdbLanguageFailure(request, result.Error);
             }
@@ -229,14 +229,14 @@ namespace Emby.Plugins.Discover
                 Uri.EscapeDataString(apiKey.Trim())).ConfigureAwait(false))
             {
                 if ((int)resp.StatusCode == 401)
-                    throw new InvalidOperationException(DiscoverLanguage.Text("TMDB weigert de key voor de talenlijst (401).", "TMDB rejects the key for the language list (401).", "TMDB lehnt den Schlüssel für die Sprachliste ab (401)."));
+                    throw new InvalidOperationException(DiscoverLanguage.T("test.tmdb_rejects_the_key_for_the_language_list"));
                 if (!resp.IsSuccessStatusCode)
                     throw new InvalidOperationException(
                         "TMDB-talenlijst gaf HTTP " + (int)resp.StatusCode + " " + resp.ReasonPhrase + ".");
 
                 var languages = _json.DeserializeFromString<List<TmdbLanguageResponse>>(
                     await resp.Content.ReadAsStringAsync().ConfigureAwait(false));
-                if (languages == null) throw new InvalidOperationException(DiscoverLanguage.Text("TMDB gaf geen geldige talenlijst terug.", "TMDB returned no valid language list.", "TMDB lieferte keine gültige Sprachliste."));
+                if (languages == null) throw new InvalidOperationException(DiscoverLanguage.T("test.tmdb_returned_no_valid_language_list"));
 
                 var options = languages
                     .Where(x => !string.IsNullOrWhiteSpace(x.iso_639_1))
@@ -304,9 +304,9 @@ namespace Emby.Plugins.Discover
                 {
                     var code = (int)resp.StatusCode;
                     if (code == 401)
-                        throw new InvalidOperationException(DiscoverLanguage.Text("API key geweigerd (401).", "API key rejected (401).", "API-Schlüssel abgelehnt (401)."));
+                        throw new InvalidOperationException(DiscoverLanguage.T("test.api_key_rejected_401"));
                     if (code == 404)
-                        throw new InvalidOperationException(DiscoverLanguage.Text("Niet gevonden (404). Klopt de URL en het type (Radarr/Sonarr)?", "Not found (404). Are the URL and the type (Radarr/Sonarr) correct?", "Nicht gefunden (404). Stimmen URL und Typ (Radarr/Sonarr)?", "Ikke funnet (404). Stemmer URL og type (Radarr/Sonarr)?"));
+                        throw new InvalidOperationException(DiscoverLanguage.T("test.not_found_404_are_the_url_and_the_type_radarr"));
                     resp.EnsureSuccessStatusCode();
 
                     return await resp.Content.ReadAsStringAsync().ConfigureAwait(false);

@@ -336,7 +336,7 @@ namespace Emby.Plugins.Discover
         /// <returns>true = aangevraagd, false = stond al aangevraagd / niets nieuws om aan te vragen.</returns>
         internal static async Task<bool> Request(IJsonSerializer json, bool tv, int tmdbId, int tvdbId, int[] seasons, object embyUserId, CancellationToken ct, bool is4k = false)
         {
-            if (!Configured) throw new InvalidOperationException(DiscoverLanguage.Text("Seerr is niet ingesteld.", "Seerr is not configured.", "Seerr ist nicht eingerichtet."));
+            if (!Configured) throw new InvalidOperationException(DiscoverLanguage.T("seerr.seerr_is_not_configured"));
             string body;
             if (tv)
             {
@@ -426,7 +426,7 @@ namespace Emby.Plugins.Discover
         /// <returns>true = verwijderd, false = Seerr kende de titel niet.</returns>
         internal static async Task<bool> Remove(IJsonSerializer json, bool tv, int tmdbId, bool deleteFiles, CancellationToken ct)
         {
-            if (!Configured) throw new InvalidOperationException(DiscoverLanguage.Text("Seerr is niet ingesteld.", "Seerr is not configured.", "Seerr ist nicht eingerichtet."));
+            if (!Configured) throw new InvalidOperationException(DiscoverLanguage.T("seerr.seerr_is_not_configured"));
             var m = await FindMedia(json, tv, tmdbId, ct).ConfigureAwait(false);
             if (m == null || m.id <= 0) { Invalidate(); return false; }
 
@@ -508,17 +508,17 @@ namespace Emby.Plugins.Discover
 
         internal static async Task<string> Test(IJsonSerializer json, string url, string apiKey, CancellationToken ct)
         {
-            if (string.IsNullOrWhiteSpace(url)) throw new InvalidOperationException(DiscoverLanguage.Text("Vul eerst een URL in.", "Enter a URL first.", "Zuerst eine URL eingeben."));
-            if (string.IsNullOrWhiteSpace(apiKey)) throw new InvalidOperationException(DiscoverLanguage.Text("Vul eerst een API key in.", "Enter an API key first.", "Zuerst einen API-Schlüssel eingeben."));
+            if (string.IsNullOrWhiteSpace(url)) throw new InvalidOperationException(DiscoverLanguage.T("dl.enter_a_url_first_2"));
+            if (string.IsNullOrWhiteSpace(apiKey)) throw new InvalidOperationException(DiscoverLanguage.T("sab.enter_an_api_key_first"));
 
             var st = await Send(HttpMethod.Get, url, apiKey, "/status", null, null, ct).ConfigureAwait(false);
             if (st.Code < 200 || st.Code > 299)
-                throw new InvalidOperationException(DiscoverLanguage.Text("Seerr niet bereikbaar op ", "Seerr not reachable at ", "Seerr nicht erreichbar unter ") + NormalizeBase(url) + " (" + MessageOf(json, st) + ").");
+                throw new InvalidOperationException(DiscoverLanguage.T("seerr.seerr_not_reachable_at") + NormalizeBase(url) + " (" + MessageOf(json, st) + ").");
             var status = json.DeserializeFromString<SeerrStatusDto>(st.Text);
 
             var me = await Send(HttpMethod.Get, url, apiKey, "/auth/me", null, null, ct).ConfigureAwait(false);
             if (me.Code == 401 || me.Code == 403)
-                throw new InvalidOperationException(DiscoverLanguage.Text("Seerr weigert de API key (", "Seerr rejects the API key (", "Seerr lehnt den API-Schlüssel ab (") + me.Code + DiscoverLanguage.Text("). Gebruik de API key uit Seerr > Instellingen > Algemeen.", "). Use the API key from Seerr > Settings > General.", "). Verwende den API-Schlüssel aus Seerr > Einstellungen > Allgemein."));
+                throw new InvalidOperationException(DiscoverLanguage.T("seerr.seerr_rejects_the_api_key") + me.Code + DiscoverLanguage.T("seerr.use_the_api_key_from_seerr_settings_general"));
             if (me.Code < 200 || me.Code > 299)
                 throw new InvalidOperationException("Seerr: " + MessageOf(json, me));
 

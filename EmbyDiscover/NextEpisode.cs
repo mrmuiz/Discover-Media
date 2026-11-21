@@ -90,7 +90,7 @@ namespace Emby.Plugins.Discover
                         bool hasDate = DateTime.TryParse(ep.airstamp, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out when)
                                        || DateTime.TryParse(ep.airdate, CultureInfo.InvariantCulture, DateTimeStyles.None, out when);
                         var code = "S" + ep.season.ToString("00") + "E" + ep.number.ToString("00");
-                        line = DiscoverLanguage.Text("Volgende aflevering: ", "Next episode: ", "Nächste Folge: ", "Neste episode: ") + code +
+                        line = DiscoverLanguage.T("api.next_episode") + code +
                                (hasDate ? " · " + InfoText.LongDate(when.Kind == DateTimeKind.Utc ? when.ToLocalTime() : when) : "");
                     }
                 }

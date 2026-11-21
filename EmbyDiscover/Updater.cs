@@ -156,12 +156,12 @@ namespace Emby.Plugins.Discover
                 if (!string.IsNullOrEmpty(tag))
                 {
                     pick = (info.Versions ?? new List<ReleaseVersion>()).FirstOrDefault(x => x.Tag == tag);
-                    if (pick == null) throw new InvalidOperationException(DiscoverLanguage.Text("Die versie staat niet (meer) op GitHub.", "That version is not on GitHub (anymore).", "Diese Version ist nicht (mehr) auf GitHub.", "Den versjonen finnes ikke (lenger) på GitHub."));
+                    if (pick == null) throw new InvalidOperationException(DiscoverLanguage.T("update.that_version_is_not_on_github_anymore"));
                 }
                 else
                 {
                     pick = info.Available ? (info.Versions ?? new List<ReleaseVersion>()).FirstOrDefault(x => x.Tag == info.Tag) : null;
-                    if (pick == null) throw new InvalidOperationException(DiscoverLanguage.Text("Er is geen nieuwere versie.", "There is no newer version.", "Es gibt keine neuere Version.", "Det finnes ingen nyere versjon."));
+                    if (pick == null) throw new InvalidOperationException(DiscoverLanguage.T("update.there_is_no_newer_version"));
                 }
 
                 var bytes = await Http.GetByteArrayAsync(pick.DownloadUrl).ConfigureAwait(false);

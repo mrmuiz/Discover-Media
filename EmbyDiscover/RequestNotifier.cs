@@ -112,10 +112,7 @@ namespace Emby.Plugins.Discover
                 {
                     var r = kv.Key;
                     var title = (r.Title ?? "?") + (r.Year > 0 ? " (" + r.Year + ")" : "");
-                    var text = DiscoverLanguage.Text(
-                        title + " is beschikbaar om te kijken.",
-                        title + " is available to watch.",
-                        title + " ist jetzt verfügbar.");
+                    var text = DiscoverLanguage.T("notify.available", title);
                     var delivered = new List<string>();
                     foreach (var sid in kv.Value)
                     {

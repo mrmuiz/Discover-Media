@@ -496,10 +496,8 @@ namespace Emby.Plugins.Discover
                 RequestErrors = DiscoverDiagnostics.RequestErrors,
                 ClipPath = clipPath,
                 ClipError = clipError,
-                ButtonScript = DiscoverLanguage.Text("OK Emby-pluginresource; open Discover om het script in deze browser te laden.",
-                    "OK Emby plugin resource; open Discover to load the script in this browser.",
-                    "OK Emby-Pluginressource; öffne Discover, um das Skript in diesem Browser zu laden."),
-                WebInject = string.IsNullOrEmpty(DiscoverDiagnostics.WebInject) ? DiscoverLanguage.Text("uit", "off", "aus") : DiscoverDiagnostics.WebInject,
+                ButtonScript = DiscoverLanguage.T("api.ok_emby_plugin_resource_open_discover_to"),
+                WebInject = string.IsNullOrEmpty(DiscoverDiagnostics.WebInject) ? DiscoverLanguage.T("web.off") : DiscoverDiagnostics.WebInject,
                 ScriptBuild = EmbeddedScriptBuild(),
                 DllBuilt = DllBuildTime(),
                 Events = DiscoverDiagnostics.Snapshot()
@@ -511,10 +509,7 @@ namespace Emby.Plugins.Discover
             var resp = new DiscoverHomeResponse { Language = DiscoverLanguage.PluginLanguage, LanguageAuto = DiscoverLanguage.IsAuto };
             if (string.IsNullOrWhiteSpace(Plugin.GetCurrentConfiguration().TmdbApiKey))
             {
-                resp.Message = DiscoverLanguage.Text(
-                    "Vul eerst je TMDB API key in bij de plugininstellingen (Dashboard > Plugins > Discover).",
-                    "Enter your TMDB API key in the plugin settings first (Dashboard > Plugins > Discover).",
-                    "Gib zuerst deinen TMDB-API-Schlüssel in den Plugin-Einstellungen ein (Dashboard > Plugins > Discover).");
+                resp.Message = DiscoverLanguage.T("api.enter_your_tmdb_api_key_in_the_plugin_settings");
                 return resp;
             }
 
@@ -537,7 +532,7 @@ namespace Emby.Plugins.Discover
             {
                 _logger.Error("Discover: loading home failed: {0}", ex.Message);
                 DiscoverDiagnostics.Add("FOUT home laden: " + ex.Message);
-                resp.Message = DiscoverLanguage.Text("Laden mislukt: ", "Loading failed: ", "Laden fehlgeschlagen: ") + ex.Message;
+                resp.Message = DiscoverLanguage.T("api.loading_failed") + ex.Message;
             }
             return resp;
         }
@@ -583,17 +578,17 @@ namespace Emby.Plugins.Discover
         {
             switch (key)
             {
-                case "recent_added": return DiscoverLanguage.Text("Onlangs toegevoegd", "Recently added", "Kürzlich hinzugefügt");
-                case "recent_requests": return DiscoverLanguage.Text("Recente aanvragen", "Recent requests", "Kürzlich angefragt");
+                case "recent_added": return DiscoverLanguage.T("api.recently_added");
+                case "recent_requests": return DiscoverLanguage.T("api.recent_requests");
                 case "trending": return "Trending";
-                case "popular_movie": return DiscoverLanguage.Text("Populaire films", "Popular Movies", "Beliebte Filme");
-                case "genres_movie": return DiscoverLanguage.Text("Filmgenres", "Movie Genres", "Filmgenres");
-                case "upcoming_movie": return DiscoverLanguage.Text("Aankomende films", "Upcoming Movies", "Kommende Filme");
-                case "studios": return DiscoverLanguage.Text("Studio's", "Studios", "Studios");
-                case "popular_tv": return DiscoverLanguage.Text("Populaire series", "Popular Series", "Beliebte Serien");
-                case "genres_tv": return DiscoverLanguage.Text("Seriegenres", "Series Genres", "Seriengenres");
-                case "upcoming_tv": return DiscoverLanguage.Text("Aankomende series", "Upcoming Series", "Kommende Serien");
-                case "networks": return DiscoverLanguage.Text("Netwerken", "Networks", "Sender");
+                case "popular_movie": return DiscoverLanguage.T("api.popular_movies");
+                case "genres_movie": return DiscoverLanguage.T("api.movie_genres");
+                case "upcoming_movie": return DiscoverLanguage.T("api.upcoming_movies");
+                case "studios": return DiscoverLanguage.T("api.studios");
+                case "popular_tv": return DiscoverLanguage.T("api.popular_series");
+                case "genres_tv": return DiscoverLanguage.T("api.series_genres");
+                case "upcoming_tv": return DiscoverLanguage.T("api.upcoming_series");
+                case "networks": return DiscoverLanguage.T("api.networks");
                 default: return key;
             }
         }
@@ -940,10 +935,7 @@ namespace Emby.Plugins.Discover
                 var states = await SafeStates(tv).ConfigureAwait(false);
                 bool hasFiles;
                 if (tv && states.TryGetValue(request.TmdbId, out hasFiles) && hasFiles && ArrClient.IsPartial(request.TmdbId))
-                    res.Lines.Add(DiscoverLanguage.Text(
-                        "\u2713 Gedeeltelijk beschikbaar",
-                        "\u2713 Partially available",
-                        "\u2713 Teilweise verfügbar"));
+                    res.Lines.Add(DiscoverLanguage.T("api.u2713_partially_available"));
                 Tuple<string, DateTime?> next = null;
                 if (tv && Plugin.GetCurrentConfiguration().ShowNextEpisode && x.next_episode_to_air == null)
                 {
@@ -951,7 +943,7 @@ namespace Emby.Plugins.Discover
                     try { next = await NextEpisode.Get(_json, _tmdb, request.TmdbId, CancellationToken.None).ConfigureAwait(false); }
                     catch (Exception ex) { if (ex is OperationCanceledException) throw; }
                     if (next != null)
-                        res.Lines.Add(DiscoverLanguage.Text("Volgende aflevering: ", "Next episode: ", "Nächste Folge: ", "Neste episode: ") + next.Item1 +
+                        res.Lines.Add(DiscoverLanguage.T("api.next_episode") + next.Item1 +
                                       (next.Item2.HasValue ? " \u00B7 " + InfoText.LongDate(next.Item2.Value) : ""));
                 }
                 res.Lines.AddRange(InfoText.Lines(null, x, tv, true));
@@ -1131,7 +1123,7 @@ namespace Emby.Plugins.Discover
                                 .Select(s => new DiscoverSeasonInfo
                                 {
                                     Number = s.season_number,
-                                    Name = string.IsNullOrWhiteSpace(s.name) ? DiscoverLanguage.Text("Seizoen ", "Season ", "Staffel ") + s.season_number : s.name,
+                                    Name = string.IsNullOrWhiteSpace(s.name) ? DiscoverLanguage.T("channel.season") + s.season_number : s.name,
                                     EpisodeCount = s.episode_count,
                                     AirDate = s.air_date,
                                     Upcoming = s.season_number > 0 && (string.IsNullOrEmpty(s.air_date) ||
@@ -1244,7 +1236,7 @@ namespace Emby.Plugins.Discover
                     if (tvdbId <= 0 && RequestHub.NeedsTvdbId)
                         tvdbId = await _arr.ResolveTvdbId(request.TmdbId, ext?.imdb_id, t.name ?? t.title, t.first_air_date, CancellationToken.None).ConfigureAwait(false);
                     if (tvdbId <= 0 && RequestHub.NeedsTvdbId)
-                        throw new InvalidOperationException(DiscoverLanguage.Text("Deze serie staat niet op TheTVDB; Sonarr kan hem daarom niet toevoegen.", "This series is not on TheTVDB, so Sonarr cannot add it.", "Diese Serie ist nicht bei TheTVDB; Sonarr kann sie daher nicht hinzufügen.", "Denne serien finnes ikke på TheTVDB, så Sonarr kan ikke legge den til."));
+                        throw new InvalidOperationException(DiscoverLanguage.T("channel.this_series_is_not_on_thetvdb_so_sonarr"));
                     added = await _arr.AddSeries(request.TmdbId, tvdbId, t.name ?? t.title, request.Seasons, CancellationToken.None, requesterGuid, requesterName).ConfigureAwait(false);
                     requested = t;
                 }
@@ -1262,15 +1254,15 @@ namespace Emby.Plugins.Discover
                 DownloadQueue.Invalidate();
                 string seasonNote = "";
                 if (tv && request.Seasons != null && request.Seasons.Length > 0)
-                    seasonNote = " (" + DiscoverLanguage.Text("seizoen ", "season ", "Staffel ") +
+                    seasonNote = " (" + DiscoverLanguage.T("api.season") +
                         string.Join(", ", request.Seasons.OrderBy(x => x)) + ")";
                 if (request.Is4k && RequestHub.External) seasonNote += " (4K)";
                 res.Message = added
-                    ? DiscoverLanguage.Text("Aangevraagd", "Requested", "Angefordert") + seasonNote +
+                    ? DiscoverLanguage.T("channel.requested_2") + seasonNote +
                         (RequestHub.WaitsForApproval(tv, request.TmdbId)
-                            ? DiscoverLanguage.Text(" (wacht op goedkeuring)", " (awaiting approval)", " (wartet auf Freigabe)")
+                            ? DiscoverLanguage.T("api.awaiting_approval")
                             : "")
-                    : DiscoverLanguage.Text("Stond al in ", "Already in ", "Bereits in ") + ArrClient.ServiceName(tv);
+                    : DiscoverLanguage.T("api.already_in") + ArrClient.ServiceName(tv);
                 _logger.Info("Discover: {0} {1} {2}", tv ? "series" : "movie", request.TmdbId, res.Message);
                 DiscoverDiagnostics.Add((tv ? "serie " : "film ") + request.TmdbId + ": " + res.Message);
                 DiscoverDiagnostics.CountRequest(true);
@@ -1305,7 +1297,7 @@ namespace Emby.Plugins.Discover
         {
             string msg;
             try { msg = CacheCleaner.Run(request != null && request.All); }
-            catch (Exception ex) { msg = DiscoverLanguage.Text("Opruimen mislukt: ", "Cleanup failed: ", "Aufräumen fehlgeschlagen: ") + ex.Message; }
+            catch (Exception ex) { msg = DiscoverLanguage.T("api.cleanup_failed") + ex.Message; }
             return CacheResult(msg);
         }
 
@@ -1319,10 +1311,7 @@ namespace Emby.Plugins.Discover
                 var policy = authInfo != null && authInfo.User != null ? authInfo.User.Policy : null;
                 if (policy == null || !(policy.IsAdministrator || policy.EnableContentDeletion))
                 {
-                    res.Message = DiscoverLanguage.Text(
-                        "Je hebt geen toestemming om te verwijderen.",
-                        "You are not allowed to delete.",
-                        "Du darfst nichts löschen.");
+                    res.Message = DiscoverLanguage.T("api.you_are_not_allowed_to_delete");
                     return res;
                 }
                 bool tv = string.Equals(request.Type, "tv", StringComparison.OrdinalIgnoreCase);
@@ -1333,8 +1322,8 @@ namespace Emby.Plugins.Discover
                 res.Success = true;
                 res.Status = 0;
                 res.Message = removed
-                    ? DiscoverLanguage.Text("Verwijderd uit ", "Removed from ", "Entfernt aus ") + ArrClient.ServiceName(tv)
-                    : DiscoverLanguage.Text("Stond niet meer in ", "Was no longer in ", "War nicht mehr in ") + ArrClient.ServiceName(tv);
+                    ? DiscoverLanguage.T("api.removed_from") + ArrClient.ServiceName(tv)
+                    : DiscoverLanguage.T("api.was_no_longer_in") + ArrClient.ServiceName(tv);
                 _logger.Info("Discover: {0} {1} {2}", tv ? "series" : "movie", request.TmdbId, res.Message);
                 DiscoverDiagnostics.Add((tv ? "serie " : "film ") + request.TmdbId + ": " + res.Message);
             }

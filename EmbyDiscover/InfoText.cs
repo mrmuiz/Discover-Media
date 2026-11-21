@@ -79,14 +79,8 @@ namespace Emby.Plugins.Discover
             if (!TryDate(date, out d)) return null;
             bool future = d.Date > DateTime.UtcNow.Date;
             if (tv)
-                return DiscoverLanguage.Text(
-                    future ? "Eerste aflevering op " : "Gestart op ",
-                    future ? "First episode on " : "Started on ",
-                    future ? "Erste Folge am " : "Gestart am ") + LongDate(d);
-            return DiscoverLanguage.Text(
-                future ? "Verschijnt op " : "Verschenen op ",
-                future ? "Coming on " : "Released on ",
-                future ? "Erscheint am " : "Veröffentlicht am ") + LongDate(d);
+                return future ? DiscoverLanguage.T("info.first_episode_on") : DiscoverLanguage.T("info.started_on") + LongDate(d);
+            return future ? DiscoverLanguage.T("info.coming_on") : DiscoverLanguage.T("info.released_on") + LongDate(d);
         }
 
         private static string Names(List<TmdbNamed> list, int max)
@@ -134,62 +128,50 @@ namespace Emby.Plugins.Discover
             if (tv)
             {
                 if (x.number_of_seasons > 0)
-                    parts.Add(x.number_of_seasons + DiscoverLanguage.Text(
-                        x.number_of_seasons == 1 ? " seizoen" : " seizoenen",
-                        x.number_of_seasons == 1 ? " season" : " seasons",
-                        x.number_of_seasons == 1 ? " Staffel" : " Staffeln"));
+                    parts.Add(x.number_of_seasons + x.number_of_seasons == 1 ? DiscoverLanguage.T("info.seasons_one_suffix") : DiscoverLanguage.T("info.seasons_many_suffix"));
                 if (x.number_of_episodes > 0)
-                    parts.Add(x.number_of_episodes + DiscoverLanguage.Text(
-                        x.number_of_episodes == 1 ? " aflevering" : " afleveringen",
-                        x.number_of_episodes == 1 ? " episode" : " episodes",
-                        x.number_of_episodes == 1 ? " Folge" : " Folgen"));
+                    parts.Add(x.number_of_episodes + x.number_of_episodes == 1 ? DiscoverLanguage.T("info.episodes_one_suffix") : DiscoverLanguage.T("info.episodes_many_suffix"));
                 int ep = x.episode_run_time != null ? x.episode_run_time.FirstOrDefault(m => m > 0) : 0;
-                if (ep > 0) parts.Add(DiscoverLanguage.Text(
-                    "± " + ep + " min per aflevering",
-                    "Approx. " + ep + " min per episode",
-                    "ca. " + ep + " Min. pro Folge"));
+                if (ep > 0) parts.Add(DiscoverLanguage.T("info.min_per_episode", ep));
             }
             else if (x.runtime > 0)
             {
                 parts.Add(x.runtime >= 60
-                    ? DiscoverLanguage.Text(
-                        (x.runtime / 60) + " u " + (x.runtime % 60) + " min",
-                        (x.runtime / 60) + " hr " + (x.runtime % 60) + " min",
-                        (x.runtime / 60) + " Std. " + (x.runtime % 60) + " Min.")
+                    ? DiscoverLanguage.T("info.hours_minutes", x.runtime / 60, x.runtime % 60)
                     : x.runtime + " min");
             }
             if (parts.Count > 0) lines.Add(string.Join(" · ", parts));
 
             DateTime nd;
             if (tv && x.next_episode_to_air != null && TryDate(x.next_episode_to_air.air_date, out nd))
-                lines.Add(DiscoverLanguage.Text("Volgende aflevering: S", "Next episode: S", "Nächste Folge: S") +
+                lines.Add(DiscoverLanguage.T("info.next_episode_s") +
                           x.next_episode_to_air.season_number.ToString("00") +
                           "E" + x.next_episode_to_air.episode_number.ToString("00") +
-                          DiscoverLanguage.Text(" op ", " on ", " am ") + LongDate(nd));
+                          DiscoverLanguage.T("info.on") + LongDate(nd));
 
             var genres = Names(x.genres, 5);
             if (genres != null) lines.Add("Genres: " + genres);
 
             var studio = Names(tv ? x.networks : x.production_companies, 3);
             if (studio != null)
-                lines.Add(DiscoverLanguage.Text(tv ? "Netwerk: " : "Studio: ", tv ? "Network: " : "Studio: ", tv ? "Sender: " : "Studio: ") + studio);
+                lines.Add(tv ? DiscoverLanguage.T("info.network_label") : DiscoverLanguage.T("info.studio_label") + studio);
             if (tv)
             {
                 var by = Names(x.created_by, 3);
-                if (by != null) lines.Add(DiscoverLanguage.Text("Bedenker: ", "Created by: ", "Erschaffen von: ") + by);
+                if (by != null) lines.Add(DiscoverLanguage.T("info.created_by") + by);
             }
             else if (x.credits != null && x.credits.crew != null)
             {
                 var dir = x.credits.crew.Where(c => string.Equals(c.job, "Director", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(c.name))
                     .Select(c => c.name.Trim()).Distinct().Take(2).ToList();
-                if (dir.Count > 0) lines.Add(DiscoverLanguage.Text("Regie: ", "Director: ", "Regie: ") + string.Join(", ", dir));
+                if (dir.Count > 0) lines.Add(DiscoverLanguage.T("info.director") + string.Join(", ", dir));
             }
 
             if (includeRating && x.vote_average > 0 && x.vote_count > 0)
-                lines.Add(DiscoverLanguage.Text("TMDB-beoordeling: ", "TMDB rating: ", "TMDB-Bewertung: ") +
+                lines.Add(DiscoverLanguage.T("info.tmdb_rating") +
                           (int)Math.Round(x.vote_average * 10) + "% (" +
                           x.vote_count.ToString("N0", CultureInfo.InvariantCulture).Replace(",", ".") +
-                          DiscoverLanguage.Text(" stemmen)", " votes)", " Stimmen)"));
+                          DiscoverLanguage.T("info.votes"));
             return lines;
         }
     }

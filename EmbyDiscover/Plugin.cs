@@ -44,6 +44,20 @@ namespace Emby.Plugins.Discover
             Instance = this;
         }
 
+        /// <summary>
+        /// Map waarin een gebruiker eigen taalbestanden kan zetten (es.json, pt-br.json, ...). Die
+        /// overschrijven de meegeleverde teksten en kunnen ook een nieuwe taal toevoegen, zonder build.
+        /// De map wordt niet aangemaakt; hij hoeft er alleen te zijn als iemand hem gebruikt.
+        /// </summary>
+        public string LanguageFolder
+        {
+            get
+            {
+                try { return Path.Combine(_paths.DataPath, "discover-languages"); }
+                catch { return null; }
+            }
+        }
+
         /// <summary>Path of the ffmpeg that Emby itself uses (Settings > Transcoding), when one is set. Read without a compile-time reference.</summary>
         public string EmbyEncoderPath
         {

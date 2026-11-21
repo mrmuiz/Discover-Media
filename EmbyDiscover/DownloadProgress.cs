@@ -757,7 +757,7 @@ namespace Emby.Plugins.Discover
             var row = new DiscoverRow
             {
                 Key = "my_requests",
-                Title = DiscoverLanguage.Text("Mijn aanvragen", "My requests", "Meine Anfragen")
+                Title = DiscoverLanguage.T("queue.my_requests")
             };
             if (!Plugin.GetCurrentConfiguration().ShowMyRequests) return row; // rij uitgezet in de instellingen
             var info = Who();

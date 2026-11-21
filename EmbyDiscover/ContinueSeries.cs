@@ -44,7 +44,7 @@ namespace Emby.Plugins.Discover
             _tmdb = new TmdbClient(json);
         }
 
-        private static string Title() => DiscoverLanguage.Text("Nieuwe seizoenen", "New seasons", "Neue Staffeln");
+        private static string Title() => DiscoverLanguage.T("continue.new_seasons");
 
         public async Task<object> Get(DiscoverContinueRequest request)
         {
@@ -53,7 +53,7 @@ namespace Emby.Plugins.Discover
             if (!pc.ShowNewSeasons || string.IsNullOrWhiteSpace(pc.TmdbApiKey)) return row;
             MediaBrowser.Controller.Entities.User user = null;
             try { var info = _auth.GetAuthorizationInfo(Request); user = info != null ? info.User : null; } catch { }
-            var ck = (user != null ? user.Id.ToString("N") : "-") + "|" + DiscoverLanguage.Text("nl", "en", "de");
+            var ck = (user != null ? user.Id.ToString("N") : "-") + "|" + DiscoverLanguage.T("continue.en");
             lock (Cache)
             {
                 KeyValuePair<DateTime, DiscoverRow> hit;
@@ -126,8 +126,8 @@ namespace Emby.Plugins.Discover
                     DateTime.TryParse(x.last_episode_to_air.air_date, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out airDate);
                     int year;
                     var note = aired == kv.Value + 1
-                        ? DiscoverLanguage.Text("Nieuw: seizoen " + aired + ".", "New: season " + aired + ".", "Neu: Staffel " + aired + ".")
-                        : DiscoverLanguage.Text("Nieuw: seizoen " + (kv.Value + 1) + " t/m " + aired + ".", "New: seasons " + (kv.Value + 1) + " to " + aired + ".", "Neu: Staffeln " + (kv.Value + 1) + " bis " + aired + ".");
+                        ? DiscoverLanguage.T("continue.new_season", aired)
+                        : DiscoverLanguage.T("continue.new_seasons_range", kv.Value + 1, aired);
                     var dto = new DiscoverItemDto
                     {
                         TmdbId = tmdbId,
