@@ -425,7 +425,8 @@
         window.addEventListener('resize', update);
         window.addEventListener('orientationchange', update);
         if (window.visualViewport) { window.visualViewport.addEventListener('resize', update); }
-        setInterval(update, 1000);
+        document.addEventListener('visibilitychange', function () { if (!document.hidden) { update(); } });
+        setInterval(function () { if (!document.hidden) { update(); } }, 1000);
         setTimeout(update, 50);
     })();
     // END bottom-clearance
@@ -2861,7 +2862,6 @@
         syncSessionView();
         window.addEventListener('hashchange', syncSessionView);
         document.addEventListener('viewshow', syncSessionView, true);
-        setInterval(syncSessionView, 700);
         // webOS/Tizen zetten niet altijd "layout-tv": dan zelf een klasse, zodat de tv-stijlen (focusrand, geen pijlen) gelden.
         try { if (rowIsTv() && document.documentElement) { document.documentElement.classList.add('discover-tv'); } } catch (e) { }
         applyRouteState();
@@ -2876,10 +2876,20 @@
             setTimeout(function () { delete lookups[id]; delete askStatus[id]; schedule(); }, 5000);
         }, true);
         document.addEventListener('viewshow', function () { applyRouteState(); syncPlaybackClass(); }, true);
-        setInterval(syncPlaybackClass, 700);
+        setInterval(function () {
+            if (document.hidden) { return; }
+            syncSessionView();
+            syncPlaybackClass();
+        }, 700);
         document.addEventListener('command', onRowCommand, true);
         document.addEventListener('click', function () { if (!isIdleRoute()) { schedule(); } }, true);
-        setInterval(function () { if (!isIdleRoute()) { schedule(); } }, 2000);
+        setInterval(function () { if (!document.hidden && !isIdleRoute()) { schedule(); } }, 2000);
+        document.addEventListener('visibilitychange', function () {
+            if (document.hidden) { return; }
+            syncSessionView();
+            syncPlaybackClass();
+            if (!isIdleRoute()) { schedule(); }
+        });
     }
 
     if (document.body) { start(); } else { document.addEventListener('DOMContentLoaded', start); }

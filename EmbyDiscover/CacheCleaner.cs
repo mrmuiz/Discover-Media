@@ -116,6 +116,9 @@ namespace Emby.Plugins.Discover
                 };
 
                 var keep = new List<FileInfo>();
+                // Maptegels worden nooit verwijderd (Emby verwijst ernaar), maar ze staan wel op schijf,
+                // dus ze tellen mee voor de maximale cachegrootte. Zo klopt de limiet met wat GetStats() meldt.
+                long fixedBytes = 0;
                 var now = DateTime.UtcNow;
                 foreach (var f in cards)
                 {
@@ -126,13 +129,14 @@ namespace Emby.Plugins.Discover
                 {
                     if (all || (!IsFolderTile(f) && cfg.TileRetentionDays > 0 && f.LastWriteTimeUtc < now.AddDays(-cfg.TileRetentionDays))) delete(f);
                     else if (!IsFolderTile(f)) keep.Add(f);
+                    else { try { fixedBytes += f.Length; } catch { } }
                 }
 
                 // Maximale grootte (kaarten en tegels samen): oudste eerst weg.
                 if (!all && cfg.MaxCacheMb > 0)
                 {
                     long max = (long)cfg.MaxCacheMb * 1024 * 1024;
-                    long total = keep.Sum(f => f.Length);
+                    long total = keep.Sum(f => f.Length) + fixedBytes;
                     foreach (var f in keep.OrderBy(x => x.LastWriteTimeUtc))
                     {
                         if (total <= max) break;

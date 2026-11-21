@@ -68,9 +68,9 @@ function dcBottomBarOffset(self) {
             return
         }
         var urls = [ApiClient.getUrl("web/ConfigurationPage", {
-            name: "discoverbuttonjs1437"
+            name: "discoverbuttonjs1438"
         }), ApiClient.getUrl("web/configurationpage", {
-            name: "discoverbuttonjs1437"
+            name: "discoverbuttonjs1438"
         }), ApiClient.getUrl("Plugins/Discover/Script")];
         var n = 0;
         (function next() {

@@ -364,14 +364,16 @@ namespace Emby.Plugins.Discover
                 }
                 else
                 {
-                    var wanted = seasons.Where(n => n > 0).Distinct().OrderBy(n => n).ToList();
-                    if (wanted.Count == 0) { body = "{\"theMovieDbId\":" + tmdbId + ",\"requestAll\":true}"; }
-                    else
+                    // Seizoen 0 (specials) telt mee, anders zou "alleen de specials" de hele serie aanvragen.
+                    var wanted = seasons.Where(n => n >= 0).Distinct().OrderBy(n => n).ToList();
+                    if (wanted.Count == 0)
                     {
-                        // Lege episodes-lijst = het hele seizoen.
-                        var parts = wanted.Select(n => "{\"seasonNumber\":" + n + ",\"episodes\":[]}");
-                        body = "{\"theMovieDbId\":" + tmdbId + ",\"requestAll\":false,\"seasons\":[" + string.Join(",", parts) + "]}";
+                        throw new InvalidOperationException(DiscoverLanguage.Text(
+                            "Geen geldig seizoen gekozen.", "No valid season chosen.", "Keine gültige Staffel gewählt.", "Ingen gyldig sesong valgt."));
                     }
+                    // Lege episodes-lijst = het hele seizoen.
+                    var parts = wanted.Select(n => "{\"seasonNumber\":" + n + ",\"episodes\":[]}");
+                    body = "{\"theMovieDbId\":" + tmdbId + ",\"requestAll\":false,\"seasons\":[" + string.Join(",", parts) + "]}";
                 }
             }
             else

@@ -377,7 +377,7 @@ namespace Emby.Plugins.Discover
             if (configured > 0) return configured;
             var text = await Send(HttpMethod.Get, url, key, "/api/v3/qualityprofile", null, ct).ConfigureAwait(false);
             var list = _json.DeserializeFromString<List<ArrIdDto>>(text);
-            if (list == null || list.Count == 0) throw new InvalidOperationException("Geen quality profile gevonden.");
+            if (list == null || list.Count == 0) throw new InvalidOperationException(DiscoverLanguage.Text("Geen quality profile gevonden.", "No quality profile found.", "Kein Qualitätsprofil gefunden.", "Fant ingen kvalitetsprofil."));
             return list[0].id;
         }
 
@@ -386,7 +386,7 @@ namespace Emby.Plugins.Discover
             if (!string.IsNullOrWhiteSpace(configured)) return configured;
             var text = await Send(HttpMethod.Get, url, key, "/api/v3/rootfolder", null, ct).ConfigureAwait(false);
             var list = _json.DeserializeFromString<List<ArrRootDto>>(text);
-            if (list == null || list.Count == 0) throw new InvalidOperationException("Geen root folder gevonden.");
+            if (list == null || list.Count == 0) throw new InvalidOperationException(DiscoverLanguage.Text("Geen root folder gevonden.", "No root folder found.", "Kein Stammordner gefunden.", "Fant ingen rotmappe."));
             return list[0].path;
         }
 

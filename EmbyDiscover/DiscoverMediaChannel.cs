@@ -1106,14 +1106,14 @@ namespace Emby.Plugins.Discover
 
             bool tv = false;
             int tmdbId = 0;
-            if (id.StartsWith("m:"))
+            if (id.StartsWith("m:") || id.StartsWith("t:"))
             {
-                tmdbId = int.Parse(id.Substring(2));
-            }
-            else if (id.StartsWith("t:"))
-            {
-                tv = true;
-                tmdbId = int.Parse(id.Substring(2));
+                tv = id[0] == 't';
+                // Het id komt van de client, dus een rare waarde mag geen harde fout geven.
+                if (!int.TryParse(id.Substring(2), NumberStyles.Integer, CultureInfo.InvariantCulture, out tmdbId) || tmdbId <= 0)
+                {
+                    throw new InvalidOperationException(DiscoverLanguage.Text("Onbekend Discover-item: ", "Unknown Discover item: ", "Unbekanntes Discover-Element: ") + id);
+                }
             }
             else
             {

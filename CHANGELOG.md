@@ -1,7 +1,17 @@
-## Version 1.4.0.24 (beta)
+## Version 1.4.0.25 (beta)
 
 - New: **Background photo on the Discover page** can be switched off, under *Appearance*. That is the large photo behind the page which changes along with the title you are on. Off gives a calm, plain background and saves loading work on a TV. Emby's own "Backdrops" display setting still applies on top of this, as before.
-- Change: page names bumped (`discoverui1153`, `discoveruijs1456`, `discoverbuttonjs1437`, `discoverconfig1113`, `discoverconfigjs1394`).
+
+**From a full review of the plugin**
+
+- Fix: the **recent activity list on the status page** was still largely Dutch for English and German users. All 214 lines the plugin can write are translated now (the table went from about 50 entries to 218), so the report you copy from the status page is in your own language from top to bottom.
+- Fix: requesting **only the specials (season 0)** through Ombi requested the whole series instead. Season 0 is now sent like any other season, and a request without a valid season gives a clear message instead of quietly requesting everything.
+- Fix: two Radarr/Sonarr error messages ("no quality profile found", "no root folder found") were Dutch for everyone; they follow the Discover language now.
+- Fix: the web client loader line on the status page said `uit` in every language when the loader had not run yet; it now says off/aus like the other values.
+- Fix: a damaged or unexpected channel item id no longer raises a raw parse error but gives a readable "Unknown Discover item" message.
+- Fix: **Maximum cache size** ignored the folder tiles, while the size shown on the status page counted them. The tiles are still never deleted (Emby points at them), but their bytes now count towards the limit, so the setting and the reported size agree.
+- Change: the request button script kept four timers running on every Emby page for the whole session. Two of them are merged, and all of them now pause while the browser tab is in the background, so an idle tab costs nothing. On a TV nothing changes.
+- Change: page names bumped (`discoverui1153`, `discoveruijs1456`, `discoverbuttonjs1438`, `discoverconfig1113`, `discoverconfigjs1394`, `discoverstatusjs1105`).
 
 ## Version 1.4.0.23
 

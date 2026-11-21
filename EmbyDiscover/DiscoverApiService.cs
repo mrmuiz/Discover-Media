@@ -499,7 +499,7 @@ namespace Emby.Plugins.Discover
                 ButtonScript = DiscoverLanguage.Text("OK Emby-pluginresource; open Discover om het script in deze browser te laden.",
                     "OK Emby plugin resource; open Discover to load the script in this browser.",
                     "OK Emby-Pluginressource; öffne Discover, um das Skript in diesem Browser zu laden."),
-                WebInject = DiscoverDiagnostics.WebInject,
+                WebInject = string.IsNullOrEmpty(DiscoverDiagnostics.WebInject) ? DiscoverLanguage.Text("uit", "off", "aus") : DiscoverDiagnostics.WebInject,
                 ScriptBuild = EmbeddedScriptBuild(),
                 DllBuilt = DllBuildTime(),
                 Events = DiscoverDiagnostics.Snapshot()

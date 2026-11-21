@@ -110,7 +110,7 @@ namespace Emby.Plugins.Discover
             {
                 bool removed = RemoveFromIndex(indexPath);
                 try { if (File.Exists(loaderPath)) File.Delete(loaderPath); } catch { }
-                return removed ? DiscoverLanguage.Text("verwijderd uit ", "removed from ", "entfernt aus ") + indexPath : "uit";
+                return removed ? DiscoverLanguage.Text("verwijderd uit ", "removed from ", "entfernt aus ") + indexPath : DiscoverLanguage.Text("uit", "off", "aus");
             }
             try
             {
