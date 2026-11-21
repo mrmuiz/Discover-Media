@@ -55,14 +55,20 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.event.inputs.release_tag || github.ref_name }}
         run: |
-          # An existing release keeps its own setting.
-          PRE=$(gh api "repos/${{ github.repository }}/releases/tags/$TAG" --jq .prerelease 2>/dev/null || true)
-          if [ -z "$PRE" ] || [ "$PRE" = "null" ]; then
-            # The release does not exist yet and this job creates it, so the CHANGELOG decides:
-            # "## Version 1.2.3.4 (beta)" means pre-release. Without that line it is a normal release.
-            VER="${TAG#v}"; VER="${VER#V}"
-            if grep -qiF "## Version $VER (beta)" CHANGELOG.md; then PRE=true; else PRE=false; fi
-            echo "no release for $TAG yet; CHANGELOG says pre-release: $PRE"
+          # The CHANGELOG decides: "## Version 1.2.3.4 (beta)" means pre-release.
+          VER="${TAG#v}"; VER="${VER#V}"
+          if grep -qiF "## Version $VER (beta)" CHANGELOG.md; then
+            PRE=true
+            echo "CHANGELOG marks $VER as beta"
+          else
+            # No entry at all? Then keep the setting of an existing release, else a normal release.
+            if grep -qiF "## Version $VER" CHANGELOG.md; then
+              PRE=false
+              echo "CHANGELOG has $VER without (beta)"
+            else
+              PRE=$(gh api "repos/${{ github.repository }}/releases/tags/$TAG" --jq .prerelease 2>/dev/null || true)
+              echo "no CHANGELOG entry for $VER; existing release says: '$PRE'"
+            fi
           fi
           case "$TAG" in *beta*) PRE=true;; esac
           [ "$PRE" = true ] || PRE=false
