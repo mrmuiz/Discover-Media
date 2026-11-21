@@ -5,7 +5,7 @@
     <title>Discover</title>
 </head>
 <body>
-<div data-role="page" class="page type-interior pluginConfigurationPage discoverConfigPage" data-require="emby-input,emby-button,emby-select,emby-checkbox" data-controller="__plugin/discoverconfigjs1396">
+<div data-role="page" class="page type-interior pluginConfigurationPage discoverConfigPage" data-require="emby-input,emby-button,emby-select,emby-checkbox" data-controller="__plugin/discoverconfigjs1397">
     <style>
         .discoverConfigPage .keyWrap { position: relative; }
         .discoverConfigPage .keyWrap input { padding-right: 2.8em; }
@@ -18,7 +18,9 @@
         .discoverConfigPage .dcTab.active { opacity: 1; font-weight: 600; border-bottom-color: #52b54b; }
         /* Taalkeuze met vlaggen; de echte keuzelijst blijft bestaan maar wordt verborgen. */
         .discoverConfigPage select.dcHiddenSelect { display: none !important; }
-        .discoverConfigPage .dcLangPick { position: relative; max-width: 32em; }
+        .discoverConfigPage .dcLangPick { position: relative; }
+        /* Emby tekent zelf een pijltje naast de keuzelijst; dat zou naast onze knop blijven staan. */
+        .discoverConfigPage .emby-select-wrapper.dcHasPicker .selectArrowContainer { display: none !important; }
         .discoverConfigPage .dcLangBtn,
         .discoverConfigPage .dcLangOpt {
             display: flex; align-items: center; gap: .7em; width: 100%; box-sizing: border-box;

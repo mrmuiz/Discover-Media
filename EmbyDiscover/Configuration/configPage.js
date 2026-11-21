@@ -381,6 +381,7 @@ var FLAGS = {
         paint();
         open(false);
         select.classList.add('dcHiddenSelect');
+        if (select.parentNode && select.parentNode.classList) { select.parentNode.classList.add('dcHasPicker'); }
     }
 
     function applyTexts(view) {

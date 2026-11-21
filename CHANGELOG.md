@@ -1,3 +1,8 @@
+## Version 1.4.0.27 (beta)
+
+- Fix: in the **Plugin language** list, Emby's own dropdown arrow stayed visible next to the new list with flags, and the list did not use the full width of the field. Checked on a live server this time.
+- Change: page names bumped (`discoverconfig1116`, `discoverconfigjs1397`).
+
 ## Version 1.4.0.26 (beta)
 
 - New: the **Plugin language** list now shows a small flag next to every language, drawn by the plugin itself (no emoji, so it also works on Windows, and no images are fetched from outside). If the list cannot be built for any reason, the plain dropdown stays.
