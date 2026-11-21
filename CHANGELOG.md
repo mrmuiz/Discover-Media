@@ -1,4 +1,4 @@
-## Version 1.4.0.24 (beta)
+## Version 1.4.0.24
 
 - New: **Background photo on the Discover page** can be switched off, under *Appearance*. That is the large photo behind the page which changes along with the title you are on. Off gives a calm, plain background and saves loading work on a TV. Emby's own "Backdrops" display setting still applies on top of this, as before.
 
