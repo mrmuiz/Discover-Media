@@ -1,3 +1,9 @@
+## Version 1.4.0.26 (beta)
+
+- New: the **Plugin language** list now shows a small flag next to every language, drawn by the plugin itself (no emoji, so it also works on Windows, and no images are fetched from outside). If the list cannot be built for any reason, the plain dropdown stays.
+- Change: the texts that sit in the settings and status pages as plain HTML are now English instead of Dutch. They are replaced by the chosen language as soon as the page loads, so you only ever saw them for a split second — but Dutch was the wrong thing to fall back to.
+- Change: page names bumped (`discoverconfig1115`, `discoverconfigjs1396`, `discoverstatusjs1107`).
+
 ## Version 1.4.0.25 (beta)
 
 **Discover speaks 15 languages**

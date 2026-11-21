@@ -253,6 +253,38 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         'btnClearAllText'
     ];
 
+    // Kleine vlaggen als inline SVG; geen externe bestanden en geen emoji (die tekent Windows niet).
+var FLAGS = {
+        "auto": "<svg viewBox=\"0 0 24 16\" width=\"24\" height=\"16\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"8\" r=\"6.2\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\"/><path d=\"M12 1.8v12.4M5.8 8h12.4M12 1.8c2.6 2.8 2.6 9.6 0 12.4M12 1.8c-2.6 2.8-2.6 9.6 0 12.4\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.1\"/></svg>",
+        "cs": "<svg viewBox=\"0 0 24 16\" width=\"24\" height=\"16\" aria-hidden=\"true\"><rect width=\"24\" height=\"8\" fill=\"#fff\"/><rect y=\"8\" width=\"24\" height=\"8\" fill=\"#d7141a\"/><path d=\"M0 0l10 8-10 8z\" fill=\"#11457e\"/><rect width=\"24\" height=\"16\" fill=\"none\" stroke=\"rgba(0,0,0,.35)\"/></svg>",
+        "da": "<svg viewBox=\"0 0 24 16\" width=\"24\" height=\"16\" aria-hidden=\"true\"><rect width=\"24\" height=\"16\" fill=\"#c8102e\"/><rect x=\"7\" width=\"3\" height=\"16\" fill=\"#fff\"/><rect y=\"6.5\" width=\"24\" height=\"3\" fill=\"#fff\"/><rect width=\"24\" height=\"16\" fill=\"none\" stroke=\"rgba(0,0,0,.35)\"/></svg>",
+        "de": "<svg viewBox=\"0 0 24 16\" width=\"24\" height=\"16\" aria-hidden=\"true\"><rect width=\"24\" height=\"16\" fill=\"#000\"/><rect y=\"5.33\" width=\"24\" height=\"5.34\" fill=\"#dd0000\"/><rect y=\"10.67\" width=\"24\" height=\"5.33\" fill=\"#ffce00\"/><rect width=\"24\" height=\"16\" fill=\"none\" stroke=\"rgba(0,0,0,.35)\"/></svg>",
+        "en": "<svg viewBox=\"0 0 24 16\" width=\"24\" height=\"16\" aria-hidden=\"true\"><rect width=\"24\" height=\"16\" fill=\"#012169\"/><path d=\"M0 0l24 16M24 0L0 16\" stroke=\"#fff\" stroke-width=\"3.2\"/><path d=\"M0 0l24 16M24 0L0 16\" stroke=\"#c8102e\" stroke-width=\"1.9\"/><path d=\"M12 0v16M0 8h24\" stroke=\"#fff\" stroke-width=\"5.3\"/><path d=\"M12 0v16M0 8h24\" stroke=\"#c8102e\" stroke-width=\"3.2\"/><rect width=\"24\" height=\"16\" fill=\"none\" stroke=\"rgba(0,0,0,.35)\"/></svg>",
+        "es": "<svg viewBox=\"0 0 24 16\" width=\"24\" height=\"16\" aria-hidden=\"true\"><rect width=\"24\" height=\"16\" fill=\"#c60b1e\"/><rect y=\"4\" width=\"24\" height=\"8\" fill=\"#ffc400\"/><rect width=\"24\" height=\"16\" fill=\"none\" stroke=\"rgba(0,0,0,.35)\"/></svg>",
+        "fr": "<svg viewBox=\"0 0 24 16\" width=\"24\" height=\"16\" aria-hidden=\"true\"><rect width=\"8\" height=\"16\" fill=\"#002395\"/><rect x=\"8\" width=\"8\" height=\"16\" fill=\"#fff\"/><rect x=\"16\" width=\"8\" height=\"16\" fill=\"#ed2939\"/><rect width=\"24\" height=\"16\" fill=\"none\" stroke=\"rgba(0,0,0,.35)\"/></svg>",
+        "it": "<svg viewBox=\"0 0 24 16\" width=\"24\" height=\"16\" aria-hidden=\"true\"><rect width=\"8\" height=\"16\" fill=\"#009246\"/><rect x=\"8\" width=\"8\" height=\"16\" fill=\"#fff\"/><rect x=\"16\" width=\"8\" height=\"16\" fill=\"#ce2b37\"/><rect width=\"24\" height=\"16\" fill=\"none\" stroke=\"rgba(0,0,0,.35)\"/></svg>",
+        "ja": "<svg viewBox=\"0 0 24 16\" width=\"24\" height=\"16\" aria-hidden=\"true\"><rect width=\"24\" height=\"16\" fill=\"#fff\"/><circle cx=\"12\" cy=\"8\" r=\"4.6\" fill=\"#bc002d\"/><rect width=\"24\" height=\"16\" fill=\"none\" stroke=\"rgba(0,0,0,.35)\"/></svg>",
+        "nb": "<svg viewBox=\"0 0 24 16\" width=\"24\" height=\"16\" aria-hidden=\"true\"><rect width=\"24\" height=\"16\" fill=\"#ba0c2f\"/><rect x=\"7\" width=\"3\" height=\"16\" fill=\"#fff\"/><rect y=\"6.5\" width=\"24\" height=\"3\" fill=\"#fff\"/><rect x=\"7.8\" width=\"1.4\" height=\"16\" fill=\"#00205b\"/><rect y=\"7.3\" width=\"24\" height=\"1.4\" fill=\"#00205b\"/><rect width=\"24\" height=\"16\" fill=\"none\" stroke=\"rgba(0,0,0,.35)\"/></svg>",
+        "nl": "<svg viewBox=\"0 0 24 16\" width=\"24\" height=\"16\" aria-hidden=\"true\"><rect width=\"24\" height=\"16\" fill=\"#ae1c28\"/><rect y=\"5.33\" width=\"24\" height=\"5.34\" fill=\"#fff\"/><rect y=\"10.67\" width=\"24\" height=\"5.33\" fill=\"#21468b\"/><rect width=\"24\" height=\"16\" fill=\"none\" stroke=\"rgba(0,0,0,.35)\"/></svg>",
+        "pl": "<svg viewBox=\"0 0 24 16\" width=\"24\" height=\"16\" aria-hidden=\"true\"><rect width=\"24\" height=\"8\" fill=\"#fff\"/><rect y=\"8\" width=\"24\" height=\"8\" fill=\"#dc143c\"/><rect width=\"24\" height=\"16\" fill=\"none\" stroke=\"rgba(0,0,0,.35)\"/></svg>",
+        "pt-br": "<svg viewBox=\"0 0 24 16\" width=\"24\" height=\"16\" aria-hidden=\"true\"><rect width=\"24\" height=\"16\" fill=\"#009b3a\"/><path d=\"M12 1.6L22.4 8 12 14.4 1.6 8z\" fill=\"#fedf00\"/><circle cx=\"12\" cy=\"8\" r=\"3.4\" fill=\"#002776\"/><path d=\"M8.9 6.9a7 7 0 016.2 1.5\" stroke=\"#fff\" stroke-width=\".9\" fill=\"none\"/><rect width=\"24\" height=\"16\" fill=\"none\" stroke=\"rgba(0,0,0,.35)\"/></svg>",
+        "ru": "<svg viewBox=\"0 0 24 16\" width=\"24\" height=\"16\" aria-hidden=\"true\"><rect width=\"24\" height=\"16\" fill=\"#fff\"/><rect y=\"5.33\" width=\"24\" height=\"5.34\" fill=\"#0039a6\"/><rect y=\"10.67\" width=\"24\" height=\"5.33\" fill=\"#d52b1e\"/><rect width=\"24\" height=\"16\" fill=\"none\" stroke=\"rgba(0,0,0,.35)\"/></svg>",
+        "sv": "<svg viewBox=\"0 0 24 16\" width=\"24\" height=\"16\" aria-hidden=\"true\"><rect width=\"24\" height=\"16\" fill=\"#006aa7\"/><rect x=\"7\" width=\"3\" height=\"16\" fill=\"#fecc00\"/><rect y=\"6.5\" width=\"24\" height=\"3\" fill=\"#fecc00\"/><rect width=\"24\" height=\"16\" fill=\"none\" stroke=\"rgba(0,0,0,.35)\"/></svg>",
+        "zh-cn": "<svg viewBox=\"0 0 24 16\" width=\"24\" height=\"16\" aria-hidden=\"true\"><rect width=\"24\" height=\"16\" fill=\"#de2910\"/><path d=\"M4 2.3l.86 2.64-2.25-1.63h2.78L3.14 4.94z\" fill=\"#ffde00\"/><circle cx=\"8.4\" cy=\"2\" r=\".8\" fill=\"#ffde00\"/><circle cx=\"10.2\" cy=\"3.9\" r=\".8\" fill=\"#ffde00\"/><circle cx=\"10.2\" cy=\"6.4\" r=\".8\" fill=\"#ffde00\"/><circle cx=\"8.4\" cy=\"8.2\" r=\".8\" fill=\"#ffde00\"/><rect width=\"24\" height=\"16\" fill=\"none\" stroke=\"rgba(0,0,0,.35)\"/></svg>",
+        "zh-tw": "<svg viewBox=\"0 0 24 16\" width=\"24\" height=\"16\" aria-hidden=\"true\"><rect width=\"24\" height=\"16\" fill=\"#fe0000\"/><rect width=\"12\" height=\"8\" fill=\"#000095\"/><circle cx=\"6\" cy=\"4\" r=\"2.6\" fill=\"#fff\"/><circle cx=\"6\" cy=\"4\" r=\"1.7\" fill=\"#000095\"/><circle cx=\"6\" cy=\"4\" r=\"1.2\" fill=\"#fff\"/><rect width=\"24\" height=\"16\" fill=\"none\" stroke=\"rgba(0,0,0,.35)\"/></svg>"
+    };
+
+    function flagFor(code) {
+        if (!code) { return FLAGS.auto; }
+        var key = String(code).toLowerCase().replace('_', '-');
+        if (FLAGS[key]) { return FLAGS[key]; }
+        var base = key.split('-')[0];
+        if (base === 'nn' || base === 'no') { base = 'nb'; }
+        if (base === 'pt') { base = 'pt-br'; }
+        if (base === 'zh') { base = 'zh-cn'; }
+        return FLAGS[base] || '<svg viewBox="0 0 24 16" width="24" height="16" aria-hidden="true"></svg>';
+    }
+
     // De talen komen van de server: wie een eigen taalbestand neerzet, ziet die taal hier vanzelf staan.
     function fillLanguageSelect(view, languages, current) {
         var select = el(view, 'selPluginLanguage');
@@ -266,6 +298,89 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         select.options[0].textContent = t('cfg.follow_emby_server_language');
         select.value = current || 'auto';
         if (!select.value) { select.value = 'auto'; }
+        try { buildLanguagePicker(view, select, languages); } catch (e) { /* dan blijft de gewone lijst staan */ }
+    }
+
+    // Een eigen lijstje met vlaggen. De echte <select> blijft bestaan (verborgen) en houdt de waarde vast,
+    // zodat opslaan en de rest van de pagina niets merken. Mislukt dit, dan blijft de <select> gewoon zichtbaar.
+    function buildLanguagePicker(view, select, languages) {
+        var container = select.parentNode;
+        if (!container) { return; }
+
+        var picker = container.querySelector('.dcLangPick');
+        if (!picker) {
+            picker = document.createElement('div');
+            picker.className = 'dcLangPick';
+            picker.innerHTML = '<button type="button" class="dcLangBtn"></button><div class="dcLangList" hidden></div>';
+            select.parentNode.insertBefore(picker, select.nextSibling);
+        }
+
+        var button = picker.querySelector('.dcLangBtn');
+        var list = picker.querySelector('.dcLangList');
+        var rows = [{ Culture: 'auto', Name: t('cfg.follow_emby_server_language'), Code: 'auto' }].concat(languages);
+
+        function label(culture) {
+            var name = t('cfg.follow_emby_server_language');
+            for (var i = 0; i < languages.length; i++) {
+                if (languages[i].Culture === culture) { name = languages[i].Name || languages[i].Culture; }
+            }
+            var code = culture === 'auto' ? 'auto' : culture;
+            return '<span class="dcFlag">' + flagFor(code) + '</span><span class="dcLangName">' + esc(name) + '</span>';
+        }
+
+        function paint() {
+            button.innerHTML = label(select.value || 'auto') + '<span class="dcLangCaret">\u25be</span>';
+            var html = '';
+            for (var i = 0; i < rows.length; i++) {
+                var value = rows[i].Culture;
+                var on = (select.value || 'auto') === value;
+                html += '<button type="button" class="dcLangOpt' + (on ? ' dcOn' : '') + '" data-value="' + esc(value) + '">' +
+                    '<span class="dcFlag">' + flagFor(rows[i].Code || value) + '</span>' +
+                    '<span class="dcLangName">' + esc(rows[i].Name || value) + '</span></button>';
+            }
+            list.innerHTML = html;
+        }
+
+        function open(yes) {
+            list.hidden = !yes;
+            picker.classList.toggle('dcOpen', !!yes);
+            if (yes) {
+                var on = list.querySelector('.dcOn') || list.querySelector('.dcLangOpt');
+                if (on) { on.focus(); }
+            }
+        }
+
+        if (!picker.dataset.wired) {
+            picker.dataset.wired = '1';
+            button.addEventListener('click', function () { open(list.hidden); });
+            list.addEventListener('click', function (e) {
+                var option = e.target.closest ? e.target.closest('.dcLangOpt') : null;
+                if (!option) { return; }
+                select.value = option.getAttribute('data-value');
+                select.dispatchEvent(new Event('change', { bubbles: true }));
+                paint();
+                open(false);
+                button.focus();
+            });
+            list.addEventListener('keydown', function (e) {
+                var options = Array.prototype.slice.call(list.querySelectorAll('.dcLangOpt'));
+                var at = options.indexOf(document.activeElement);
+                if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    var next = options[at + (e.key === 'ArrowDown' ? 1 : -1)];
+                    if (next) { next.focus(); }
+                } else if (e.key === 'Escape') {
+                    open(false); button.focus();
+                }
+            });
+            document.addEventListener('click', function (e) {
+                if (!picker.contains(e.target) && !list.hidden) { open(false); }
+            }, true);
+        }
+
+        paint();
+        open(false);
+        select.classList.add('dcHiddenSelect');
     }
 
     function applyTexts(view) {
