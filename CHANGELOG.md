@@ -1,3 +1,8 @@
+## Version 1.4.0.28 (beta)
+
+- Fix: on Emby's light theme the language list was a dark panel with dark text, so it could not be read. The list now measures the background of the page and follows the theme. Checked on a live server, on the light theme.
+- Change: page names bumped (`discoverconfig1117`, `discoverconfigjs1398`).
+
 ## Version 1.4.0.27 (beta)
 
 - Fix: in the **Plugin language** list, Emby's own dropdown arrow stayed visible next to the new list with flags, and the list did not use the full width of the field. Checked on a live server this time.

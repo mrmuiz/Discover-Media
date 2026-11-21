@@ -5,7 +5,7 @@
     <title>Discover</title>
 </head>
 <body>
-<div data-role="page" class="page type-interior pluginConfigurationPage discoverConfigPage" data-require="emby-input,emby-button,emby-select,emby-checkbox" data-controller="__plugin/discoverconfigjs1397">
+<div data-role="page" class="page type-interior pluginConfigurationPage discoverConfigPage" data-require="emby-input,emby-button,emby-select,emby-checkbox" data-controller="__plugin/discoverconfigjs1398">
     <style>
         .discoverConfigPage .keyWrap { position: relative; }
         .discoverConfigPage .keyWrap input { padding-right: 2.8em; }
@@ -39,6 +39,14 @@
             max-height: 19em; overflow-y: auto; padding: .25em; border-radius: .25em;
             background: #1b1f24; border: 1px solid rgba(255, 255, 255, .25); box-shadow: 0 .6em 1.6em rgba(0, 0, 0, .55);
         }
+        /* Licht Emby-thema: zwarte tekst hoort niet op een donkere lijst te staan. */
+        .discoverConfigPage .dcLightUi .dcLangBtn,
+        .discoverConfigPage .dcLightUi .dcLangOpt { background: rgba(0, 0, 0, .04); border-color: rgba(0, 0, 0, .28); }
+        .discoverConfigPage .dcLightUi .dcLangOpt { border: 0; background: transparent; }
+        .discoverConfigPage .dcLightUi .dcLangBtn:hover,
+        .discoverConfigPage .dcLightUi .dcLangOpt:hover { background: rgba(0, 0, 0, .09); }
+        .discoverConfigPage .dcLightUi .dcLangOpt.dcOn { background: rgba(0, 0, 0, .12); }
+        .discoverConfigPage .dcLightUi .dcLangList { border-color: rgba(0, 0, 0, .28); box-shadow: 0 .6em 1.6em rgba(0, 0, 0, .25); }
         .discoverConfigPage .dcLangOpt { border: 0; border-radius: .2em; background: transparent; }
         .discoverConfigPage .dcLangOpt.dcOn { background: rgba(255, 255, 255, .12); font-weight: 600; }
         .discoverConfigPage .dcPanel { display: none; }

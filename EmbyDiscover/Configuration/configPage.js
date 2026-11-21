@@ -274,6 +274,22 @@ var FLAGS = {
         "zh-tw": "<svg viewBox=\"0 0 24 16\" width=\"24\" height=\"16\" aria-hidden=\"true\"><rect width=\"24\" height=\"16\" fill=\"#fe0000\"/><rect width=\"12\" height=\"8\" fill=\"#000095\"/><circle cx=\"6\" cy=\"4\" r=\"2.6\" fill=\"#fff\"/><circle cx=\"6\" cy=\"4\" r=\"1.7\" fill=\"#000095\"/><circle cx=\"6\" cy=\"4\" r=\"1.2\" fill=\"#fff\"/><rect width=\"24\" height=\"16\" fill=\"none\" stroke=\"rgba(0,0,0,.35)\"/></svg>"
     };
 
+    // Emby heeft een licht en een donker thema. Meet de achtergrond van de pagina en pas de lijst aan,
+    // anders staat er donkere tekst op een donkere lijst (of andersom).
+    function paintTheme(picker, list) {
+        var node = picker.parentNode, bg = '';
+        while (node && node.nodeType === 1) {
+            var c = window.getComputedStyle(node).backgroundColor;
+            if (c && c !== 'transparent' && c.replace(/\s/g, '') !== 'rgba(0,0,0,0)') { bg = c; break; }
+            node = node.parentNode;
+        }
+        if (!bg) { bg = window.getComputedStyle(document.body).backgroundColor || '#ffffff'; }
+        var rgb = (bg.match(/\d+/g) || [255, 255, 255]).map(Number);
+        var light = (0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2]) / 255 > 0.55;
+        picker.classList.toggle('dcLightUi', light);
+        list.style.backgroundColor = bg;
+    }
+
     function flagFor(code) {
         if (!code) { return FLAGS.auto; }
         var key = String(code).toLowerCase().replace('_', '-');
@@ -378,6 +394,7 @@ var FLAGS = {
             }, true);
         }
 
+        paintTheme(picker, list);
         paint();
         open(false);
         select.classList.add('dcHiddenSelect');
