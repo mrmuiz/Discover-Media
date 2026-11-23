@@ -1,4 +1,4 @@
-## Version 1.4.2.1 (beta)
+## Version 1.4.2.1
 
 **Security: in Seerr mode a request from an unmapped user was sent as the administrator.**
 
