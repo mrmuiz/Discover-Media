@@ -37,6 +37,9 @@ jobs:
       - name: Check that every page name is registered
         run: python3 tools/check-pagenames.py
 
+      - name: Check that the browser script version matches the plugin
+        run: python3 tools/check-jsversion.py
+
       - name: Collect plugin DLL
         run: |
           mkdir -p artifacts

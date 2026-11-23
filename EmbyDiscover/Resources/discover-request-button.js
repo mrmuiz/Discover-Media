@@ -3,14 +3,18 @@
  * Verbergt ook "Media informatie" op Discover/Trailers-detailpagina's. */
 (function () {
     'use strict';
-    if (window.__discoverRequestButtonVersion === '1.4.1.3') { return; }
+    // Versie op één plek. tools/check-jsversion.py bewaakt dat DC_VER gelijk is aan <Version> in de csproj,
+    // zodat dit nummer (dat hieronder ook het herinjectie-slot is) nooit achterloopt op een release.
+    var DC_VER = '1.4.2.0';
+    var DC_DATE = '2026-11-23';
+    if (window.__discoverRequestButtonVersion === DC_VER) { return; }
     if (window.__discoverRequestButton) {
         console.warn('[Discover] oudere knopcode is nog actief; vernieuw de webclient om dubbele handlers te voorkomen.');
         return;
     }
-    var DC_BUILD = '1.4.1.3 2026-11-23';
+    var DC_BUILD = DC_VER + ' ' + DC_DATE;
     window.__discoverRequestButton = true;
-    window.__discoverRequestButtonVersion = '1.4.1.3';
+    window.__discoverRequestButtonVersion = DC_VER;
 
     // Themakleur (instelling "Weergave"): CSS-variabelen op <html>, gebruikt door de Discover-pagina en de rijen en
     // knoppen op Emby's pagina's. Laatste waarde onthouden, zodat de kleur bij het openen niet eerst geel flitst.
@@ -51,7 +55,7 @@
         })();
     }
     window.__discoverRequestButtonBuild = DC_BUILD;
-    console.log('[Discover] request-button script loaded v1.4.1.3 build ' + DC_BUILD);
+    console.log('[Discover] request-button script loaded v' + DC_VER + ' build ' + DC_BUILD);
 
     var diagnosticsEnabled = false;
     var lastDiagnostic = null;
@@ -78,7 +82,7 @@
                     'color:#ffd666;background:rgba(0,0,0,.7);padding:4px 8px;border-radius:4px;pointer-events:none;white-space:pre-wrap;';
                 document.body.appendChild(el);
             }
-            el.textContent = 'Discover v1.4.1.3 | ' + msg;
+            el.textContent = 'Discover v' + DC_VER + ' | ' + msg;
         } catch (e) { }
     }
     var isAdmin = false;
@@ -332,7 +336,7 @@
             var bcs = btn ? getComputedStyle(btn) : null;
             var vv = window.visualViewport;
             el.textContent = [
-                'Discover v1.4.1.3 build ' + DC_BUILD + ' (' + (window.__discoverRequestButtonBuild || '?') + ')',
+                'Discover v' + DC_VER + ' build ' + DC_BUILD + ' (' + (window.__discoverRequestButtonBuild || '?') + ')',
                 'item page: ' + (document.querySelector('.itemDetailPage') ? 'ja' : 'nee') + ' body=' + document.body.className.split(/\s+/).filter(function (c) { return /^(dc|discover)/.test(c); }).join(' '),
                 'bar: ' + (info.bar ? describe(info.bar) + ' ' + rectText(info.bar) : 'niet gevonden') + ' h=' + info.measured,
                 'mode=' + info.mode + ' --dc-bottom-clear=' + (document.documentElement.style.getPropertyValue('--dc-bottom-clear') || '(leeg)'),
