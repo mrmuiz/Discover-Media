@@ -172,18 +172,9 @@ namespace Emby.Plugins.Discover
             catch { return format; }
         }
 
-        /// <summary>
-        /// Oude vorm met de tekst per taal in de code. Blijft bestaan voor losse gevallen, maar nieuwe
-        /// teksten horen in de taalbestanden via T("sleutel").
-        /// </summary>
-        public static string Text(string dutch, string english, string german = null, string norwegian = null)
-        {
-            var code = Code;
-            if (code == "nl") { return dutch; }
-            if (code == "de") { return german ?? english; }
-            if (code == "nb") { return norwegian ?? english; }
-            return english;
-        }
+        // De oude vorm Text(nl, en, de, nb) met de tekst per taal in de code staat hier niet meer:
+        // die gaf de twaalf andere talen altijd Engels. Elke tekst hoort in de taalbestanden,
+        // via T("sleutel"), zodat hij te vertalen is.
 
         public static string FromEmbyCulture(string culture) { return CultureOf(ResolveCode(culture)); }
     }
