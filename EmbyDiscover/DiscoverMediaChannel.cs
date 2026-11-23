@@ -180,12 +180,12 @@ namespace Emby.Plugins.Discover
                 if (id == AskRoot) res = await RequestRoot(ct).ConfigureAwait(false);
                 else if (id.StartsWith(AskTvItemPrefix)) { var two = await RequestItems(id.Substring(AskTvItemPrefix.Length), ct, query.UserId != 0).ConfigureAwait(false); res = new ChannelItemResult { Items = two, TotalRecordCount = two.Count }; }
                 else if (id.StartsWith(AskItemPrefix)) { var two = await RequestItems(id.Substring(AskItemPrefix.Length), ct, query.UserId != 0).ConfigureAwait(false); res = new ChannelItemResult { Items = two, TotalRecordCount = two.Count }; }
-                else if (id.StartsWith(AskSeasonFolderPrefix)) res = await RequestSeasons(id.Substring(AskSeasonFolderPrefix.Length), ct).ConfigureAwait(false);
-                else if (id.StartsWith(LegacyAskSeasonFolderPrefix5)) res = await RequestSeasons(id.Substring(LegacyAskSeasonFolderPrefix5.Length), ct).ConfigureAwait(false);
-                else if (id.StartsWith(LegacyAskSeasonFolderPrefix4)) res = await RequestSeasons(id.Substring(LegacyAskSeasonFolderPrefix4.Length), ct).ConfigureAwait(false);
-                else if (id.StartsWith(LegacyAskSeasonFolderPrefix3)) res = await RequestSeasons(id.Substring(LegacyAskSeasonFolderPrefix3.Length), ct).ConfigureAwait(false);
-                else if (id.StartsWith(LegacyAskSeasonFolderPrefix2)) res = await RequestSeasons(id.Substring(LegacyAskSeasonFolderPrefix2.Length), ct).ConfigureAwait(false);
-                else if (id.StartsWith(LegacyAskSeasonFolderPrefix)) res = await RequestSeasons(id.Substring(LegacyAskSeasonFolderPrefix.Length), ct).ConfigureAwait(false);
+                else if (id.StartsWith(AskSeasonFolderPrefix)) res = await RequestSeasons(id.Substring(AskSeasonFolderPrefix.Length), ct, query.UserId != 0).ConfigureAwait(false);
+                else if (id.StartsWith(LegacyAskSeasonFolderPrefix5)) res = await RequestSeasons(id.Substring(LegacyAskSeasonFolderPrefix5.Length), ct, query.UserId != 0).ConfigureAwait(false);
+                else if (id.StartsWith(LegacyAskSeasonFolderPrefix4)) res = await RequestSeasons(id.Substring(LegacyAskSeasonFolderPrefix4.Length), ct, query.UserId != 0).ConfigureAwait(false);
+                else if (id.StartsWith(LegacyAskSeasonFolderPrefix3)) res = await RequestSeasons(id.Substring(LegacyAskSeasonFolderPrefix3.Length), ct, query.UserId != 0).ConfigureAwait(false);
+                else if (id.StartsWith(LegacyAskSeasonFolderPrefix2)) res = await RequestSeasons(id.Substring(LegacyAskSeasonFolderPrefix2.Length), ct, query.UserId != 0).ConfigureAwait(false);
+                else if (id.StartsWith(LegacyAskSeasonFolderPrefix)) res = await RequestSeasons(id.Substring(LegacyAskSeasonFolderPrefix.Length), ct, query.UserId != 0).ConfigureAwait(false);
                 else if (id.StartsWith(AskGenrePrefix)) res = await GenreTiles(id.Substring(AskGenrePrefix.Length) == "tv", ct).ConfigureAwait(false);
                 else if (id == AskStudioRoot) res = await StudioTiles(ct).ConfigureAwait(false);
                 else if (id.StartsWith(AskListPrefix)) res = await GetList(id.Substring(AskListPrefix.Length), query, ct, true).ConfigureAwait(false);
@@ -384,8 +384,9 @@ namespace Emby.Plugins.Discover
                 : new List<ChannelItemInfo> { item };
         }
 
-        private async Task<ChannelItemResult> RequestSeasons(string rest, CancellationToken ct)
+        private async Task<ChannelItemResult> RequestSeasons(string rest, CancellationToken ct, bool userBrowsing = false)
         {
+            // Emby's background refresh (no user) opens every series: then only cheap data (no ffmpeg tiles, logos or per-season lookups).
             rest = StripTileMark(rest);
             var parts = rest.Split(':');
             int tmdbId;
@@ -429,7 +430,7 @@ namespace Emby.Plugins.Discover
                 var allSub = seasonCount == 1 ? DiscoverLanguage.T("channel.seasons_one") : DiscoverLanguage.T("channel.seasons_many", seasonCount);
                 string allTile = null;
                 bool allTileNew = false;
-                if (Plugin.GetCurrentConfiguration().TileTextImages)
+                if (userBrowsing && Plugin.GetCurrentConfiguration().TileTextImages)
                 {
                     string logoPath = null;
                     try { logoPath = await _tmdb.GetTitleLogo(true, tmdbId, ct).ConfigureAwait(false); } catch (Exception ex) { if (ex is OperationCanceledException) throw; }
@@ -453,7 +454,7 @@ namespace Emby.Plugins.Discover
                 // Seriesinfo zoals op de trailerpagina (ook zichtbaar in de tv- en mobiele apps).
                 try
                 {
-                    var seriesExtra = await SafeExtra(true, tmdbId, ct).ConfigureAwait(false);
+                    var seriesExtra = userBrowsing ? await SafeExtra(true, tmdbId, ct).ConfigureAwait(false) : null;
                     var seriesLines = InfoText.Lines(detail, seriesExtra, true, false);
                     if (seriesLines.Count > 0) allOverview += "\n\n" + string.Join("\n", seriesLines);
                 }
@@ -484,7 +485,7 @@ namespace Emby.Plugins.Discover
                 bool hasFiles = hasSonarrSeason && sonarrSeason.statistics != null &&
                     sonarrSeason.statistics.episodeFileCount > 0;
                 bool showHourglass = hasSonarrSeason && (sonarrSeason.monitored || hasFiles);
-                if (showHourglass && string.IsNullOrWhiteSpace(season.overview))
+                if (userBrowsing && showHourglass && string.IsNullOrWhiteSpace(season.overview))
                 {
                     try
                     {
@@ -498,7 +499,7 @@ namespace Emby.Plugins.Discover
                     }
                 }
                 // De seizoenslijst van de serie mist soms een poster die het seizoen zelf wel heeft: dan het seizoen rechtstreeks opvragen.
-                if (string.IsNullOrWhiteSpace(season.poster_path))
+                if (userBrowsing && string.IsNullOrWhiteSpace(season.poster_path))
                 {
                     try
                     {
@@ -555,7 +556,7 @@ namespace Emby.Plugins.Discover
 
                 // De bevestigingskaart van dit seizoen alvast maken (op de achtergrond): zo staat de kaart met poster en
                 // status klaar zodra je op Afspelen drukt, ook voor een seizoen dat nog nooit is aangevraagd.
-                PrewarmCard(detail, null, true, sonarrSeasons.Count > 0, seasonNumber, season.poster_path);
+                if (userBrowsing) PrewarmCard(detail, null, true, sonarrSeasons.Count > 0, seasonNumber, season.poster_path);
 
                 items.Add(new ChannelItemInfo
                 {
