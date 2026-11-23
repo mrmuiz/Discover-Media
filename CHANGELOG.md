@@ -1,3 +1,40 @@
+## Version 1.4.2.0
+
+The first stable release since 1.4.1.1. It gathers the work of the three betas that followed (1.4.1.2, 1.4.1.3 and 1.4.1.4); each of them is described in full further down. The short version:
+
+**Discover speaks the viewer's language**
+
+Since 1.4.1.0 the channel's item names are translated, but the browser script still recognised Discover's own items by their Dutch, German or English name. In the other thirteen languages it therefore no longer recognised them: the Play button was not renamed, the ✓/⏳ status was missing, the duplicate request tile stayed visible and the season card did not load. In the worst case requesting a season could add a completely unrelated film to Radarr. The server now tells the browser what kind of item it is, derived from the id the channel handed out, so no language can break it.
+
+On top of that, five tables of text still lived in the code with a column for Dutch, English, German and Norwegian: the labels of the info block in the request popup, the names of languages and countries, the status words of a series and a film, six qBittorrent messages, and the names of genres. Those are in the language files now, translated into all sixteen languages. Genre names follow TMDB in the viewer's language, release dates and age ratings come from the country that belongs to the chosen language instead of always the United States, and dates are written the way that language writes them.
+
+**Four crashes in the browser**
+
+A local variable named `t` shadowed the translation function in four places, which threw a `TypeError` every time that code ran: the button kept saying "Requesting…", "Available"/"Requested" never appeared, the request badges in an actor's filmography were missing, and the "+" buttons on a film collection did nothing.
+
+**Two ways the plugin could damage something**
+
+- Writing the web client's `index.html` deleted the file first and then moved the new one into place. If that move failed, the web client was gone for every user. There is a one-time backup now (`index.html.discover-bak`) and an atomic replace, with the backup restored if anything still goes wrong.
+- Title folders in the channel were left empty after Emby's "Refresh Internet Channels", because the plugin threw an error for every folder during that background crawl and Emby stored the empty result.
+
+**Private things stay private**
+
+The settings page and the diagnostics report could be opened by anyone who was signed in and knew the address. Both now check for an administrator. `/Discover/Status` likewise handed the activity log (which contains user names), server paths and counters to every logged-in user; those fields are filled for administrators only. Emby itself never handed the stored keys to a non-administrator, so no key was ever readable — but the pages should not have been building those screens at all.
+
+**Much less load with many users**
+
+The loader asked the server something every three seconds on every page of every user, IMDb scores were fetched one request per poster, and OMDb, MDBList and TMDB detail lookups ran once per viewer instead of once per title. All of that is now shared, batched or slowed down to a sane interval, every memory cache has an upper bound, and the page observer no longer walks the whole document on every change — which is what made the remote lag on a TV.
+
+**Requests**
+
+- Pressing Play twice sent two requests and counted both against the limit; the same title from the same user is one request for half a minute. A playback event without a user went past both the block list and the limit, and now falls back to the user of the session.
+- A request limit above 50 silently did nothing; it now works up to 500.
+- When fetching the Seerr user list failed, an empty list was cached for ten minutes, and every request in that window was sent as the owner of the API key, bypassing Seerr's own limits and approval. A failed fetch is no longer cached.
+- A season without a description stayed empty unless Sonarr already knew it.
+- Every Sonarr call was made twice on Sonarr v4, because the plugin tried Sonarr v5's `/api/v5` before each v3 call. The answer is remembered now.
+
+Everything else, including the page name changes, is listed under the three beta entries below.
+
 ## Version 1.4.1.4 (beta)
 
 - **The settings page and the diagnostics report are for the server owner only.** A plugin page can be opened by anyone who is signed in and knows the address, and both pages then rendered what only the owner should see: the settings hold the TMDB, Radarr, Sonarr, Seerr and MDBList keys plus the list of users, and the report names the Emby version, the operating system, which services are configured and who can see the channel. Both pages now check for an administrator and show a single line instead. Emby refuses to hand the stored settings themselves to anyone but an administrator, so the keys were never actually readable — but the page should not be building that screen at all, and the report was assembling genuinely private information.
