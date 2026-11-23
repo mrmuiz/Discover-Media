@@ -679,6 +679,7 @@
   "sab.enter_an_api_key_first": "Zuerst einen API-Schlüssel eingeben.",
   "sab.sabnzbd_download_failed": "SABnzbd: Download fehlgeschlagen",
   "sab.sabnzbd_gave_no_valid_response_check_the": "SABnzbd lieferte keine gültige Antwort. URL und API-Schlüssel prüfen.",
+  "seerr.account_not_linked": "Dein Konto ist mit keinem Benutzer in Seerr verknüpft, daher kann diese Anfrage nicht für dich gestellt werden. Bitte den Administrator, dein Konto in Seerr zu verknüpfen.",
   "seerr.seerr_is_not_configured": "Seerr ist nicht eingerichtet.",
   "seerr.seerr_not_reachable_at": "Seerr nicht erreichbar unter ",
   "seerr.seerr_rejects_the_api_key": "Seerr lehnt den API-Schlüssel ab (",

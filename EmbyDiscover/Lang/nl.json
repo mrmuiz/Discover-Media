@@ -684,6 +684,7 @@
   "sab.enter_an_api_key_first": "Vul eerst een API key in.",
   "sab.sabnzbd_download_failed": "SABnzbd: download mislukt",
   "sab.sabnzbd_gave_no_valid_response_check_the": "SABnzbd gaf geen geldig antwoord. Controleer de URL en de API key.",
+  "seerr.account_not_linked": "Je account is niet gekoppeld aan een gebruiker in Seerr, dus deze aanvraag kan niet voor je worden gedaan. Vraag de beheerder om je account in Seerr te koppelen.",
   "seerr.seerr_is_not_configured": "Seerr is niet ingesteld.",
   "seerr.seerr_not_reachable_at": "Seerr niet bereikbaar op ",
   "seerr.seerr_rejects_the_api_key": "Seerr weigert de API key (",

@@ -465,6 +465,7 @@
   "sab.enter_an_api_key_first": "先に API キーを入力してください。",
   "sab.sabnzbd_download_failed": "SABnzbd: ダウンロードに失敗しました",
   "sab.sabnzbd_gave_no_valid_response_check_the": "SABnzbd から有効な応答がありません。URL と API キーを確認してください。",
+  "seerr.account_not_linked": "あなたのアカウントは Seerr のユーザーに紐付けられていないため、このリクエストを代わりに送信できません。管理者に Seerr でのアカウント連携を依頼してください。",
   "seerr.seerr_is_not_configured": "Seerr が設定されていません。",
   "seerr.seerr_not_reachable_at": "Seerr に接続できません: ",
   "seerr.seerr_rejects_the_api_key": "Seerr が API キーを拒否しました（",

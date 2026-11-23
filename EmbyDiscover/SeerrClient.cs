@@ -347,7 +347,7 @@ namespace Emby.Plugins.Discover
         // ---------- Aanvragen ----------
 
         /// <returns>true = aangevraagd, false = stond al aangevraagd / niets nieuws om aan te vragen.</returns>
-        internal static async Task<bool> Request(IJsonSerializer json, bool tv, int tmdbId, int tvdbId, int[] seasons, object embyUserId, CancellationToken ct, bool is4k = false)
+        internal static async Task<bool> Request(IJsonSerializer json, bool tv, int tmdbId, int tvdbId, int[] seasons, object embyUserId, CancellationToken ct, bool is4k = false, bool allowOwnerFallback = false)
         {
             if (!Configured) throw new InvalidOperationException(DiscoverLanguage.T("seerr.seerr_is_not_configured"));
             string body;
@@ -364,6 +364,13 @@ namespace Emby.Plugins.Discover
             }
 
             var asUser = await MapUser(json, embyUserId, ct).ConfigureAwait(false);
+            if (!asUser.HasValue && !allowOwnerFallback)
+            {
+                // Geen Seerr-gebruiker gekoppeld: de aanvraag NIET op naam van de API-sleutel (de eigenaar) laten
+                // lopen. Dat zou Seerr's goedkeuring, de limiet per gebruiker en de 4K-rechten omzeilen. Alleen een
+                // beheerder (die zelf de eigenaar van de sleutel is) mag op die terugval aanvragen.
+                throw new InvalidOperationException(DiscoverLanguage.T("seerr.account_not_linked"));
+            }
             var r = await Call(HttpMethod.Post, "/request", body, ct, asUser).ConfigureAwait(false);
             if (r.Code == 409 || r.Code == 202)
             {

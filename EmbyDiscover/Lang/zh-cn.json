@@ -465,6 +465,7 @@
   "sab.enter_an_api_key_first": "请先填写 API 密钥。",
   "sab.sabnzbd_download_failed": "SABnzbd：下载失败",
   "sab.sabnzbd_gave_no_valid_response_check_the": "SABnzbd 未返回有效响应。请检查网址和 API 密钥。",
+  "seerr.account_not_linked": "你的账号未关联到 Seerr 中的用户，因此无法为你发起此请求。请让管理员在 Seerr 中关联你的账号。",
   "seerr.seerr_is_not_configured": "尚未配置 Seerr。",
   "seerr.seerr_not_reachable_at": "无法连接 Seerr： ",
   "seerr.seerr_rejects_the_api_key": "Seerr 拒绝该 API 密钥（",

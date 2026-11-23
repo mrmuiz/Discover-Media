@@ -168,7 +168,7 @@ namespace Emby.Plugins.Discover
                 {
                     try
                     {
-                        var msg = await DiscoverMediaChannel.RequestTitle(_tmdb, _arr, tv, tmdbId, seasons, CancellationToken.None, known ? userId : null, user != null ? user.Name : null).ConfigureAwait(false);
+                        var msg = await DiscoverMediaChannel.RequestTitle(_tmdb, _arr, tv, tmdbId, seasons, CancellationToken.None, known ? userId : null, user != null ? user.Name : null, isAdmin).ConfigureAwait(false);
                         DiscoverDiagnostics.Add("log.play.aanvraag_via_afspelen", ext, msg);
                         if (known)
                         {

@@ -684,6 +684,7 @@
   "sab.enter_an_api_key_first": "Enter an API key first.",
   "sab.sabnzbd_download_failed": "SABnzbd: download failed",
   "sab.sabnzbd_gave_no_valid_response_check_the": "SABnzbd gave no valid response. Check the URL and the API key.",
+  "seerr.account_not_linked": "Your account isn't linked to a user in Seerr, so this request can't be made for you. Ask the administrator to link your account in Seerr.",
   "seerr.seerr_is_not_configured": "Seerr is not configured.",
   "seerr.seerr_not_reachable_at": "Seerr not reachable at ",
   "seerr.seerr_rejects_the_api_key": "Seerr rejects the API key (",

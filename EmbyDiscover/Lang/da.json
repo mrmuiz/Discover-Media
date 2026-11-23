@@ -465,6 +465,7 @@
   "sab.enter_an_api_key_first": "Indtast først en API-nøgle.",
   "sab.sabnzbd_download_failed": "SABnzbd: download mislykkedes",
   "sab.sabnzbd_gave_no_valid_response_check_the": "SABnzbd gav ikke et gyldigt svar. Kontrollér URL'en og API-nøglen.",
+  "seerr.account_not_linked": "Din konto er ikke knyttet til en bruger i Seerr, så denne anmodning kan ikke sendes for dig. Bed administratoren om at knytte din konto i Seerr.",
   "seerr.seerr_is_not_configured": "Seerr er ikke konfigureret.",
   "seerr.seerr_not_reachable_at": "Seerr kan ikke nås på ",
   "seerr.seerr_rejects_the_api_key": "Seerr afviser API-nøglen (",

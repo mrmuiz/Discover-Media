@@ -1308,7 +1308,7 @@ namespace Emby.Plugins.Discover
 
 
         /// <summary>Vraagt een titel aan bij Radarr/Sonarr; null seasons behoudt de bestaande all-seasons-aanvraag.</summary>
-        internal static async Task<string> RequestTitle(TmdbClient tmdb, ArrClient arr, bool tv, int tmdbId, int[] seasons, CancellationToken ct, object embyUserId = null, string alias = null)
+        internal static async Task<string> RequestTitle(TmdbClient tmdb, ArrClient arr, bool tv, int tmdbId, int[] seasons, CancellationToken ct, object embyUserId = null, string alias = null, bool allowOwnerFallback = false)
         {
             bool added;
             if (tv)
@@ -1320,12 +1320,12 @@ namespace Emby.Plugins.Discover
                     tvdbId = await arr.ResolveTvdbId(tmdbId, ext?.imdb_id, t.name ?? t.title, t.first_air_date, ct).ConfigureAwait(false);
                 if (tvdbId <= 0 && RequestHub.NeedsTvdbId)
                     throw new InvalidOperationException(DiscoverLanguage.T("channel.this_series_is_not_on_thetvdb_so_sonarr"));
-                added = await arr.AddSeries(tmdbId, tvdbId, t.name ?? t.title, seasons, ct, embyUserId, alias).ConfigureAwait(false);
+                added = await arr.AddSeries(tmdbId, tvdbId, t.name ?? t.title, seasons, ct, embyUserId, alias, allowOwnerFallback).ConfigureAwait(false);
             }
             else
             {
                 var m = await tmdb.GetMovie(tmdbId, ct).ConfigureAwait(false);
-                added = await arr.AddMovie(tmdbId, m.title ?? m.name, YearOf(m.release_date) ?? 0, ct, embyUserId, null, alias).ConfigureAwait(false);
+                added = await arr.AddMovie(tmdbId, m.title ?? m.name, YearOf(m.release_date) ?? 0, ct, embyUserId, null, alias, allowOwnerFallback).ConfigureAwait(false);
             }
             DiscoverDiagnostics.CountRequest(true);
             return added

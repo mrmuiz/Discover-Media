@@ -465,6 +465,7 @@
   "sab.enter_an_api_key_first": "Saisissez d'abord une clé d'API.",
   "sab.sabnzbd_download_failed": "SABnzbd : échec du téléchargement",
   "sab.sabnzbd_gave_no_valid_response_check_the": "SABnzbd n'a pas renvoyé de réponse valide. Vérifiez l'URL et la clé d'API.",
+  "seerr.account_not_linked": "Votre compte n'est pas lié à un utilisateur dans Seerr, cette demande ne peut donc pas être faite pour vous. Demandez à l'administrateur de lier votre compte dans Seerr.",
   "seerr.seerr_is_not_configured": "Seerr n'est pas configuré.",
   "seerr.seerr_not_reachable_at": "Seerr injoignable à l'adresse ",
   "seerr.seerr_rejects_the_api_key": "Seerr refuse la clé d'API (",

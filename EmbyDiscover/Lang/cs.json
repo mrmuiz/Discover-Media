@@ -465,6 +465,7 @@
   "sab.enter_an_api_key_first": "Nejprve zadejte klíč API.",
   "sab.sabnzbd_download_failed": "SABnzbd: stahování se nezdařilo",
   "sab.sabnzbd_gave_no_valid_response_check_the": "SABnzbd nevrátil platnou odpověď. Zkontrolujte adresu URL a klíč API.",
+  "seerr.account_not_linked": "Tvůj účet není propojen s uživatelem v Seerr, takže tento požadavek za tebe nelze odeslat. Požádej správce o propojení účtu v Seerr.",
   "seerr.seerr_is_not_configured": "Seerr není nastaven.",
   "seerr.seerr_not_reachable_at": "Seerr není dostupný na ",
   "seerr.seerr_rejects_the_api_key": "Seerr odmítá klíč API (",

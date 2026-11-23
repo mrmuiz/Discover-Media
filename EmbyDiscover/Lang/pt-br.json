@@ -465,6 +465,7 @@
   "sab.enter_an_api_key_first": "Informe primeiro uma chave de API.",
   "sab.sabnzbd_download_failed": "SABnzbd: falha no download",
   "sab.sabnzbd_gave_no_valid_response_check_the": "O SABnzbd não deu uma resposta válida. Verifique a URL e a chave de API.",
+  "seerr.account_not_linked": "Sua conta não está vinculada a um usuário no Seerr, então este pedido não pode ser feito para você. Peça ao administrador para vincular sua conta no Seerr.",
   "seerr.seerr_is_not_configured": "O Seerr não está configurado.",
   "seerr.seerr_not_reachable_at": "Não foi possível alcançar o Seerr em ",
   "seerr.seerr_rejects_the_api_key": "O Seerr recusa a chave de API (",

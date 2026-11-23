@@ -465,6 +465,7 @@
   "sab.enter_an_api_key_first": "Najpierw podaj klucz API.",
   "sab.sabnzbd_download_failed": "SABnzbd: pobieranie nie powiodło się",
   "sab.sabnzbd_gave_no_valid_response_check_the": "SABnzbd nie zwrócił poprawnej odpowiedzi. Sprawdź adres URL i klucz API.",
+  "seerr.account_not_linked": "Twoje konto nie jest powiązane z użytkownikiem w Seerr, więc tej prośby nie można złożyć w Twoim imieniu. Poproś administratora o powiązanie Twojego konta w Seerr.",
   "seerr.seerr_is_not_configured": "Seerr nie jest skonfigurowany.",
   "seerr.seerr_not_reachable_at": "Nie można połączyć się z Seerr pod adresem ",
   "seerr.seerr_rejects_the_api_key": "Seerr odrzuca klucz API (",

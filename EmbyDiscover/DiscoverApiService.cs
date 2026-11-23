@@ -1349,7 +1349,7 @@ namespace Emby.Plugins.Discover
                         try { var ext4k = await _tmdb.GetTvExternalIds(request.TmdbId, CancellationToken.None).ConfigureAwait(false); tvdb = ext4k?.tvdb_id ?? 0; }
                         catch { }
                     }
-                    added = await RequestHub.Request(_json, tv, request.TmdbId, tvdb, request.Seasons, requesterGuid, requesterName, CancellationToken.None, true).ConfigureAwait(false);
+                    added = await RequestHub.Request(_json, tv, request.TmdbId, tvdb, request.Seasons, requesterGuid, requesterName, CancellationToken.None, true, isAdminRequester).ConfigureAwait(false);
                 }
                 else if (tv)
                 {
@@ -1360,14 +1360,14 @@ namespace Emby.Plugins.Discover
                         tvdbId = await _arr.ResolveTvdbId(request.TmdbId, ext?.imdb_id, t.name ?? t.title, t.first_air_date, CancellationToken.None).ConfigureAwait(false);
                     if (tvdbId <= 0 && RequestHub.NeedsTvdbId)
                         throw new InvalidOperationException(DiscoverLanguage.T("channel.this_series_is_not_on_thetvdb_so_sonarr"));
-                    added = await _arr.AddSeries(request.TmdbId, tvdbId, t.name ?? t.title, request.Seasons, CancellationToken.None, requesterGuid, requesterName).ConfigureAwait(false);
+                    added = await _arr.AddSeries(request.TmdbId, tvdbId, t.name ?? t.title, request.Seasons, CancellationToken.None, requesterGuid, requesterName, isAdminRequester).ConfigureAwait(false);
                     requested = t;
                 }
                 else
                 {
                     var m = await _tmdb.GetMovie(request.TmdbId, CancellationToken.None).ConfigureAwait(false);
                     added = await _arr.AddMovie(request.TmdbId, m.title ?? m.name, YearOf(m.release_date), CancellationToken.None, requesterGuid,
-                        isAdminRequester ? request.MinimumAvailability : null, requesterName).ConfigureAwait(false);
+                        isAdminRequester ? request.MinimumAvailability : null, requesterName, isAdminRequester).ConfigureAwait(false);
                     requested = m;
                 }
 

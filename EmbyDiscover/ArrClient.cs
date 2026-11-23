@@ -407,11 +407,11 @@ namespace Emby.Plugins.Discover
             return "released";
         }
 
-        public async Task<bool> AddMovie(int tmdbId, string title, int year, CancellationToken ct, object embyUserId = null, string minimumAvailability = null, string alias = null)
+        public async Task<bool> AddMovie(int tmdbId, string title, int year, CancellationToken ct, object embyUserId = null, string minimumAvailability = null, string alias = null, bool allowOwnerFallback = false)
         {
             if (RequestHub.External)
             {
-                if (await RequestHub.Request(_json, false, tmdbId, 0, null, embyUserId, alias, ct).ConfigureAwait(false)) return true;
+                if (await RequestHub.Request(_json, false, tmdbId, 0, null, embyUserId, alias, ct, false, allowOwnerFallback).ConfigureAwait(false)) return true;
                 // Stond er al: een mislukte aanvraag opnieuw proberen en, als Radarr ook is ingesteld, de film daar
                 // op gemonitord zetten en laten zoeken (de aanvraagdienst zoekt zelf niet opnieuw).
                 bool retried = await RequestHub.RetryFailed(_json, false, tmdbId, ct).ConfigureAwait(false);
@@ -568,11 +568,11 @@ namespace Emby.Plugins.Discover
             return 0;
         }
 
-        public async Task<bool> AddSeries(int tmdbId, int tvdbId, string title, int[] seasons, CancellationToken ct, object embyUserId = null, string alias = null)
+        public async Task<bool> AddSeries(int tmdbId, int tvdbId, string title, int[] seasons, CancellationToken ct, object embyUserId = null, string alias = null, bool allowOwnerFallback = false)
         {
             if (RequestHub.External)
             {
-                if (await RequestHub.Request(_json, true, tmdbId, tvdbId, seasons, embyUserId, alias, ct).ConfigureAwait(false)) return true;
+                if (await RequestHub.Request(_json, true, tmdbId, tvdbId, seasons, embyUserId, alias, ct, false, allowOwnerFallback).ConfigureAwait(false)) return true;
                 // Stond er al: mislukte aanvraag opnieuw proberen en, als Sonarr ook is ingesteld, de seizoenen daar
                 // op gemonitord zetten en ontbrekende afleveringen laten zoeken.
                 bool retried = await RequestHub.RetryFailed(_json, true, tmdbId, ct).ConfigureAwait(false);

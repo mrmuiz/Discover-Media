@@ -55,9 +55,9 @@ namespace Emby.Plugins.Discover
         /// <param name="alias">Voor Ombi: de naam die als aanvrager bij de aanvraag komt te staan.</param>
         /// <returns>true = aangevraagd, false = stond al aangevraagd.</returns>
         internal static Task<bool> Request(IJsonSerializer json, bool tv, int tmdbId, int tvdbId, int[] seasons,
-            object embyUserId, string alias, CancellationToken ct, bool is4k = false) =>
+            object embyUserId, string alias, CancellationToken ct, bool is4k = false, bool allowOwnerFallback = false) =>
             SeerrClient.Enabled
-                ? SeerrClient.Request(json, tv, tmdbId, tvdbId, seasons, embyUserId, ct, is4k)
+                ? SeerrClient.Request(json, tv, tmdbId, tvdbId, seasons, embyUserId, ct, is4k, allowOwnerFallback)
                 : OmbiClient.Request(json, tv, tmdbId, seasons, alias, ct, is4k);
 
         /// <summary>Een mislukte aanvraag opnieuw laten versturen. Ombi kent dit niet.</summary>
