@@ -1,5 +1,7 @@
 ## Unreleased
 
+- Fix: **title folders in the channel were always empty** ("No items found", no Request/Trailer tiles) after Emby's "Refresh Internet Channels". The plugin threw an error for every title and season folder in that background crawl, and Emby kept those folders as empty. They are now built normally (without the extra per-title TMDB call during the background crawl), and the channel's data version changed so folders that were stored empty are read again.
+
 - The plugin-resource line on the Discover page shows its real text again for a non-administrator who has diagnostics switched on. In 1.4.1.2 it moved into the administrator-only part of the status, where it said "unknown"; it is a fixed translated line without paths or names, so everyone may see it.
 
 ## Version 1.4.1.2 (beta)

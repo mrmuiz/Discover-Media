@@ -69,7 +69,7 @@ namespace Emby.Plugins.Discover
         // Ophogen als Emby oude (bewaarde) kanaalinhoud blijft tonen.
         // De tegel-epoch verandert als de opruiming tegelplaatjes heeft verwijderd: dan vraagt Emby de mappen opnieuw op
         // en maakt de plugin de ontbrekende plaatjes opnieuw (anders verwijst Emby naar een bestand dat niet meer bestaat).
-        public string DataVersion => (Plugin.GetCurrentConfiguration().ShowTrailerTile ? "77" : "77-notrailer") + "-e" + CacheCleaner.TileEpoch;
+        public string DataVersion => (Plugin.GetCurrentConfiguration().ShowTrailerTile ? "78" : "78-notrailer") + "-e" + CacheCleaner.TileEpoch;
         public ChannelParentalRating ParentalRating => ChannelParentalRating.GeneralAudience;
         public bool IsEnabledFor(string userId) => true;
 
@@ -149,27 +149,12 @@ namespace Emby.Plugins.Discover
             kind = ""; tmdbId = 0;
         }
 
-        private static bool IsDeepFolder(string id)
-        {
-            return !string.IsNullOrEmpty(id)
-                && (id.StartsWith(AskItemPrefix) || id.StartsWith(AskTvItemPrefix)
-                    || id.StartsWith(AskSeasonFolderPrefix) || id.StartsWith(LegacyAskSeasonFolderPrefix));
-        }
-
         // ---------- Mappen en items ----------
         public async Task<ChannelItemResult> GetChannelItems(InternalChannelItemQuery query, CancellationToken ct)
         {
             var cfg = Plugin.GetCurrentConfiguration();
             var hasKey = !string.IsNullOrWhiteSpace(cfg.TmdbApiKey);
             var folder = string.IsNullOrEmpty(query.FolderId) ? "(root)" : query.FolderId;
-
-            // Emby's own background refresh (no user) walks every folder; the title and season folders are skipped for it:
-            // they only make sense for a user who opens them, and crawling them hammers TMDB for nothing.
-            var systemCall = query.UserId == 0;
-            if (systemCall && IsDeepFolder(query.FolderId))
-            {
-                throw new InvalidOperationException("Discover: skipped (background refresh does not crawl title folders)");
-            }
 
             DiscoverDiagnostics.CountCall();
             var tmdbLanguage = TmdbClient.Language();
@@ -273,7 +258,8 @@ namespace Emby.Plugins.Discover
 
             // Status (Radarr/Sonarr) en extra info (TMDB) tegelijk ophalen; mislukt de extra info, dan blijft het bij de basis.
             var statesTask = SafeStates(tv, ct);
-            var extraTask = SafeExtra(tv, tmdbId, ct);
+            // Emby's background refresh (no user) opens every title: no extra TMDB call per title then.
+            var extraTask = userBrowsing ? SafeExtra(tv, tmdbId, ct) : Task.FromResult<TmdbExtra>(null);
             var states = await statesTask.ConfigureAwait(false);
             TmdbExtra extra = await extraTask.ConfigureAwait(false);
             int status = 0;
