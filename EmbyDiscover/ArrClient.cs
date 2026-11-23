@@ -249,9 +249,12 @@ namespace Emby.Plugins.Discover
                     }
                     seasonStates[s.tmdbId] = byNumber;
                 }
-                if (s.tmdbId > 0 && s.statistics != null && s.statistics.episodeFileCount > 0 &&
-                    s.statistics.episodeFileCount < s.statistics.episodeCount) partial.Add(s.tmdbId);
-                else noTmdb++;
+                if (s.tmdbId > 0)
+                {
+                    if (s.statistics != null && s.statistics.episodeFileCount > 0 &&
+                        s.statistics.episodeFileCount < s.statistics.episodeCount) partial.Add(s.tmdbId);
+                }
+                else noTmdb++;   // telt alleen series waarvan Sonarr geen tmdbId heeft
             }
             if (noTmdb > 0)
                 DiscoverDiagnostics.Add("log.arr.sonarr_serie_s_zonder_tmdbid_die_krijgen", noTmdb);
@@ -368,6 +371,7 @@ namespace Emby.Plugins.Discover
             _seriesCache = null;
             RequestHub.Invalidate();
             lock (_seriesCacheLock) { _seriesSeasonCache = new Dictionary<int, Dictionary<int, SonarrSeasonDto>>(); }
+            ForgetSonarrVersion();
         }
 
         // ---------- Aanvragen ----------
@@ -810,12 +814,49 @@ namespace Emby.Plugins.Discover
             return changed;
         }
 
-        /// <summary>Sonarr v5 heeft /api/v5; oudere versies alleen /api/v3. Eerst v5, bij een fout v3.</summary>
+        // Heeft deze Sonarr /api/v5? null = nog niet geprobeerd. Wordt onthouden, anders gaat bij
+        // iedereen op v4 elke aanroep twee keer: eerst de mislukte v5 en dan de goede v3.
+        // Na een uur opnieuw kijken, zodat een server die bijgewerkt wordt weer v5 krijgt.
+        private static bool? _hasV5;
+        private static DateTime _v5Checked;
+        private static readonly object _v5Lock = new object();
+        private static readonly TimeSpan V5Recheck = TimeSpan.FromHours(1);
+
+        internal static void ForgetSonarrVersion()
+        {
+            lock (_v5Lock) { _hasV5 = null; _v5Checked = DateTime.MinValue; }
+        }
+
+        /// <summary>Sonarr v5 heeft /api/v5; oudere versies alleen /api/v3. De uitkomst blijft onthouden.</summary>
         private static async Task<string> SendApi(HttpMethod method, string path, string body)
         {
             var cfg = Plugin.GetCurrentConfiguration();
-            try { return await Send(method, cfg.SonarrUrl, cfg.SonarrApiKey, "/api/v5" + path, body, CancellationToken.None).ConfigureAwait(false); }
-            catch (Exception) { return await Send(method, cfg.SonarrUrl, cfg.SonarrApiKey, "/api/v3" + path, body, CancellationToken.None).ConfigureAwait(false); }
+            bool? hasV5;
+            lock (_v5Lock)
+            {
+                if (_hasV5.HasValue && DateTime.UtcNow - _v5Checked > V5Recheck) { _hasV5 = null; }
+                hasV5 = _hasV5;
+            }
+
+            if (hasV5 == false)
+            {
+                return await Send(method, cfg.SonarrUrl, cfg.SonarrApiKey, "/api/v3" + path, body, CancellationToken.None).ConfigureAwait(false);
+            }
+
+            try
+            {
+                var result = await Send(method, cfg.SonarrUrl, cfg.SonarrApiKey, "/api/v5" + path, body, CancellationToken.None).ConfigureAwait(false);
+                lock (_v5Lock) { _hasV5 = true; _v5Checked = DateTime.UtcNow; }
+                return result;
+            }
+            catch (OperationCanceledException) { throw; }
+            catch (Exception)
+            {
+                // Mislukt v5 maar lukt v3, dan kent deze Sonarr v5 niet; mislukt v3 ook, dan lag het niet aan de versie.
+                var result = await Send(method, cfg.SonarrUrl, cfg.SonarrApiKey, "/api/v3" + path, body, CancellationToken.None).ConfigureAwait(false);
+                lock (_v5Lock) { _hasV5 = false; _v5Checked = DateTime.UtcNow; }
+                return result;
+            }
         }
 
         /// <summary>

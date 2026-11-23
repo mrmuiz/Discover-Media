@@ -76,8 +76,9 @@ namespace Emby.Plugins.Discover
             get { var c = Plugin.GetCurrentConfiguration(); return c != null && !string.IsNullOrWhiteSpace(c.QbitUrl); }
         }
 
-        private static string Fail(string english, string dutch, string german, string norwegian) =>
-            DiscoverLanguage.Text(dutch, english, german, norwegian);
+        private static string Fail(string key) => DiscoverLanguage.T(key);
+
+        private static string Fail(string key, params object[] args) => DiscoverLanguage.T(key, args);
 
         private static async Task<string> Login(string url, string user, string pass, CancellationToken ct, bool force)
         {
@@ -89,7 +90,7 @@ namespace Emby.Plugins.Discover
             // but only for the same URL, user and password (changed credentials are tried right away).
             var failKey = key + "|" + (pass ?? "").GetHashCode().ToString(CultureInfo.InvariantCulture);
             if (DateTime.UtcNow < _failUntil && _failFor == failKey)
-                throw new InvalidOperationException(Fail("login failed; next attempt in a few minutes (check username and password)", "inloggen mislukt; volgende poging over enkele minuten (controleer gebruikersnaam en wachtwoord)", "Anmeldung fehlgeschlagen; nächster Versuch in einigen Minuten (Benutzername und Passwort prüfen)", "innlogging mislyktes; nytt forsøk om noen minutter (sjekk brukernavn og passord)"));
+                throw new InvalidOperationException(Fail("dl.qb.login_failed_retry"));
             using (var req = new HttpRequestMessage(HttpMethod.Post, b + "/api/v2/auth/login"))
             {
                 req.Headers.Referrer = new Uri(b);
@@ -115,7 +116,7 @@ namespace Emby.Plugins.Discover
                     if (code == 403)
                     {
                         _failUntil = DateTime.UtcNow.AddMinutes(5); _failFor = failKey;
-                        throw new InvalidOperationException(Fail("qBittorrent has temporarily banned this IP address after too many failed logins (HTTP 403). Wait, or restart qBittorrent, then test again.", "qBittorrent heeft dit IP-adres tijdelijk geblokkeerd na te veel mislukte logins (HTTP 403). Wacht even of herstart qBittorrent en test opnieuw.", "qBittorrent hat diese IP-Adresse nach zu vielen fehlgeschlagenen Anmeldungen vorübergehend gesperrt (HTTP 403). Warte oder starte qBittorrent neu und teste erneut.", "qBittorrent har midlertidig blokkert denne IP-adressen etter for mange mislykkede innlogginger (HTTP 403). Vent, eller start qBittorrent på nytt, og test igjen."));
+                        throw new InvalidOperationException(Fail("dl.qb.ip_banned"));
                     }
                     // qBittorrent < 5.2 answers 200 "Ok."; 5.2+ answers 204 No Content. A wrong password gives 200 "Fails." (or 401 on 5.2+).
                     bool ok = resp.IsSuccessStatusCode && (code == 204 || string.Equals(text, "Ok.", StringComparison.OrdinalIgnoreCase) || (text.Length == 0 && cookie != null));
@@ -123,8 +124,8 @@ namespace Emby.Plugins.Discover
                     {
                         _failUntil = DateTime.UtcNow.AddMinutes(5); _failFor = failKey;
                         bool wrongPassword = string.Equals(text, "Fails.", StringComparison.OrdinalIgnoreCase) || code == 401 || resp.IsSuccessStatusCode;
-                        throw new InvalidOperationException(Fail("login failed", "inloggen mislukt", "Anmeldung fehlgeschlagen", "innlogging mislyktes") +
-                            (wrongPassword ? Fail(" (check username and password)", " (controleer gebruikersnaam en wachtwoord)", " (Benutzername und Passwort prüfen)", " (sjekk brukernavn og passord)") : " (HTTP " + code + ")"));
+                        throw new InvalidOperationException(Fail("dl.qb.login_failed") +
+                            (wrongPassword ? Fail("dl.qb.check_credentials") : " (HTTP " + code + ")"));
                     }
                     _failFor = null;
                     _cookie = cookie ?? "";
@@ -149,7 +150,7 @@ namespace Emby.Plugins.Discover
                     {
                         int code = (int)resp.StatusCode;
                         if (code == 401 || code == 403)
-                            throw new InvalidOperationException(Fail("API key rejected (HTTP " + code + "); check the key, it needs qBittorrent 5.2 or newer", "API key geweigerd (HTTP " + code + "); controleer de key, hiervoor is qBittorrent 5.2 of nieuwer nodig", "API-Schlüssel abgelehnt (HTTP " + code + "); prüfe den Schlüssel, dafür ist qBittorrent 5.2 oder neuer nötig", "API-nøkkel avvist (HTTP " + code + "); sjekk nøkkelen, dette krever qBittorrent 5.2 eller nyere"));
+                            throw new InvalidOperationException(Fail("dl.qb.key_rejected", code));
                         if (!resp.IsSuccessStatusCode) throw new InvalidOperationException("HTTP " + code + " " + resp.ReasonPhrase);
                         return await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
                     }
@@ -171,7 +172,7 @@ namespace Emby.Plugins.Discover
                     }
                 }
             }
-            throw new InvalidOperationException(Fail("no access (403)", "geen toegang (403)", "kein Zugriff (403)", "ingen tilgang (403)"));
+            throw new InvalidOperationException(Fail("dl.qb.no_access"));
         }
 
         internal static async Task<SabSnapshot> Fetch(IJsonSerializer json, CancellationToken ct)
