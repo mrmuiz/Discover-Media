@@ -22,6 +22,13 @@ namespace Emby.Plugins.Discover
         public static string WebInject = "";
 
         /// <summary>
+        /// Hetzelfde resultaat als WebInject, maar als vaste code: "on", "already", "readonly", "notfound",
+        /// "error", "removed" of "" (nog niet gelopen). De statuspagina keek eerder naar de Nederlandse woorden
+        /// in WebInject en kon het oordeel dus alleen in het Nederlands geven.
+        /// </summary>
+        public static string WebInjectState = "";
+
+        /// <summary>
         /// Een los woord in een logregel dat ook vertaald moet worden ("serie" / "film"). Zonder dit zou
         /// zo'n woord al bij het opschrijven vastliggen, terwijl de regel pas bij het tonen wordt vertaald.
         /// </summary>
@@ -45,12 +52,18 @@ namespace Emby.Plugins.Discover
         /// Schrijft een regel op als sleutel plus waarden. De tekst wordt pas gemaakt als iemand de
         /// statuspagina opvraagt, in de taal van die kijker; het Emby-logboek blijft Engels.
         /// </summary>
+        /// <summary>
+        /// Hoeveel regels we bewaren. Dertig was te weinig zodra er meer mensen tegelijk op de server zitten:
+        /// een fout schoof er dan binnen seconden weer uit en op de statuspagina was er niets meer van te zien.
+        /// </summary>
+        private const int MaxEvents = 200;
+
         public static void Add(string key, params object[] args)
         {
             lock (Gate)
             {
                 Events.Add(new Entry { When = DateTime.Now, Key = key, Args = args });
-                while (Events.Count > 30) Events.RemoveAt(0);
+                if (Events.Count > MaxEvents) { Events.RemoveRange(0, Events.Count - MaxEvents); }
             }
         }
 

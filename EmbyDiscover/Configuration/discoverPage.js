@@ -241,9 +241,9 @@ function dcBottomBarOffset(self) {
             return
         }
         var urls = [ApiClient.getUrl("web/ConfigurationPage", {
-            name: "discoverbuttonjs1439"
+            name: "discoverbuttonjs1440"
         }), ApiClient.getUrl("web/configurationpage", {
-            name: "discoverbuttonjs1439"
+            name: "discoverbuttonjs1440"
         }), ApiClient.getUrl("Plugins/Discover/Script")];
         var n = 0;
         (function next() {
@@ -277,7 +277,7 @@ function dcBottomBarOffset(self) {
             document.head.appendChild(script)
         })()
     }
-    var UI_PAGE = "discoverui1155";
+    var UI_PAGE = "discoverui1156";
     return function(view, params) {
         var embedded = !!(params && params.embedded);
         if (embedded) {
@@ -1008,30 +1008,42 @@ function dcBottomBarOffset(self) {
             pumpImdb()
         }
 
+        // Scores in groepjes opvragen in plaats van per poster: een pagina met zestig posters was zestig
+        // verzoeken per gebruiker. Nu zijn dat er twee of drie, en de server zoekt de id's maar één keer op.
         function pumpImdb() {
-            while (imdbBusy < 3 && imdbQueue.length) {
-                (function(job) {
-                    imdbBusy++;
-
-                    function finish(r) {
-                        imdbBusy--;
-                        job.c.done = true;
-                        job.c.r = r;
-                        var l = job.c.cbs;
-                        job.c.cbs = [];
-                        for (var x = 0; x < l.length; x++) {
-                            l[x](r)
-                        }
-                        pumpImdb()
-                    }
-                    api("GET", "Discover/ImdbScore", {
-                        Type: job.i.Type,
-                        TmdbId: job.i.TmdbId
-                    }).then(finish, function() {
-                        finish(null)
-                    })
-                })(imdbQueue.shift())
+            if (imdbBusy >= 2 || !imdbQueue.length) {
+                return
             }
+            var batch = imdbQueue.splice(0, 25);
+            imdbBusy++;
+
+            function finish(byKey) {
+                imdbBusy--;
+                batch.forEach(function(job) {
+                    var r = byKey ? byKey[job.i.Type + ":" + job.i.TmdbId] || null : null;
+                    job.c.done = true;
+                    job.c.r = r;
+                    var l = job.c.cbs;
+                    job.c.cbs = [];
+                    for (var x = 0; x < l.length; x++) {
+                        l[x](r)
+                    }
+                });
+                pumpImdb()
+            }
+            api("GET", "Discover/ImdbScores", {
+                Items: batch.map(function(job) {
+                    return (job.i.Type === "tv" ? "t:" : "m:") + job.i.TmdbId
+                }).join(",")
+            }).then(function(r) {
+                var byKey = {};
+                ((r && r.Items) || []).forEach(function(e) {
+                    byKey[e.Type + ":" + e.TmdbId] = e
+                });
+                finish(byKey)
+            }, function() {
+                finish(null)
+            })
         }
 
         function fillImdbScore(card) {
@@ -3791,8 +3803,8 @@ function dcBottomBarOffset(self) {
             if (f.Status !== 0 || f.TmdbId === i.TmdbId) {
                 return ""
             }
-            var t = t('channel.request_2') + ": " + f.Title;
-            return '<button type="button" class="dcColAdd" data-req="' + f.TmdbId + '" title="' + esc(t) + '" aria-label="' + esc(t) + '">+</button>'
+            var lab = t('channel.request_2') + ": " + f.Title;
+            return '<button type="button" class="dcColAdd" data-req="' + f.TmdbId + '" title="' + esc(lab) + '" aria-label="' + esc(lab) + '">+</button>'
         }
 
         function renderCollection(i, r) {
@@ -3853,11 +3865,12 @@ function dcBottomBarOffset(self) {
             })
         }
         overlay.querySelector(".dcCollection").addEventListener("click", function(e) {
-            var t = e.target && e.target.closest ? e.target : null;
-            if (!t) {
+            // Geen variabele 't' hier: die verbergt de vertaalfunctie t() in deze hele handler.
+            var tgt = e.target && e.target.closest ? e.target : null;
+            if (!tgt) {
                 return
             }
-            var openBtn = t.closest(".dcColPoster");
+            var openBtn = tgt.closest(".dcColPoster");
             if (openBtn) {
                 var f0 = colFind(parseInt(openBtn.getAttribute("data-open"), 10));
                 if (f0 && current && f0.TmdbId !== current.TmdbId) {
@@ -3865,7 +3878,7 @@ function dcBottomBarOffset(self) {
                 }
                 return
             }
-            var reqBtn = t.closest(".dcColAdd[data-req]");
+            var reqBtn = tgt.closest(".dcColAdd[data-req]");
             if (reqBtn) {
                 var f = colFind(parseInt(reqBtn.getAttribute("data-req"), 10));
                 if (!f) {
@@ -3887,7 +3900,7 @@ function dcBottomBarOffset(self) {
                 });
                 return
             }
-            var all = t.closest(".dcColAll");
+            var all = tgt.closest(".dcColAll");
             if (all) {
                 var curItem = current;
                 var r = collectionCache[curItem.TmdbId];

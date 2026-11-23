@@ -28,7 +28,7 @@ namespace Emby.Plugins.Discover
             get
             {
                 try { return typeof(Plugin).Assembly.GetName().Version.ToString(); }
-                catch { return "1.4.1.1"; }
+                catch { return "1.4.1.2"; }
             }
         }
 
@@ -152,14 +152,14 @@ namespace Emby.Plugins.Discover
             {
                 new PluginPageInfo
                 {
-                    Name = "discoverconfig1119",
+                    Name = "discoverconfig1120",
                     EmbeddedResourcePath = GetType().Namespace + ".Configuration.configPage.html",
                     EnableInMainMenu = true,
                     IsMainConfigPage = true
                 },
                 new PluginPageInfo
                 {
-                    Name = "discoverui1155",
+                    Name = "discoverui1156",
                     DisplayName = "Discover",
                     EmbeddedResourcePath = GetType().Namespace + ".Configuration.discoverPage.html",
                     EnableInMainMenu = true,
@@ -168,27 +168,27 @@ namespace Emby.Plugins.Discover
                 },
                 new PluginPageInfo
                 {
-                    Name = "discoveruijs1458",
+                    Name = "discoveruijs1459",
                     EmbeddedResourcePath = GetType().Namespace + ".Configuration.discoverPage.js"
                 },
                 new PluginPageInfo
                 {
-                    Name = "discoverbuttonjs1439",
+                    Name = "discoverbuttonjs1440",
                     EmbeddedResourcePath = GetType().Namespace + ".Resources.discover-request-button.js"
                 },
                 new PluginPageInfo
                 {
-                    Name = "discoverstatus1079",
+                    Name = "discoverstatus1080",
                     EmbeddedResourcePath = GetType().Namespace + ".Configuration.statusPage.html"
                 },
                 new PluginPageInfo
                 {
-                    Name = "discoverstatusjs1107",
+                    Name = "discoverstatusjs1108",
                     EmbeddedResourcePath = GetType().Namespace + ".Configuration.statusPage.js"
                 },
                 new PluginPageInfo
                 {
-                    Name = "discoverconfigjs1400",
+                    Name = "discoverconfigjs1401",
                     EmbeddedResourcePath = GetType().Namespace + ".Configuration.configPage.js"
                 }
             };

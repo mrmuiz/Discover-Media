@@ -2,7 +2,6 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
     'use strict';
 
     var pluginId = "7b0f3a52-4c1e-4a7b-9d2e-5f6c8a1b3d90";
-    var configLanguage = 'nl';
 
     // <fallback-en> automatisch gevuld door tools/sync-js-fallback.py; niet met de hand aanpassen
     var STR_EN = {
@@ -121,13 +120,25 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         return s;
     }
 
-    function languageText(dutch, english, german, norwegian) {
-        return configLanguage === 'de' ? (german || english) : configLanguage === 'no' ? (norwegian || english) : configLanguage === 'en' ? english : dutch;
-    }
-
+    // Cultuurcode bij een taalkeuze. De lijst met talen komt van de server (status.Languages), dus daar staat
+    // de juiste cultuurcode al bij; eerder gaf dit voor alles behalve nl en de "en-US" terug, waardoor bij
+    // "automatisch" de verkeerde TMDB-taal in beeld stond.
+    var serverLanguages = [];
     function languageCode(locale) {
-        var culture = String(locale || '').toLowerCase();
-        return culture.indexOf('nl') === 0 ? 'nl-NL' : culture.indexOf('de') === 0 ? 'de-DE' : 'en-US';
+        var culture = String(locale || '').trim();
+        if (!culture) { return 'en-US'; }
+        var low = culture.toLowerCase();
+        for (var i = 0; i < serverLanguages.length; i++) {
+            var lang = serverLanguages[i];
+            var code = String(lang.Code || '').toLowerCase();
+            var cult = String(lang.Culture || '').toLowerCase();
+            if (low === cult || low === code) { return lang.Culture || culture; }
+        }
+        for (var j = 0; j < serverLanguages.length; j++) {
+            var base = String(serverLanguages[j].Code || '').toLowerCase().split('-')[0];
+            if (base && low.split(/[-_]/)[0] === base) { return serverLanguages[j].Culture || culture; }
+        }
+        return culture.indexOf('-') > 0 ? culture : 'en-US';
     }
 
     function selectedAutoTmdbLanguage(view, state) {
@@ -433,8 +444,6 @@ var FLAGS = {
     }
 
     function applyLanguage(view, locale) {
-        var culture = String(locale || '').toLowerCase();
-        configLanguage = culture.indexOf('nl') === 0 ? 'nl' : culture.indexOf('de') === 0 ? 'de' : (culture.indexOf('nb') === 0 || culture.indexOf('nn') === 0 || culture.indexOf('no') === 0) ? 'no' : 'en';
         var hdgRadarr = el(view, 'hdgRadarr');
         if (hdgRadarr) { hdgRadarr.textContent = t('cfg.radarr_movies'); }
         var hdgSonarr = el(view, 'hdgSonarr');
@@ -696,7 +705,7 @@ var FLAGS = {
     }
 
     function ajaxErrorMessage(err) {
-        if (!err) { return 'onbekende fout'; }
+        if (!err) { return t('ui.unknown_error'); }
         var payload = err.responseJSON;
         if (!payload && err.responseText) {
             try { payload = JSON.parse(err.responseText); } catch (ignored) { }
@@ -706,7 +715,7 @@ var FLAGS = {
             (err.response && (err.response.statusText || err.response.responseText));
         if (typeof details === 'string' && details.length > 240) { details = details.slice(0, 240) + '...'; }
         return (payload && (payload.Message || payload.message || payload.Error || payload.error)) ||
-            details || (status ? 'HTTP ' + status : 'Geen HTTP-status (response kon niet worden verwerkt)');
+            details || (status ? 'HTTP ' + status : t('ui.unknown_error'));
     }
 
     // items: [{value, label}] ; selected: huidige waarde
@@ -792,10 +801,10 @@ var FLAGS = {
         }).then(function (result) {
             try {
                 if (!result || !result.Success) {
-                    throw new Error((result && result.Error) || 'TMDB kon de talenlijst niet laden.');
+                    throw new Error((result && result.Error) || t('ui.unknown_error'));
                 }
                 var list = asLanguageList(result.Languages);
-                if (!list.length) { throw new Error('TMDB gaf een lege talenlijst terug.'); }
+                if (!list.length) { throw new Error(t('ui.unknown_error')); }
                 render(list);
                 if (requestId === state.languageRequest) {
                     status.textContent = t('cfg.follow_the_plugin_emby_language_automatically');
@@ -1359,7 +1368,8 @@ var FLAGS = {
             c.CardRetentionDays = intValue(view, 'numCardDays', 14);
             c.TileRetentionDays = intValue(view, 'numTileDays', 30);
             c.MaxCacheMb = intValue(view, 'numMaxCacheMb', 2048);
-            c.RequestLimit = intValue(view, 'numRequestLimit', 0);
+            // Boven de 500 bewaart de server de aanvragen niet meer die nodig zijn om te tellen.
+            c.RequestLimit = Math.min(500, intValue(view, 'numRequestLimit', 0));
             c.ShowNewSeasons = el(view, 'chkShowNewSeasons').checked;
             c.ShowMyRequests = el(view, 'chkShowMyRequests').checked;
             c.PageBackdrops = el(view, 'chkPageBackdrops').checked;
@@ -1644,8 +1654,8 @@ var FLAGS = {
         });
         el(view, 'chkUpdateAuto').addEventListener('change', function () { syncUpdateBoxes(view); });
         view.querySelector('.btnStatus').addEventListener('click', function () {
-            if (window.Dashboard && Dashboard.navigate) { Dashboard.navigate('configurationpage?name=discoverstatus1079'); }
-            else { window.location.hash = '#!/configurationpage?name=discoverstatus1079'; }
+            if (window.Dashboard && Dashboard.navigate) { Dashboard.navigate('configurationpage?name=discoverstatus1080'); }
+            else { window.location.hash = '#!/configurationpage?name=discoverstatus1080'; }
         });
 
         view.addEventListener('viewshow', function () {

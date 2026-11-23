@@ -3,14 +3,14 @@
  * Verbergt ook "Media informatie" op Discover/Trailers-detailpagina's. */
 (function () {
     'use strict';
-    if (window.__discoverRequestButtonVersion === '1.4.0.7') { return; }
+    if (window.__discoverRequestButtonVersion === '1.4.1.2') { return; }
     if (window.__discoverRequestButton) {
         console.warn('[Discover] oudere knopcode is nog actief; vernieuw de webclient om dubbele handlers te voorkomen.');
         return;
     }
-    var DC_BUILD = '1.4.0.7 2026-11-09';
+    var DC_BUILD = '1.4.1.2 2026-11-23';
     window.__discoverRequestButton = true;
-    window.__discoverRequestButtonVersion = '1.4.0.7';
+    window.__discoverRequestButtonVersion = '1.4.1.2';
 
     // Themakleur (instelling "Weergave"): CSS-variabelen op <html>, gebruikt door de Discover-pagina en de rijen en
     // knoppen op Emby's pagina's. Laatste waarde onthouden, zodat de kleur bij het openen niet eerst geel flitst.
@@ -51,9 +51,8 @@
         })();
     }
     window.__discoverRequestButtonBuild = DC_BUILD;
-    console.log('[Discover] request-button script loaded v1.4.0.7 build ' + DC_BUILD);
+    console.log('[Discover] request-button script loaded v1.4.1.2 build ' + DC_BUILD);
 
-    var uiLanguage = 'nl';
     var diagnosticsEnabled = false;
     var lastDiagnostic = null;
     var diagnosticsLoaded = false;
@@ -79,7 +78,7 @@
                     'color:#ffd666;background:rgba(0,0,0,.7);padding:4px 8px;border-radius:4px;pointer-events:none;white-space:pre-wrap;';
                 document.body.appendChild(el);
             }
-            el.textContent = 'Discover v1.4.0.7 | ' + msg;
+            el.textContent = 'Discover v1.4.1.2 | ' + msg;
         } catch (e) { }
     }
     var isAdmin = false;
@@ -333,7 +332,7 @@
             var bcs = btn ? getComputedStyle(btn) : null;
             var vv = window.visualViewport;
             el.textContent = [
-                'Discover v1.4.0.7 build ' + DC_BUILD + ' (' + (window.__discoverRequestButtonBuild || '?') + ')',
+                'Discover v1.4.1.2 build ' + DC_BUILD + ' (' + (window.__discoverRequestButtonBuild || '?') + ')',
                 'item page: ' + (document.querySelector('.itemDetailPage') ? 'ja' : 'nee') + ' body=' + document.body.className.split(/\s+/).filter(function (c) { return /^(dc|discover)/.test(c); }).join(' '),
                 'bar: ' + (info.bar ? describe(info.bar) + ' ' + rectText(info.bar) : 'niet gevonden') + ' h=' + info.measured,
                 'mode=' + info.mode + ' --dc-bottom-clear=' + (document.documentElement.style.getPropertyValue('--dc-bottom-clear') || '(leeg)'),
@@ -469,7 +468,6 @@
         "btn.verifying": "Verifying",
         "btn.waiting_for_processing": "Waiting for processing",
         "btn.waiting_to_import": "Waiting to import",
-        "channel.request": "Request: ",
         "channel.request_2": "Request",
         "channel.requested_2": "Requested",
         "channel.season": "Season ",
@@ -525,9 +523,8 @@
                 document.documentElement.classList.toggle('dcNoYear', status.PosterShowYear === false);
                 document.documentElement.classList.toggle('dcNoScore', status.PosterShowScore === false);
             }
-            // Automatisch: de taal van deze Emby-app (html lang), niet die van de server.
-            var culture = String((status && status.PluginLanguageAuto && clientLanguage()) || (status && status.PluginLanguage) || '').toLowerCase();
-            uiLanguage = culture.indexOf('nl') === 0 ? 'nl' : culture.indexOf('de') === 0 ? 'de' : (culture.indexOf('nb') === 0 || culture.indexOf('nn') === 0 || culture.indexOf('no') === 0) ? 'no' : 'en';
+            // De teksten komen van de server, in de taal van de kijker (status.Strings); hier valt niets meer
+            // per taal te kiezen.
             diagnosticsLoaded = true;
             diagnosticsRequest = false;
             diagnosticsRetryAfter = 0;
@@ -556,6 +553,15 @@
         if (!/\/item\?/.test(h)) { return null; }
         var m = /[?&]id=([^&]+)/.exec(h);
         return m ? decodeURIComponent(m[1]) : null;
+    }
+
+    // Het statusteken van het kanaal (✓ / ⏳) staat achter de titel (zodat het niet meesorteert); oudere
+    // versies zetten het ervoor. Beide kanten weghalen, anders mist de titel-opzoeking op de server.
+    function stripMark(name) {
+        return String(name == null ? '' : name)
+            .replace(/^[✓⏳]+\s*/, '')
+            .replace(/\s*[✓⏳]+$/, '')
+            .trim();
     }
 
     function visible(el) {
@@ -690,7 +696,8 @@
             url: c.getUrl('Users/' + uid + '/Items/' + id, { Fields: 'ChannelInfo,Path,ProviderIds,Overview,MediaSources' }),
             dataType: 'json'
         }).then(null, function () { return c.getItem(uid, id); });
-        var p = fetchItem.then(function (item) {
+        var p = Promise.all([fetchItem, kindOf(id)]).then(function (both) {
+            var item = both[0], known = both[1];
             if (!item) { dbg('getItem gaf niets'); return null; }
             var paths = [item.Path || ''];
             (item.MediaSources || []).forEach(function (ms) { paths.push(ms.Path || ''); });
@@ -705,18 +712,30 @@
             // Trailer-item ("Trailer: titel"): Afspelen = trailer, de knop Aanvragen wordt wel toegevoegd.
             // Op beide pagina's verdwijnen de overbodige knoppen en het blok "Over".
             var nm = String(item.Name || '');
-            if (/^[\u2713\u23F3]?\s*Trailer:/.test(nm)) { trailerIds[id] = true; }
-            if (/^[\u2713\u23F3]?\s*(?:Aanvragen|Anfragen|Request):/i.test(nm)) {
+            var pids = item.ProviderIds || {};
+            // Het soort item komt van de server (uit het id dat het kanaal uitdeelde) en is dus taalonafhankelijk.
+            var kind = known && known.kind ? known.kind : '';
+            if (!kind) {
+                // Terugval voor een oudere server die het soort nog niet meldt: herkenning op naam (nl/de/en).
+                if (/^[\u2713\u23F3]?\s*(?:Aanvragen|Anfragen|Request):/i.test(nm)) { kind = 'ask'; }
+                else if (/^[\u2713\u23F3]?\s*(?:Alle seizoenen|All seasons|Alle Staffeln)\s*$/i.test(nm)) { kind = 'all'; }
+                else if (/^[\u2713\u23F3]?\s*(?:Aanvragen Seizoen|Request Season|Staffel anfragen|Seizoen|Season|Staffel)\s+\d+/i.test(nm)) { kind = 'season'; }
+                else if (/^[\u2713\u23F3]?\s*Trailer:/i.test(nm)) { kind = 'trailer'; }
+            }
+            if (kind === 'trailer') { trailerIds[id] = true; }
+            if (kind === 'ask') {
                 askIds[id] = true;
-                var askName = nm.replace(/^[\u2713\u23F3]?\s*(?:Aanvragen|Anfragen|Request):\s*/i, '');
-                var askPid = item.ProviderIds || {};
+                var askTmdb = (known && known.tmdbId) || parseInt(pids.DiscoverTmdb || pids.Tmdb || pids.tmdb || 0, 10) || 0;
+                // Titel zonder het voorvoegsel ("Aanvragen: ", "Solicitar: ", "\u8BF7\u6C42\uFF1A "): alles tot en met de eerste dubbele punt.
+                var askName = stripMark(nm).replace(/^[^:\uFF1A]*[:\uFF1A]\s*/, '');
                 return c.ajax({
                     type: 'GET',
                     url: c.getUrl('Discover/Resolve', {
                         Name: askName,
                         Year: item.ProductionYear || 0,
                         Overview: '',
-                        TmdbId: parseInt(askPid.DiscoverTmdb || askPid.Tmdb || askPid.tmdb || 0, 10) || 0
+                        TmdbId: askTmdb,
+                        Type: known && known.kind ? (known.tv ? 'tv' : 'movie') : ''
                     }),
                     dataType: 'json'
                 }).then(function (r) {
@@ -726,22 +745,19 @@
                 }, function () { schedule(); return null; });
             }
             // Het kanaalitem "Alle seizoenen" is een aanvraagitem zoals de seizoenen: geen eigen Aanvragen-knop.
-            if (/^[\u2713\u23F3]?\s*(?:Alle seizoenen|All seasons|Alle Staffeln)\s*$/i.test(nm)) {
+            if (kind === 'all') {
                 askIds[id] = true;
                 askStatus[id] = 0;
                 dbg('alle-seizoenen-aanvraag herkend: ' + nm);
                 schedule();
                 return null;
             }
-            var seasonAskName = /^[\u2713\u23F3]?\s*(?:Aanvragen Seizoen|Request Season|Staffel anfragen|Seizoen|Season|Staffel)\s+\d+/i.test(nm);
-            if (seasonAskName) {
+            if (kind === 'season') {
                 askIds[id] = true;
                 seasonAskIds[id] = true;
                 askStatus[id] = 0;
-                var seasonProviderIds = item.ProviderIds || {};
-                var seriesTmdbId = parseInt(seasonProviderIds.DiscoverTmdb || seasonProviderIds.Tmdb || seasonProviderIds.tmdb || String(seasonProviderIds.DiscoverSeasonTmdb || '').split('-')[0] || 0, 10) || 0;
-                var seasonNo = parseInt(String(seasonProviderIds.DiscoverSeasonTmdb || '').split('-')[1] || 0, 10) ||
-                    parseInt((/(?:Seizoen|Season|Staffel)\s+(\d+)/i.exec(nm) || [])[1] || 0, 10) || 0;
+                var seriesTmdbId = (known && known.tmdbId) || parseInt(pids.DiscoverTmdb || pids.Tmdb || pids.tmdb || 0, 10) || 0;
+                var seasonNo = (known && known.season) || parseInt((/(\d+)\s*$/.exec(stripMark(nm)) || [])[1] || 0, 10) || 0;
                 if (seriesTmdbId > 0) {
                     seasonCardIds[id] = seriesTmdbId;
                     seasonCardSeason[id] = seasonNo;
@@ -759,9 +775,9 @@
                 if (negCount[id] < 5) { delete lookups[id]; }   // pagina nog niet opgebouwd: later opnieuw proberen
                 return null;
             }
-            var name = String(item.Name || '').replace(/^[\u2713\u23F3]\s+/, '');
+            var name = stripMark(item.Name);
             var pid = item.ProviderIds || {};
-            var tmdb = parseInt(pid.DiscoverTmdb || pid.Tmdb || pid.tmdb || 0, 10) || 0;
+            var tmdb = (known && known.tmdbId) || parseInt(pid.DiscoverTmdb || pid.Tmdb || pid.tmdb || 0, 10) || 0;
             // Seizoentrailer: de sleutel is "<serie-id>-s<seizoen>"; de knop Aanvragen vraagt dan alleen dat seizoen aan.
             var seasonTrailer = /^(\d+)-s(\d+)$/.exec(String(pid.DiscoverTrailerTmdb || ''));
             if (seasonTrailer && trailerIds[id]) {
@@ -785,7 +801,8 @@
                     Name: name,
                     Year: item.ProductionYear || 0,
                     Overview: item.Overview || '',
-                    TmdbId: tmdb
+                    TmdbId: tmdb,
+                    Type: known && known.kind ? (known.tv ? 'tv' : 'movie') : ''
                 }),
                 dataType: 'json'
             }).then(function (r) {
@@ -852,12 +869,13 @@
         var show = isAdmin && info.Found && info.Status > 0;
         rm.style.setProperty('display', show ? 'inline-flex' : 'none', 'important');
         rm.disabled = false;
-        var t = info.Status === 2
+        // Let op: geen variabele 't' hier - dat verbergt de vertaalfunctie t() in dit hele blok.
+        var label = info.Status === 2
             ? t('btn.delete')
             : t('btn.cancel_request');
         var span = rm.querySelector('.detailButton-text');
-        if (span) { span.textContent = t; }
-        rm.setAttribute('title', t);
+        if (span) { span.textContent = label; }
+        rm.setAttribute('title', label);
     }
 
     function render(btn, info) {
@@ -1018,7 +1036,8 @@
         btn.setAttribute('is', 'emby-button');
         btn.className = 'raised detailButton emby-button btnDiscoverRequest';
         btn.setAttribute('data-itemid', id);
-        btn.innerHTML = '<i class="md-icon detailButton-icon material-icons">add</i><span class="detailButton-text">Aanvragen</span>';
+        btn.innerHTML = '<i class="md-icon detailButton-icon material-icons">add</i><span class="detailButton-text"></span>';
+        btn.querySelector('.detailButton-text').textContent = t('channel.request_2');
         styleButton(btn);
         render(btn, info);
 
@@ -1063,7 +1082,8 @@
         rm.setAttribute('is', 'emby-button');
         rm.className = 'raised detailButton emby-button btnDiscoverRemove';
         rm.setAttribute('data-itemid', id);
-        rm.innerHTML = '<i class="md-icon detailButton-icon material-icons">delete</i><span class="detailButton-text">Annuleren</span>';
+        rm.innerHTML = '<i class="md-icon detailButton-icon material-icons">delete</i><span class="detailButton-text"></span>';
+        rm.querySelector('.detailButton-text').textContent = t('btn.cancel_request');
         var st = {
             'display': 'none', 'align-items': 'center', 'justify-content': 'center',
             'background': '#c62828', 'background-color': '#c62828', 'color': '#fff',
@@ -1562,14 +1582,42 @@
     }
 
     // Welke van deze Emby-id's horen bij Discover? Emby 4.11 geeft ChannelId niet meer mee, dus vraag het de server.
+    // De server zegt er meteen bij wat voor item het is (aanvraag, seizoen, trailer, map). Dat komt uit het id dat
+    // het kanaal zelf heeft uitgedeeld en is dus taalonafhankelijk; op de naam zoeken werkt alleen in nl/de/en.
+    var itemKind = {};       // Emby-id -> { kind, tv, tmdbId, season }
+    var kindLookups = {};    // Emby-id -> Promise (losse opvraging)
+
+    function rememberKinds(r) {
+        ((r && r.Kinds) || []).forEach(function (k) {
+            if (k && k.Id) { itemKind[k.Id] = { kind: k.Kind || '', tv: !!k.Tv, tmdbId: k.TmdbId || 0, season: k.Season || 0 }; }
+        });
+    }
+
     function discoverIdsOf(ids) {
         var c = api();
         if (!c || !ids.length) { return Promise.resolve({}); }
         return Promise.resolve(c.getJSON(c.getUrl('Discover/IsDiscoverItem', { Ids: ids.join(',') }))).then(function (r) {
             var m = {};
             ((r && r.OurIds) || []).forEach(function (x) { m[x] = true; });
+            rememberKinds(r);
             return m;
         }, function () { return {}; });
+    }
+
+    // Soort van één item; het antwoord wordt bewaard, dus dit kost één verzoek per itempagina.
+    function kindOf(id) {
+        if (itemKind[id]) { return Promise.resolve(itemKind[id]); }
+        if (kindLookups[id]) { return kindLookups[id]; }
+        var c = api();
+        if (!c || !id) { return Promise.resolve(null); }
+        var p = Promise.resolve(c.getJSON(c.getUrl('Discover/IsDiscoverItem', { Id: id }))).then(function (r) {
+            var k = r ? { kind: r.Kind || '', tv: !!r.Tv, tmdbId: r.TmdbId || 0, season: r.Season || 0, ours: !!r.Ours, folder: !!r.Folder } : null;
+            if (k) { itemKind[id] = k; }
+            delete kindLookups[id];
+            return k;
+        }, function () { delete kindLookups[id]; return null; });
+        kindLookups[id] = p;
+        return p;
     }
 
     function markFolderCards() {
@@ -1599,8 +1647,15 @@
         }).then(null, function () { ids.forEach(function (x) { delete cardSeen[x]; }); });
     }
 
-    function requestTileName(name) {
-        var value = String(name || '').replace(/^[\u2713\u23F3]\s*/, '');
+    // Wat voor tegel is dit? Het soort komt van de server (uit het id van het kanaal), dus dit werkt in elke taal.
+    // Alleen als de server het niet meldt (oudere versie) valt het terug op de namen in nl/de/en.
+    function requestTileName(info) {
+        if (!info) { return null; }
+        var value = stripMark(info.name);
+        if (info.kind === 'season') { return { kind: 'season', title: value, number: info.season || 0 }; }
+        if (info.kind === 'trailer') { return { kind: 'trailer', title: value }; }
+        if (info.kind === 'ask') { return { kind: 'ask', title: value }; }
+        if (info.kind) { return null; }   // 'all', 'folder', ...: geen paar-tegel
         var season = /^(?:Aanvragen Seizoen|Request Season|Staffel anfragen|Seizoen|Season|Staffel)\s+(\d+)/i.exec(value);
         if (season) { return { kind: 'season', title: value, number: parseInt(season[1], 10) }; }
         var trailer = /^Trailer:\s*(.+)$/i.exec(value);
@@ -1636,10 +1691,7 @@
         if (!node || !card.contains(node)) {
             card.__discoverSeasonLabelNode = null;
             card.__discoverOriginalSeasonLabel = undefined;
-            var walker = document.createTreeWalker(card, NodeFilter.SHOW_TEXT, null, false);
-            while ((node = walker.nextNode())) {
-                if (/^\s*(?:[\u2713\u23F3]\s*)?(?:Aanvragen Seizoen|Request Season|Staffel anfragen|Seizoen|Season|Staffel)\s+\d+/i.test(node.nodeValue || '')) { break; }
-            }
+            node = tileLabelNode(card, info.name);
             if (!node) { return; }
             card.__discoverSeasonLabelNode = node;
             card.__discoverOriginalSeasonLabel = node.nodeValue;
@@ -1648,8 +1700,10 @@
         var availableInEmby = !!(states && states[seasonNumber]);
         var requestedInSonarr = /^\s*\u23F3|\u23F3\s*$/.test(info.name || '');
         var prefix = availableInEmby ? '\u2713 ' : requestedInSonarr ? '\u23F3 ' : '';
+        // De naam zelf komt van de server (in de taal van de kijker); alleen het teken ervoor zetten we erbij.
         var leadingWhitespace = /^\s*/.exec(card.__discoverOriginalSeasonLabel)[0];
-        node.nodeValue = leadingWhitespace + prefix + t('channel.season') + seasonNumber;
+        var want = leadingWhitespace + prefix + stripMark(info.name);
+        if (node.nodeValue !== want) { node.nodeValue = want; }
     }
 
     // Alleen gewone film- en seriebibliotheken, niet de Live TV-opnames (OTA/DVR). tv: true / false / null (beide).
@@ -1763,21 +1817,36 @@
         });
     }
 
-    function setRequestTileLabel(card) {
+    // Zoekt in een tegel het tekstknoopje met de naam van het item (wat de server als naam gaf), zonder op
+    // woorden te zoeken: de naam is vertaald, het knoopje vinden we door te vergelijken met die naam zelf.
+    function tileLabelNode(card, name) {
+        var want = stripMark(name);
+        if (!want) { return null; }
+        var walker = document.createTreeWalker(card, NodeFilter.SHOW_TEXT, null, false);
+        var node, loose = null;
+        while ((node = walker.nextNode())) {
+            var text = stripMark(node.nodeValue);
+            if (!text) { continue; }
+            if (text === want) { return node; }
+            if (!loose && want.length > 2 && text.indexOf(want) === 0) { loose = node; }
+        }
+        return loose;
+    }
+
+    function setRequestTileLabel(card, askName, trailerName) {
         var node = card.__discoverTileLabelNode;
         if (!node || !card.contains(node)) {
             card.__discoverTileLabelNode = null;
             card.__discoverOriginalTileLabel = undefined;
-            var walker = document.createTreeWalker(card, NodeFilter.SHOW_TEXT, null, false);
-            while ((node = walker.nextNode())) {
-                if (/^\s*Trailer:/i.test(node.nodeValue || '')) { break; }
-            }
+            node = tileLabelNode(card, trailerName);
             if (!node) { return; }
             card.__discoverTileLabelNode = node;
             card.__discoverOriginalTileLabel = node.nodeValue;
         }
-        var prefix = t('channel.request');
-        node.nodeValue = card.__discoverOriginalTileLabel.replace(/^(\s*)Trailer:\s*/i, '$1' + prefix);
+        var want = String(askName || '');
+        if (!want) { return; }
+        var leading = /^\s*/.exec(card.__discoverOriginalTileLabel)[0];
+        if (node.nodeValue !== leading + want) { node.nodeValue = leading + want; }
     }
 
     function applyRequestTilePresentation() {
@@ -1793,7 +1862,8 @@
             card.classList.remove('discover-channel-landscape-card');
             card.classList.remove('discover-season-request-card');
             card.classList.remove('discover-no-played');
-            if (info && info.name && /^[\u2713\u23F3]?\s*(?:Alle seizoenen|All seasons|Alle Staffeln)\s*$/i.test(info.name)) {
+            if (info && (info.kind === 'all' ||
+                (!info.kind && info.name && /^[\u2713\u23F3]?\s*(?:Alle seizoenen|All seasons|Alle Staffeln)\s*$/i.test(info.name)))) {
                 // Emby's eigen groene "gezien"-vinkje zegt hier niets over je bibliotheek: verbergen.
                 card.classList.add('discover-no-played');
             }
@@ -1802,7 +1872,7 @@
                 restoreSeasonTileLabel(card);
                 continue;
             }
-            var parsed = requestTileName(info.name);
+            var parsed = requestTileName(info);
             if (!parsed) {
                 restoreRequestTileLabel(card);
                 restoreSeasonTileLabel(card);
@@ -1843,9 +1913,10 @@
                 continue;
             }
             restoreSeasonTileLabel(card);
-            var key = info.parentId + '\n' + parsed.title.toLocaleLowerCase();
+            // Paar op TMDB-id in plaats van op de titel: het id is overal gelijk, de titel staat in de taal van de kijker.
+            var key = info.parentId + '\n' + (info.tmdbId || parsed.title.toLocaleLowerCase());
             var entry = groups[key] || (groups[key] = { ask: [], trailer: [] });
-            entry[parsed.kind].push({ card: card });
+            entry[parsed.kind].push({ card: card, name: info.name });
             candidates.push({ card: card, kind: parsed.kind, key: key });
         }
         for (var j = 0; j < candidates.length; j++) {
@@ -1859,7 +1930,9 @@
             if (candidate.kind === 'ask') {
                 candidate.card.classList.add('discover-web-ask-hidden');
             } else {
-                setRequestTileLabel(candidate.card);
+                // De trailertegel blijft staan en krijgt de naam van de (verborgen) aanvraagtegel ernaast.
+                // Die naam komt van de server en staat dus al in de juiste taal; niets te vertalen of te plakken.
+                setRequestTileLabel(candidate.card, pair.ask[0].name, pair.trailer[0].name);
             }
         }
         seasonCardsByParent.forEach(function (entry) {
@@ -1868,7 +1941,7 @@
                 if (cards[k].parentNode !== entry.parent) { continue; }
                 var siblingId = cards[k].getAttribute('data-id');
                 var siblingInfo = requestTileInfo[siblingId];
-                var siblingSeason = siblingInfo && requestTileName(siblingInfo.name);
+                var siblingSeason = siblingInfo && requestTileName(siblingInfo);
                 if (!siblingSeason || (siblingSeason.kind !== 'season' && siblingSeason.kind !== 'seasontrailer')) { return; }
                 siblingCards.push({ card: cards[k], number: siblingSeason.number * 2 + (siblingSeason.kind === 'season' ? 1 : 0) });
             }
@@ -1878,14 +1951,16 @@
         });
     }
 
-    function syncRequestTileCards() {
+    function syncRequestTileCards(onDiscoverPage) {
         var c = api();
         if (!c) { return; }
         var cards = document.querySelectorAll('.card[data-id]');
         var ids = [];
-        for (var i = 0; i < cards.length; i++) {
+        // Buiten het Discover-kanaal staan geen aanvraag- of trailertegels, dus daar hoeven we niets op te vragen.
+        // Binnen het kanaal nemen we alle tegels mee: op de naam filteren werkte alleen in nl/de/en.
+        for (var i = 0; onDiscoverPage && i < cards.length && ids.length < 60; i++) {
             var id = cards[i].getAttribute('data-id');
-            if (!id || !/(?:Trailer|Aanvragen|Anfragen|Request):\s*\S+|(?:Aanvragen Seizoen|Request Season|Staffel anfragen|Seizoen|Season|Staffel)\s+\d+/i.test(cards[i].textContent || '')) { continue; }
+            if (!id) { continue; }
             if (requestTileInfo[id] === undefined && !requestTilePending[id] &&
                 Date.now() >= (requestTileRetry[id] || 0)) {
                 requestTilePending[id] = true;
@@ -1910,10 +1985,14 @@
                 ((r && r.Items) || []).forEach(function (item) {
                     if (item.ChannelId === chId || ours[item.Id]) {
                         var providerIds = item.ProviderIds || {};
+                        var known = itemKind[item.Id];
                         found[item.Id] = {
                             name: item.Name || '',
                             parentId: item.ParentId || '',
-                            tmdbId: parseInt(providerIds.DiscoverTmdb || providerIds.Tmdb || providerIds.tmdb || String(providerIds.DiscoverSeasonTmdb || '').split('-')[0] || 0, 10) || 0
+                            kind: (known && known.kind) || '',
+                            season: (known && known.season) || 0,
+                            tmdbId: (known && known.tmdbId) ||
+                                parseInt(providerIds.DiscoverTmdb || providerIds.Tmdb || providerIds.tmdb || 0, 10) || 0
                         };
                     }
                 });
@@ -1958,7 +2037,11 @@
     var rowLoading = {};
     var libIndexPromise = null;
     var libIndexAt = 0;
-    var LIB_INDEX_TTL = 5 * 60 * 1000;
+    // Een half uur. Dit haalt de hele film- en serielijst van de bibliotheek op, per gebruiker; bij veel
+    // gebruikers is dat de grootste last van dit script. Een nieuwe titel in de bibliotheek is hierdoor
+    // hoogstens een half uur later bekend, en dat is alleen van invloed op wat er in de extra rijen staat.
+    var LIB_INDEX_TTL = 30 * 60 * 1000;
+    var LIB_INDEX_MAX = 25000;
 
     function titleKey(name, year) {
         return String(name || '').toLowerCase().replace(/[^a-z0-9]+/g, '') + '|' + (year || 0);
@@ -1972,7 +2055,7 @@
         libIndexAt = now;
         libIndexPromise = libraryQuery(c, {
             Recursive: true, IncludeItemTypes: 'Movie,Series', Fields: 'ProviderIds,ProductionYear',
-            EnableImages: false, EnableUserData: false
+            EnableImages: false, EnableUserData: false, Limit: LIB_INDEX_MAX
         }, null).then(function (r) {
             var idx = {};
             ((r && r.Items) || []).forEach(function (it) {
@@ -2164,7 +2247,7 @@
         var link = document.createElement('a');
         link.className = 'discover-row-poster';
         // Klik op de poster: de Discover-popup met info en trailer.
-        link.href = '#!/configurationpage?name=discoverui1155&openType=' + item.Type + '&openId=' + item.TmdbId;
+        link.href = '#!/configurationpage?name=discoverui1156&openType=' + item.Type + '&openId=' + item.TmdbId;
         link.setAttribute('aria-label', item.Title);   // geen title: dat gaf een tooltip-vakje over de poster
         // Gewone klik: de popup hier op de pagina openen (Ctrl/middenklik volgt de link naar Discover).
         link.addEventListener('click', function (e) {
@@ -2471,7 +2554,7 @@
     // ---- De Discover-popup boven de huidige pagina ----
     // Laadt de Discover-pagina één keer onzichtbaar (alleen de popup wordt gebruikt) met dezelfde controller
     // als de echte pagina, in "embedded"-modus. Zo is de popup overal gelijk: info, cast, seizoenen, trailer, aanvragen.
-    var DC_UI_PAGE = 'discoverui1155', DC_UI_JS = 'discoveruijs1458';
+    var DC_UI_PAGE = 'discoverui1156', DC_UI_JS = 'discoveruijs1459';
     var embedPromise = null;
     function pageText(c, name) {
         var url = c.getUrl('web/ConfigurationPage', { name: name });
@@ -2582,9 +2665,10 @@
             var year = ym ? parseInt(ym[0], 10) : 0;
             // zoek de credit waarvan de genormaliseerde titel vooraan in de regel staat (+ jaar als beide bekend)
             var match = null, keys = Object.keys(byTitle);
-            for (var t = 0; t < keys.length; t++) {
-                if (bodyNorm.indexOf(keys[t]) !== 0 && bodyNorm.indexOf(keys[t]) < 0) { continue; }
-                var cands = byTitle[keys[t]];
+            // Geen teller 't' hier: die verbergt de vertaalfunctie t() verderop in deze functie.
+            for (var ki = 0; ki < keys.length; ki++) {
+                if (bodyNorm.indexOf(keys[ki]) !== 0 && bodyNorm.indexOf(keys[ki]) < 0) { continue; }
+                var cands = byTitle[keys[ki]];
                 for (var cI = 0; cI < cands.length; cI++) {
                     if (!year || !cands[cI].Year || cands[cI].Year === year) { match = cands[cI]; break; }
                 }
@@ -2749,10 +2833,10 @@
         }
         checkAdmin();
         markFolderCards();
-        syncRequestTileCards();
         // Mappen: als detailpagina (/item?id=) of als lijst (/list?parentId=, Emby 4.11).
         var folderId = id || listIdFromHash();
         syncFolderPage(folderId);
+        syncRequestTileCards(folderPage[folderId] === true);
         syncExtraRows(id);
         syncItemCast(folderId);
         syncBodyClass(id);
@@ -2820,8 +2904,16 @@
         if (bodyObserver || !document.body) { return; }
         try {
             // De YouTube-link (en de regel erbij) meteen bij elke wijziging verbergen, nog voordat de pagina getekend wordt.
+            // Elke wijziging in de pagina kwam hier langs, en hideFilePathLines loopt alle tekstknopen van de
+            // pagina af. Op een tv liep de afstandsbediening daardoor achter. Nu hoogstens vier keer per seconde.
+            var hidePending = 0;
             bodyObserver = new MutationObserver(function () {
-                try { hideFilePathLines(false, true); } catch (e) { }
+                if (!hidePending) {
+                    hidePending = setTimeout(function () {
+                        hidePending = 0;
+                        try { hideFilePathLines(false, true); } catch (e) { }
+                    }, 250);
+                }
                 schedule();
             });
             bodyObserver.observe(document.body, { childList: true, subtree: true });

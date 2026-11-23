@@ -2,19 +2,8 @@ define(['emby-button'], function () {
     'use strict';
 
     var pluginId = '7b0f3a52-4c1e-4a7b-9d2e-5f6c8a1b3d90';
-    var language = 'nl';
 
-
-    // Vertaling van de activiteitenregels (de server schrijft ze in het Nederlands). Elke regel: [patroon, Engels, Duits].
-    // De tijd ("HH:mm:ss  ") blijft staan; foutmeldingen van Emby/TMDB/Radarr/Sonarr zelf blijven zoals ze zijn.
-    // De logregels komen vertaald van de server (sleutel + waarden, zie Lang/*.json),
-    // dus hier wordt niets meer omgezet.
-    function translateEvent(e) { return e; }
-
-    function setLanguage(locale) {
-        var value = String(locale || '').toLowerCase();
-        language = value.indexOf('de') === 0 ? 'de' : value.indexOf('nl') === 0 ? 'nl' : (value.indexOf('nb') === 0 || value.indexOf('nn') === 0 || value.indexOf('no') === 0) ? 'no' : 'en';
-    }
+    // De logregels en de statusregels komen al vertaald van de server (sleutel + waarden, zie Lang/*.json).
 
     function translatePage(view) {
         view.querySelector('h2').textContent = t('status.discover_status');
@@ -156,9 +145,6 @@ define(['emby-button'], function () {
     function info(lines, text) { lines.push('       ' + text); }
     function warn(lines, message) { lines.push('[ ! ]  ' + message); }
 
-    // De server stuurt deze regel al in de taal van de kijker.
-    function translateButtonScript(value) { return value; }
-
     function run(view, out) {
         var lines = [];
         out.textContent = t('status.checking');
@@ -167,7 +153,6 @@ define(['emby-button'], function () {
         return getJson('Discover/Status', { Lang: viewerLang() }).then(function (initialStatus) {
             if (initialStatus && initialStatus.Strings) { STR = initialStatus.Strings; }
             window.__discoverStatus = initialStatus;
-            setLanguage(initialStatus.PluginLanguage);
             translatePage(view);
             return step(lines, t('status.get_emby_version'), function () {
             return getJson('System/Info').then(function (i) {
@@ -207,15 +192,16 @@ define(['emby-button'], function () {
                     }
                     if (r.ClipError) { bad(lines, t('status.confirmation_clip_could_not_be_written') + r.ClipError); }
                     else { ok(lines, t('status.confirmation_clip_is_ready') + r.ClipPath); }
-                    if (r.ButtonScript && /^OK/.test(r.ButtonScript)) { ok(lines, t('status.request_button_in_web_client') + translateButtonScript(r.ButtonScript)); }
-                    else { bad(lines, t('status.request_button_in_web_client') + translateButtonScript(r.ButtonScript || t('ui.unknown'))); }
+                    if (r.ButtonScript && /^OK/.test(r.ButtonScript)) { ok(lines, t('status.request_button_in_web_client') + r.ButtonScript); }
+                    else { bad(lines, t('status.request_button_in_web_client') + (r.ButtonScript || t('ui.unknown'))); }
+                    // De server geeft het oordeel als vaste code mee; eerder werd hier op Nederlandse woorden
+                    // gezocht, waardoor het oordeel in elke andere taal wegviel.
                     var wi = r.WebInject || t('ui.unknown');
                     var wiLabel = t('status.tile_discover_media_discover_page');
-                    if (/^(actief|al actief)/.test(wi)) { ok(lines, wiLabel + wi); }
-                    else if (/^alleen-lezen/.test(wi)) {
-                        warn(lines, wiLabel + t('status.loader_readonly_detail', wi));
-                    }
-                    else if (/^(fout|webclient niet gevonden)/.test(wi)) { bad(lines, wiLabel + wi); }
+                    var state = r.WebInjectState || '';
+                    if (state === 'on' || state === 'already') { ok(lines, wiLabel + wi); }
+                    else if (state === 'readonly') { warn(lines, wiLabel + t('status.loader_readonly_detail', wi)); }
+                    else if (state === 'error' || state === 'notfound') { bad(lines, wiLabel + wi); }
                     else { info(lines, wiLabel + wi); }
                     info(lines, t('status.channel_requests_by_emby') + r.ChannelCalls + 'x; ' + t('status.requests_succeeded_failed') + (r.Requests - r.RequestErrors) + '/' + r.RequestErrors);
                 });
@@ -288,12 +274,27 @@ define(['emby-button'], function () {
             if (!users.length) { return; }
             lines.push('');
             lines.push('== ' + t('status.who_can_see_the_channel') + ' ==');
-            return Promise.all(users.map(function (u) {
+            // Per gebruiker één verzoek, maar niet alle tegelijk: bij honderden gebruikers liep de server vast
+            // op een paar honderd parallelle aanroepen uit deze ene pagina. Acht tegelijk is ruim snel genoeg.
+            function inChunks(list, size, fn) {
+                var out = [], at = 0;
+                function next() {
+                    if (at >= list.length) { return Promise.resolve(out); }
+                    var slice = list.slice(at, at + size);
+                    at += size;
+                    return Promise.all(slice.map(fn)).then(function (part) {
+                        out = out.concat(part);
+                        return next();
+                    });
+                }
+                return next();
+            }
+            return inChunks(users, 8, function (u) {
                 return getJson('Channels', { UserId: u.Id }).then(function (r) {
                     var has = (r.Items || []).some(isDiscoverChannel);
                     return { name: u.Name, has: has };
                 }, function () { return { name: u.Name, has: null }; });
-            })).then(function (res) {
+            }).then(function (res) {
                 var without = res.filter(function (x) { return x.has === false; }).map(function (x) { return x.name; });
                 var unknown = res.filter(function (x) { return x.has === null; }).map(function (x) { return x.name; });
                 var withCount = res.filter(function (x) { return x.has; }).length;
@@ -312,7 +313,6 @@ define(['emby-button'], function () {
             if (!r || !r.Events || !r.Events.length) { info(lines, t('status.nothing_yet_open_the_discover_channel_in')); }
             else {
                 r.Events.forEach(function (e) {
-                    e = translateEvent(e);
                     info(lines, e);
                 });
             }

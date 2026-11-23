@@ -62,6 +62,7 @@ namespace Emby.Plugins.Discover
             catch (Exception ex)
             {
                 DiscoverDiagnostics.WebInject = DiscoverLanguage.T("web.error") + ex.Message;
+                DiscoverDiagnostics.WebInjectState = "error";
                 try { _logger.Error("Discover: applying the web client loader failed: {0}", ex.Message); } catch { }
             }
         }
@@ -91,25 +92,31 @@ namespace Emby.Plugins.Discover
             if (indexPath == null)
             {
                 DiscoverDiagnostics.WebInject = DiscoverLanguage.T("web.web_client_not_found_enter_the_web_client");
+                DiscoverDiagnostics.WebInjectState = "notfound";
                 return;
             }
 
             // The loader always stays injected: it reads the "tile opens Discover" switch from the server at runtime
             // (/Discover/LoaderConfig), so toggling takes effect at once without a restart or a changed index.html.
-            DiscoverDiagnostics.WebInject = ApplyLoader(indexPath, true) + (loaderOn ? DiscoverLanguage.T("web.tile_discover_on") : DiscoverLanguage.T("web.tile_discover_off"));
+            string loaderState;
+            DiscoverDiagnostics.WebInject = ApplyLoader(indexPath, true, out loaderState) +
+                (loaderOn ? DiscoverLanguage.T("web.tile_discover_on") : DiscoverLanguage.T("web.tile_discover_off"));
+            DiscoverDiagnostics.WebInjectState = loaderState;
             string ns = RemoveNativeShell(indexPath);
             try { _logger.Info("Discover: webclient-lader {0}; oude app-modus-shim {1}", DiscoverDiagnostics.WebInject, ns); } catch { }
         }
 
         // Lader (tegel -> Discover + knop globaal): een extern <script> voor </body>.
-        private string ApplyLoader(string indexPath, bool enabled)
+        private string ApplyLoader(string indexPath, bool enabled, out string state)
         {
+            state = "error";
             string dir = Path.GetDirectoryName(indexPath);
             string loaderPath = Path.Combine(dir, LoaderFile);
             if (!enabled)
             {
                 bool removed = RemoveFromIndex(indexPath);
                 try { if (File.Exists(loaderPath)) File.Delete(loaderPath); } catch { }
+                state = removed ? "removed" : "off";
                 return removed ? DiscoverLanguage.T("web.removed_from") + indexPath : DiscoverLanguage.T("web.off");
             }
             try
@@ -127,10 +134,12 @@ namespace Emby.Plugins.Discover
                     catch { try { if (File.Exists(tmp)) File.Delete(tmp); } catch { } throw; }
                 }
                 bool added = AddToIndex(indexPath);
+                state = added ? "on" : "already";
                 return (added ? DiscoverLanguage.T("web.active_in") : DiscoverLanguage.T("web.already_active_in")) + indexPath;
             }
             catch (Exception ex) when (ex is UnauthorizedAccessException || ex is IOException)
             {
+                state = "readonly";
                 return DiscoverLanguage.T("web.read_only_web_client_folder") + dir + DiscoverLanguage.T("web.is_not_writable") + ex.Message + DiscoverLanguage.T("web.loader_not_placed") +
                     DiscoverLanguage.T("web.the_discover_page_and_buttons_still_work");
             }
@@ -215,10 +224,19 @@ namespace Emby.Plugins.Discover
             return Encoding.UTF8.GetString(bytes, start, bytes.Length - start);
         }
 
+        /// <summary>
+        /// Schrijft de index.html van de webclient. Dit is het enige bestand buiten de plugin dat we aanraken, en
+        /// als het misgaat ziet iedere gebruiker een lege webclient. Daarom:
+        ///   1. eenmalig een back-up ernaast (index.html.discover-bak), zodat er altijd iets is om terug te zetten;
+        ///   2. File.Replace in plaats van verwijderen-en-verplaatsen, zodat het bestand nooit even weg is;
+        ///   3. mislukt Replace (ander bestandssysteem, Docker-mount), dan pas verplaatsen, en bij een fout
+        ///      halverwege de back-up terugzetten.
+        /// </summary>
         private void WriteText(string path, string text, bool bom)
         {
             var body = Encoding.UTF8.GetBytes(text);
             var tmp = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+            var backup = path + ".discover-bak";
             try
             {
                 using (var fs = File.Create(tmp))
@@ -226,8 +244,32 @@ namespace Emby.Plugins.Discover
                     if (bom) fs.Write(new byte[] { 0xEF, 0xBB, 0xBF }, 0, 3);
                     fs.Write(body, 0, body.Length);
                 }
-                if (File.Exists(path)) File.Delete(path);
-                File.Move(tmp, path);
+
+                if (!File.Exists(path)) { File.Move(tmp, path); return; }
+
+                // Eenmalig de originele index.html bewaren (alleen de eerste keer: later staat de lader er al in).
+                try { if (!File.Exists(backup)) { File.Copy(path, backup); } }
+                catch (Exception ex) { DiscoverDiagnostics.Add("log.web.backup_mislukt", backup, ex.Message); }
+
+                try
+                {
+                    File.Replace(tmp, path, null);
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    DiscoverDiagnostics.Add("log.web.replace_mislukt_verplaatsen", ex.Message);
+                }
+
+                // Terugval: verwijderen en verplaatsen. Gaat het verplaatsen mis, dan de back-up terugzetten,
+                // zodat de webclient niet zonder index.html achterblijft.
+                File.Delete(path);
+                try { File.Move(tmp, path); }
+                catch
+                {
+                    try { if (!File.Exists(path) && File.Exists(backup)) { File.Copy(backup, path); } } catch { }
+                    throw;
+                }
             }
             catch { try { if (File.Exists(tmp)) File.Delete(tmp); } catch { } throw; }
         }

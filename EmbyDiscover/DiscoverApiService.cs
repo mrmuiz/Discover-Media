@@ -75,6 +75,12 @@ namespace Emby.Plugins.Discover
         public string Overview { get; set; }
         /// <summary>Optioneel: TMDB-id uit de metadata van het item (Trailers-kanaal). Alleen voor films.</summary>
         public int TmdbId { get; set; }
+        /// <summary>
+        /// Optioneel: "tv" of "movie" als de browser het al zeker weet (van het id dat het kanaal uitdeelde).
+        /// Zonder deze hint wordt eerst een film geprobeerd, en dat levert bij een serie de verkeerde titel op:
+        /// TMDB-id's van films en series overlappen.
+        /// </summary>
+        public string Type { get; set; }
     }
 
     [Route("/Discover/Info", "GET", Summary = "Info text (release date, status, seasons, network/studio, genres) for the popup")]
@@ -231,6 +237,8 @@ namespace Emby.Plugins.Discover
         public string ClipError { get; set; }
         public string ButtonScript { get; set; }
         public string WebInject { get; set; }
+        /// <summary>Hetzelfde als vaste code ("on", "already", "readonly", "notfound", "error", "removed", "off").</summary>
+        public string WebInjectState { get; set; }
         public string ScriptBuild { get; set; }
         public string DllBuilt { get; set; }
         public List<string> Events { get; set; } = new List<string>();
@@ -503,7 +511,7 @@ namespace Emby.Plugins.Discover
             string clipError;
             var clipPath = ClipPathOrError(out clipError);
             var viewer = ViewerCode(request == null ? null : request.Lang, request != null && request.Force);
-            return new DiscoverStatusResponse
+            var resp = new DiscoverStatusResponse
             {
                 Strings = DiscoverStrings.Table(viewer),
                 Languages = DiscoverLanguage.Available()
@@ -528,18 +536,42 @@ namespace Emby.Plugins.Discover
                 PosterScoreSource = cfg.EffPosterScoreSource,
                 AccentColor = AccentOf(cfg.AccentColor),
                 OmdbRatings = cfg.ShowOmdbRatings && (!string.IsNullOrWhiteSpace(cfg.OmdbApiKey) || !string.IsNullOrWhiteSpace(cfg.MdblistApiKey)),
-                LoadedAt = DiscoverDiagnostics.LoadedUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss"),
-                ChannelCalls = DiscoverDiagnostics.ChannelCalls,
-                Requests = DiscoverDiagnostics.Requests,
-                RequestErrors = DiscoverDiagnostics.RequestErrors,
-                ClipPath = clipPath,
-                ClipError = clipError,
-                ButtonScript = DiscoverStrings.Get(viewer, "api.ok_emby_plugin_resource_open_discover_to"),
-                WebInject = string.IsNullOrEmpty(DiscoverDiagnostics.WebInject) ? DiscoverStrings.Get(viewer, "web.off") : DiscoverDiagnostics.WebInject,
                 ScriptBuild = EmbeddedScriptBuild(),
-                DllBuilt = DllBuildTime(),
-                Events = DiscoverDiagnostics.Snapshot(viewer)
             };
+
+            // Alles hieronder is beheerdersinformatie: het logboek (met namen van gebruikers erin), de paden op
+            // de server en de tellers. Elke ingelogde gebruiker mag deze pagina opvragen voor de teksten en de
+            // weergave-instellingen, maar hoeft dit niet te zien. ShowDiagnostics verborg het alleen in de
+            // schermen; wie de URL zelf opvroeg kreeg het toch.
+            if (!IsAdmin())
+            {
+                return resp;
+            }
+            resp.LoadedAt = DiscoverDiagnostics.LoadedUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss");
+            resp.ChannelCalls = DiscoverDiagnostics.ChannelCalls;
+            resp.Requests = DiscoverDiagnostics.Requests;
+            resp.RequestErrors = DiscoverDiagnostics.RequestErrors;
+            resp.ClipPath = clipPath;
+            resp.ClipError = clipError;
+            resp.ButtonScript = DiscoverStrings.Get(viewer, "api.ok_emby_plugin_resource_open_discover_to");
+            resp.WebInject = string.IsNullOrEmpty(DiscoverDiagnostics.WebInject)
+                ? DiscoverStrings.Get(viewer, "web.off")
+                : DiscoverDiagnostics.WebInject;
+            resp.WebInjectState = string.IsNullOrEmpty(DiscoverDiagnostics.WebInject) ? "off" : (DiscoverDiagnostics.WebInjectState ?? "");
+            resp.DllBuilt = DllBuildTime();
+            resp.Events = DiscoverDiagnostics.Snapshot(viewer);
+            return resp;
+        }
+
+        /// <summary>Is degene die dit opvraagt beheerder in Emby?</summary>
+        private bool IsAdmin()
+        {
+            try
+            {
+                var info = _auth == null ? null : _auth.GetAuthorizationInfo(Request);
+                return info != null && info.User != null && info.User.Policy != null && info.User.Policy.IsAdministrator;
+            }
+            catch { return false; }
         }
 
         public async Task<object> Get(DiscoverHomeRequest request)
@@ -805,7 +837,12 @@ namespace Emby.Plugins.Discover
             {
                 var item = tv ? await _tmdb.GetTv(id, CancellationToken.None).ConfigureAwait(false)
                               : await _tmdb.GetMovie(id, CancellationToken.None).ConfigureAwait(false);
-                if (item != null) lock (DetailCache) { DetailCache[key] = item; }
+                if (item != null) lock (DetailCache)
+                    {
+                        // Begrensd: anders blijft elke ooit geopende titel in het geheugen staan.
+                        if (DetailCache.Count > 1500) { DetailCache.Clear(); }
+                        DetailCache[key] = item;
+                    }
                 return item;
             }
             catch (Exception ex)
@@ -1085,20 +1122,54 @@ namespace Emby.Plugins.Discover
             return result;
         }
 
+        /// <summary>
+        /// Haalt het statusteken van het kanaal (✓ / ⏳) van de titel af. Het staat achter de titel (zodat het niet
+        /// meesorteert), maar oudere versies zetten het ervoor; beide kanten dus weghalen.
+        /// </summary>
+        internal static string StripStatusMark(string name)
+        {
+            var value = (name ?? "").Trim();
+            while (value.Length > 1 && (value[0] == '✓' || value[0] == '⏳')) { value = value.Substring(1).TrimStart(); }
+            while (value.Length > 1)
+            {
+                var last = value[value.Length - 1];
+                if (last != '✓' && last != '⏳') { break; }
+                value = value.Substring(0, value.Length - 1).TrimEnd();
+            }
+            return value;
+        }
+
         public async Task<object> Get(DiscoverResolveRequest request)
         {
             var res = new DiscoverResolveResult();
             try
             {
-                var name = (request.Name ?? "").Trim();
-                // Het kanaal zet een status-icoon voor de titel.
-                while (name.Length > 1 && (name[0] == '\u2713' || name[0] == '\u23F3')) name = name.Substring(1).TrimStart();
+                var name = StripStatusMark(request.Name);
                 if (name.Length == 0 || string.IsNullOrWhiteSpace(Plugin.GetCurrentConfiguration().TmdbApiKey)) return res;
+
+                // Weet de browser het soort al (uit het id van het kanaal), dan is er niets te raden.
+                bool knowsType = string.Equals(request.Type, "tv", StringComparison.OrdinalIgnoreCase) ||
+                                 string.Equals(request.Type, "movie", StringComparison.OrdinalIgnoreCase);
+                bool wantTv = string.Equals(request.Type, "tv", StringComparison.OrdinalIgnoreCase);
 
                 bool tv = false;
                 TmdbItem hit = null;
-                // Eerst kanaal-cache (weet meteen film vs serie).
-                hit = DiscoverMediaChannel.FindCached(name, request.Year, request.Overview, out tv);
+                if (knowsType && request.TmdbId > 0)
+                {
+                    tv = wantTv;
+                    try
+                    {
+                        hit = wantTv
+                            ? await _tmdb.GetTv(request.TmdbId, CancellationToken.None).ConfigureAwait(false)
+                            : await _tmdb.GetMovie(request.TmdbId, CancellationToken.None).ConfigureAwait(false);
+                    }
+                    catch (Exception ex)
+                    {
+                        DiscoverDiagnostics.Add(wantTv ? "log.api.knop_tmdb_serie" : "log.api.knop_tmdb_film", request.TmdbId, ex.Message);
+                    }
+                }
+                // Anders: eerst de kanaal-cache (die weet film vs serie), dan het meegegeven id.
+                if (hit == null) { hit = DiscoverMediaChannel.FindCached(name, request.Year, request.Overview, out tv); }
                 if (hit == null && request.TmdbId > 0)
                 {
                     // Trailers-kanaal of ProviderIds.Tmdb: probeer film, dan serie.
@@ -1124,7 +1195,13 @@ namespace Emby.Plugins.Discover
                         }
                     }
                 }
-                if (hit == null)
+                if (hit == null && knowsType)
+                {
+                    // Het soort staat vast: alleen daar zoeken, nooit in de andere.
+                    tv = wantTv;
+                    hit = await FindBySearch(name, request.Year, wantTv).ConfigureAwait(false);
+                }
+                else if (hit == null)
                 {
                     // Niet in cache: zoek op titel, eerst films, dan series.
                     hit = await FindBySearch(name, request.Year, false).ConfigureAwait(false);

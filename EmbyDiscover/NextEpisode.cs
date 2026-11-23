@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Linq;
 using System.Globalization;
 using System.Net.Http;
 using System.Threading;
@@ -25,6 +26,20 @@ namespace Emby.Plugins.Discover
         static NextEpisode()
         {
             try { Http.DefaultRequestHeaders.UserAgent.ParseAdd("EmbyDiscoverMedia/1.0"); } catch { }
+        }
+
+        /// <summary>
+        /// Houdt een cache klein. De houdbaarheid wordt bij het lezen gecontroleerd, maar verlopen regels bleven
+        /// staan tot Emby herstart; bij veel gebruikers die veel series openen loopt dat op.
+        /// </summary>
+        private static void Cap<TKey, TValue>(ConcurrentDictionary<TKey, TValue> map, int max, Func<TValue, DateTime> at)
+        {
+            if (map.Count <= max) { return; }
+            foreach (var key in map.ToArray().OrderBy(kv => at(kv.Value)).Take(map.Count - max * 3 / 4).Select(kv => kv.Key))
+            {
+                TValue ignored;
+                map.TryRemove(key, out ignored);
+            }
         }
 
         /// <summary>TVmaze-nummer als dat al bekend is (voor de link in het infoblok), anders 0.</summary>
@@ -66,6 +81,7 @@ namespace Emby.Plugins.Discover
                 DiscoverDiagnostics.Add("log.next.tvmaze_volgende_aflevering_mislukt", tmdbId, ex.Message);
             }
             Next[tmdbId] = Tuple.Create(DateTime.UtcNow, code, when);
+            Cap(Next, 2000, v => v.Item1);
             return code == null ? null : Tuple.Create(code, when);
         }
 
@@ -101,6 +117,7 @@ namespace Emby.Plugins.Discover
                 DiscoverDiagnostics.Add("log.next.tvmaze_volgende_aflevering_mislukt", tmdbId, ex.Message);
             }
             Lines[key] = Tuple.Create(DateTime.UtcNow, line);
+            Cap(Lines, 2000, v => v.Item1);
             return line;
         }
 
@@ -115,6 +132,7 @@ namespace Emby.Plugins.Discover
             if (id <= 0 && ext != null && !string.IsNullOrWhiteSpace(ext.imdb_id))
                 id = await Lookup(json, "imdb=" + Uri.EscapeDataString(ext.imdb_id.Trim())).ConfigureAwait(false);
             ShowIds[tmdbId] = Tuple.Create(DateTime.UtcNow, id);
+            Cap(ShowIds, 2000, v => v.Item1);
             return id;
         }
 

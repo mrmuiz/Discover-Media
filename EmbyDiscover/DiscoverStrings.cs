@@ -37,29 +37,29 @@ namespace Emby.Plugins.Discover
 
         internal static bool Has(string code)
         {
-            Ensure();
-            return code != null && _tables.ContainsKey(code.ToLowerInvariant());
+            var tables = Ensure();
+            return code != null && tables.ContainsKey(code.ToLowerInvariant());
         }
 
         /// <summary>Hoeveel van de Engelse sleutels deze taal heeft (voor de statuspagina).</summary>
         internal static void Coverage(string code, out int translated, out int total)
         {
-            Ensure();
+            var tables = Ensure();
             Dictionary<string, string> en, t;
-            _tables.TryGetValue("en", out en);
+            tables.TryGetValue("en", out en);
             total = en == null ? 0 : en.Count;
             translated = 0;
-            if (code == null || !_tables.TryGetValue(code.ToLowerInvariant(), out t) || en == null) { return; }
+            if (code == null || !tables.TryGetValue(code.ToLowerInvariant(), out t) || en == null) { return; }
             foreach (var k in en.Keys) { if (t.ContainsKey(k)) { translated++; } }
         }
 
         /// <summary>De waarde van een sleutel in precies deze taal, zonder terugval op Engels.</summary>
         internal static string Own(string code, string key)
         {
-            Ensure();
+            var tables = Ensure();
             Dictionary<string, string> table;
             string value;
-            if (code != null && _tables.TryGetValue(code.ToLowerInvariant(), out table) && table.TryGetValue(key, out value)) { return value; }
+            if (code != null && tables.TryGetValue(code.ToLowerInvariant(), out table) && table.TryGetValue(key, out value)) { return value; }
             return null;
         }
 
@@ -67,14 +67,14 @@ namespace Emby.Plugins.Discover
         internal static string Get(string code, string key)
         {
             if (string.IsNullOrEmpty(key)) { return ""; }
-            Ensure();
+            var tables = Ensure();
             Dictionary<string, string> table;
             string value;
-            if (code != null && _tables.TryGetValue(code.ToLowerInvariant(), out table) && table.TryGetValue(key, out value) && value != null)
+            if (code != null && tables.TryGetValue(code.ToLowerInvariant(), out table) && table.TryGetValue(key, out value) && value != null)
             {
                 return value;
             }
-            if (_tables.TryGetValue("en", out table) && table.TryGetValue(key, out value) && value != null)
+            if (tables.TryGetValue("en", out table) && table.TryGetValue(key, out value) && value != null)
             {
                 return value;
             }
@@ -84,23 +84,30 @@ namespace Emby.Plugins.Discover
         /// <summary>Alle teksten van een taal (Engels aangevuld), voor de browserscripts.</summary>
         internal static Dictionary<string, string> Table(string code)
         {
-            Ensure();
+            var tables = Ensure();
             var result = new Dictionary<string, string>(StringComparer.Ordinal);
             Dictionary<string, string> table;
-            if (_tables.TryGetValue("en", out table)) { foreach (var kv in table) { result[kv.Key] = kv.Value; } }
-            if (code != null && _tables.TryGetValue(code.ToLowerInvariant(), out table))
+            if (tables.TryGetValue("en", out table)) { foreach (var kv in table) { result[kv.Key] = kv.Value; } }
+            if (code != null && tables.TryGetValue(code.ToLowerInvariant(), out table))
             {
                 foreach (var kv in table) { if (kv.Value != null) { result[kv.Key] = kv.Value; } }
             }
             return result;
         }
 
-        private static void Ensure()
+        /// <summary>
+        /// Zorgt dat de tabellen geladen zijn en geeft ze terug. Bewust de tabel teruggeven in plaats van het
+        /// veld laten lezen: Reload() zet het veld op null, en een lezer die daar net tussen zat kreeg dan een
+        /// NullReferenceException midden in een paginaload.
+        /// </summary>
+        private static Dictionary<string, Dictionary<string, string>> Ensure()
         {
-            if (_tables != null) { return; }
+            var ready = _tables;
+            if (ready != null) { return ready; }
             lock (Gate)
             {
-                if (_tables != null) { return; }
+                ready = _tables;
+                if (ready != null) { return ready; }
                 var tables = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
                 var problems = new List<string>();
 
@@ -141,6 +148,7 @@ namespace Emby.Plugins.Discover
                 _codes = codes;
                 _loadNote = codes.Count + " language(s): " + string.Join(", ", codes.ToArray()) +
                     (problems.Count == 0 ? "" : "; problems: " + string.Join("; ", problems.ToArray()));
+                return tables;
             }
         }
 

@@ -403,6 +403,7 @@ namespace Emby.Plugins.Discover
                 try { pending = !await IsApproved(json, tv, res.requestId, ct).ConfigureAwait(false); }
                 catch (Exception ex) { if (ex is OperationCanceledException) throw; }
             }
+            if (_pending.Count > 5000) { _pending.Clear(); }
             _pending[(tv ? "t:" : "m:") + tmdbId] = pending;
             if (is4k && !tv) DiscoverDiagnostics.Add("log.ombi.ombi_4k_request_for_movie", tmdbId);
             Invalidate();

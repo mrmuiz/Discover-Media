@@ -74,9 +74,9 @@ namespace Emby.Plugins.Discover
     {
         private static readonly HttpClient Http = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
         private static readonly TimeSpan Ttl = TimeSpan.FromHours(24);
-        private static readonly Dictionary<string, KeyValuePair<DateTime, DiscoverRatingsResult>> Cache =
-            new Dictionary<string, KeyValuePair<DateTime, DiscoverRatingsResult>>();
-        private static readonly Dictionary<string, string> ImdbIds = new Dictionary<string, string>();
+        // Begrensd, en per titel één opvraging tegelijk (zie AsyncCache).
+        private static readonly AsyncCache<DiscoverRatingsResult> Cache = new AsyncCache<DiscoverRatingsResult>(Ttl, 3000);
+        private static readonly AsyncCache<string> ImdbIds = new AsyncCache<string>(TimeSpan.FromDays(7), 5000);
 
         private readonly IJsonSerializer _json;
         private readonly TmdbClient _tmdb;
@@ -102,27 +102,29 @@ namespace Emby.Plugins.Discover
 
         private static string Clean(string v) => string.IsNullOrWhiteSpace(v) || v == "N/A" ? null : v.Trim();
 
-        private async Task<string> ImdbIdFor(bool tv, int tmdbId)
+        private Task<string> ImdbIdFor(bool tv, int tmdbId)
         {
             var k = (tv ? "t" : "m") + tmdbId;
-            lock (ImdbIds) { string c; if (ImdbIds.TryGetValue(k, out c)) return c; }
-            string id = null;
-            if (tv)
+            return ImdbIds.Get(k, async () =>
             {
-                var ext = await _tmdb.GetTvExternalIds(tmdbId, CancellationToken.None).ConfigureAwait(false);
-                id = ext?.imdb_id;
-            }
-            else
-            {
-                var x = await _tmdb.GetExtraCached(false, tmdbId, CancellationToken.None).ConfigureAwait(false);
-                id = x?.imdb_id;
-            }
-            if (!string.IsNullOrWhiteSpace(id)) lock (ImdbIds) { ImdbIds[k] = id; }
-            return id;
+                string id;
+                if (tv)
+                {
+                    var ext = await _tmdb.GetTvExternalIds(tmdbId, CancellationToken.None).ConfigureAwait(false);
+                    id = ext == null ? null : ext.imdb_id;
+                }
+                else
+                {
+                    var x = await _tmdb.GetExtraCached(false, tmdbId, CancellationToken.None).ConfigureAwait(false);
+                    id = x == null ? null : x.imdb_id;
+                }
+                // Niets gevonden? Niet bewaren, dan wordt het later opnieuw geprobeerd.
+                if (string.IsNullOrWhiteSpace(id)) { throw new InvalidOperationException("no imdb id"); }
+                return id;
+            });
         }
 
-        private static readonly Dictionary<string, KeyValuePair<DateTime, DiscoverRatingsResult>> MdbCache =
-            new Dictionary<string, KeyValuePair<DateTime, DiscoverRatingsResult>>();
+        private static readonly AsyncCache<DiscoverRatingsResult> MdbCache = new AsyncCache<DiscoverRatingsResult>(Ttl, 3000);
 
         private async Task<MdbItemDto> FetchMdb(string key, bool tv, int tmdbId)
         {
@@ -179,50 +181,50 @@ namespace Emby.Plugins.Discover
             if (!string.IsNullOrWhiteSpace(cfg.MdblistApiKey))
             {
                 var mk = (tv ? "t" : "m") + request.TmdbId;
-                lock (MdbCache)
-                {
-                    KeyValuePair<DateTime, DiscoverRatingsResult> hit;
-                    if (MdbCache.TryGetValue(mk, out hit) && DateTime.UtcNow - hit.Key < Ttl && hit.Value != null) return hit.Value;
-                }
                 try
                 {
-                    var m = FromMdb(await FetchMdb(cfg.MdblistApiKey, tv, request.TmdbId).ConfigureAwait(false));
-                    if (m != null)
+                    // Eén opvraging per titel, ook als twintig gebruikers tegelijk dezelfde popup openen.
+                    var m = await MdbCache.Get(mk, async () =>
                     {
-                        lock (MdbCache) { MdbCache[mk] = new KeyValuePair<DateTime, DiscoverRatingsResult>(DateTime.UtcNow, m); }
-                        return m;
-                    }
+                        var dto = FromMdb(await FetchMdb(cfg.MdblistApiKey, tv, request.TmdbId).ConfigureAwait(false));
+                        if (dto == null) { throw new InvalidOperationException("MDBList has no ratings"); }
+                        return dto;
+                    }).ConfigureAwait(false);
+                    if (m != null) { return m; }
                 }
                 catch (Exception ex)
                 {
-                    DiscoverDiagnostics.Add("log.omdb.fout_mdblist", request.Type, request.TmdbId, ex.Message);
+                    if (!(ex is InvalidOperationException))
+                        DiscoverDiagnostics.Add("log.omdb.fout_mdblist", request.Type, request.TmdbId, ex.Message);
                 }
             }
             if (string.IsNullOrWhiteSpace(cfg.OmdbApiKey)) return res;
             try
             {
-                var imdb = await ImdbIdFor(tv, request.TmdbId).ConfigureAwait(false);
+                string imdb = null;
+                try { imdb = await ImdbIdFor(tv, request.TmdbId).ConfigureAwait(false); }
+                catch (InvalidOperationException) { }   // deze titel heeft geen IMDb-id bij TMDB
                 if (string.IsNullOrWhiteSpace(imdb)) return res;
-                lock (Cache)
+                // Ook hier één opvraging per titel: de gratis OMDb-sleutel is duizend verzoeken per dag, en
+                // zonder dit haalde elke gebruiker die dezelfde titel opende zijn eigen exemplaar op.
+                return await Cache.Get(imdb, async () =>
                 {
-                    KeyValuePair<DateTime, DiscoverRatingsResult> hit;
-                    if (Cache.TryGetValue(imdb, out hit) && DateTime.UtcNow - hit.Key < Ttl) return hit.Value;
-                }
-                var r = await Fetch(cfg.OmdbApiKey, imdb).ConfigureAwait(false);
-                res.ImdbId = imdb;
-                if (string.Equals(r.Response, "True", StringComparison.OrdinalIgnoreCase))
-                {
-                    res.Imdb = Clean(r.imdbRating);
-                    res.ImdbVotes = Clean(r.imdbVotes);
-                    res.Metacritic = Clean(r.Metascore);
-                    var rt = (r.Ratings ?? new List<OmdbRating>()).FirstOrDefault(x => x != null && string.Equals(x.Source, "Rotten Tomatoes", StringComparison.OrdinalIgnoreCase));
-                    res.RottenTomatoes = Clean(rt?.Value);
-                }
-                else
-                {
-                    DiscoverDiagnostics.Add("log.omdb.omdb", imdb, (object)(r.Error) ?? DiscoverDiagnostics.W("word.geen_resultaat"));
-                }
-                lock (Cache) { Cache[imdb] = new KeyValuePair<DateTime, DiscoverRatingsResult>(DateTime.UtcNow, res); }
+                    var one = new DiscoverRatingsResult { ImdbId = imdb };
+                    var r = await Fetch(cfg.OmdbApiKey, imdb).ConfigureAwait(false);
+                    if (string.Equals(r.Response, "True", StringComparison.OrdinalIgnoreCase))
+                    {
+                        one.Imdb = Clean(r.imdbRating);
+                        one.ImdbVotes = Clean(r.imdbVotes);
+                        one.Metacritic = Clean(r.Metascore);
+                        var rt = (r.Ratings ?? new List<OmdbRating>()).FirstOrDefault(x => x != null && string.Equals(x.Source, "Rotten Tomatoes", StringComparison.OrdinalIgnoreCase));
+                        one.RottenTomatoes = Clean(rt?.Value);
+                    }
+                    else
+                    {
+                        DiscoverDiagnostics.Add("log.omdb.omdb", imdb, (object)(r.Error) ?? DiscoverDiagnostics.W("word.geen_resultaat"));
+                    }
+                    return one;
+                }).ConfigureAwait(false);
             }
             catch (Exception ex)
             {

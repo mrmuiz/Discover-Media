@@ -299,6 +299,7 @@ namespace Emby.Plugins.Discover
                     if (users == null || DateTime.UtcNow - _usersAt > UserTtl)
                     {
                         var map = new Dictionary<string, int>();
+                        var failed = false;
                         try
                         {
                             for (int page = 0; page < 20; page++)
@@ -318,15 +319,27 @@ namespace Emby.Plugins.Discover
                         {
                             if (ex is OperationCanceledException) throw;
                             DiscoverDiagnostics.Add("log.seerr.seerr_gebruikers_ophalen_mislukt_aanvraag", ex.Message);
+                            // Niets bewaren bij een fout: een lege lijst tien minuten vasthouden betekent dat
+                            // elke aanvraag in die tijd op naam van de API-sleutel binnenkomt, en dus langs de
+                            // limieten en de goedkeuring van Seerr heen. Liever de volgende keer opnieuw proberen.
+                            if (map.Count == 0) { failed = true; }
                         }
-                        _users = users = map;
-                        _usersAt = DateTime.UtcNow;
+                        if (!failed)
+                        {
+                            _users = users = map;
+                            _usersAt = DateTime.UtcNow;
+                        }
+                        else
+                        {
+                            // De vorige (goede) lijst blijft gelden zolang we geen nieuwe hebben.
+                            users = _users;
+                        }
                     }
                 }
                 finally { _userLock.Release(); }
             }
             int id;
-            if (users.TryGetValue(key, out id)) return id;
+            if (users != null && users.TryGetValue(key, out id)) return id;
             DiscoverDiagnostics.Add("log.seerr.seerr_geen_seerr_gebruiker_gekoppeld_aan", key);
             return null;
         }
@@ -367,6 +380,7 @@ namespace Emby.Plugins.Discover
                 pending = created != null && created.status == 1;
             }
             catch { }
+            if (_pending.Count > 5000) { _pending.Clear(); }
             _pending[(tv ? "t:" : "m:") + tmdbId] = pending;
             if (is4k) DiscoverDiagnostics.Add("log.seerr.seerr_4k_aanvraag_voor", DiscoverDiagnostics.W(tv ? "word.serie" : "word.film"), tmdbId);
             Invalidate();
