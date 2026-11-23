@@ -1,3 +1,15 @@
+## Version 1.4.2.1 (beta)
+
+**Security: in Seerr mode a request from an unmapped user was sent as the administrator.**
+
+When Discover requests through Seerr (Jellyseerr/Overseerr), it sends the request with the requesting user's Seerr identity so that Seerr applies that user's approval rules, request quota and 4K permission. If the Emby user could not be matched to a Seerr user, the request was instead sent with no user at all — that is, as the owner of the Seerr API key, the administrator.
+
+The effect: any signed-in Emby user whose account was not linked in Seerr had their requests made as the admin. They were auto-approved, counted against no one's quota, and could ask for the 4K version. The user does not control whether their account is linked, so this happened silently wherever an Emby account was missing from Seerr — a common situation.
+
+A request from a user who cannot be matched to a Seerr user is now refused, with a message asking them to have the administrator link their account in Seerr. An administrator is the owner of the key, so an administrator's own request still goes through. A user who is correctly linked notices no change.
+
+This only affects setups that request through Seerr; Ombi and direct Radarr/Sonarr are unaffected.
+
 ## Version 1.4.2.0
 
 The first stable release since 1.4.1.1. It gathers the work of the three betas that followed (1.4.1.2, 1.4.1.3 and 1.4.1.4); each of them is described in full further down. The short version:
