@@ -485,7 +485,9 @@ namespace Emby.Plugins.Discover
                 bool hasFiles = hasSonarrSeason && sonarrSeason.statistics != null &&
                     sonarrSeason.statistics.episodeFileCount > 0;
                 bool showHourglass = hasSonarrSeason && (sonarrSeason.monitored || hasFiles);
-                if (userBrowsing && showHourglass && string.IsNullOrWhiteSpace(season.overview))
+                // Elk seizoen zonder beschrijving: het seizoen rechtstreeks opvragen (dat valt terug op Engels).
+                // Dat hing eerder aan de zandloper, waardoor alleen seizoenen die al in Sonarr stonden tekst kregen.
+                if (userBrowsing && string.IsNullOrWhiteSpace(season.overview))
                 {
                     try
                     {
@@ -900,6 +902,7 @@ namespace Emby.Plugins.Discover
         private async Task<ChannelItemResult> GenreTiles(bool tv, CancellationToken ct)
         {
             var genres = await _tmdb.GetGenres(tv, ct).ConfigureAwait(false);
+            RememberGenreNames(tv, genres);
             var names = genres.Select(genre => LocalizedGenreName(genre.id, tv, genre.name)).ToArray();
             var backs = await Task.WhenAll(genres.Select(g => GenreBackdrop(tv, g.id, ct))).ConfigureAwait(false);
             var imageUrls = genres.Select((genre, i) => GenreImageUrl(genre.id, backs[i])).ToArray();
@@ -1382,13 +1385,46 @@ namespace Emby.Plugins.Discover
             {10768, new[]{"Oorlog & politiek","War & Politics","Krieg & Politik"}}, {37, new[]{"Western","Western","Western"}}
         };
 
+        /// <summary>Namen van genres zoals TMDB ze in de ingestelde taal geeft, zodra de genrelijst is opgehaald.</summary>
+        private static readonly Dictionary<string, string> TmdbGenreNames = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        private static string GenreKey(bool tv, int id) { return DiscoverLanguage.Code + (tv ? "|t|" : "|m|") + id; }
+
+        /// <summary>Onthoudt de namen uit /genre/.../list, zodat ook een tegel zonder naam de taal van TMDB volgt.</summary>
+        internal static void RememberGenreNames(bool tv, IEnumerable<TmdbGenre> genres)
+        {
+            if (genres == null) { return; }
+            lock (TmdbGenreNames)
+            {
+                foreach (var g in genres)
+                {
+                    if (g != null && g.id > 0 && !string.IsNullOrWhiteSpace(g.name)) { TmdbGenreNames[GenreKey(tv, g.id)] = g.name.Trim(); }
+                }
+                CacheLimit.Trim(TmdbGenreNames, 400, v => DateTime.UtcNow);
+            }
+        }
+
+        private static string KnownGenreName(bool tv, int id)
+        {
+            lock (TmdbGenreNames) { string n; return TmdbGenreNames.TryGetValue(GenreKey(tv, id), out n) ? n : null; }
+        }
+
+        /// <summary>
+        /// De naam van een genre. Nederlands en Duits staan in de tabel hierboven, nagekeken; elke andere
+        /// taal krijgt de naam die TMDB zelf in die taal geeft, en alleen als die ontbreekt het Engels.
+        /// </summary>
         internal static string LocalizedGenreName(int genreId, bool tv, string fallback)
         {
-            string[] names;
             var map = tv ? TvGenres : MovieGenres;
-            if (!map.TryGetValue(genreId, out names)) return fallback;
-            int column = DiscoverLanguage.IsDutch ? 0 : DiscoverLanguage.IsGerman ? 2 : 1;
-            return names[column];
+            string[] names;
+            if (DiscoverLanguage.IsDutch || DiscoverLanguage.IsGerman)
+            {
+                if (map.TryGetValue(genreId, out names)) { return names[DiscoverLanguage.IsDutch ? 0 : 2]; }
+            }
+            if (!string.IsNullOrWhiteSpace(fallback)) { return fallback.Trim(); }
+            var known = KnownGenreName(tv, genreId);
+            if (!string.IsNullOrWhiteSpace(known)) { return known; }
+            return map.TryGetValue(genreId, out names) ? names[1] : fallback;
         }
 
         /// <summary>Beschrijving uit de lijst met de releasedatum eraan voorop (geen extra TMDB-call).</summary>
@@ -1403,12 +1439,10 @@ namespace Emby.Plugins.Discover
         {
             var result = new List<string>();
             if (i.genre_ids == null) return result;
-            int col = DiscoverLanguage.IsDutch ? 0 : DiscoverLanguage.IsGerman ? 2 : 1;
-            var map = tv ? TvGenres : MovieGenres;
             foreach (var g in i.genre_ids)
             {
-                string[] names;
-                if (map.TryGetValue(g, out names)) result.Add(names[col]);
+                var name = LocalizedGenreName(g, tv, null);
+                if (!string.IsNullOrWhiteSpace(name)) { result.Add(name); }
             }
             return result;
         }

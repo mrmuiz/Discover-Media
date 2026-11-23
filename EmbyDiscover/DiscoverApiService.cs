@@ -784,6 +784,7 @@ namespace Emby.Plugins.Discover
             {
                 bool tvGenres = kind == "genre_tv";
                 var genres = await _tmdb.GetGenres(tvGenres, CancellationToken.None).ConfigureAwait(false);
+                DiscoverMediaChannel.RememberGenreNames(tvGenres, genres);
                 // Foto per genre (zelfde bron en cache als de kanaaltegels); lukt het niet, dan blijft de effen kleur.
                 string[] backs;
                 try
@@ -1526,23 +1527,14 @@ namespace Emby.Plugins.Discover
             return status;
         }
 
-        private static string LanguageName(string language)
-        {
-            if (string.IsNullOrWhiteSpace(language)) return null;
-            try { return CultureInfo.GetCultureInfo(language).EnglishName; }
-            catch (CultureNotFoundException) { return language.ToUpperInvariant(); }
-        }
+        // Taal en land in de taal van de plugin, uit dezelfde namenlijst als het infoblok van de popup,
+        // zodat de twee blokken op een itempagina niet verschillende namen tonen.
+        private static string LanguageName(string language) { return DiscoverNames.Language(language); }
 
         private static string CountryNames(IEnumerable<string> countries)
         {
-            if (countries == null) return null;
-            var names = new List<string>();
-            foreach (var country in countries.Where(x => !string.IsNullOrWhiteSpace(x)).Distinct().Take(3))
-            {
-                try { names.Add(new RegionInfo(country).EnglishName); }
-                catch (ArgumentException) { names.Add(country.ToUpperInvariant()); }
-            }
-            return names.Count == 0 ? null : string.Join(", ", names);
+            if (countries == null) { return null; }
+            return DiscoverNames.Countries(countries.Where(x => !string.IsNullOrWhiteSpace(x)).Distinct().Take(3));
         }
 
         internal static DiscoverItemDto ToDto(TmdbItem i, bool tv, Dictionary<int, bool> states)

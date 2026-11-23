@@ -63,6 +63,27 @@ namespace Emby.Plugins.Discover
             return null;
         }
 
+        /// <summary>
+        /// Zelfde als Get, maar null als de sleutel nergens staat. Voor tabellen waarvan niet elke
+        /// code een naam heeft (talen, landen): dan moet de beller zelf iets anders bedenken.
+        /// </summary>
+        internal static string Find(string code, string key)
+        {
+            if (string.IsNullOrEmpty(key)) { return null; }
+            var tables = Ensure();
+            Dictionary<string, string> table;
+            string value;
+            if (code != null && tables.TryGetValue(code.ToLowerInvariant(), out table) && table.TryGetValue(key, out value) && value != null)
+            {
+                return value;
+            }
+            if (tables.TryGetValue("en", out table) && table.TryGetValue(key, out value) && value != null)
+            {
+                return value;
+            }
+            return null;
+        }
+
         /// <summary>De tekst bij een sleutel in de gevraagde taal, met terugval op Engels en op de sleutel.</summary>
         internal static string Get(string code, string key)
         {

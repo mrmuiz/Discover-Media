@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace Emby.Plugins.Discover
 {
@@ -26,51 +27,40 @@ namespace Emby.Plugins.Discover
             "Juli", "August", "September", "Oktober", "November", "Dezember"
         };
 
-        private static readonly Dictionary<string, string> DutchMovieStatus = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-            { "Released", "Verschenen" }, { "Post Production", "Postproductie" }, { "In Production", "In productie" },
-            { "Planned", "Gepland" }, { "Rumored", "Geruchten" }, { "Canceled", "Geannuleerd" }
-        };
-
-        private static readonly Dictionary<string, string> EnglishMovieStatus = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-            { "Released", "Released" }, { "Post Production", "Post-production" }, { "In Production", "In production" },
-            { "Planned", "Planned" }, { "Rumored", "Rumored" }, { "Canceled", "Canceled" }
-        };
-
-        private static readonly Dictionary<string, string> DutchTvStatus = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-            { "Returning Series", "Lopend" }, { "Ended", "Beëindigd" }, { "Canceled", "Geannuleerd" },
-            { "In Production", "In productie" }, { "Planned", "Gepland" }, { "Pilot", "Pilot" }
-        };
-
-        private static readonly Dictionary<string, string> EnglishTvStatus = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-            { "Returning Series", "Returning" }, { "Ended", "Ended" }, { "Canceled", "Canceled" },
-            { "In Production", "In production" }, { "Planned", "Planned" }, { "Pilot", "Pilot" }
-        };
-
-        private static readonly Dictionary<string, string> GermanMovieStatus = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-            { "Released", "Veröffentlicht" }, { "Post Production", "Nachproduktion" }, { "In Production", "In Produktion" },
-            { "Planned", "Geplant" }, { "Rumored", "Vermutet" }, { "Canceled", "Abgebrochen" }
-        };
-
-        private static readonly Dictionary<string, string> GermanTvStatus = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-            { "Returning Series", "Laufende Serie" }, { "Ended", "Beendet" }, { "Canceled", "Abgebrochen" },
-            { "In Production", "In Produktion" }, { "Planned", "Geplant" }, { "Pilot", "Pilotfolge" }
-        };
-
         public static bool TryDate(string date, out DateTime d) =>
             DateTime.TryParseExact(date ?? "", "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out d);
 
-        public static string LongDate(DateTime d) =>
-            DiscoverLanguage.IsDutch
-                ? d.Day + " " + DutchMonths[d.Month - 1] + " " + d.Year
-                : DiscoverLanguage.IsGerman
-                    ? d.Day + ". " + GermanMonths[d.Month - 1] + " " + d.Year
-                    : EnglishMonths[d.Month - 1] + " " + d.Day + ", " + d.Year;
+        /// <summary>
+        /// Een datum voluit. Nederlands en Duits staan hier met de hand, omdat de maandnamen
+        /// daar nagekeken zijn; elke andere taal krijgt het lange patroon van zijn eigen cultuur
+        /// zonder de weekdag, dus "January 5, 2026", "5 janvier 2026", "2026\u5e741\u67085\u65e5".
+        /// </summary>
+        public static string LongDate(DateTime d)
+        {
+            if (DiscoverLanguage.IsDutch) { return d.Day + " " + DutchMonths[d.Month - 1] + " " + d.Year; }
+            if (DiscoverLanguage.IsGerman) { return d.Day + ". " + GermanMonths[d.Month - 1] + " " + d.Year; }
+            try
+            {
+                var culture = DiscoverLanguage.Culture;
+                var pattern = culture.DateTimeFormat.LongDatePattern;
+                if (!string.IsNullOrWhiteSpace(pattern))
+                {
+                    // De weekdag ("dddd, " of ", dddd") hoort niet in een losse datum in een regel tekst.
+                    pattern = Regex.Replace(pattern, @"\s*,?\s*d{3,4}\s*,?\s*", " ").Trim();
+                    if (pattern.Length > 0) { return d.ToString(pattern, culture); }
+                }
+            }
+            catch { }
+            return EnglishMonths[d.Month - 1] + " " + d.Day + ", " + d.Year;
+        }
+
+        /// <summary>Het woord bij een status van TMDB ("Returning Series", "Released") in de taal van de plugin.</summary>
+        private static string StatusWord(string status, bool tv)
+        {
+            if (string.IsNullOrWhiteSpace(status)) { return null; }
+            var key = (tv ? "info.tvstatus." : "info.movstatus.") + Regex.Replace(status.Trim().ToLowerInvariant(), "[^a-z0-9]+", "_");
+            return DiscoverStrings.Find(DiscoverLanguage.Code, key);
+        }
 
         /// <summary>"Verschijnt op 14 november 2026" / "Verschenen op ..." (series: "Eerste aflevering op" / "Gestart op"). Leeg als de datum onbekend is.</summary>
         public static string DateLine(string date, bool tv)
@@ -94,11 +84,7 @@ namespace Emby.Plugins.Discover
         internal static string StatusText(string status, bool tv)
         {
             if (string.IsNullOrWhiteSpace(status)) return null;
-            var map = tv
-                ? (DiscoverLanguage.IsDutch ? DutchTvStatus : DiscoverLanguage.IsGerman ? GermanTvStatus : EnglishTvStatus)
-                : (DiscoverLanguage.IsDutch ? DutchMovieStatus : DiscoverLanguage.IsGerman ? GermanMovieStatus : EnglishMovieStatus);
-            string st;
-            return map.TryGetValue(status.Trim(), out st) ? st : status.Trim();
+            return StatusWord(status, tv) ?? status.Trim();
         }
 
         public static List<string> Lines(TmdbItem t, TmdbExtra x, bool tv, bool includeRating)
@@ -119,12 +105,8 @@ namespace Emby.Plugins.Discover
             if (dl != null) lines.Add(dl);
 
             var parts = new List<string>();
-            string st;
-            var statusMap = tv
-                ? (DiscoverLanguage.IsDutch ? DutchTvStatus : DiscoverLanguage.IsGerman ? GermanTvStatus : EnglishTvStatus)
-                : (DiscoverLanguage.IsDutch ? DutchMovieStatus : DiscoverLanguage.IsGerman ? GermanMovieStatus : EnglishMovieStatus);
-            if (!string.IsNullOrWhiteSpace(x.status) && statusMap.TryGetValue(x.status.Trim(), out st))
-                parts.Add("Status: " + st);
+            var st = StatusWord(x.status, tv);
+            if (st != null) { parts.Add(DiscoverLanguage.T("info.status_label") + st); }
             if (tv)
             {
                 if (x.number_of_seasons > 0)
@@ -150,7 +132,7 @@ namespace Emby.Plugins.Discover
                           DiscoverLanguage.T("info.on") + LongDate(nd));
 
             var genres = Names(x.genres, 5);
-            if (genres != null) lines.Add("Genres: " + genres);
+            if (genres != null) lines.Add(DiscoverLanguage.T("info.genres_label") + genres);
 
             var studio = Names(tv ? x.networks : x.production_companies, 3);
             if (studio != null)

@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using MediaBrowser.Controller.Library;
@@ -64,6 +66,28 @@ namespace Emby.Plugins.Discover
             }
         }
 
+        // Per gebruiker en titel het moment van de laatste aanvraag, om dubbele indrukken te negeren.
+        private static readonly Dictionary<string, DateTime> LastPress = new Dictionary<string, DateTime>(StringComparer.Ordinal);
+        private static readonly TimeSpan PressWindow = TimeSpan.FromSeconds(30);
+
+        /// <summary>True bij de eerste keer; binnen een halve minuut dezelfde titel van dezelfde gebruiker is false.</summary>
+        private static bool FirstPress(object userId, string ext)
+        {
+            var key = RequestAccess.Normalize(userId) + "|" + (ext ?? "");
+            var now = DateTime.UtcNow;
+            lock (LastPress)
+            {
+                DateTime seen;
+                if (LastPress.TryGetValue(key, out seen) && now - seen < PressWindow) { return false; }
+                LastPress[key] = now;
+                if (LastPress.Count > 200)
+                {
+                    foreach (var old in LastPress.Where(kv => now - kv.Value > PressWindow).Select(kv => kv.Key).ToList()) { LastPress.Remove(old); }
+                }
+                return true;
+            }
+        }
+
         private void OnPlaybackStart(object sender, PlaybackProgressEventArgs e)
         {
             try
@@ -105,21 +129,36 @@ namespace Emby.Plugins.Discover
                     return;
                 }
 
-                // Mag deze gebruiker aanvragen? Zo niet: niets naar Radarr/Sonarr, het afspelen stoppen en een melding tonen.
+                // Wie vraagt dit aan? Staat de gebruiker niet bij de gebeurtenis, dan die van de sessie:
+                // anders zou een aanvraag langs de blokkeerlijst en langs de limiet heen glippen.
                 var user = e.Users != null && e.Users.Count > 0 ? e.Users[0] : null;
-                if (user != null && !RequestAccess.IsAllowed(user.Id))
+                object userId = user != null ? (object)user.Id : (e.Session != null ? e.Session.UserId : null);
+                var userName = user != null ? user.Name : null;
+                if (string.IsNullOrEmpty(userName)) { userName = RequestAccess.Normalize(userId); }
+                bool isAdmin = user != null && user.Policy != null && user.Policy.IsAdministrator;
+                bool known = RequestAccess.Normalize(userId).Length > 0;
+
+                // Twee keer op Afspelen drukken (of Emby die de gebeurtenis twee keer stuurt) is één aanvraag.
+                if (known && !FirstPress(userId, ext))
                 {
-                    DiscoverDiagnostics.Add("log.play.aanvraag_geblokkeerd_voor_gebruiker", user.Name, ext);
-                    _logger.Info("Discover: request {0} blocked for user {1}", ext, user.Name);
+                    DiscoverDiagnostics.Add("log.play.aanvraag_al_net_gedaan", userName, ext);
+                    return;
+                }
+
+                // Mag deze gebruiker aanvragen? Zo niet: niets naar Radarr/Sonarr, het afspelen stoppen en een melding tonen.
+                if (known && !RequestAccess.IsAllowed(userId))
+                {
+                    DiscoverDiagnostics.Add("log.play.aanvraag_geblokkeerd_voor_gebruiker", userName, ext);
+                    _logger.Info("Discover: request {0} blocked for user {1}", ext, userName);
                     NotifyBlocked(e);
                     return;
                 }
-                if (user != null)
+                if (known)
                 {
-                    var limitMsg = RequestAccess.LimitMessage(_json, user.Id, user.Policy != null && user.Policy.IsAdministrator);
+                    var limitMsg = RequestAccess.LimitMessage(_json, userId, isAdmin);
                     if (limitMsg != null)
                     {
-                        DiscoverDiagnostics.Add("log.play.aanvraag_afspelen_boven_de_limiet_voor", user.Name, ext);
+                        DiscoverDiagnostics.Add("log.play.aanvraag_afspelen_boven_de_limiet_voor", userName, ext);
                         NotifyBlocked(e, limitMsg);
                         return;
                     }
@@ -129,15 +168,15 @@ namespace Emby.Plugins.Discover
                 {
                     try
                     {
-                        var msg = await DiscoverMediaChannel.RequestTitle(_tmdb, _arr, tv, tmdbId, seasons, CancellationToken.None, user != null ? (object)user.Id : null, user != null ? user.Name : null).ConfigureAwait(false);
+                        var msg = await DiscoverMediaChannel.RequestTitle(_tmdb, _arr, tv, tmdbId, seasons, CancellationToken.None, known ? userId : null, user != null ? user.Name : null).ConfigureAwait(false);
                         DiscoverDiagnostics.Add("log.play.aanvraag_via_afspelen", ext, msg);
-                        if (user != null)
+                        if (known)
                         {
                             try
                             {
                                 var it = tv ? await _tmdb.GetTv(tmdbId, CancellationToken.None).ConfigureAwait(false)
                                             : await _tmdb.GetMovie(tmdbId, CancellationToken.None).ConfigureAwait(false);
-                                RequestStore.Add(_json, user.Id, tv, it, tmdbId);
+                                RequestStore.Add(_json, userId, tv, it, tmdbId);
                             }
                             catch (Exception ex) { DiscoverDiagnostics.Add("log.play.aanvraag_afspelen_onthouden_mislukt", ex.Message); }
                         }
