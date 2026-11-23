@@ -28,7 +28,7 @@ namespace Emby.Plugins.Discover
             get
             {
                 try { return typeof(Plugin).Assembly.GetName().Version.ToString(); }
-                catch { return "1.4.1.3"; }
+                catch { return "1.4.1.4"; }
             }
         }
 
@@ -152,7 +152,7 @@ namespace Emby.Plugins.Discover
             {
                 new PluginPageInfo
                 {
-                    Name = "discoverconfig1120",
+                    Name = "discoverconfig1121",
                     EmbeddedResourcePath = GetType().Namespace + ".Configuration.configPage.html",
                     EnableInMainMenu = true,
                     IsMainConfigPage = true
@@ -178,17 +178,17 @@ namespace Emby.Plugins.Discover
                 },
                 new PluginPageInfo
                 {
-                    Name = "discoverstatus1080",
+                    Name = "discoverstatus1081",
                     EmbeddedResourcePath = GetType().Namespace + ".Configuration.statusPage.html"
                 },
                 new PluginPageInfo
                 {
-                    Name = "discoverstatusjs1108",
+                    Name = "discoverstatusjs1109",
                     EmbeddedResourcePath = GetType().Namespace + ".Configuration.statusPage.js"
                 },
                 new PluginPageInfo
                 {
-                    Name = "discoverconfigjs1401",
+                    Name = "discoverconfigjs1402",
                     EmbeddedResourcePath = GetType().Namespace + ".Configuration.configPage.js"
                 }
             };

@@ -19,6 +19,7 @@ define(['emby-button'], function () {
     // Zonder tabel valt t() terug op de sleutel zelf; dat is lelijk maar breekt niets.
     // <fallback-en> automatisch gevuld door tools/sync-js-fallback.py; niet met de hand aanpassen
     var STR_EN = {
+        "status.admin_only": "This report is only for the server owner. Sign in as an administrator to see it.",
         "status.at": "at ",
         "status.button_script_in_this_browser_build": "Button script in this browser: build ",
         "status.channel": "Channel",
@@ -150,6 +151,22 @@ define(['emby-button'], function () {
         out.textContent = t('status.checking');
         var cfg = null, users = [], adminId = ApiClient.getCurrentUserId && ApiClient.getCurrentUserId();
 
+        // Dit rapport is alleen voor de eigenaar van de server: het noemt de Emby-versie, het besturingssysteem,
+        // welke diensten ingesteld zijn en wie het kanaal kan zien. Een plugin-pagina is op te vragen door
+        // iedereen die is ingelogd, dus hier wordt eerst gecontroleerd of dat een beheerder is.
+        return Promise.resolve(ApiClient.getCurrentUser()).then(function (u) {
+            if (!(u && u.Policy && u.Policy.IsAdministrator)) {
+                STR = {};
+                out.textContent = t('status.admin_only');
+                return null;
+            }
+            return runChecks();
+        }, function () {
+            out.textContent = t('status.admin_only');
+            return null;
+        });
+
+        function runChecks() {
         return getJson('Discover/Status', { Lang: viewerLang() }).then(function (initialStatus) {
             if (initialStatus && initialStatus.Strings) { STR = initialStatus.Strings; }
             window.__discoverStatus = initialStatus;
@@ -319,6 +336,7 @@ define(['emby-button'], function () {
             out.textContent = lines.join('\n');
         });
         });
+        }
     }
 
     return function (view, params) {

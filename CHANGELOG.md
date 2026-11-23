@@ -1,3 +1,8 @@
+## Version 1.4.1.4 (beta)
+
+- **The settings page and the diagnostics report are for the server owner only.** A plugin page can be opened by anyone who is signed in and knows the address, and both pages then rendered what only the owner should see: the settings hold the TMDB, Radarr, Sonarr, Seerr and MDBList keys plus the list of users, and the report names the Emby version, the operating system, which services are configured and who can see the channel. Both pages now check for an administrator and show a single line instead. Emby refuses to hand the stored settings themselves to anyone but an administrator, so the keys were never actually readable — but the page should not be building that screen at all, and the report was assembling genuinely private information.
+- Change: page names bumped (`discoverconfig1121`, `discoverconfigjs1402`, `discoverstatus1081`, `discoverstatusjs1109`).
+
 ## Version 1.4.1.3 (beta)
 
 - Fix: **title folders in the channel were always empty** ("No items found", no Request/Trailer tiles) after Emby's "Refresh Internet Channels". The plugin threw an error for every title and season folder in that background crawl, and Emby kept those folders as empty. They are now built normally (without the extra per-title TMDB call during the background crawl), and the channel's data version changed so folders that were stored empty are read again.

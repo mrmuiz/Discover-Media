@@ -9,6 +9,7 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         "btn.available": "Available",
         "btn.status": "Status",
         "btn.title_fallback": "Title",
+        "cfg.admin_only": "These settings are only for the server owner. Sign in as an administrator to see them.",
         "cfg.administrator": "administrator",
         "cfg.auto_follow_language": "{0} (automatic)",
         "cfg.card_clips": "Card clips: ",
@@ -1654,12 +1655,27 @@ var FLAGS = {
         });
         el(view, 'chkUpdateAuto').addEventListener('change', function () { syncUpdateBoxes(view); });
         view.querySelector('.btnStatus').addEventListener('click', function () {
-            if (window.Dashboard && Dashboard.navigate) { Dashboard.navigate('configurationpage?name=discoverstatus1080'); }
-            else { window.location.hash = '#!/configurationpage?name=discoverstatus1080'; }
+            if (window.Dashboard && Dashboard.navigate) { Dashboard.navigate('configurationpage?name=discoverstatus1081'); }
+            else { window.location.hash = '#!/configurationpage?name=discoverstatus1081'; }
         });
 
         view.addEventListener('viewshow', function () {
-            load(view, state);
+            // De instellingen zijn alleen voor de eigenaar: hier staan de API-sleutels van TMDB, Radarr,
+            // Sonarr en Seerr in, en de lijst met gebruikers. Een plugin-pagina is op te vragen door iedereen
+            // die is ingelogd, dus eerst controleren of dat een beheerder is en anders niets laten zien.
+            Promise.resolve(ApiClient.getCurrentUser()).then(function (u) {
+                if (u && u.Policy && u.Policy.IsAdministrator) { load(view, state); return; }
+                adminOnly(view);
+            }, function () { adminOnly(view); });
         });
+
+        function adminOnly(target) {
+            var form = target.querySelector('form') || target;
+            form.innerHTML = '';
+            var p = document.createElement('p');
+            p.style.padding = '2em 1em';
+            p.textContent = t('cfg.admin_only');
+            form.appendChild(p);
+        }
     };
 });
