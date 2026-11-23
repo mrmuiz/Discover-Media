@@ -537,6 +537,9 @@ namespace Emby.Plugins.Discover
                 AccentColor = AccentOf(cfg.AccentColor),
                 OmdbRatings = cfg.ShowOmdbRatings && (!string.IsNullOrWhiteSpace(cfg.OmdbApiKey) || !string.IsNullOrWhiteSpace(cfg.MdblistApiKey)),
                 ScriptBuild = EmbeddedScriptBuild(),
+                // Een vaste, vertaalde regel zonder paden of namen erin: die mag iedereen zien, want de
+                // diagnoseregel op de Discover-pagina laat hem zien als "diagnose" aan staat.
+                ButtonScript = DiscoverStrings.Get(viewer, "api.ok_emby_plugin_resource_open_discover_to"),
             };
 
             // Alles hieronder is beheerdersinformatie: het logboek (met namen van gebruikers erin), de paden op
@@ -553,7 +556,6 @@ namespace Emby.Plugins.Discover
             resp.RequestErrors = DiscoverDiagnostics.RequestErrors;
             resp.ClipPath = clipPath;
             resp.ClipError = clipError;
-            resp.ButtonScript = DiscoverStrings.Get(viewer, "api.ok_emby_plugin_resource_open_discover_to");
             resp.WebInject = string.IsNullOrEmpty(DiscoverDiagnostics.WebInject)
                 ? DiscoverStrings.Get(viewer, "web.off")
                 : DiscoverDiagnostics.WebInject;

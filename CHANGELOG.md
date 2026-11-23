@@ -1,3 +1,7 @@
+## Unreleased
+
+- The plugin-resource line on the Discover page shows its real text again for a non-administrator who has diagnostics switched on. In 1.4.1.2 it moved into the administrator-only part of the status, where it said "unknown"; it is a fixed translated line without paths or names, so everyone may see it.
+
 ## Version 1.4.1.2 (beta)
 
 A full re-read of the plugin with many users in mind. Twenty-two findings, all fixed in this one release.
