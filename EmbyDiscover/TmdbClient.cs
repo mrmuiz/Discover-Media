@@ -369,9 +369,20 @@ namespace Emby.Plugins.Discover
                     PageCache[key] = new PageEntry { Task = task, At = DateTime.UtcNow };
                     if (PageCache.Count > 400)
                     {
+                        // Eerst wat echt verlopen is...
                         var old = PageCache.Where(kv => kv.Value.Task.IsCompleted && DateTime.UtcNow - kv.Value.At > PageStale)
                                            .Select(kv => kv.Key).ToList();
                         foreach (var k in old) PageCache.Remove(k);
+                        // ...en zijn ze allemaal nog vers, dan toch de oudste weg: anders groeide de cache
+                        // bij veel gebruikers die veel verschillende lijsten openen gewoon door.
+                        if (PageCache.Count > 400)
+                        {
+                            var oldest = PageCache.Where(kv => kv.Value.Task.IsCompleted && !kv.Value.Refreshing)
+                                                  .OrderBy(kv => kv.Value.At)
+                                                  .Take(PageCache.Count - 300)
+                                                  .Select(kv => kv.Key).ToList();
+                            foreach (var k in oldest) PageCache.Remove(k);
+                        }
                     }
                 }
             }
@@ -545,7 +556,7 @@ namespace Emby.Plugins.Discover
                 if (ex is OperationCanceledException) throw;
                 DiscoverDiagnostics.Add("log.tmdb.tmdb_titellogo_mislukt", key, ex.Message);
             }
-            lock (LogoCache) { LogoCache[key] = logo; }
+            lock (LogoCache) { if (LogoCache.Count > 4000) { LogoCache.Clear(); } LogoCache[key] = logo; }
             return logo;
         }
 
@@ -565,7 +576,7 @@ namespace Emby.Plugins.Discover
                 if (ex is OperationCanceledException) throw;
                 DiscoverDiagnostics.Add("log.tmdb.tmdb_logo_mislukt", key, ex.Message);
             }
-            if (!string.IsNullOrEmpty(logo)) lock (LogoCache) { LogoCache[key] = logo; }
+            if (!string.IsNullOrEmpty(logo)) lock (LogoCache) { if (LogoCache.Count > 4000) { LogoCache.Clear(); } LogoCache[key] = logo; }
             return logo;
         }
 
@@ -589,7 +600,7 @@ namespace Emby.Plugins.Discover
                     if (!list.Contains(p)) list.Add(p);
                     if (list.Count >= 8) break;
                 }
-                lock (LogoVariantCache) { LogoVariantCache[key] = list; }
+                lock (LogoVariantCache) { if (LogoVariantCache.Count > 2000) { LogoVariantCache.Clear(); } LogoVariantCache[key] = list; }
             }
             catch (Exception ex)
             {
@@ -635,21 +646,27 @@ namespace Emby.Plugins.Discover
         }
 
         private static readonly TimeSpan ExtraTtl = TimeSpan.FromHours(6);
-        private static readonly Dictionary<string, KeyValuePair<DateTime, TmdbExtra>> ExtraCache =
-            new Dictionary<string, KeyValuePair<DateTime, TmdbExtra>>();
+        // Begrensd en met één opvraging per titel: anders halen twintig gebruikers die dezelfde popup openen
+        // twintig keer hetzelfde op, en bleven verlopen regels (met de hele cast erin) tot een herstart staan.
+        private static readonly AsyncCache<TmdbExtra> ExtraCache = new AsyncCache<TmdbExtra>(ExtraTtl, 1500);
 
         /// <summary>Zoals GetExtra, maar 6 uur bewaard in het geheugen (voor de infotekst in lijsten en popup).</summary>
         public async Task<TmdbExtra> GetExtraCached(bool tv, int id, CancellationToken ct)
         {
             var key = (tv ? "t" : "m") + id + "|" + Language();
-            lock (ExtraCache)
+            try
             {
-                KeyValuePair<DateTime, TmdbExtra> hit;
-                if (ExtraCache.TryGetValue(key, out hit) && DateTime.UtcNow - hit.Key < ExtraTtl) return hit.Value;
+                // Een mislukte opvraging wordt bewust niet bewaard (vandaar de uitzondering): anders zou een
+                // storing van een minuut zes uur lang blijven hangen.
+                return await ExtraCache.Get(key, async () =>
+                {
+                    var x = await GetExtra(tv, id, ct).ConfigureAwait(false);
+                    if (x == null) { throw new InvalidOperationException("TMDB extra not available"); }
+                    return x;
+                }).ConfigureAwait(false);
             }
-            var x = await GetExtra(tv, id, ct).ConfigureAwait(false);
-            if (x != null) lock (ExtraCache) { ExtraCache[key] = new KeyValuePair<DateTime, TmdbExtra>(DateTime.UtcNow, x); }
-            return x;
+            catch (OperationCanceledException) { throw; }
+            catch { return null; }
         }
 
         /// <summary>Genres, speelduur, cast en regie. Mislukt dit, dan krijg je null (de kaart werkt ook zonder).</summary>

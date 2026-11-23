@@ -589,8 +589,14 @@ namespace Emby.Plugins.Discover
                 var path = FilePath();
                 var tmp = path + ".tmp";
                 File.WriteAllText(tmp, json.SerializeToString(_data));
-                if (File.Exists(path)) File.Delete(path);
-                File.Move(tmp, path);
+                if (!File.Exists(path)) { File.Move(tmp, path); return; }
+                // File.Replace laat het bestand nooit even verdwijnen; lukt dat niet, dan pas de oude weg.
+                try { File.Replace(tmp, path, null); }
+                catch
+                {
+                    File.Delete(path);
+                    File.Move(tmp, path);
+                }
             }
             catch (Exception ex) { DiscoverDiagnostics.Add("log.queue.aanvragenlijst_opslaan_mislukt", ex.Message); }
         }
@@ -621,7 +627,12 @@ namespace Emby.Plugins.Discover
                         Overview = item == null ? null : item.overview,
                         Added = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture)
                     });
-                    var mine = d.Requests.Where(r => r.UserId == uid).Skip(MaxPerUser).ToList();
+                    // Hoeveel aanvragen we per gebruiker bewaren. Minstens MaxPerUser (voor de lijst "Mijn
+                    // aanvragen"), maar nooit minder dan de ingestelde limiet: anders wordt die limiet nooit
+                    // bereikt en gold hij stilzwijgend niet. Boven de 500 knippen we af.
+                    var limit = Plugin.GetCurrentConfiguration().RequestLimit;
+                    var keep = Math.Max(MaxPerUser, limit > 0 ? Math.Min(500, limit + 5) : 0);
+                    var mine = d.Requests.Where(r => r.UserId == uid).Skip(keep).ToList();
                     foreach (var r in mine) d.Requests.Remove(r);
                     Save(json);
                 }

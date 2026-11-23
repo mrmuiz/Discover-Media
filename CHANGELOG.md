@@ -1,3 +1,52 @@
+## Version 1.4.1.2 (beta)
+
+A full re-read of the plugin with many users in mind. Twenty-two findings, all fixed in this one release.
+
+**Four crashes in the browser**
+
+A local variable named `t` shadowed the translation function `t()` in four places, which made the code throw a `TypeError` every time it ran. Visible effects: after a successful request the button kept saying "Requesting…" until you reloaded the page, "Available"/"Requested" never appeared, the administrator's cancel button kept an untranslated label, the request badges in an actor's filmography were missing, and the "+" buttons on a film collection in the popup did nothing.
+
+**Discover works in every language again, not just three**
+
+The browser script recognised Discover items by their displayed name, with Dutch, German and English hardcoded. Since 1.4.1.0 those names are translated, so in the other thirteen languages the plugin no longer recognised its own channel items: the Play button was not renamed, the ✓/⏳ status was missing, the duplicate request tile stayed visible and the season card did not load. In the worst case a season tile fell through to a title search that tries movies before series, so requesting a season could add a completely unrelated movie to Radarr (TMDB ids for movies and series overlap).
+
+The server now tells the browser what kind of item it is, derived from the id the channel itself handed out. That is language-independent, and the browser no longer guesses from words. Three related fixes:
+
+- The ✓/⏳ marker moved behind the title in an earlier version (so it would not affect sorting) but was still only stripped from the front, which made every already-requested title fall back to a title search.
+- `/Discover/Resolve` accepts the kind of item and no longer tries a movie first when the browser already knows it is a series.
+- Cached TMDB lists now record whether they hold series. This was derived from the cache key, which missed series genre lists (`gt_18`) and network lists, so a series opened through a genre or network tile was reported as a movie.
+
+**index.html can no longer disappear**
+
+Writing the web client's `index.html` deleted the file and then moved the new one into place. If that move failed — permissions, a virus scanner holding the file on Windows, Emby being stopped at that exact moment — the web client was gone for every user, with no way back except reinstalling it. The plugin now keeps a one-time backup (`index.html.discover-bak`) and uses an atomic replace, with the backup restored if anything still goes wrong. The stored request list is written the same way.
+
+**Less load with many users**
+
+- The loader script asked the server every three seconds, on every page of every user, whether one setting was on, and kept doing so in background tabs. That is now once a minute, and not at all in a hidden tab. Opening the channel still reads the setting fresh, so the switch works as immediately as before.
+- IMDb scores were fetched one request per poster: sixty posters meant sixty requests per user, each looking up an IMDb id at TMDB. They now go in groups of 25, and the server looks up each id only once even when many viewers ask at the same time.
+- OMDb, MDBList and the TMDB detail lookups now do one fetch per title instead of one per viewer. With twenty people opening the same popup, that is the difference between one and twenty calls — and the free OMDb key allows a thousand a day.
+- All memory caches are now bounded. They checked their expiry when read but never removed anything, so expired entries stayed until Emby restarted.
+- A movie request no longer throws away the whole Radarr and Sonarr cache; the new movie is added to it, the way series requests already did.
+- The browser no longer re-reads the entire library index every five minutes, but every thirty, with an upper bound.
+- The diagnostics page no longer fires one request per user simultaneously; it goes eight at a time.
+- Genre, studio and network tiles get the same shared time budget the main folders already had, so a cold cache no longer makes Emby wait minutes.
+- Finishing a series request polls Sonarr for up to 90 seconds; at most two of those now run at once.
+- The page observer no longer walks every text node on every single DOM change, which is what made the remote lag on a TV.
+
+**Privacy and limits**
+
+- `/Discover/Status` returned the activity log (which contains user names), server paths and the counters to every logged-in user. "Show diagnostics" only hid that in the screens. Those fields are now only filled for administrators; the texts, the language list and the display settings stay available to everyone, because the pages need them.
+- A request limit above 50 silently did nothing: the server kept 50 requests per user and counted the limit from that list. It now keeps as many as the limit needs, up to 500.
+- When fetching the Seerr user list failed, an empty list was cached for ten minutes, and in that window every request was sent as the owner of the API key — bypassing Seerr's own limits and approval. A failed fetch is no longer cached.
+
+**Smaller things**
+
+- The status page judged the loader line by matching Dutch words, so in any other language the verdict disappeared; the server now sends that verdict as a fixed code.
+- Leftovers from the language conversion removed (dead `uiLanguage`, `languageText`, `setLanguage`, `translateEvent`), the "automatic" TMDB language now shows the right culture code for all sixteen languages instead of `en-US`, and the last hardcoded Dutch labels in the request and cancel buttons are gone.
+- `DiscoverStrings.Reload()` could throw a `NullReferenceException` in a reader that happened to be in between; the table is now handed out instead of read from the field.
+- The activity log keeps 200 lines instead of 30 — with several people on the server a problem used to scroll out of view within seconds.
+- Change: page names bumped (`discoverui1156`, `discoveruijs1459`, `discoverbuttonjs1440`, `discoverconfig1120`, `discoverconfigjs1401`, `discoverstatus1080`, `discoverstatusjs1108`).
+
 ## Version 1.4.1.1
 
 - Fix: **the Discover page did not open** and the tile fell back to the channel tiles. The page asked for its own script under a name the plugin no longer registered (`discoveruijs1456` against 1457), so the script was never found and the page stayed empty. One file was missed when the page names were bumped in 1.4.0.25.

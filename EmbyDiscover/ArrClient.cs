@@ -429,8 +429,34 @@ namespace Emby.Plugins.Discover
                        ",\"addOptions\":{\"searchForMovie\":true}}";
 
             await Send(HttpMethod.Post, cfg.RadarrUrl, cfg.RadarrApiKey, "/api/v3/movie", body, ct).ConfigureAwait(false);
-            InvalidateCaches();
+            // De nieuwe film er zelf bij zetten in plaats van alle caches weggooien. Dat laatste dwong de
+            // volgende paginaload (van wie dan ook) de hele film- én serielijst opnieuw op te halen; op een
+            // server waar regelmatig aangevraagd wordt stond die cache daardoor vrijwel altijd koud.
+            if (!TryAddToMovieCache(tmdbId)) { InvalidateCaches(); }
+            else { RequestHub.Invalidate(); DownloadQueue.Invalidate(); }
             return true;
+        }
+
+        /// <summary>Zet een net toegevoegde film in de bewaarde Radarr-gegevens. false = niet gelukt, wis dan de cache.</summary>
+        private static bool TryAddToMovieCache(int tmdbId)
+        {
+            try
+            {
+                var cache = _movieCache;
+                if (cache == null) { return true; }   // niets bewaard: de volgende keer wordt de lijst toch vers opgehaald
+                var copy = new Dictionary<int, bool>(cache);
+                copy[tmdbId] = false;                 // net aangevraagd, dus nog geen bestand
+                var recent = new List<RecentEntry>(_movieRecent);
+                recent.Insert(0, new RecentEntry { TmdbId = tmdbId, HasFile = false, Added = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture) });
+                _movieRecent = recent;
+                _movieCache = copy;                   // als laatste: _movieCacheAt blijft staan, na de gewone 5 minuten volgt een verse lijst
+                return true;
+            }
+            catch (Exception ex)
+            {
+                DiscoverDiagnostics.Add("log.arr.radarr_cache_bijwerken_mislukt_cache_gewist", ex.Message);
+                return false;
+            }
         }
 
         /// <summary>
@@ -797,7 +823,23 @@ namespace Emby.Plugins.Discover
         /// zet dan precies de gekozen seizoenen en hun afleveringen op gemonitord (de rest uit) en start de zoekopdracht.
         /// Dat gebeurt expliciet omdat de seizoensvlaggen bij het toevoegen niet altijd op de afleveringen doorwerken.
         /// </summary>
+        /// <summary>
+        /// Hoogstens twee series tegelijk afmaken. Elke afronding pollt Sonarr tot anderhalve minuut lang;
+        /// tien aanvragen in een minuut betekende tien pollers die samen op Sonarr zaten.
+        /// </summary>
+        private static readonly SemaphoreSlim _finishGate = new SemaphoreSlim(2, 2);
+
         private async Task FinishSeasonRequest(int seriesId, int[] seasons, string title)
+        {
+            await _finishGate.WaitAsync().ConfigureAwait(false);
+            try
+            {
+                await FinishSeasonRequestInner(seriesId, seasons, title).ConfigureAwait(false);
+            }
+            finally { _finishGate.Release(); }
+        }
+
+        private async Task FinishSeasonRequestInner(int seriesId, int[] seasons, string title)
         {
             try
             {

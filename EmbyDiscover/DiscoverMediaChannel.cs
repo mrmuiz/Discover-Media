@@ -94,6 +94,61 @@ namespace Emby.Plugins.Discover
             ShowRootFoldersAtTopLevel = true
         };
 
+        /// <summary>
+        /// Wat voor Discover-item is dit, volgens het id dat het kanaal zelf heeft uitgedeeld (de ExternalId die
+        /// Emby bewaart)? Dit is de enige betrouwbare manier: de naam van een item staat in de taal van de kijker,
+        /// dus daarop zoeken werkt alleen in de talen die in de code staan.
+        /// kind: "ask" (aanvraagitem), "season" (één seizoen), "all" (alle seizoenen), "trailer", "folder" of "".
+        /// </summary>
+        internal static void DescribeExternalId(string externalId, out string kind, out bool tv, out int tmdbId, out int season)
+        {
+            kind = ""; tv = false; tmdbId = 0; season = 0;
+            var id = StripTileMark(externalId);
+            if (string.IsNullOrEmpty(id)) { return; }
+
+            string rest = null;
+            if (id.StartsWith(AskSeasonPrefix, StringComparison.Ordinal))
+            {
+                // ask22season:t:<id>:s:<nummer>
+                var parts = id.Substring(AskSeasonPrefix.Length).Split(':');
+                if (parts.Length == 4 && parts[0] == "t" && parts[2] == "s" &&
+                    int.TryParse(parts[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out tmdbId) &&
+                    int.TryParse(parts[3], NumberStyles.Integer, CultureInfo.InvariantCulture, out season))
+                {
+                    kind = "season"; tv = true;
+                }
+                return;
+            }
+            if (id.StartsWith(AskAllPrefix, StringComparison.Ordinal)) { kind = "all"; rest = id.Substring(AskAllPrefix.Length); }
+            else if (id.StartsWith(AskPrefix, StringComparison.Ordinal)) { kind = "ask"; rest = id.Substring(AskPrefix.Length); }
+            else if (id.StartsWith(TrailerPrefix, StringComparison.Ordinal)) { kind = "trailer"; rest = id.Substring(TrailerPrefix.Length); }
+            else if (id.StartsWith(AskSeasonFolderPrefix, StringComparison.Ordinal) ||
+                     id.StartsWith(LegacyAskSeasonFolderPrefix, StringComparison.Ordinal) ||
+                     id.StartsWith(LegacyAskSeasonFolderPrefix2, StringComparison.Ordinal) ||
+                     id.StartsWith(LegacyAskSeasonFolderPrefix3, StringComparison.Ordinal) ||
+                     id.StartsWith(LegacyAskSeasonFolderPrefix4, StringComparison.Ordinal) ||
+                     id.StartsWith(LegacyAskSeasonFolderPrefix5, StringComparison.Ordinal) ||
+                     id.StartsWith(AskItemPrefix, StringComparison.Ordinal) ||
+                     id.StartsWith(AskTvItemPrefix, StringComparison.Ordinal) ||
+                     id.StartsWith(AskListPrefix, StringComparison.Ordinal) ||
+                     id.StartsWith(AskGenrePrefix, StringComparison.Ordinal) ||
+                     id == AskStudioRoot || id == AskRoot)
+            {
+                kind = "folder";
+                return;
+            }
+            else { return; }
+
+            // rest is "m:<id>" of "t:<id>"
+            if (rest != null && rest.Length > 2 && (rest[0] == 'm' || rest[0] == 't') && rest[1] == ':' &&
+                int.TryParse(rest.Substring(2), NumberStyles.Integer, CultureInfo.InvariantCulture, out tmdbId))
+            {
+                tv = rest[0] == 't';
+                return;
+            }
+            kind = ""; tmdbId = 0;
+        }
+
         private static bool IsDeepFolder(string id)
         {
             return !string.IsNullOrEmpty(id)
@@ -579,8 +634,8 @@ namespace Emby.Plugins.Discover
             {
                 foreach (var kv in ListCache)
                 {
-                    if (kv.Key.EndsWith("_tv") != tv) continue;
-                    foreach (var i in kv.Value.Value)
+                    if (kv.Value.Tv != tv) continue;
+                    foreach (var i in kv.Value.Items)
                         if (i.id == id) return i;
                 }
             }
@@ -717,6 +772,19 @@ namespace Emby.Plugins.Discover
             return null;
         }
 
+        /// <summary>Het resultaat als de tegel al klaar is, anders null (dan wordt de gewone afbeelding gebruikt).</summary>
+        private static string DoneOrNull(Task<string> t)
+        {
+            try { return t.Status == TaskStatus.RanToCompletion ? t.Result : null; }
+            catch { return null; }
+        }
+
+        private static async Task ObserveTiles(Task waiting)
+        {
+            try { await waiting.ConfigureAwait(false); }
+            catch (Exception ex) { DiscoverDiagnostics.Add("log.channel.tegelafbeelding_mislukt", "studio/netwerk", ex.Message); }
+        }
+
         private static async Task ObserveTileCreation(Task<string> creation, string text)
         {
             try { await creation.ConfigureAwait(false); }
@@ -794,7 +862,11 @@ namespace Emby.Plugins.Discover
                     ? new List<string>()
                     : page.results.Where(x => !x.adult && !string.IsNullOrEmpty(x.backdrop_path)).Select(x => x.backdrop_path).ToList();
                 if (list.Count > 0)
-                    lock (TopBackdropCache) { TopBackdropCache[cacheKey] = new KeyValuePair<DateTime, List<string>>(DateTime.UtcNow, list); }
+                    lock (TopBackdropCache)
+                    {
+                        TopBackdropCache[cacheKey] = new KeyValuePair<DateTime, List<string>>(DateTime.UtcNow, list);
+                        CacheLimit.Trim(TopBackdropCache, 100, e => e.Key);
+                    }
                 return list;
             }
             catch (Exception ex)
@@ -830,7 +902,11 @@ namespace Emby.Plugins.Discover
                 DiscoverDiagnostics.Add("log.channel.genre_achtergrond_mislukt", key, ex.Message);
                 return null;
             }
-            lock (GenreBackdropCache) { GenreBackdropCache[key] = new KeyValuePair<DateTime, string>(DateTime.UtcNow, chosen); }
+            lock (GenreBackdropCache)
+            {
+                GenreBackdropCache[key] = new KeyValuePair<DateTime, string>(DateTime.UtcNow, chosen);
+                CacheLimit.Trim(GenreBackdropCache, 200, e => e.Key);
+            }
             return chosen;
         }
 
@@ -846,9 +922,16 @@ namespace Emby.Plugins.Discover
                 imageUrls[i],
                 CancellationToken.None,
                 GenreFallbackColor(genre.id))).ToArray();
+            // Eén gezamenlijk tijdbudget, zoals bij de hoofdmappen: met twintig genres en een koude cache zou
+            // Emby anders minuten op ffmpeg staan wachten. Wat niet klaar is, wordt op de achtergrond afgemaakt
+            // en staat de volgende keer klaar; tot die tijd gebruiken we de gewone afbeelding.
             var files = new string[genres.Count];
+            var tileDeadline = DateTime.UtcNow.AddSeconds(20);
             for (int i = 0; i < creations.Length; i++)
             {
+                var left = tileDeadline - DateTime.UtcNow;
+                if (left > TimeSpan.Zero) { await Task.WhenAny(creations[i], Task.Delay(left)).ConfigureAwait(false); }
+                if (!creations[i].IsCompleted) { _ = ObserveTileCreation(creations[i], names[i]); continue; }
                 try { files[i] = await creations[i].ConfigureAwait(false); }
                 catch (Exception ex) { DiscoverDiagnostics.Add("log.channel.genretegel_mislukt", names[i], ex.Message); }
             }
@@ -880,8 +963,18 @@ namespace Emby.Plugins.Discover
             var nUrls = nLogos.Select(LogoImageUrl).ToArray();
 
             // Elk logo midden in een liggend, doorzichtig plaatje (niets afgesneden); lukt dat niet, dan het logo zelf.
-            var sFiles = await Task.WhenAll(studios.Select((x, i) => FolderTile.CreateLogo("s" + x.Key, sUrls[i], x.Value, ct))).ConfigureAwait(false);
-            var nFiles = await Task.WhenAll(networks.Select((x, i) => FolderTile.CreateLogo("n" + x.Key, nUrls[i], x.Value, ct))).ConfigureAwait(false);
+            // Met een gezamenlijk tijdbudget: wat niet binnen 20 seconden klaar is, wordt op de achtergrond
+            // afgemaakt en staat de volgende keer klaar (anders wacht Emby bij een koude cache heel lang).
+            var sTasks = studios.Select((x, i) => FolderTile.CreateLogo("s" + x.Key, sUrls[i], x.Value, ct)).ToArray();
+            var nTasks = networks.Select((x, i) => FolderTile.CreateLogo("n" + x.Key, nUrls[i], x.Value, ct)).ToArray();
+            var all = Task.WhenAll(sTasks.Concat(nTasks).ToArray());
+            if (await Task.WhenAny(all, Task.Delay(TimeSpan.FromSeconds(20))).ConfigureAwait(false) != all)
+            {
+                DiscoverDiagnostics.Add("log.channel.studiotegels_duren_langer_achtergrond");
+                _ = ObserveTiles(all);
+            }
+            var sFiles = sTasks.Select(DoneOrNull).ToArray();
+            var nFiles = nTasks.Select(DoneOrNull).ToArray();
 
             var items = new List<ChannelItemInfo>();
             for (int i = 0; i < studios.Length; i++)
@@ -903,16 +996,28 @@ namespace Emby.Plugins.Discover
         // terug (tot ChannelPages x 20 titels), houden ons aan de gevraagde sortering en laten Emby zelf pagineren.
         private const int ChannelPages = 10;
         private static readonly TimeSpan ListCacheTtl = TimeSpan.FromMinutes(30);
-        private static readonly Dictionary<string, KeyValuePair<DateTime, List<TmdbItem>>> ListCache =
-            new Dictionary<string, KeyValuePair<DateTime, List<TmdbItem>>>();
+
+        /// <summary>
+        /// Een bewaarde lijst, met erbij of het om series gaat. Dat laatste stond eerder niet in de cache en werd
+        /// uit de sleutelnaam geraden ("..._tv"); een tv-genrelijst (gt_18) of netwerklijst (n_213) viel daar
+        /// buiten en gold dan als film, met de verkeerde titel als gevolg (TMDB-id's overlappen).
+        /// </summary>
+        private sealed class CachedList
+        {
+            public DateTime At;
+            public List<TmdbItem> Items;
+            public bool Tv;
+        }
+
+        private static readonly Dictionary<string, CachedList> ListCache = new Dictionary<string, CachedList>();
 
         private async Task<List<TmdbItem>> GetCachedList(string key, string path, CancellationToken ct, bool tv = false, string filter = null)
         {
             var cacheKey = TmdbClient.Language() + "|" + key;
             lock (ListCache)
             {
-                KeyValuePair<DateTime, List<TmdbItem>> hit;
-                if (ListCache.TryGetValue(cacheKey, out hit) && DateTime.UtcNow - hit.Key < ListCacheTtl) return hit.Value;
+                CachedList hit;
+                if (ListCache.TryGetValue(cacheKey, out hit) && DateTime.UtcNow - hit.At < ListCacheTtl) return hit.Items;
             }
             List<TmdbItem> list;
             try
@@ -926,7 +1031,11 @@ namespace Emby.Plugins.Discover
                 DiscoverDiagnostics.Add("log.channel.fout_tmdb", path, ex.Message);
                 throw;
             }
-            lock (ListCache) { ListCache[cacheKey] = new KeyValuePair<DateTime, List<TmdbItem>>(DateTime.UtcNow, list); }
+            lock (ListCache)
+            {
+                ListCache[cacheKey] = new CachedList { At = DateTime.UtcNow, Items = list, Tv = tv };
+                CacheLimit.Trim(ListCache, 200, e => e.At);
+            }
             return list;
         }
 
@@ -1249,8 +1358,8 @@ namespace Emby.Plugins.Discover
             {
                 foreach (var kv in ListCache)
                 {
-                    bool isTv = kv.Key.EndsWith("_tv");
-                    foreach (var i in kv.Value.Value)
+                    bool isTv = kv.Value.Tv;
+                    foreach (var i in kv.Value.Items)
                     {
                         if (!string.Equals(TitleOf(i, isTv), title, StringComparison.OrdinalIgnoreCase)) continue;
                         int y = YearOf(isTv ? i.first_air_date : i.release_date) ?? 0;

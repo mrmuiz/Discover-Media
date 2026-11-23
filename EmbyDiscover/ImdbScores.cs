@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -22,6 +23,28 @@ namespace Emby.Plugins.Discover
         /// <summary>"movie" of "tv"</summary>
         public string Type { get; set; }
         public int TmdbId { get; set; }
+    }
+
+    [Route("/Discover/ImdbScores", "GET", Summary = "IMDb scores for several titles at once")]
+    [Authenticated]
+    public class DiscoverImdbScoresRequest : IReturn<DiscoverImdbScoresResult>
+    {
+        /// <summary>Komma-gescheiden, bv. "m:550,t:1399" (m = film, t = serie).</summary>
+        public string Items { get; set; }
+    }
+
+    public class DiscoverImdbScoreEntry
+    {
+        public string Type { get; set; }
+        public int TmdbId { get; set; }
+        public string ImdbId { get; set; }
+        public string Imdb { get; set; }
+        public int Votes { get; set; }
+    }
+
+    public class DiscoverImdbScoresResult
+    {
+        public List<DiscoverImdbScoreEntry> Items { get; set; } = new List<DiscoverImdbScoreEntry>();
     }
 
     public class DiscoverImdbScoreResult
@@ -153,42 +176,94 @@ namespace Emby.Plugins.Discover
 
     public class ImdbScoreService : IService
     {
-        private static readonly Dictionary<string, string> ImdbIds = new Dictionary<string, string>();
+        // Eén opvraging per titel, ook als tientallen posters tegelijk om een score vragen, en begrensd
+        // zodat verlopen regels niet tot een herstart blijven staan.
+        private static readonly AsyncCache<string> ImdbIds = new AsyncCache<string>(TimeSpan.FromDays(7), 20000);
         private readonly TmdbClient _tmdb;
 
         public ImdbScoreService(IJsonSerializer json) { _tmdb = new TmdbClient(json); }
 
-        public async Task<object> Get(DiscoverImdbScoreRequest request)
+        private Task<string> IdFor(bool tv, int tmdbId)
+        {
+            return ImdbIds.Get((tv ? "t" : "m") + tmdbId, async () =>
+            {
+                string id;
+                if (tv)
+                {
+                    var ext = await _tmdb.GetTvExternalIds(tmdbId, CancellationToken.None).ConfigureAwait(false);
+                    id = ext == null ? null : ext.imdb_id;
+                }
+                else
+                {
+                    var x = await _tmdb.GetExtraCached(false, tmdbId, CancellationToken.None).ConfigureAwait(false);
+                    id = x == null ? null : x.imdb_id;
+                }
+                // Leeg antwoord mag bewaard worden (de titel heeft gewoon geen IMDb-id); een fout niet.
+                return id ?? "";
+            });
+        }
+
+        private async Task<DiscoverImdbScoreResult> ScoreFor(bool tv, int tmdbId)
         {
             var res = new DiscoverImdbScoreResult();
-            ImdbDataset.EnsureLoaded();
-            if (request.TmdbId <= 0 || ImdbDataset.Count == 0) return res;
-            bool tv = string.Equals(request.Type, "tv", StringComparison.OrdinalIgnoreCase);
-            var k = (tv ? "t" : "m") + request.TmdbId;
+            if (tmdbId <= 0) { return res; }
             string imdb;
-            lock (ImdbIds) { ImdbIds.TryGetValue(k, out imdb); }
-            try
+            try { imdb = await IdFor(tv, tmdbId).ConfigureAwait(false); }
+            catch (Exception ex)
             {
-                if (imdb == null)
-                {
-                    if (tv)
-                    {
-                        var ext = await _tmdb.GetTvExternalIds(request.TmdbId, CancellationToken.None).ConfigureAwait(false);
-                        imdb = ext == null ? null : ext.imdb_id;
-                    }
-                    else
-                    {
-                        var x = await _tmdb.GetExtraCached(false, request.TmdbId, CancellationToken.None).ConfigureAwait(false);
-                        imdb = x == null ? null : x.imdb_id;
-                    }
-                    lock (ImdbIds) { ImdbIds[k] = imdb ?? ""; }
-                }
+                DiscoverDiagnostics.Add("log.imdb.imdb_id", (tv ? "tv" : "movie"), tmdbId, ex.Message);
+                return res;
             }
-            catch (Exception ex) { DiscoverDiagnostics.Add("log.imdb.imdb_id", request.Type, request.TmdbId, ex.Message); return res; }
             string rating; int votes;
             if (!string.IsNullOrEmpty(imdb) && ImdbDataset.TryGet(imdb, out rating, out votes))
             {
                 res.ImdbId = imdb; res.Imdb = rating; res.Votes = votes;
+            }
+            return res;
+        }
+
+        public async Task<object> Get(DiscoverImdbScoreRequest request)
+        {
+            ImdbDataset.EnsureLoaded();
+            if (ImdbDataset.Count == 0) { return new DiscoverImdbScoreResult(); }
+            return await ScoreFor(string.Equals(request.Type, "tv", StringComparison.OrdinalIgnoreCase), request.TmdbId).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Veel titels in één keer. De pagina vroeg de score per poster op: zestig posters waren zestig
+        /// verzoeken per gebruiker, en elk daarvan moest bij TMDB het IMDb-id opzoeken.
+        /// </summary>
+        public async Task<object> Get(DiscoverImdbScoresRequest request)
+        {
+            var res = new DiscoverImdbScoresResult();
+            ImdbDataset.EnsureLoaded();
+            if (ImdbDataset.Count == 0 || string.IsNullOrWhiteSpace(request.Items)) { return res; }
+
+            var wanted = new List<KeyValuePair<bool, int>>();
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var part in request.Items.Split(','))
+            {
+                var one = (part ?? "").Trim();
+                if (one.Length < 3 || (one[0] != 'm' && one[0] != 't') || one[1] != ':') { continue; }
+                int id;
+                if (!int.TryParse(one.Substring(2), NumberStyles.Integer, CultureInfo.InvariantCulture, out id) || id <= 0) { continue; }
+                if (!seen.Add(one)) { continue; }
+                wanted.Add(new KeyValuePair<bool, int>(one[0] == 't', id));
+                if (wanted.Count >= 60) { break; }
+            }
+
+            var scores = await Task.WhenAll(wanted.Select(x => ScoreFor(x.Key, x.Value))).ConfigureAwait(false);
+            for (var i = 0; i < wanted.Count; i++)
+            {
+                var s = scores[i];
+                res.Items.Add(new DiscoverImdbScoreEntry
+                {
+                    Type = wanted[i].Key ? "tv" : "movie",
+                    TmdbId = wanted[i].Value,
+                    ImdbId = s.ImdbId,
+                    Imdb = s.Imdb,
+                    Votes = s.Votes
+                });
             }
             return res;
         }

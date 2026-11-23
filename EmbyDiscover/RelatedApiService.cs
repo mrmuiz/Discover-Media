@@ -96,11 +96,29 @@ namespace Emby.Plugins.Discover
         public string Ids { get; set; }
     }
 
+    /// <summary>Wat voor Discover-item dit is, volgens het kanaal zelf (niet volgens de naam, die is vertaald).</summary>
+    public class DiscoverItemKind
+    {
+        public string Id { get; set; }
+        /// <summary>"ask", "season", "all", "trailer", "folder" of leeg.</summary>
+        public string Kind { get; set; }
+        public bool Tv { get; set; }
+        public int TmdbId { get; set; }
+        public int Season { get; set; }
+    }
+
     public class DiscoverIsItemResult
     {
         public bool Ours { get; set; }
         public bool Folder { get; set; }
         public List<string> OurIds { get; set; } = new List<string>();
+        /// <summary>Per gevraagd id het soort item, zodat de browser niet op vertaalde namen hoeft te zoeken.</summary>
+        public List<DiscoverItemKind> Kinds { get; set; } = new List<DiscoverItemKind>();
+        /// <summary>Bij één gevraagd id: hetzelfde, maar los.</summary>
+        public string Kind { get; set; }
+        public bool Tv { get; set; }
+        public int TmdbId { get; set; }
+        public int Season { get; set; }
     }
 
     [Route("/Discover/ItemCast", "GET", Summary = "Cast (with photo) of a title in the Discover channel")]
@@ -241,6 +259,15 @@ namespace Emby.Plugins.Discover
         private static DiscoverChannelInfoResult _channel;
         private static DateTime _channelAt;
 
+        /// <summary>Het soort Discover-item, afgeleid van het id dat het kanaal zelf heeft uitgedeeld.</summary>
+        private static DiscoverItemKind KindOf(string id, MediaBrowser.Controller.Entities.BaseItem item)
+        {
+            string kind; bool tv; int tmdbId, season;
+            DiscoverMediaChannel.DescribeExternalId(item == null ? null : item.ExternalId, out kind, out tv, out tmdbId, out season);
+            if (kind.Length == 0 && item != null && item.IsDisplayedAsFolder) { kind = "folder"; }
+            return new DiscoverItemKind { Id = id, Kind = kind, Tv = tv, TmdbId = tmdbId, Season = season };
+        }
+
         private static bool OurExternalId(string ext) =>
             !string.IsNullOrEmpty(ext) && (ext.StartsWith("ask", StringComparison.Ordinal) || ext.StartsWith("tr", StringComparison.Ordinal));
 
@@ -290,7 +317,10 @@ namespace Emby.Plugins.Discover
                         else if (Guid.TryParse(one, out g)) it = _library.GetItemById(g);
                         if (it == null) continue;
                         if (OurExternalId(it.ExternalId) || (chInfo != null && chInfo.Id == it.InternalId.ToString(System.Globalization.CultureInfo.InvariantCulture)))
+                        {
                             res.OurIds.Add(one);
+                            res.Kinds.Add(KindOf(one, it));
+                        }
                     }
                     catch { }
                 }
@@ -306,6 +336,8 @@ namespace Emby.Plugins.Discover
                 if (item == null) return res;
                 res.Folder = item.IsDisplayedAsFolder;
                 res.Ours = OurExternalId(item.ExternalId);
+                var one = KindOf(raw, item);
+                res.Kind = one.Kind; res.Tv = one.Tv; res.TmdbId = one.TmdbId; res.Season = one.Season;
                 if (!res.Ours)
                 {
                     var ch = Get(new DiscoverChannelInfoRequest()) as DiscoverChannelInfoResult;
