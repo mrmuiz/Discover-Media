@@ -101,13 +101,7 @@
         }
         return false;
     }
-    // window.__discoverStay: set by the Discover page's channel button so the channel root opens normally
-    // (also when coming back from a folder). Cleared as soon as the user leaves channel routes.
     function inChannelRoutes(route) { return /^\/(list|videos|item|channel)\b/.test(route); }
-    function stayActive() {
-        if (window.__discoverStay && !inChannelRoutes(routeOf(location.href))) { window.__discoverStay = false; }
-        return !!window.__discoverStay;
-    }
 
     // Setting "Tile opens the Discover page", read from the server: null = not known yet.
     // De waarde wordt een minuut vastgehouden. Dit script draait op ELKE pagina van ELKE gebruiker, dus een
@@ -139,7 +133,7 @@
         });
         return redirectLoading;
     }
-    window.__discoverDebug = function () { return { backdrop: { allowed: (typeof bdAllowed === 'function') ? bdAllowed() : null, on: bd && bd.on, urls: bd && bd.urls ? bd.urls.length : 0 }, redirectOn: redirectOn, configAgeMs: Date.now() - redirectAt, stay: !!window.__discoverStay, route: routeOf(location.href), channelIds: info && info.ids }; };
+    window.__discoverDebug = function () { return { backdrop: { allowed: (typeof bdAllowed === 'function') ? bdAllowed() : null, on: bd && bd.on, urls: bd && bd.urls ? bd.urls.length : 0 }, redirectOn: redirectOn, configAgeMs: Date.now() - redirectAt, route: routeOf(location.href), channelIds: info && info.ids }; };
 
     // Decision: redirect only for a fresh open of the channel root (tile / menu), never when the setting is off,
     // when the user asked for the channel tiles, or when coming back (Back) from inside the channel.
@@ -149,7 +143,6 @@
         if (!ignoreCfg && redirectOn !== true) { why = 'schakelaar uit'; }
         else if (!targetsChannel(route)) { why = 'geen kanaalroute'; }
         else if (window.__discoverAlwaysTile === true) { why = null; }   // eigen app: altijd Discover, nooit de tegels
-        else if (window.__discoverStay) { why = 'Kanaaltegels-knop actief'; }
         else if (navType === 'traverse' && inChannelRoutes(fromRoute || '')) { why = 'terug vanuit kanaal'; }
         if (why && targetsChannel(route)) { log('beslissing: NIET doorsturen (' + why + '), config=' + redirectOn); }
         else if (!why) { log('beslissing: doorsturen, config=' + redirectOn); }
@@ -168,7 +161,6 @@
                 var route = routeOf(e.destination && e.destination.url);
                 var from = prevRoute;
                 prevRoute = route;
-                if (!inChannelRoutes(route)) { window.__discoverStay = false; }
                 if (!targetsChannel(route)) { refreshConfig(false); return; }
                 // Channel open: always use a fresh value of the setting (never the one cached in memory).
                 refreshConfig(true).then(function (on) {
@@ -189,7 +181,6 @@
         if (route === prevRoute) { return; }
         var from = prevRoute;
         prevRoute = route;
-        if (!inChannelRoutes(route)) { window.__discoverStay = false; }
         Promise.all([refreshConfig(true), loadInfo()]).then(function (r) {
             if (r[0] === true && routeOf(location.href) === route && shouldRedirect(route, 'traverse', from, true)) { redirect(); }
         });
