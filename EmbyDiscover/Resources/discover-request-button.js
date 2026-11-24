@@ -5,7 +5,7 @@
     'use strict';
     // Versie op één plek. tools/check-jsversion.py bewaakt dat DC_VER gelijk is aan <Version> in de csproj,
     // zodat dit nummer (dat hieronder ook het herinjectie-slot is) nooit achterloopt op een release.
-    var DC_VER = '1.4.2.4';
+    var DC_VER = '1.4.2.5';
     var DC_DATE = '2026-11-23';
     if (window.__discoverRequestButtonVersion === DC_VER) { return; }
     if (window.__discoverRequestButton) {

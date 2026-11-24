@@ -1,6 +1,7 @@
-## Version 1.4.2.4 (beta)
+## Version 1.4.2.5 (beta)
 
 - **A genre filter on every browse page where it makes sense.** The pages with the Type / Year / Score / Language bar now have a Genre dropdown: the streaming/studio/network pages (Netflix and the like), and the full-screen rows — Trending, Upcoming movies, Upcoming series — next to Popular, which already had it. Pick a genre and the page is fetched again for that genre only, so the results stay full instead of being thinned out. For Trending (which mixes films and series) and the provider pages, TMDB's separate film/series genres (Action is "Action & Adventure" for series) are merged by name and each choice is applied with the right id per kind; a genre that exists for only one of the two returns nothing on the other. Search is left as is — TMDB does not allow a genre filter together with a text search.
+- **No more "The page at file:// says" over the confirmations.** The install, restart and clear-cache buttons on the settings page used the browser's native confirm(), which Emby for Android frames with that file:// header. They now use a small in-page confirmation in the Discover style instead.
 
 ## Version 1.4.2.2
 
