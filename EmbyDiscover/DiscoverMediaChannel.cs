@@ -207,9 +207,6 @@ namespace Emby.Plugins.Discover
             return new ChannelItemResult { Items = new List<ChannelItemInfo>(), TotalRecordCount = 0 };
         }
 
-        private static ChannelItemResult Single(ChannelItemInfo item) =>
-            new ChannelItemResult { Items = new List<ChannelItemInfo> { item }, TotalRecordCount = 1 };
-
         private static ChannelItemInfo Folder(string id, string name, string image, string overview) =>
             new ChannelItemInfo
             {

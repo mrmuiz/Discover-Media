@@ -2643,57 +2643,6 @@
         }
     }
 
-    function wireFilmography(id) {
-        var data = rowData[id];
-        if (!data || !data.length) { return; }
-        var items = [];
-        for (var i = 0; i < data.length; i++) { if (String(data[i].key).indexOf('person') === 0) { items = items.concat(data[i].items); } }
-        if (!items.length) { return; }
-        var section = document.querySelector('.mainCreditsSection');
-        if (!section || !visible(section)) { return; }
-        // index op genormaliseerde titel -> lijst van credits (kan meer jaren hebben)
-        var byTitle = {};
-        for (var j = 0; j < items.length; j++) {
-            var it = items[j]; if (it.Status !== 0) { continue; }
-            var k = normTitle(it.Title); if (!k) { continue; }
-            (byTitle[k] = byTitle[k] || []).push(it);
-        }
-        var rows = section.querySelectorAll('.listItem');
-        for (var r = 0; r < rows.length; r++) {
-            var row = rows[r];
-            if (row.getAttribute('data-discover-film')) { continue; }
-            var bodyEl = row.querySelector('.listItemBodyText') || row;
-            var bodyNorm = normTitle(bodyEl.textContent);
-            var yearEl = row.querySelector('.secondaryText');
-            var ym = (yearEl && yearEl.textContent || '').match(/\d{4}/);
-            var year = ym ? parseInt(ym[0], 10) : 0;
-            // zoek de credit waarvan de genormaliseerde titel vooraan in de regel staat (+ jaar als beide bekend)
-            var match = null, keys = Object.keys(byTitle);
-            // Geen teller 't' hier: die verbergt de vertaalfunctie t() verderop in deze functie.
-            for (var ki = 0; ki < keys.length; ki++) {
-                if (bodyNorm.indexOf(keys[ki]) !== 0 && bodyNorm.indexOf(keys[ki]) < 0) { continue; }
-                var cands = byTitle[keys[ki]];
-                for (var cI = 0; cI < cands.length; cI++) {
-                    if (!year || !cands[cI].Year || cands[cI].Year === year) { match = cands[cI]; break; }
-                }
-                if (match) { break; }
-            }
-            if (!match) { continue; }
-            row.setAttribute('data-discover-film', '1');
-            row.classList.add('discover-film-req');
-            if (!row.querySelector('.discover-film-badge')) {
-                var b = document.createElement('span');
-                b.className = 'discover-film-badge';
-                b.textContent = t('channel.request_2');
-                (row.querySelector('.listItemBodyText') || row).appendChild(b);
-            }
-            (function (type, tmdb) {
-                row.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); filmReqOpen(type, tmdb); }, true);
-                row.addEventListener('keydown', function (e) { if (e.keyCode === 13) { e.preventDefault(); e.stopPropagation(); filmReqOpen(type, tmdb); } }, true);
-            })(match.Type, match.TmdbId);
-        }
-    }
-
     function loadRowsFor(id, item) {
         var c = api();
         var p = item.ProviderIds || {};

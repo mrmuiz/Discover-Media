@@ -114,7 +114,6 @@ namespace Emby.Plugins.Discover
         }
 
         private const int PX = 100, PY = 44, PW = 520, PH = 780;   // poster (2:3), groot
-        private const int PadShadow = 36;
 
         private static async Task Render(string ffmpeg, string work, TmdbItem t, bool tv, bool alreadyThere, int season, string posterPath, CancellationToken ct)
         {
@@ -278,22 +277,6 @@ namespace Emby.Plugins.Discover
         }
 
         // ---------- Hulpjes ----------
-
-        private static string LengthOf(TmdbItem t, TmdbExtra x, bool tv)
-        {
-            if (x == null) return null;
-            if (tv)
-            {
-                if (x.number_of_seasons > 0)
-                    return x.number_of_seasons + (x.number_of_seasons == 1 ? DiscoverLanguage.T("info.seasons_one_suffix") : DiscoverLanguage.T("info.seasons_many_suffix"));
-                return null;
-            }
-            if (x.runtime <= 0) return null;
-            int h = x.runtime / 60, m = x.runtime % 60;
-            return h > 0
-                ? DiscoverLanguage.T("card.hours_minutes", h, m.ToString("00", CultureInfo.InvariantCulture))
-                : DiscoverLanguage.T("card.minutes", m);
-        }
 
         // Breedte per teken (in em) van Poppins, ASCII 32..126 (gemeten uit de lettertypes in de DLL).
         private static readonly double[] RegW = { 0.267, 0.298, 0.292, 0.840, 0.622, 0.759, 0.739, 0.159, 0.454, 0.454, 0.486, 0.683, 0.198, 0.551, 0.210, 0.476, 0.628, 0.320, 0.575, 0.589, 0.629, 0.628, 0.635, 0.546, 0.631, 0.630, 0.213, 0.264, 0.555, 0.723, 0.539, 0.524, 1.013, 0.674, 0.613, 0.772, 0.707, 0.513, 0.504, 0.778, 0.692, 0.246, 0.530, 0.599, 0.432, 0.861, 0.703, 0.786, 0.579, 0.788, 0.608, 0.587, 0.541, 0.675, 0.676, 0.976, 0.621, 0.584, 0.541, 0.423, 0.658, 0.423, 0.629, 0.733, 0.257, 0.676, 0.676, 0.607, 0.676, 0.620, 0.329, 0.676, 0.640, 0.246, 0.248, 0.515, 0.246, 1.030, 0.640, 0.640, 0.676, 0.676, 0.373, 0.522, 0.364, 0.640, 0.561, 0.820, 0.479, 0.563, 0.455, 0.462, 0.291, 0.462, 0.519 };
