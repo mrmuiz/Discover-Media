@@ -1,3 +1,12 @@
+## Version 1.4.2.2
+
+A small follow-up to 1.4.2.1 with one visible fix and some tidying.
+
+- **The status of a series on the card now follows your language.** "Returning", "Ended", "Canceled" and the rest were still translated only into Dutch and German; every other language saw the English word on the card. They now use the same sixteen-language list as the info block in the popup, so a French viewer reads "Terminée" and a Spanish one "Finalizada". Dutch and German are unchanged.
+- Fix: on the request-management page, arming the delete button showed the raw template `Delete "{0}" from {1} AND delete its files from disk?` with the braces visible, because the button text was filled without its values. It now reads a short "Press again to confirm", while the full question stays in the message that pops up.
+- Cleanup: removed code and texts that were no longer used — an old way of putting request badges on an actor's filmography (replaced long ago), two unused helper methods, an unused constant, and a few orphaned translation keys.
+- Cleanup: removed the inert "channel tiles" escape hatch. It was meant to let the channel open with the plain tiles once without turning Discover off, but the button that switched it on never existed, so nothing used it. The setting to turn the whole redirect on or off already covers this.
+
 ## Version 1.4.2.1
 
 **Security: in Seerr mode a request from an unmapped user was sent as the administrator.**
