@@ -242,9 +242,9 @@ function dcBottomBarOffset(self) {
             return
         }
         var urls = [ApiClient.getUrl("web/ConfigurationPage", {
-            name: "discoverbuttonjs1441"
+            name: "discoverbuttonjs1442"
         }), ApiClient.getUrl("web/configurationpage", {
-            name: "discoverbuttonjs1441"
+            name: "discoverbuttonjs1442"
         }), ApiClient.getUrl("Plugins/Discover/Script")];
         var n = 0;
         (function next() {
@@ -278,7 +278,7 @@ function dcBottomBarOffset(self) {
             document.head.appendChild(script)
         })()
     }
-    var UI_PAGE = "discoverui1157";
+    var UI_PAGE = "discoverui1158";
     return function(view, params) {
         var embedded = !!(params && params.embedded);
         if (embedded) {
@@ -1486,10 +1486,22 @@ function dcBottomBarOffset(self) {
             if (mChanged) {
                 b.media = mSel.value || ""
             }
-            if (gsChanged || yChanged || mChanged) {
+            var bgSel = bar.querySelector(".dcFBGenre");
+            var bgm = 0, bgt = 0, bgChanged = false;
+            if (bgSel) {
+                var gp = (bgSel.value || "0-0").split("-");
+                bgm = parseInt(gp[0], 10) || 0;
+                bgt = parseInt(gp[1], 10) || 0;
+                bgChanged = bgm !== (b.genreMovie || 0) || bgt !== (b.genreTv || 0)
+            }
+            if (gsChanged || yChanged || mChanged || bgChanged) {
                 if (gsChanged) {
                     b.genre = parseInt(gSel.value, 10) || 0;
                     b.sort = sSel.value || "popular"
+                }
+                if (bgChanged) {
+                    b.genreMovie = bgm;
+                    b.genreTv = bgt
                 }
                 b.year = b.srvYear ? yNew : 0;
                 b.next = 1;
@@ -1860,6 +1872,26 @@ function dcBottomBarOffset(self) {
             });
             return out
         }
+        // Film- en serie-genres samengevoegd op naam: TMDB heeft aparte id's (Actie=28 bij films,
+        // Actie & Avontuur=10759 bij series). Elke optie draagt beide id's ("film-serie"), 0 als het
+        // genre voor die soort niet bestaat; de server laat dan die soort weg.
+        function mergedGenres() {
+            var byName = {};
+            genreTiles(false).forEach(function(g) {
+                (byName[g.Name] = byName[g.Name] || { name: g.Name, m: 0, t: 0 }).m = g.Id;
+            });
+            genreTiles(true).forEach(function(g) {
+                (byName[g.Name] = byName[g.Name] || { name: g.Name, m: 0, t: 0 }).t = g.Id;
+            });
+            return Object.keys(byName).map(function(k) { return byName[k]; })
+                .sort(function(a, b) { return a.name.localeCompare(b.name); });
+        }
+        function genreSelectHtml() {
+            return "<label>" + t('ui.genre') + ' <select class="dcFBGenre"><option value="0-0">' + t('ui.all_2') + "</option>" +
+                mergedGenres().map(function(g) {
+                    return '<option value="' + g.m + "-" + g.t + '">' + esc(g.name) + "</option>";
+                }).join("") + "</select></label>";
+        }
 
         function openRowGrid(rowKey, title) {
             openBrowse(null, null, title, rowKey)
@@ -1887,6 +1919,8 @@ function dcBottomBarOffset(self) {
                     hideRequested: false
                 },
                 genre: 0,
+                genreMovie: 0,
+                genreTv: 0,
                 sort: "popular",
                 year: 0,
                 media: "",
@@ -1899,6 +1933,10 @@ function dcBottomBarOffset(self) {
             var serverFilters = "";
             if (!rowKey && (kind === "studio" || kind === "network" && STREAMING_NETWORKS.indexOf(Number(id)) >= 0)) {
                 serverFilters += "<label>" + t('ui.type') + ' <select class="dcFMedia">' + '<option value="">' + t('ui.all') + "</option>" + '<option value="movie">' + t('ui.movies') + "</option>" + '<option value="tv">' + t('ui.series_2') + "</option></select></label>"
+            }
+            // Genre op studio-/netwerkpagina's (de populair-rijen hebben hun eigen genre-keuze hierboven).
+            if (!rowKey && (kind === "studio" || kind === "network")) {
+                serverFilters += genreSelectHtml();
             }
             if (popular) {
                 var gs = genreTiles(rowKey === "popular_tv");
@@ -1963,7 +2001,9 @@ function dcBottomBarOffset(self) {
                 Id: b.id,
                 Page: b.next,
                 Year: b.year || 0,
-                Media: b.media || ""
+                Media: b.media || "",
+                GenreMovie: b.genreMovie || 0,
+                GenreTv: b.genreTv || 0
             });
             var reqNo = b.req || 0;
             call.then(function(r) {

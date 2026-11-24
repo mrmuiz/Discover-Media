@@ -285,6 +285,10 @@ namespace Emby.Plugins.Discover
         public int Year { get; set; }
         /// <summary>Studio/streamingdienst: "movie", "tv" of leeg/"all" (beide).</summary>
         public string Media { get; set; }
+        /// <summary>Genrefilter (0 = alle). Film en serie apart, want TMDB heeft aparte genre-id's;
+        /// een bron waarvan de id 0 is (dat genre bestaat niet voor die soort) valt weg.</summary>
+        public int GenreMovie { get; set; }
+        public int GenreTv { get; set; }
     }
 
     public class DiscoverRow
@@ -746,6 +750,16 @@ namespace Emby.Plugins.Discover
                         }
                         break;
                     default: return row;
+                }
+                // Genrefilter: per bron de id van die soort erbij; een soort zonder passend genre valt weg
+                // (bv. "Actie" bestaat wel voor films maar niet voor series, waar het "Actie & Avontuur" heet).
+                if (request.GenreMovie > 0 || request.GenreTv > 0)
+                {
+                    sources = sources
+                        .Where(src => (src.Key ? request.GenreTv : request.GenreMovie) > 0)
+                        .Select(src => new KeyValuePair<bool, string>(src.Key,
+                            src.Value + "&with_genres=" + (src.Key ? request.GenreTv : request.GenreMovie)))
+                        .ToList();
                 }
                 if (sources.Count == 0) return row;
                 var tasks = sources.Select(src =>
