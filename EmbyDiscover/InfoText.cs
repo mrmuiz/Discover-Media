@@ -55,7 +55,7 @@ namespace Emby.Plugins.Discover
         }
 
         /// <summary>Het woord bij een status van TMDB ("Returning Series", "Released") in de taal van de plugin.</summary>
-        private static string StatusWord(string status, bool tv)
+        internal static string StatusWord(string status, bool tv)
         {
             if (string.IsNullOrWhiteSpace(status)) { return null; }
             var key = (tv ? "info.tvstatus." : "info.movstatus.") + Regex.Replace(status.Trim().ToLowerInvariant(), "[^a-z0-9]+", "_");

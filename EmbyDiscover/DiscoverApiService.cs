@@ -1497,34 +1497,13 @@ namespace Emby.Plugins.Discover
         private static string TitleOf(TmdbItem i, bool tv) =>
             tv ? (i.name ?? i.title ?? "?") : (i.title ?? i.name ?? "?");
 
+        // Status van een serie in de taal van de plugin. Dit stond eerder als een vaste nl/de-tabel,
+        // waardoor de dertien andere talen Engels kregen; nu via dezelfde info.tvstatus.*-sleutels
+        // als het infoblok van de popup, dus voor alle zestien talen.
         private static string LocalizedSeriesStatus(string status)
         {
             if (string.IsNullOrWhiteSpace(status)) return null;
-            if (DiscoverLanguage.IsDutch)
-            {
-                switch (status)
-                {
-                    case "Returning Series": return "Lopend";
-                    case "Ended": return "Beëindigd";
-                    case "Canceled": return "Geannuleerd";
-                    case "In Production": return "In productie";
-                    case "Planned": return "Gepland";
-                    case "Pilot": return "Pilot";
-                }
-            }
-            else if (DiscoverLanguage.IsGerman)
-            {
-                switch (status)
-                {
-                    case "Returning Series": return "Laufende Serie";
-                    case "Ended": return "Beendet";
-                    case "Canceled": return "Abgebrochen";
-                    case "In Production": return "In Produktion";
-                    case "Planned": return "Geplant";
-                    case "Pilot": return "Pilotfolge";
-                }
-            }
-            return status;
+            return InfoText.StatusWord(status, true) ?? status.Trim();
         }
 
         // Taal en land in de taal van de plugin, uit dezelfde namenlijst als het infoblok van de popup,
