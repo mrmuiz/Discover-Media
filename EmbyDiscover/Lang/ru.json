@@ -668,6 +668,7 @@
   "ui.specials": "Спецвыпуски",
   "ui.starts": "Начало ",
   "ui.sure_request_n_movies": "Точно? Запросить {0} фильмов",
+  "ui.tap_again": "Нажмите ещё раз для подтверждения",
   "ui.this_movie": "Этот фильм",
   "ui.title_not_found": "Название не найдено.",
   "ui.top_rated": "С лучшими оценками",

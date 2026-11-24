@@ -180,6 +180,7 @@ function dcBottomBarOffset(self) {
         "ui.specials": "Specials",
         "ui.starts": "Starts ",
         "ui.sure_request_n_movies": "Sure? Request {0} movies",
+        "ui.tap_again": "Press again to confirm",
         "ui.text": ".",
         "ui.this_movie": "This movie",
         "ui.title_not_found": "Title not found.",
@@ -277,7 +278,7 @@ function dcBottomBarOffset(self) {
             document.head.appendChild(script)
         })()
     }
-    var UI_PAGE = "discoverui1156";
+    var UI_PAGE = "discoverui1157";
     return function(view, params) {
         var embedded = !!(params && params.embedded);
         if (embedded) {
@@ -4080,7 +4081,7 @@ function dcBottomBarOffset(self) {
             if (!delArmed) {
                 delArmed = true;
                 d.classList.add("armed");
-                d.textContent = withFiles ? t('ui.confirm_delete_files') : t('ui.confirm_cancel_request');
+                d.textContent = t('ui.tap_again');
                 showToast(q, false);
                 clearTimeout(delArmTimer);
                 delArmTimer = setTimeout(function() {

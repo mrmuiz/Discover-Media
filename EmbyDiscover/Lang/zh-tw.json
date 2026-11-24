@@ -668,6 +668,7 @@
   "ui.specials": "特別篇",
   "ui.starts": "開播 ",
   "ui.sure_request_n_movies": "確定？請求 {0} 部電影",
+  "ui.tap_again": "再次點擊以確認",
   "ui.this_movie": "這部電影",
   "ui.title_not_found": "未找到該影片。",
   "ui.top_rated": "評分最高",

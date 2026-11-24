@@ -890,6 +890,7 @@
   "ui.specials": "Specials",
   "ui.starts": "Starts ",
   "ui.sure_request_n_movies": "Sure? Request {0} movies",
+  "ui.tap_again": "Press again to confirm",
   "ui.text": ".",
   "ui.this_movie": "This movie",
   "ui.title_not_found": "Title not found.",
