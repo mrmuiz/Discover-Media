@@ -242,9 +242,9 @@ function dcBottomBarOffset(self) {
             return
         }
         var urls = [ApiClient.getUrl("web/ConfigurationPage", {
-            name: "discoverbuttonjs1442"
+            name: "discoverbuttonjs1443"
         }), ApiClient.getUrl("web/configurationpage", {
-            name: "discoverbuttonjs1442"
+            name: "discoverbuttonjs1443"
         }), ApiClient.getUrl("Plugins/Discover/Script")];
         var n = 0;
         (function next() {
@@ -278,7 +278,7 @@ function dcBottomBarOffset(self) {
             document.head.appendChild(script)
         })()
     }
-    var UI_PAGE = "discoverui1158";
+    var UI_PAGE = "discoverui1159";
     return function(view, params) {
         var embedded = !!(params && params.embedded);
         if (embedded) {
@@ -1479,7 +1479,7 @@ function dcBottomBarOffset(self) {
             var gSel = bar.querySelector(".dcFGenre"),
                 sSel = bar.querySelector(".dcFSort");
             var yNew = parseInt(bar.querySelector(".dcFYear").value, 10) || 0;
-            var gsChanged = !!(gSel && sSel && (parseInt(gSel.value, 10) !== (b.genre || 0) || sSel.value !== (b.sort || "popular")));
+            var gsChanged = !!(gSel && (parseInt(gSel.value, 10) !== (b.genre || 0) || (sSel && sSel.value !== (b.sort || "popular"))));
             var yChanged = !!(b.srvYear && yNew !== (b.year || 0));
             var mSel = bar.querySelector(".dcFMedia");
             var mChanged = !!(mSel && mSel.value !== (b.media || ""));
@@ -1497,7 +1497,7 @@ function dcBottomBarOffset(self) {
             if (gsChanged || yChanged || mChanged || bgChanged) {
                 if (gsChanged) {
                     b.genre = parseInt(gSel.value, 10) || 0;
-                    b.sort = sSel.value || "popular"
+                    if (sSel) b.sort = sSel.value || "popular"
                 }
                 if (bgChanged) {
                     b.genreMovie = bgm;
@@ -1892,6 +1892,13 @@ function dcBottomBarOffset(self) {
                     return '<option value="' + g.m + "-" + g.t + '">' + esc(g.name) + "</option>";
                 }).join("") + "</select></label>";
         }
+        // Eén soort (film of serie): de genrelijst van die soort, als enkel id doorgegeven.
+        function singleGenreHtml(tv) {
+            return "<label>" + t('ui.genre') + ' <select class="dcFGenre"><option value="0">' + t('ui.all_2') + "</option>" +
+                genreTiles(tv).map(function(g) {
+                    return '<option value="' + esc(g.Id) + '">' + esc(g.Name) + "</option>";
+                }).join("") + "</select></label>";
+        }
 
         function openRowGrid(rowKey, title) {
             openBrowse(null, null, title, rowKey)
@@ -1939,10 +1946,11 @@ function dcBottomBarOffset(self) {
                 serverFilters += genreSelectHtml();
             }
             if (popular) {
-                var gs = genreTiles(rowKey === "popular_tv");
-                serverFilters = "<label>" + t('ui.genre') + ' <select class="dcFGenre"><option value="0">' + t('ui.all_2') + "</option>" + gs.map(function(g) {
-                    return '<option value="' + esc(g.Id) + '">' + esc(g.Name) + "</option>"
-                }).join("") + "</select></label>" + "<label>" + t('ui.sort') + ' <select class="dcFSort">' + '<option value="popular">' + t('ui.popular') + "</option>" + '<option value="new">' + t('ui.newest') + "</option>" + '<option value="top">' + t('ui.top_rated') + "</option></select></label>"
+                serverFilters = singleGenreHtml(rowKey === "popular_tv") + "<label>" + t('ui.sort') + ' <select class="dcFSort">' + '<option value="popular">' + t('ui.popular') + "</option>" + '<option value="new">' + t('ui.newest') + "</option>" + '<option value="top">' + t('ui.top_rated') + "</option></select></label>"
+            } else if (rowKey === "upcoming_movie" || rowKey === "upcoming_tv") {
+                serverFilters = singleGenreHtml(rowKey === "upcoming_tv");
+            } else if (rowKey === "trending") {
+                serverFilters = genreSelectHtml();
             }
             content.innerHTML = '<div class="dcBrowseHead"><button type="button" class="dcBack">&#10094; ' + t('ui.back') + "</button>" + '<span class="dcBrowseTitle">' + esc(name) + "</span></div>" + '<div class="dcFilters">' + serverFilters + "<label>" + t('ui.year') + ' <select class="dcFYear">' + years.map(function(y) {
                 return '<option value="' + y + '">' + (y ? y + (browse.upcoming ? "" : "+") : t('ui.all_2')) + "</option>"
@@ -1994,6 +2002,8 @@ function dcBottomBarOffset(self) {
                 Key: b.row,
                 Page: b.next,
                 Genre: b.genre || 0,
+                GenreMovie: b.genreMovie || 0,
+                GenreTv: b.genreTv || 0,
                 Sort: b.sort || "",
                 Year: b.year || 0
             }) : api("GET", "Discover/Browse", {

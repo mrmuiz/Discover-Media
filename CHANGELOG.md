@@ -1,6 +1,6 @@
-## Version 1.4.2.3 (beta)
+## Version 1.4.2.4 (beta)
 
-- **A genre filter on the studio, network and provider pages.** The pages with the Type / Year / Score / Language bar (a streaming service like Netflix, a studio, a network) now have a Genre dropdown next to Type, the way the popular rows already did. Pick a genre and the page is fetched again for that genre only, so the results stay full instead of being thinned out. TMDB keeps separate genres for films and series (Action is "Action & Adventure" for series), so the list is merged by name and each choice is applied with the right id per kind; a genre that only exists for one of the two simply returns nothing on the other. Search is unchanged — TMDB does not allow a genre filter together with a text search.
+- **A genre filter on every browse page where it makes sense.** The pages with the Type / Year / Score / Language bar now have a Genre dropdown: the streaming/studio/network pages (Netflix and the like), and the full-screen rows — Trending, Upcoming movies, Upcoming series — next to Popular, which already had it. Pick a genre and the page is fetched again for that genre only, so the results stay full instead of being thinned out. For Trending (which mixes films and series) and the provider pages, TMDB's separate film/series genres (Action is "Action & Adventure" for series) are merged by name and each choice is applied with the right id per kind; a genre that exists for only one of the two returns nothing on the other. Search is left as is — TMDB does not allow a genre filter together with a text search.
 
 ## Version 1.4.2.2
 

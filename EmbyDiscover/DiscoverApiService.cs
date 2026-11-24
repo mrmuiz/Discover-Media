@@ -25,8 +25,11 @@ namespace Emby.Plugins.Discover
     {
         public string Key { get; set; }
         public int Page { get; set; }
-        /// <summary>Alleen Populaire films/series: TMDB-genre-id om op te filteren (0 = alle).</summary>
+        /// <summary>Genre-id voor rijen van één soort (populair/aankomend): TMDB-genre-id (0 = alle).</summary>
         public int Genre { get; set; }
+        /// <summary>Trending (film + serie): genre-id per soort, want TMDB heeft aparte id's (0 = alle).</summary>
+        public int GenreMovie { get; set; }
+        public int GenreTv { get; set; }
         /// <summary>Alleen Populaire films/series: "popular" (standaard), "new" (nieuwste) of "top" (best beoordeeld).</summary>
         public string Sort { get; set; }
         /// <summary>Jaarfilter (0 = alle): popular/upcoming-rijen. Aankomend: exact dat jaar; populair: dat jaar en nieuwer.</summary>
@@ -683,16 +686,30 @@ namespace Emby.Plugins.Discover
             {
                 var ms = SafeStates(false);
                 var ts = SafeStates(true);
-                bool popular = def.Key == "popular_movie" || def.Key == "popular_tv";
+                bool upcoming = def.Key == "upcoming_movie" || def.Key == "upcoming_tv";
                 var sort = (request.Sort ?? "").Trim().ToLowerInvariant();
                 int year = ValidYear(request.Year);
-                Task<List<TmdbItem>> itemsTask;
-                if (popular && (request.Genre > 0 || year > 0 || sort == "new" || sort == "top"))
+                var today = DateTime.UtcNow.ToString("yyyy-MM-dd");
+                // Een genre (of jaar/sortering) binnen een rij: via /discover van TMDB, want de kale lijsten
+                // (/trending, /upcoming) kennen geen genrefilter. Trending bevat films én series, dus die haalt
+                // beide op en voegt ze samen; de andere rijen zijn één soort.
+                bool genreSel = def.Mixed ? (request.GenreMovie > 0 || request.GenreTv > 0) : request.Genre > 0;
+                bool useDiscover = genreSel || year > 0 || sort == "new" || sort == "top";
+
+                if (useDiscover && !def.Mixed)
                 {
-                    // Populair binnen een genre en/of anders gesorteerd: via /discover van TMDB.
-                    var today = DateTime.UtcNow.ToString("yyyy-MM-dd");
-                    string sortBy = "popularity.desc", filter = request.Genre > 0 ? "&with_genres=" + request.Genre : "";
-                    if (year > 0) filter += (def.Tv ? "&first_air_date.gte=" : "&primary_release_date.gte=") + year + "-01-01";
+                    string filter = request.Genre > 0 ? "&with_genres=" + request.Genre : "";
+                    string sortBy = "popularity.desc";
+                    if (upcoming)
+                    {
+                        filter += (def.Tv ? "&first_air_date.gte=" : "&primary_release_date.gte=") + today;
+                        if (year > 0) filter += (def.Tv ? "&first_air_date.lte=" : "&primary_release_date.lte=") + year + "-12-31";
+                        sortBy = def.Tv ? "first_air_date.asc" : "primary_release_date.asc";
+                    }
+                    else if (year > 0)
+                    {
+                        filter += (def.Tv ? "&first_air_date.gte=" : "&primary_release_date.gte=") + year + "-01-01";
+                    }
                     if (sort == "new")
                     {
                         sortBy = def.Tv ? "first_air_date.desc" : "primary_release_date.desc";
@@ -703,14 +720,31 @@ namespace Emby.Plugins.Discover
                         sortBy = "vote_average.desc";
                         filter += "&vote_count.gte=" + (def.Tv ? "200" : "500");
                     }
-                    itemsTask = _tmdb.BrowsePages(def.Tv, filter, request.Page, request.Page, CancellationToken.None, sortBy);
+                    var itemsTask = _tmdb.BrowsePages(def.Tv, filter, request.Page, request.Page, CancellationToken.None, sortBy);
+                    await Task.WhenAll(ms, ts, itemsTask).ConfigureAwait(false);
+                    row.Items = ToDtos(itemsTask.Result, def, ms.Result, ts.Result);
+                }
+                else if (useDiscover) // gemengd (trending) binnen een genre: film + serie, elk zijn eigen genre-id
+                {
+                    var parts = new List<KeyValuePair<bool, Task<List<TmdbItem>>>>();
+                    if (request.GenreMovie > 0)
+                        parts.Add(new KeyValuePair<bool, Task<List<TmdbItem>>>(false,
+                            _tmdb.BrowsePages(false, "&with_genres=" + request.GenreMovie, request.Page, request.Page, CancellationToken.None, "popularity.desc")));
+                    if (request.GenreTv > 0)
+                        parts.Add(new KeyValuePair<bool, Task<List<TmdbItem>>>(true,
+                            _tmdb.BrowsePages(true, "&with_genres=" + request.GenreTv, request.Page, request.Page, CancellationToken.None, "popularity.desc")));
+                    await Task.WhenAll(new Task[] { ms, ts }.Concat(parts.Select(p => (Task)p.Value))).ConfigureAwait(false);
+                    var combined = new List<TmdbItem>();
+                    foreach (var p in parts)
+                        foreach (var x in p.Value.Result) { x.media_type = p.Key ? "tv" : "movie"; combined.Add(x); }
+                    row.Items = ToDtos(combined.OrderByDescending(x => x.popularity).ToList(), def, ms.Result, ts.Result);
                 }
                 else
                 {
-                    itemsTask = _tmdb.GetListPages(def.Path, request.Page, request.Page, CancellationToken.None, year);
+                    var itemsTask = _tmdb.GetListPages(def.Path, request.Page, request.Page, CancellationToken.None, year);
+                    await Task.WhenAll(ms, ts, itemsTask).ConfigureAwait(false);
+                    row.Items = ToDtos(itemsTask.Result, def, ms.Result, ts.Result);
                 }
-                await Task.WhenAll(ms, ts, itemsTask).ConfigureAwait(false);
-                row.Items = ToDtos(itemsTask.Result, def, ms.Result, ts.Result);
             }
             catch (Exception ex)
             {
