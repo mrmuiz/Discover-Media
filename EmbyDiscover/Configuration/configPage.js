@@ -12,6 +12,7 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         "cfg.admin_only": "These settings are only for the server owner. Sign in as an administrator to see them.",
         "cfg.administrator": "administrator",
         "cfg.auto_follow_language": "{0} (automatic)",
+        "cfg.cancel": "Cancel",
         "cfg.card_clips": "Card clips: ",
         "cfg.change_time": "Change time",
         "cfg.check_now": "Check now",
@@ -58,6 +59,7 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         "cfg.no_updater": " – no updater",
         "cfg.not_checked_automatically_click_check_now": "Not checked automatically. Click Check now.",
         "cfg.note_this_version_has_no_updates_tab_yet": "Note: this version has no Updates tab yet. Going back to a newer version is then manual only.",
+        "cfg.ok": "OK",
         "cfg.ombi_radarr_sonarr_for_the_status": "Ombi + Radarr & Sonarr (for the status)",
         "cfg.previous_versions": "Previous versions",
         "cfg.profile_id": "Profile ID ",
@@ -119,6 +121,43 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
         if (s == null) { s = key; }
         for (var i = 1; i < arguments.length; i++) { s = s.split('{' + (i - 1) + '}').join(String(arguments[i])); }
         return s;
+    }
+
+    // Eigen bevestiging in de pagina, in plaats van window.confirm(): dat laatste zet op sommige apps
+    // (Emby voor Android laadt de webclient via file://) een lelijke "De pagina op 'file://' meldt..."-kop
+    // boven het venster. Geeft een belofte terug die true/false oplevert.
+    function dcConfirm(message) {
+        return new Promise(function (resolve) {
+            if (!document.getElementById('dcConfirmCss')) {
+                var st = document.createElement('style');
+                st.id = 'dcConfirmCss';
+                st.textContent = '.dcConfirmOverlay{position:fixed;inset:0;z-index:100000;background:rgba(0,0,0,.6);' +
+                    'display:flex;align-items:center;justify-content:center;padding:16px}' +
+                    '.dcConfirmBox{background:#1f1f1f;color:#fff;border:1px solid rgba(255,255,255,.14);border-radius:14px;' +
+                    'max-width:380px;width:100%;padding:20px 20px 16px;box-shadow:0 12px 40px rgba(0,0,0,.5)}' +
+                    '.dcConfirmMsg{font-size:1rem;line-height:1.5;margin-bottom:18px}' +
+                    '.dcConfirmBtns{display:flex;gap:10px;justify-content:flex-end}' +
+                    '.dcConfirmBtns button{border:0;border-radius:999px;padding:9px 20px;font-size:.95rem;cursor:pointer}' +
+                    '.dcConfirmNo{background:rgba(255,255,255,.12);color:#fff}' +
+                    '.dcConfirmYes{background:#4caf50;color:#0b2a12;font-weight:600}';
+                document.head.appendChild(st);
+            }
+            var ov = document.createElement('div');
+            ov.className = 'dcConfirmOverlay';
+            ov.innerHTML = '<div class="dcConfirmBox" role="dialog" aria-modal="true"><div class="dcConfirmMsg"></div>' +
+                '<div class="dcConfirmBtns"><button type="button" class="dcConfirmNo"></button>' +
+                '<button type="button" class="dcConfirmYes"></button></div></div>';
+            ov.querySelector('.dcConfirmMsg').textContent = message;
+            ov.querySelector('.dcConfirmNo').textContent = t('cfg.cancel');
+            ov.querySelector('.dcConfirmYes').textContent = t('cfg.ok');
+            function done(val) { try { ov.parentNode.removeChild(ov); } catch (e) { } resolve(val); }
+            ov.querySelector('.dcConfirmNo').addEventListener('click', function () { done(false); });
+            ov.querySelector('.dcConfirmYes').addEventListener('click', function () { done(true); });
+            ov.addEventListener('click', function (e) { if (e.target === ov) { done(false); } });
+            document.body.appendChild(ov);
+            var yes = ov.querySelector('.dcConfirmYes');
+            if (yes.focus) { try { yes.focus(); } catch (e) { } }
+        });
     }
 
     // Cultuurcode bij een taalkeuze. De lijst met talen komt van de server (status.Languages), dus daar staat
@@ -667,8 +706,9 @@ var FLAGS = {
     function pickVersion(view) {
         var sel = el(view, 'selUpdVersion');
         var label = sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].textContent : sel.value;
-        if (!window.confirm(t('cfg.install_version_confirm', label))) { return; }
-        installUpdate(view, sel.value);
+        dcConfirm(t('cfg.install_version_confirm', label)).then(function (ok) {
+            if (ok) { installUpdate(view, sel.value); }
+        });
     }
 
     function checkUpdate(view, fresh) {
@@ -690,10 +730,12 @@ var FLAGS = {
             .then(function (u) { showUpdate(view, u); }, function (err) { updStatus(view, ajaxErrorMessage(err)); });
     }
     function restartForUpdate(view) {
-        if (!window.confirm(t('cfg.restart_emby_now_anyone_watching_will_be'))) { return; }
-        updStatus(view, t('cfg.emby_is_restarting_refresh_the_page_in_a'));
-        view.querySelector('.btnUpdRestart').style.display = 'none';
-        ApiClient.ajax({ type: 'POST', url: ApiClient.getUrl('Discover/Update/Restart') }).catch(function () { });
+        dcConfirm(t('cfg.restart_emby_now_anyone_watching_will_be')).then(function (ok) {
+            if (!ok) { return; }
+            updStatus(view, t('cfg.emby_is_restarting_refresh_the_page_in_a'));
+            view.querySelector('.btnUpdRestart').style.display = 'none';
+            ApiClient.ajax({ type: 'POST', url: ApiClient.getUrl('Discover/Update/Restart') }).catch(function () { });
+        });
     }
 
     function showLoading() { if (window.Dashboard && Dashboard.showLoadingMsg) { Dashboard.showLoadingMsg(); } }
@@ -1642,7 +1684,7 @@ var FLAGS = {
         view.querySelector('.btnTestMdblist').addEventListener('click', function () { testMdblist(view); });
         view.querySelector('.btnClearAll').addEventListener('click', function () {
             var q = t('cfg.delete_all_stored_card_clips_and_tile_images');
-            if (window.confirm(q)) { cleanCache(view, true); }
+            dcConfirm(q).then(function (ok) { if (ok) { cleanCache(view, true); } });
         });
 
         view.querySelector('.btnUpdCheck').addEventListener('click', function () { checkUpdate(view, true); });
