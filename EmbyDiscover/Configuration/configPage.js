@@ -142,6 +142,10 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
                     '.dcConfirmYes{background:#4caf50;color:#0b2a12;font-weight:600}';
                 document.head.appendChild(st);
             }
+            // Een eventueel al open venster eerst weg (dubbel tikken stapelt anders twee vensters,
+            // want dit blokkeert niet zoals window.confirm).
+            var old = document.querySelector('.dcConfirmOverlay');
+            if (old && old.parentNode) { old.parentNode.removeChild(old); }
             var ov = document.createElement('div');
             ov.className = 'dcConfirmOverlay';
             ov.innerHTML = '<div class="dcConfirmBox" role="dialog" aria-modal="true"><div class="dcConfirmMsg"></div>' +
@@ -150,7 +154,16 @@ define(['emby-input', 'emby-button', 'emby-select', 'emby-checkbox'], function (
             ov.querySelector('.dcConfirmMsg').textContent = message;
             ov.querySelector('.dcConfirmNo').textContent = t('cfg.cancel');
             ov.querySelector('.dcConfirmYes').textContent = t('cfg.ok');
-            function done(val) { try { ov.parentNode.removeChild(ov); } catch (e) { } resolve(val); }
+            function done(val) {
+                document.removeEventListener('keydown', onKey, true);
+                try { ov.parentNode.removeChild(ov); } catch (e) { }
+                resolve(val);
+            }
+            function onKey(e) {
+                if (e.key === 'Escape') { done(false); }
+                else if (e.key === 'Enter') { done(true); }
+            }
+            document.addEventListener('keydown', onKey, true);
             ov.querySelector('.dcConfirmNo').addEventListener('click', function () { done(false); });
             ov.querySelector('.dcConfirmYes').addEventListener('click', function () { done(true); });
             ov.addEventListener('click', function (e) { if (e.target === ov) { done(false); } });
