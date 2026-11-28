@@ -837,7 +837,7 @@ namespace Emby.Plugins.Discover
                 string[] backs;
                 try
                 {
-                    backs = await Task.WhenAll(genres.Select(g => DiscoverMediaChannel.GenreBackdropFor(_tmdb, tvGenres, g.id, CancellationToken.None))).ConfigureAwait(false);
+                    backs = await DiscoverMediaChannel.GenreBackdropsFor(_tmdb, tvGenres, genres.Select(g => g.id).ToList(), CancellationToken.None).ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {
