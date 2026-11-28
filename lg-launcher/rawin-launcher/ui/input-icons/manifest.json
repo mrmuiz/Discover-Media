@@ -1,0 +1,1488 @@
+{
+  "repository": "https://github.com/elax46/custom-brand-icons",
+  "revision": "72731666e020c9fa7300ed08b1031f191e077ba3",
+  "license": "MIT",
+  "icons": [
+    {
+      "id": "hdmi",
+      "title": "HDMI",
+      "upstream": "https://raw.githubusercontent.com/elax46/custom-brand-icons/72731666e020c9fa7300ed08b1031f191e077ba3/icon-svg/hdmi.svg",
+      "sha256": "97ceb51c739ab336656846b0959f59bc64aad22a59a00e3ef3adfaafc2dee382"
+    },
+    {
+      "id": "playstation",
+      "title": "PlayStation",
+      "upstream": "https://raw.githubusercontent.com/elax46/custom-brand-icons/72731666e020c9fa7300ed08b1031f191e077ba3/icon-svg/playstation.svg",
+      "sha256": "9681dac69d17d4aaeda7bf4cd61cad5e6885d2a9312ab201485db8d65b5ef830"
+    },
+    {
+      "id": "ps3",
+      "title": "PlayStation 3",
+      "upstream": "https://raw.githubusercontent.com/elax46/custom-brand-icons/72731666e020c9fa7300ed08b1031f191e077ba3/icon-svg/playstation-3.svg",
+      "sha256": "4cf88634d6ede26706591be59c0e813ea5ec2ee2f726384564d82404b8082883"
+    },
+    {
+      "id": "ps4",
+      "title": "PlayStation 4",
+      "upstream": "https://raw.githubusercontent.com/elax46/custom-brand-icons/72731666e020c9fa7300ed08b1031f191e077ba3/icon-svg/playstation-4.svg",
+      "sha256": "a0a1dc2a430810245b80ec9b81c00f8242a68d4187b3e4146e1cdc034321a3b5"
+    },
+    {
+      "id": "ps5",
+      "title": "PlayStation 5",
+      "upstream": "https://raw.githubusercontent.com/elax46/custom-brand-icons/72731666e020c9fa7300ed08b1031f191e077ba3/icon-svg/playstation-5.svg",
+      "sha256": "f6b0bdd36313a928b12473591a228ac5dfdbd46c2f04f25ece1053151a673653"
+    },
+    {
+      "id": "xbox",
+      "title": "Xbox",
+      "upstream": "https://raw.githubusercontent.com/elax46/custom-brand-icons/72731666e020c9fa7300ed08b1031f191e077ba3/icon-svg/xbox.svg",
+      "sha256": "4d9c02fd0d021f118e0441bd7e5c58c968cd158a74003c652c11978ebc4739f6"
+    },
+    {
+      "id": "xbox-console",
+      "title": "Xbox (console)",
+      "upstream": "https://raw.githubusercontent.com/elax46/custom-brand-icons/72731666e020c9fa7300ed08b1031f191e077ba3/icon-svg/xbox-alt.svg",
+      "sha256": "303914adb9f847bf6c008529397228dcadcb06e2accce8c9480644ce243fcf42"
+    },
+    {
+      "id": "apple-tv",
+      "title": "Apple TV",
+      "upstream": "https://raw.githubusercontent.com/elax46/custom-brand-icons/72731666e020c9fa7300ed08b1031f191e077ba3/icon-svg/apple-tv.svg",
+      "sha256": "31d1597f0f20b2d43e84c30206adad297149df3eb6d5e1ab088480ca93f84a4c"
+    },
+    {
+      "id": "apple-tv-box",
+      "title": "Apple TV (box)",
+      "upstream": "https://raw.githubusercontent.com/elax46/custom-brand-icons/72731666e020c9fa7300ed08b1031f191e077ba3/icon-svg/apple-tv-box.svg",
+      "sha256": "0e0a38580c8d2dcf31d03273c22723a44c5bfe7a74a74285de81e76d94a0fca1"
+    },
+    {
+      "id": "wiim",
+      "title": "WiiM",
+      "upstream": "https://raw.githubusercontent.com/elax46/custom-brand-icons/72731666e020c9fa7300ed08b1031f191e077ba3/icon-svg/wiim.svg",
+      "sha256": "e8b5c4e932d954472e2ce5d5b223f237ea4132c5a8ecaaa61e3140d5fd070b4d"
+    },
+    {
+      "id": "shield",
+      "title": "NVIDIA Shield",
+      "upstream": "https://raw.githubusercontent.com/elax46/custom-brand-icons/72731666e020c9fa7300ed08b1031f191e077ba3/icon-svg/nvidia-shield.svg",
+      "sha256": "b48226c437dc63b19d1250069ae7e1298e8d6519231b212feabbfb70ea6c9416"
+    },
+    {
+      "id": "pc",
+      "title": "PC",
+      "upstream": "https://raw.githubusercontent.com/elax46/custom-brand-icons/72731666e020c9fa7300ed08b1031f191e077ba3/icon-svg/desktop-computer.svg",
+      "sha256": "1d7b5ea85d183ffaa918ea182e4be70208b9eedc4ab5a6f6eb5e671c56fabf0d"
+    },
+    {
+      "id": "laptop",
+      "title": "Laptop",
+      "upstream": "https://raw.githubusercontent.com/elax46/custom-brand-icons/72731666e020c9fa7300ed08b1031f191e077ba3/icon-svg/laptop.svg",
+      "sha256": "0527593a8b1a0a1c4b30bdd317483a6ae73d5c84289685905b30744d079c4a1d"
+    },
+    {
+      "id": "steam-deck",
+      "title": "Steam Deck",
+      "upstream": "https://raw.githubusercontent.com/elax46/custom-brand-icons/72731666e020c9fa7300ed08b1031f191e077ba3/icon-svg/steam-deck.svg",
+      "sha256": "13e77722e492f2032fc7ddb85f3d81fb2b62fc493a11dc85174454a642255ed3"
+    },
+    {
+      "id": "switch",
+      "title": "Nintendo Switch",
+      "upstream": "https://raw.githubusercontent.com/elax46/custom-brand-icons/72731666e020c9fa7300ed08b1031f191e077ba3/icon-svg/nintendo-switch-logo.svg",
+      "sha256": "c9b2b19e4f135099a4cf84cefb79cab2c3729cf63202e0d890286f9e5d3200c6"
+    },
+    {
+      "id": "gamecube",
+      "title": "Nintendo GameCube",
+      "upstream": "https://raw.githubusercontent.com/elax46/custom-brand-icons/72731666e020c9fa7300ed08b1031f191e077ba3/icon-svg/gamecube.svg",
+      "sha256": "418466cd0d3eceea1dd5300b7b3c6d2b78cdd0b63d58895e8ffebab9e3537f31"
+    },
+    {
+      "id": "saturn",
+      "title": "Sega Saturn",
+      "upstream": "https://raw.githubusercontent.com/elax46/custom-brand-icons/72731666e020c9fa7300ed08b1031f191e077ba3/icon-svg/sega-saturn.svg",
+      "sha256": "07ae1e171d2f5dfb96f40c10e456a8d99d3663b8ae734f0a0245fe3f3920bfa5"
+    },
+    {
+      "id": "chromecast",
+      "title": "Chromecast",
+      "upstream": "https://raw.githubusercontent.com/elax46/custom-brand-icons/72731666e020c9fa7300ed08b1031f191e077ba3/icon-svg/chromecast.svg",
+      "sha256": "dee12ce1450ffecf2b5fbb7fc9fc54998fb534422367b231dcb5f741e89590a6"
+    },
+    {
+      "id": "android-tv",
+      "title": "Android TV",
+      "upstream": "https://raw.githubusercontent.com/elax46/custom-brand-icons/72731666e020c9fa7300ed08b1031f191e077ba3/icon-svg/androidtv.svg",
+      "sha256": "bb3de1dcf54c14f0b92487984f5c3041351732e90fda09b7a283edee3743fb47"
+    },
+    {
+      "id": "fire-tv",
+      "title": "Fire TV",
+      "upstream": "https://raw.githubusercontent.com/elax46/custom-brand-icons/72731666e020c9fa7300ed08b1031f191e077ba3/icon-svg/firetv.svg",
+      "sha256": "1521dd0ee8c889045816101e8e2184ac482f6f19d82168c134fa6f03e9d18120"
+    },
+    {
+      "id": "fire-tv-cube",
+      "title": "Fire TV Cube",
+      "upstream": "https://raw.githubusercontent.com/elax46/custom-brand-icons/72731666e020c9fa7300ed08b1031f191e077ba3/icon-svg/firetv-cube.svg",
+      "sha256": "b3ccea2275e742ec469826a038a89d43ad7849061cdb9a4d0e96abd1b77349c2"
+    },
+    {
+      "id": "roku",
+      "title": "Roku",
+      "upstream": "https://raw.githubusercontent.com/elax46/custom-brand-icons/72731666e020c9fa7300ed08b1031f191e077ba3/icon-svg/roku.svg",
+      "sha256": "9c8d4679cba075f25f7408d5447e2626aeaaf9a0403122232ed1ca5ead26c391"
+    },
+    {
+      "id": "roku-ultra",
+      "title": "Roku Ultra",
+      "upstream": "https://raw.githubusercontent.com/elax46/custom-brand-icons/72731666e020c9fa7300ed08b1031f191e077ba3/icon-svg/roku-ultra.svg",
+      "sha256": "5176f10647f49c4ff301b401e9cd12edd72dba73bfbcda7d4fa96f6b3ec440ba"
+    },
+    {
+      "id": "dune-hd",
+      "title": "Dune HD",
+      "upstream": "https://raw.githubusercontent.com/elax46/custom-brand-icons/72731666e020c9fa7300ed08b1031f191e077ba3/icon-svg/dune-hd.svg",
+      "sha256": "f285b7e21256e334a4e372204008dc28b6f214317b34f19bf4c1b58c57ae4399"
+    },
+    {
+      "id": "zidoo",
+      "title": "Zidoo",
+      "upstream": "https://raw.githubusercontent.com/elax46/custom-brand-icons/72731666e020c9fa7300ed08b1031f191e077ba3/icon-svg/zidooo.svg",
+      "sha256": "8eaa2c168d95cfe320d773dfeb3249b862ffe0a2eb60bbe4545b1de23ec685bb"
+    },
+    {
+      "id": "bluray",
+      "title": "Blu-ray",
+      "upstream": "https://raw.githubusercontent.com/elax46/custom-brand-icons/72731666e020c9fa7300ed08b1031f191e077ba3/icon-svg/bluray.svg",
+      "sha256": "a5986625a072e2b165a5834a43ff6b29949df34d19fd8c59ab36f366b8275cca"
+    },
+    {
+      "id": "dvd",
+      "title": "DVD",
+      "upstream": "https://raw.githubusercontent.com/elax46/custom-brand-icons/72731666e020c9fa7300ed08b1031f191e077ba3/icon-svg/dvd.svg",
+      "sha256": "1db52d2cc7bf2ff0d768f069c433941f5b99697c4a6daf1e23fa2f36c1cee3e8"
+    },
+    {
+      "id": "raspberry-pi",
+      "title": "Raspberry Pi",
+      "upstream": "https://raw.githubusercontent.com/elax46/custom-brand-icons/72731666e020c9fa7300ed08b1031f191e077ba3/icon-svg/raspberry-pi.svg",
+      "sha256": "d28713dae52057c0c75d46c6d906d7d45d3ba57e1bd11fc375ffba7d4f7ed883"
+    },
+    {
+      "id": "intel-nuc",
+      "title": "Intel NUC",
+      "upstream": "https://raw.githubusercontent.com/elax46/custom-brand-icons/72731666e020c9fa7300ed08b1031f191e077ba3/icon-svg/intel-nuc.svg",
+      "sha256": "ee42a0bec22452521ea35b44b825da7f8946f17593f72f89c04bc50bc1683228"
+    },
+    {
+      "id": "sonos",
+      "title": "Sonos",
+      "upstream": "https://raw.githubusercontent.com/elax46/custom-brand-icons/72731666e020c9fa7300ed08b1031f191e077ba3/icon-svg/sonos.svg",
+      "sha256": "76d9ff94f0d78ee905865a8c6f294775cd370978cf59175bb781b29a22684afe"
+    },
+    {
+      "id": "sonos-arc",
+      "title": "Sonos Arc",
+      "upstream": "https://raw.githubusercontent.com/elax46/custom-brand-icons/72731666e020c9fa7300ed08b1031f191e077ba3/icon-svg/sonos-arc.svg",
+      "sha256": "f6be50d413531dcb7e613fead52fbfe25d6bfcdc9b7a7afa5eff3eed663052f3"
+    },
+    {
+      "id": "sonos-beam",
+      "title": "Sonos Beam",
+      "upstream": "https://raw.githubusercontent.com/elax46/custom-brand-icons/72731666e020c9fa7300ed08b1031f191e077ba3/icon-svg/sonos-beam.svg",
+      "sha256": "5aaad0608e7f6d422a4e60b169adc1cac68669f599bb34264fbf35d008f7e9cc"
+    },
+    {
+      "id": "denon",
+      "title": "Denon",
+      "upstream": "https://raw.githubusercontent.com/elax46/custom-brand-icons/72731666e020c9fa7300ed08b1031f191e077ba3/icon-svg/denon.svg",
+      "sha256": "0999fae646739abfce674728c7bf04c7fbf3ee45a18d2a393c2a332c697ea806"
+    },
+    {
+      "id": "yamaha",
+      "title": "Yamaha AVR",
+      "upstream": "https://raw.githubusercontent.com/elax46/custom-brand-icons/72731666e020c9fa7300ed08b1031f191e077ba3/icon-svg/yamaha-rx-v773.svg",
+      "sha256": "91ebe525d6da218768cd4c19bd96c5faa8f5627effcf7a88286716c1c2de778e"
+    },
+    {
+      "id": "cambridge-audio",
+      "title": "Cambridge Audio",
+      "upstream": "https://raw.githubusercontent.com/elax46/custom-brand-icons/72731666e020c9fa7300ed08b1031f191e077ba3/icon-svg/cambridge-audio.svg",
+      "sha256": "e39d1fc1ac7555e7bbdbedbaf7ee785e643b858cc73a2c98c47270f5448ba383"
+    },
+    {
+      "id": "tv-screen",
+      "title": "TV screen",
+      "group": "tv",
+      "license": "Apache-2.0",
+      "repository": "https://github.com/Templarian/MaterialDesign",
+      "revision": "2424e748e0cc63ab7b9c095a099b9fe239b737c0",
+      "upstream": "https://raw.githubusercontent.com/Templarian/MaterialDesign/2424e748e0cc63ab7b9c095a099b9fe239b737c0/svg/television.svg",
+      "sha256": "989bf58def2d1eb9285cc324eda6e0668a3d2481c0de00e04da90ab867fb1be4"
+    },
+    {
+      "id": "tv-classic",
+      "title": "Classic TV",
+      "group": "tv",
+      "license": "Apache-2.0",
+      "repository": "https://github.com/Templarian/MaterialDesign",
+      "revision": "2424e748e0cc63ab7b9c095a099b9fe239b737c0",
+      "upstream": "https://raw.githubusercontent.com/Templarian/MaterialDesign/2424e748e0cc63ab7b9c095a099b9fe239b737c0/svg/television-classic.svg",
+      "sha256": "96458fb1a18d4fb8bcb7c10342bda564530ea607bd481ce17573e825e3decc8f"
+    },
+    {
+      "id": "tv-guide",
+      "title": "TV guide",
+      "group": "tv",
+      "license": "Apache-2.0",
+      "repository": "https://github.com/Templarian/MaterialDesign",
+      "revision": "2424e748e0cc63ab7b9c095a099b9fe239b737c0",
+      "upstream": "https://raw.githubusercontent.com/Templarian/MaterialDesign/2424e748e0cc63ab7b9c095a099b9fe239b737c0/svg/television-guide.svg",
+      "sha256": "14c27dce8a0565ee90120f450ce977e5160f86e12a753ae46d7af4945876b94f"
+    },
+    {
+      "id": "tv-play",
+      "title": "TV playback",
+      "group": "tv",
+      "license": "Apache-2.0",
+      "repository": "https://github.com/Templarian/MaterialDesign",
+      "revision": "2424e748e0cc63ab7b9c095a099b9fe239b737c0",
+      "upstream": "https://raw.githubusercontent.com/Templarian/MaterialDesign/2424e748e0cc63ab7b9c095a099b9fe239b737c0/svg/television-play.svg",
+      "sha256": "27886656901708170d6f274aeb081fcc37a5385f43f8144974ea98270e012247"
+    },
+    {
+      "id": "asus",
+      "title": "ASUS",
+      "upstream": "https://raw.githubusercontent.com/elax46/custom-brand-icons/72731666e020c9fa7300ed08b1031f191e077ba3/icon-svg/asus-new.svg",
+      "sha256": "ec694a5b06cd07c702483e10d1c184370627328d426dea34c714301f2832073c"
+    },
+    {
+      "id": "bose",
+      "title": "Bose",
+      "upstream": "https://raw.githubusercontent.com/elax46/custom-brand-icons/72731666e020c9fa7300ed08b1031f191e077ba3/icon-svg/boses-oundwave.svg",
+      "sha256": "fed402224c258a67a0a3a9b293058f2c49802a6f3d0b3308ddab1ee5f1f63a2b"
+    },
+    {
+      "id": "bose-soundtouch",
+      "title": "Bose SoundTouch",
+      "upstream": "https://raw.githubusercontent.com/elax46/custom-brand-icons/72731666e020c9fa7300ed08b1031f191e077ba3/icon-svg/bose-soundtouch.svg",
+      "sha256": "e1c71fedbe6069663773f1cc806f98bdad9956fbb93da37f0857b867e2950e3a"
+    },
+    {
+      "id": "google",
+      "title": "Google",
+      "upstream": "https://raw.githubusercontent.com/elax46/custom-brand-icons/72731666e020c9fa7300ed08b1031f191e077ba3/icon-svg/google-logo-circle.svg",
+      "sha256": "d7ba70b927d5ab0b7a7f8bda65bddd5dc556e9a68701acc5987d13bb8c8c86b8"
+    },
+    {
+      "id": "kodi",
+      "title": "Kodi",
+      "upstream": "https://raw.githubusercontent.com/elax46/custom-brand-icons/72731666e020c9fa7300ed08b1031f191e077ba3/icon-svg/kodi.svg",
+      "sha256": "fb8cb56b5723127d63e41f9f66043e6dc1edc7aceb250069962f799593432d2c"
+    },
+    {
+      "id": "lg",
+      "title": "LG",
+      "upstream": "https://raw.githubusercontent.com/elax46/custom-brand-icons/72731666e020c9fa7300ed08b1031f191e077ba3/icon-svg/lg.svg",
+      "sha256": "220c36aadf3df7cf32d7b2413b0e4ed989f78135a948589b0362843d1879eee9"
+    },
+    {
+      "id": "onkyo",
+      "title": "Onkyo",
+      "upstream": "https://raw.githubusercontent.com/elax46/custom-brand-icons/72731666e020c9fa7300ed08b1031f191e077ba3/icon-svg/onkyo.svg",
+      "sha256": "c1afa1e4e56842a8a7b38026ea517d3be172fda5ec5bd2b970e79c426434a9d5"
+    },
+    {
+      "id": "panasonic",
+      "title": "Panasonic",
+      "upstream": "https://raw.githubusercontent.com/elax46/custom-brand-icons/72731666e020c9fa7300ed08b1031f191e077ba3/icon-svg/panasonic.svg",
+      "sha256": "793ac7aad6c8670de1d721cfb327d521586a81aa5581dc5133ae7253ca86b656"
+    },
+    {
+      "id": "samsung",
+      "title": "Samsung",
+      "upstream": "https://raw.githubusercontent.com/elax46/custom-brand-icons/72731666e020c9fa7300ed08b1031f191e077ba3/icon-svg/samsung.svg",
+      "sha256": "9d4561b10497947c371e34c78798d1a1defd0ccc100610d243f02bbfd532e2e9"
+    },
+    {
+      "id": "sony",
+      "title": "Sony",
+      "upstream": "https://raw.githubusercontent.com/elax46/custom-brand-icons/72731666e020c9fa7300ed08b1031f191e077ba3/icon-svg/sony.svg",
+      "sha256": "80ed0016cce8988823c265c90587196bc7e574f6f50120e63b7b1f614e0ab79c"
+    },
+    {
+      "id": "steam",
+      "title": "Steam",
+      "upstream": "https://raw.githubusercontent.com/elax46/custom-brand-icons/72731666e020c9fa7300ed08b1031f191e077ba3/icon-svg/steam.svg",
+      "sha256": "a5fe17bf474fa3f96c18af7e2de5eada206e49917b90b7e24dc92c876a8dd95f"
+    },
+    {
+      "id": "wiim-device",
+      "title": "WiiM (device)",
+      "upstream": "https://raw.githubusercontent.com/elax46/custom-brand-icons/72731666e020c9fa7300ed08b1031f191e077ba3/icon-svg/wiim-alt.svg",
+      "sha256": "a00c401b12e8ac11830921ce1f822d3ea1b96de31d0b64d333457e32d205164e"
+    },
+    {
+      "id": "xiaomi",
+      "title": "Xiaomi",
+      "upstream": "https://raw.githubusercontent.com/elax46/custom-brand-icons/72731666e020c9fa7300ed08b1031f191e077ba3/icon-svg/xiaomi-logo.svg",
+      "sha256": "106199226a63f9f1e91bd43879a584ab714b15d37a84d06f42de5edf85bb6d51"
+    },
+    {
+      "id": "xgimi",
+      "title": "XGIMI Horizon",
+      "upstream": "https://raw.githubusercontent.com/elax46/custom-brand-icons/72731666e020c9fa7300ed08b1031f191e077ba3/icon-svg/xgimi-horizon.svg",
+      "sha256": "7ae10cc743906608bcfbabc48df33513e408ee8a7d980e94f56d61496b282969"
+    },
+    {
+      "id": "soundbar",
+      "title": "Soundbar",
+      "titleKey": "device_soundbar",
+      "group": "device",
+      "repository": "https://github.com/Templarian/MaterialDesign",
+      "revision": "2424e748e0cc63ab7b9c095a099b9fe239b737c0",
+      "license": "Apache-2.0",
+      "upstream": "https://raw.githubusercontent.com/Templarian/MaterialDesign/2424e748e0cc63ab7b9c095a099b9fe239b737c0/svg/soundbar.svg",
+      "sha256": "6f9887d024d529d13876ca8e848feb7ff3d46991f17fd1164be1439fb7212916"
+    },
+    {
+      "id": "receiver",
+      "title": "AV receiver",
+      "titleKey": "device_receiver",
+      "group": "device",
+      "repository": "https://github.com/Templarian/MaterialDesign",
+      "revision": "2424e748e0cc63ab7b9c095a099b9fe239b737c0",
+      "license": "Apache-2.0",
+      "upstream": "https://raw.githubusercontent.com/Templarian/MaterialDesign/2424e748e0cc63ab7b9c095a099b9fe239b737c0/svg/audio-video.svg",
+      "sha256": "ee509d4d0ed8cfb5b44c19b166e44d5890f406a57cca999564c9d1df67936b06"
+    },
+    {
+      "id": "amplifier",
+      "title": "Amplifier",
+      "titleKey": "device_amplifier",
+      "group": "device",
+      "repository": "https://github.com/Templarian/MaterialDesign",
+      "revision": "2424e748e0cc63ab7b9c095a099b9fe239b737c0",
+      "license": "Apache-2.0",
+      "upstream": "https://raw.githubusercontent.com/Templarian/MaterialDesign/2424e748e0cc63ab7b9c095a099b9fe239b737c0/svg/amplifier.svg",
+      "sha256": "7a185d3662b35c72e57bd7a4be9ce65ff7ba035c333d9ff0add02a8d963f1b69"
+    },
+    {
+      "id": "projector",
+      "title": "Projector",
+      "titleKey": "device_projector",
+      "group": "device",
+      "repository": "https://github.com/Templarian/MaterialDesign",
+      "revision": "2424e748e0cc63ab7b9c095a099b9fe239b737c0",
+      "license": "Apache-2.0",
+      "upstream": "https://raw.githubusercontent.com/Templarian/MaterialDesign/2424e748e0cc63ab7b9c095a099b9fe239b737c0/svg/projector.svg",
+      "sha256": "080518b507101d7a4c903bc88350535f39650efedeb26cff1074ce6c974b0870"
+    },
+    {
+      "id": "console",
+      "title": "Game console",
+      "titleKey": "device_console",
+      "group": "device",
+      "repository": "https://github.com/Templarian/MaterialDesign",
+      "revision": "2424e748e0cc63ab7b9c095a099b9fe239b737c0",
+      "license": "Apache-2.0",
+      "upstream": "https://raw.githubusercontent.com/Templarian/MaterialDesign/2424e748e0cc63ab7b9c095a099b9fe239b737c0/svg/gamepad-variant.svg",
+      "sha256": "582674a7f638c5e3f733173832188e230b3c74d3f9f4af3c98e4da4f4aafd225"
+    },
+    {
+      "id": "set-top-box",
+      "title": "Set-top box",
+      "titleKey": "device_set_top_box",
+      "group": "device",
+      "repository": "https://github.com/Templarian/MaterialDesign",
+      "revision": "2424e748e0cc63ab7b9c095a099b9fe239b737c0",
+      "license": "Apache-2.0",
+      "upstream": "https://raw.githubusercontent.com/Templarian/MaterialDesign/2424e748e0cc63ab7b9c095a099b9fe239b737c0/svg/set-top-box.svg",
+      "sha256": "834fe4ed19e9aa640e9214520ef2163bec5c855c036b20bc25543471dba1dfaf"
+    },
+    {
+      "id": "monitor",
+      "title": "Monitor",
+      "titleKey": "device_monitor",
+      "group": "device",
+      "repository": "https://github.com/Templarian/MaterialDesign",
+      "revision": "2424e748e0cc63ab7b9c095a099b9fe239b737c0",
+      "license": "Apache-2.0",
+      "upstream": "https://raw.githubusercontent.com/Templarian/MaterialDesign/2424e748e0cc63ab7b9c095a099b9fe239b737c0/svg/monitor.svg",
+      "sha256": "8abd5c8ca1cba72c05075733c9b560280d5ad42f31122b29c5c799c6c78a888b"
+    },
+    {
+      "id": "disc-player",
+      "title": "Disc player",
+      "titleKey": "device_disc_player",
+      "group": "device",
+      "repository": "https://github.com/Templarian/MaterialDesign",
+      "revision": "2424e748e0cc63ab7b9c095a099b9fe239b737c0",
+      "license": "Apache-2.0",
+      "upstream": "https://raw.githubusercontent.com/Templarian/MaterialDesign/2424e748e0cc63ab7b9c095a099b9fe239b737c0/svg/disc-player.svg",
+      "sha256": "d92eb26d06e666759bf501a8a84c38bd868fdca874e4a0e342311d6a5ffd81a8"
+    },
+    {
+      "id": "speaker",
+      "title": "Speaker",
+      "titleKey": "device_speaker",
+      "group": "device",
+      "repository": "https://github.com/Templarian/MaterialDesign",
+      "revision": "2424e748e0cc63ab7b9c095a099b9fe239b737c0",
+      "license": "Apache-2.0",
+      "upstream": "https://raw.githubusercontent.com/Templarian/MaterialDesign/2424e748e0cc63ab7b9c095a099b9fe239b737c0/svg/speaker.svg",
+      "sha256": "bb7580d1ea560464729fde9ed5fda1ad20eb4f14da0feb6643cfe445558c3fd2"
+    },
+    {
+      "id": "speakers",
+      "title": "Speakers",
+      "titleKey": "device_speakers",
+      "group": "device",
+      "repository": "https://github.com/Templarian/MaterialDesign",
+      "revision": "2424e748e0cc63ab7b9c095a099b9fe239b737c0",
+      "license": "Apache-2.0",
+      "upstream": "https://raw.githubusercontent.com/Templarian/MaterialDesign/2424e748e0cc63ab7b9c095a099b9fe239b737c0/svg/speaker-multiple.svg",
+      "sha256": "ecd85705be93ff5bde44df0a4bcabccb2a5c5a48fdb298ae6a30248dd03a0548"
+    },
+    {
+      "id": "streamer",
+      "title": "Media streamer",
+      "titleKey": "device_streamer",
+      "group": "device",
+      "repository": "https://github.com/Templarian/MaterialDesign",
+      "revision": "2424e748e0cc63ab7b9c095a099b9fe239b737c0",
+      "license": "Apache-2.0",
+      "upstream": "https://raw.githubusercontent.com/Templarian/MaterialDesign/2424e748e0cc63ab7b9c095a099b9fe239b737c0/svg/cast.svg",
+      "sha256": "8551e089a189ed80d2f67c8ded466bc8d2b3cb158b3d452905017176463b1035"
+    },
+    {
+      "id": "satellite",
+      "title": "Satellite receiver",
+      "titleKey": "device_satellite",
+      "group": "device",
+      "repository": "https://github.com/Templarian/MaterialDesign",
+      "revision": "2424e748e0cc63ab7b9c095a099b9fe239b737c0",
+      "license": "Apache-2.0",
+      "upstream": "https://raw.githubusercontent.com/Templarian/MaterialDesign/2424e748e0cc63ab7b9c095a099b9fe239b737c0/svg/satellite-variant.svg",
+      "sha256": "8b5439ab3e48f956bd87ee92f9bdea4b43edee36a4935a5e874f6ec5d38f7b19"
+    },
+    {
+      "id": "usb",
+      "title": "USB drive",
+      "titleKey": "device_usb",
+      "group": "port",
+      "repository": "https://github.com/Templarian/MaterialDesign",
+      "revision": "2424e748e0cc63ab7b9c095a099b9fe239b737c0",
+      "license": "Apache-2.0",
+      "upstream": "https://raw.githubusercontent.com/Templarian/MaterialDesign/2424e748e0cc63ab7b9c095a099b9fe239b737c0/svg/usb-flash-drive.svg",
+      "sha256": "b32669940ba8fcdbd91a5f9b23e4b3ba2b168b38d30d1701b7b05292009b5a81"
+    },
+    {
+      "id": "av",
+      "title": "AV",
+      "group": "port",
+      "repository": "https://github.com/Templarian/MaterialDesign",
+      "revision": "2424e748e0cc63ab7b9c095a099b9fe239b737c0",
+      "license": "Apache-2.0",
+      "upstream": "https://raw.githubusercontent.com/Templarian/MaterialDesign/2424e748e0cc63ab7b9c095a099b9fe239b737c0/svg/video-input-svideo.svg",
+      "sha256": "c880c40346a2d14f81526de236311e6fb03f9fa6863a287778537a6e186d27df"
+    },
+    {
+      "id": "component",
+      "title": "Component",
+      "titleKey": "device_component",
+      "group": "port",
+      "repository": "https://github.com/Templarian/MaterialDesign",
+      "revision": "2424e748e0cc63ab7b9c095a099b9fe239b737c0",
+      "license": "Apache-2.0",
+      "upstream": "https://raw.githubusercontent.com/Templarian/MaterialDesign/2424e748e0cc63ab7b9c095a099b9fe239b737c0/svg/video-input-component.svg",
+      "sha256": "3ccf1ed448d5fc14fecf5aabe680593a18515206f73ec137c0f8440fdc554943"
+    },
+    {
+      "id": "scart",
+      "title": "SCART",
+      "group": "port",
+      "repository": "https://github.com/Templarian/MaterialDesign",
+      "revision": "2424e748e0cc63ab7b9c095a099b9fe239b737c0",
+      "license": "Apache-2.0",
+      "upstream": "https://raw.githubusercontent.com/Templarian/MaterialDesign/2424e748e0cc63ab7b9c095a099b9fe239b737c0/svg/video-input-scart.svg",
+      "sha256": "c78edc77d975da4d8ff0837aa333106bb3d8a25bf79e2f2fcb87641ab833edf5"
+    }
+  ],
+  "rendering": {
+    "canvas": 128,
+    "sourceCanvas": 512,
+    "method": "alpha bounds; aspect preserved; optical long edge 104/112/120",
+    "icons": [
+      {
+        "id": "hdmi",
+        "sourceBounds": [
+          55,
+          219,
+          402,
+          74
+        ],
+        "opticalEdge": 120,
+        "pngSize": [
+          120,
+          22
+        ]
+      },
+      {
+        "id": "playstation",
+        "sourceBounds": [
+          55,
+          99,
+          402,
+          314
+        ],
+        "opticalEdge": 104,
+        "pngSize": [
+          104,
+          81
+        ]
+      },
+      {
+        "id": "ps3",
+        "sourceBounds": [
+          55,
+          210,
+          402,
+          92
+        ],
+        "opticalEdge": 120,
+        "pngSize": [
+          120,
+          27
+        ]
+      },
+      {
+        "id": "ps4",
+        "sourceBounds": [
+          55,
+          212,
+          402,
+          88
+        ],
+        "opticalEdge": 120,
+        "pngSize": [
+          120,
+          26
+        ]
+      },
+      {
+        "id": "ps5",
+        "sourceBounds": [
+          55,
+          212,
+          402,
+          88
+        ],
+        "opticalEdge": 120,
+        "pngSize": [
+          120,
+          26
+        ]
+      },
+      {
+        "id": "xbox",
+        "sourceBounds": [
+          55,
+          55,
+          402,
+          402
+        ],
+        "opticalEdge": 104,
+        "pngSize": [
+          104,
+          104
+        ]
+      },
+      {
+        "id": "xbox-console",
+        "sourceBounds": [
+          55,
+          55,
+          402,
+          402
+        ],
+        "opticalEdge": 104,
+        "pngSize": [
+          104,
+          104
+        ]
+      },
+      {
+        "id": "apple-tv",
+        "sourceBounds": [
+          55,
+          162,
+          402,
+          188
+        ],
+        "opticalEdge": 112,
+        "pngSize": [
+          112,
+          52
+        ]
+      },
+      {
+        "id": "apple-tv-box",
+        "sourceBounds": [
+          55,
+          89,
+          402,
+          334
+        ],
+        "opticalEdge": 104,
+        "pngSize": [
+          104,
+          86
+        ]
+      },
+      {
+        "id": "wiim",
+        "sourceBounds": [
+          55,
+          188,
+          402,
+          136
+        ],
+        "opticalEdge": 120,
+        "pngSize": [
+          120,
+          40
+        ]
+      },
+      {
+        "id": "shield",
+        "sourceBounds": [
+          151,
+          55,
+          210,
+          402
+        ],
+        "opticalEdge": 112,
+        "pngSize": [
+          58,
+          112
+        ]
+      },
+      {
+        "id": "pc",
+        "sourceBounds": [
+          55,
+          69,
+          402,
+          374
+        ],
+        "opticalEdge": 104,
+        "pngSize": [
+          104,
+          96
+        ]
+      },
+      {
+        "id": "laptop",
+        "sourceBounds": [
+          55,
+          141,
+          402,
+          230
+        ],
+        "opticalEdge": 112,
+        "pngSize": [
+          112,
+          64
+        ]
+      },
+      {
+        "id": "steam-deck",
+        "sourceBounds": [
+          104,
+          55,
+          304,
+          402
+        ],
+        "opticalEdge": 104,
+        "pngSize": [
+          78,
+          104
+        ]
+      },
+      {
+        "id": "switch",
+        "sourceBounds": [
+          55,
+          55,
+          402,
+          402
+        ],
+        "opticalEdge": 104,
+        "pngSize": [
+          104,
+          104
+        ]
+      },
+      {
+        "id": "gamecube",
+        "sourceBounds": [
+          79,
+          55,
+          354,
+          402
+        ],
+        "opticalEdge": 104,
+        "pngSize": [
+          91,
+          104
+        ]
+      },
+      {
+        "id": "saturn",
+        "sourceBounds": [
+          55,
+          127,
+          402,
+          258
+        ],
+        "opticalEdge": 112,
+        "pngSize": [
+          112,
+          71
+        ]
+      },
+      {
+        "id": "chromecast",
+        "sourceBounds": [
+          71,
+          55,
+          370,
+          402
+        ],
+        "opticalEdge": 104,
+        "pngSize": [
+          95,
+          104
+        ]
+      },
+      {
+        "id": "android-tv",
+        "sourceBounds": [
+          55,
+          95,
+          402,
+          322
+        ],
+        "opticalEdge": 104,
+        "pngSize": [
+          104,
+          83
+        ]
+      },
+      {
+        "id": "fire-tv",
+        "sourceBounds": [
+          55,
+          147,
+          402,
+          218
+        ],
+        "opticalEdge": 112,
+        "pngSize": [
+          112,
+          60
+        ]
+      },
+      {
+        "id": "fire-tv-cube",
+        "sourceBounds": [
+          55,
+          62,
+          402,
+          388
+        ],
+        "opticalEdge": 104,
+        "pngSize": [
+          104,
+          100
+        ]
+      },
+      {
+        "id": "roku",
+        "sourceBounds": [
+          55,
+          192,
+          402,
+          128
+        ],
+        "opticalEdge": 120,
+        "pngSize": [
+          120,
+          38
+        ]
+      },
+      {
+        "id": "roku-ultra",
+        "sourceBounds": [
+          55,
+          72,
+          402,
+          368
+        ],
+        "opticalEdge": 104,
+        "pngSize": [
+          104,
+          95
+        ]
+      },
+      {
+        "id": "dune-hd",
+        "sourceBounds": [
+          55,
+          83,
+          402,
+          346
+        ],
+        "opticalEdge": 104,
+        "pngSize": [
+          104,
+          89
+        ]
+      },
+      {
+        "id": "zidoo",
+        "sourceBounds": [
+          55,
+          61,
+          402,
+          390
+        ],
+        "opticalEdge": 104,
+        "pngSize": [
+          104,
+          100
+        ]
+      },
+      {
+        "id": "bluray",
+        "sourceBounds": [
+          55,
+          168,
+          402,
+          176
+        ],
+        "opticalEdge": 120,
+        "pngSize": [
+          120,
+          52
+        ]
+      },
+      {
+        "id": "dvd",
+        "sourceBounds": [
+          55,
+          165,
+          402,
+          182
+        ],
+        "opticalEdge": 112,
+        "pngSize": [
+          112,
+          50
+        ]
+      },
+      {
+        "id": "raspberry-pi",
+        "sourceBounds": [
+          55,
+          144,
+          402,
+          225
+        ],
+        "opticalEdge": 112,
+        "pngSize": [
+          112,
+          62
+        ]
+      },
+      {
+        "id": "intel-nuc",
+        "sourceBounds": [
+          55,
+          162,
+          402,
+          188
+        ],
+        "opticalEdge": 112,
+        "pngSize": [
+          112,
+          52
+        ]
+      },
+      {
+        "id": "sonos",
+        "sourceBounds": [
+          55,
+          215,
+          402,
+          82
+        ],
+        "opticalEdge": 120,
+        "pngSize": [
+          120,
+          24
+        ]
+      },
+      {
+        "id": "sonos-arc",
+        "sourceBounds": [
+          61,
+          55,
+          391,
+          402
+        ],
+        "opticalEdge": 104,
+        "pngSize": [
+          101,
+          104
+        ]
+      },
+      {
+        "id": "sonos-beam",
+        "sourceBounds": [
+          55,
+          156,
+          402,
+          200
+        ],
+        "opticalEdge": 112,
+        "pngSize": [
+          112,
+          55
+        ]
+      },
+      {
+        "id": "denon",
+        "sourceBounds": [
+          55,
+          210,
+          402,
+          92
+        ],
+        "opticalEdge": 120,
+        "pngSize": [
+          120,
+          27
+        ]
+      },
+      {
+        "id": "yamaha",
+        "sourceBounds": [
+          55,
+          177,
+          402,
+          158
+        ],
+        "opticalEdge": 120,
+        "pngSize": [
+          120,
+          47
+        ]
+      },
+      {
+        "id": "cambridge-audio",
+        "sourceBounds": [
+          55,
+          189,
+          402,
+          134
+        ],
+        "opticalEdge": 120,
+        "pngSize": [
+          120,
+          40
+        ]
+      },
+      {
+        "id": "tv-screen",
+        "sourceBounds": [
+          35,
+          75,
+          442,
+          362
+        ],
+        "opticalEdge": 104,
+        "pngSize": [
+          104,
+          85
+        ]
+      },
+      {
+        "id": "tv-classic",
+        "sourceBounds": [
+          55,
+          75,
+          402,
+          362
+        ],
+        "opticalEdge": 104,
+        "pngSize": [
+          104,
+          93
+        ]
+      },
+      {
+        "id": "tv-guide",
+        "sourceBounds": [
+          35,
+          75,
+          442,
+          362
+        ],
+        "opticalEdge": 104,
+        "pngSize": [
+          104,
+          85
+        ]
+      },
+      {
+        "id": "tv-play",
+        "sourceBounds": [
+          35,
+          75,
+          442,
+          362
+        ],
+        "opticalEdge": 104,
+        "pngSize": [
+          104,
+          85
+        ]
+      },
+      {
+        "id": "asus",
+        "sourceBounds": [
+          55,
+          55,
+          402,
+          402
+        ],
+        "opticalEdge": 104,
+        "pngSize": [
+          104,
+          104
+        ]
+      },
+      {
+        "id": "bose",
+        "sourceBounds": [
+          55,
+          165,
+          402,
+          182
+        ],
+        "opticalEdge": 112,
+        "pngSize": [
+          112,
+          50
+        ]
+      },
+      {
+        "id": "bose-soundtouch",
+        "sourceBounds": [
+          120,
+          55,
+          272,
+          402
+        ],
+        "opticalEdge": 112,
+        "pngSize": [
+          75,
+          112
+        ]
+      },
+      {
+        "id": "google",
+        "sourceBounds": [
+          55,
+          55,
+          402,
+          402
+        ],
+        "opticalEdge": 104,
+        "pngSize": [
+          104,
+          104
+        ]
+      },
+      {
+        "id": "kodi",
+        "sourceBounds": [
+          55,
+          55,
+          402,
+          402
+        ],
+        "opticalEdge": 104,
+        "pngSize": [
+          104,
+          104
+        ]
+      },
+      {
+        "id": "lg",
+        "sourceBounds": [
+          55,
+          168,
+          402,
+          176
+        ],
+        "opticalEdge": 120,
+        "pngSize": [
+          120,
+          52
+        ]
+      },
+      {
+        "id": "onkyo",
+        "sourceBounds": [
+          55,
+          226,
+          402,
+          60
+        ],
+        "opticalEdge": 120,
+        "pngSize": [
+          120,
+          17
+        ]
+      },
+      {
+        "id": "panasonic",
+        "sourceBounds": [
+          55,
+          224,
+          402,
+          64
+        ],
+        "opticalEdge": 120,
+        "pngSize": [
+          120,
+          19
+        ]
+      },
+      {
+        "id": "samsung",
+        "sourceBounds": [
+          55,
+          224,
+          402,
+          64
+        ],
+        "opticalEdge": 120,
+        "pngSize": [
+          120,
+          19
+        ]
+      },
+      {
+        "id": "sony",
+        "sourceBounds": [
+          55,
+          219,
+          402,
+          74
+        ],
+        "opticalEdge": 120,
+        "pngSize": [
+          120,
+          22
+        ]
+      },
+      {
+        "id": "steam",
+        "sourceBounds": [
+          55,
+          55,
+          402,
+          402
+        ],
+        "opticalEdge": 104,
+        "pngSize": [
+          104,
+          104
+        ]
+      },
+      {
+        "id": "wiim-device",
+        "sourceBounds": [
+          55,
+          55,
+          402,
+          402
+        ],
+        "opticalEdge": 104,
+        "pngSize": [
+          104,
+          104
+        ]
+      },
+      {
+        "id": "xiaomi",
+        "sourceBounds": [
+          55,
+          55,
+          402,
+          402
+        ],
+        "opticalEdge": 104,
+        "pngSize": [
+          104,
+          104
+        ]
+      },
+      {
+        "id": "xgimi",
+        "sourceBounds": [
+          55,
+          87,
+          402,
+          338
+        ],
+        "opticalEdge": 104,
+        "pngSize": [
+          104,
+          87
+        ]
+      },
+      {
+        "id": "soundbar",
+        "sourceBounds": [
+          55,
+          175,
+          402,
+          162
+        ],
+        "opticalEdge": 120,
+        "pngSize": [
+          120,
+          48
+        ]
+      },
+      {
+        "id": "receiver",
+        "sourceBounds": [
+          55,
+          155,
+          402,
+          242
+        ],
+        "opticalEdge": 112,
+        "pngSize": [
+          112,
+          67
+        ]
+      },
+      {
+        "id": "amplifier",
+        "sourceBounds": [
+          75,
+          55,
+          362,
+          402
+        ],
+        "opticalEdge": 104,
+        "pngSize": [
+          93,
+          104
+        ]
+      },
+      {
+        "id": "projector",
+        "sourceBounds": [
+          55,
+          135,
+          402,
+          262
+        ],
+        "opticalEdge": 112,
+        "pngSize": [
+          112,
+          72
+        ]
+      },
+      {
+        "id": "console",
+        "sourceBounds": [
+          35,
+          135,
+          442,
+          242
+        ],
+        "opticalEdge": 112,
+        "pngSize": [
+          112,
+          61
+        ]
+      },
+      {
+        "id": "set-top-box",
+        "sourceBounds": [
+          35,
+          215,
+          442,
+          122
+        ],
+        "opticalEdge": 120,
+        "pngSize": [
+          120,
+          33
+        ]
+      },
+      {
+        "id": "monitor",
+        "sourceBounds": [
+          35,
+          55,
+          442,
+          402
+        ],
+        "opticalEdge": 104,
+        "pngSize": [
+          104,
+          94
+        ]
+      },
+      {
+        "id": "disc-player",
+        "sourceBounds": [
+          55,
+          35,
+          402,
+          422
+        ],
+        "opticalEdge": 104,
+        "pngSize": [
+          99,
+          104
+        ]
+      },
+      {
+        "id": "speaker",
+        "sourceBounds": [
+          115,
+          55,
+          282,
+          402
+        ],
+        "opticalEdge": 112,
+        "pngSize": [
+          78,
+          112
+        ]
+      },
+      {
+        "id": "speakers",
+        "sourceBounds": [
+          75,
+          15,
+          362,
+          482
+        ],
+        "opticalEdge": 104,
+        "pngSize": [
+          78,
+          104
+        ]
+      },
+      {
+        "id": "streamer",
+        "sourceBounds": [
+          35,
+          75,
+          442,
+          362
+        ],
+        "opticalEdge": 104,
+        "pngSize": [
+          104,
+          85
+        ]
+      },
+      {
+        "id": "satellite",
+        "sourceBounds": [
+          35,
+          35,
+          422,
+          422
+        ],
+        "opticalEdge": 104,
+        "pngSize": [
+          104,
+          104
+        ]
+      },
+      {
+        "id": "usb",
+        "sourceBounds": [
+          35,
+          35,
+          442,
+          442
+        ],
+        "opticalEdge": 104,
+        "pngSize": [
+          104,
+          104
+        ]
+      },
+      {
+        "id": "av",
+        "sourceBounds": [
+          35,
+          35,
+          442,
+          442
+        ],
+        "opticalEdge": 104,
+        "pngSize": [
+          104,
+          104
+        ]
+      },
+      {
+        "id": "component",
+        "sourceBounds": [
+          35,
+          35,
+          442,
+          442
+        ],
+        "opticalEdge": 104,
+        "pngSize": [
+          104,
+          104
+        ]
+      },
+      {
+        "id": "scart",
+        "sourceBounds": [
+          55,
+          59,
+          404,
+          378
+        ],
+        "opticalEdge": 104,
+        "pngSize": [
+          104,
+          97
+        ]
+      }
+    ]
+  }
+}

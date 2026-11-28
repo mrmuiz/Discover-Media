@@ -1,0 +1,193 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Homebar</title>
+<style>
+  :root { --bg: #f4f4f2; --card: #fff; --ink: #18181a; --ink2: #5c5c62; --edge: #e2e2de; --accent: #a50034; --onAccent: #fff; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #121214; --card: #1d1d20; --ink: #f2f2f0; --ink2: #a4a4aa; --edge: #2e2e33; --accent: #ff5c86; --onAccent: #121214; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 520px; margin: 0 auto; padding: 28px 16px 40px; }
+  h1 { font-size: 26px; margin: 0 0 4px; letter-spacing: -0.4px; }
+  .sub { color: var(--ink2); margin: 0 0 22px; }
+  .card { background: var(--card); border: 1px solid var(--edge); border-radius: 16px; padding: 16px; margin-bottom: 14px; }
+  .label { font-size: 13px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--ink2); margin-bottom: 4px; }
+  .now { font-size: 20px; font-weight: 600; }
+  .now small { display: block; font-size: 14px; font-weight: 400; color: var(--ink2); }
+  form { display: flex; gap: 8px; }
+  input { flex: 1; min-width: 0; font: inherit; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--edge); background: var(--bg); color: var(--ink); }
+  button { font: inherit; font-weight: 600; padding: 12px 16px; border-radius: 12px; border: 0; background: var(--accent); color: var(--onAccent); cursor: pointer; }
+  button.plain { background: transparent; color: var(--accent); padding: 12px 0; }
+  ul { list-style: none; padding: 0; margin: 12px 0 0; }
+  li button { width: 100%; text-align: left; background: transparent; color: var(--ink); border-top: 1px solid var(--edge); border-radius: 0; padding: 12px 2px; font-weight: 600; }
+  li button span { display: block; font-weight: 400; font-size: 14px; color: var(--ink2); }
+  .msg { color: var(--ink2); margin: 12px 0 0; }
+  .msg.ok { color: var(--accent); font-weight: 600; }
+  [hidden] { display: none; }
+  .field { margin: 0 0 12px; }
+  .field label { display: block; font-size: 14px; color: var(--ink2); margin: 0 0 4px; }
+  .field input, .field select { width: 100%; font: inherit; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--edge); background: var(--bg); color: var(--ink); }
+  .hintline { font-size: 13px; color: var(--ink2); margin: 4px 0 0; }
+  h2 { font-size: 20px; margin: 0 0 4px; }
+</style>
+</head>
+<body>
+<main>
+  <div class="card" id="discoverCard">
+    <h2 id="dTitle"></h2>
+    <p class="sub" id="dIntro" style="margin-bottom:14px"></p>
+    <form id="dForm" style="display:block">
+      <div class="field"><label for="dServer" id="dServerLabel"></label><input id="dServer" type="url" inputmode="url" autocomplete="off" placeholder="http://192.168.1.10:8096" required></div>
+      <div class="field"><label for="dKey" id="dKeyLabel"></label><input id="dKey" type="password" autocomplete="off"><p class="hintline" id="dKeyHint"></p></div>
+      <div class="field"><label for="dRow" id="dRowLabel"></label><select id="dRow"></select></div>
+      <div class="field"><label for="dApp" id="dAppLabel"></label><select id="dApp"></select><p class="hintline" id="dAppHint"></p></div>
+      <div class="field"><label style="display:flex;gap:10px;align-items:center;color:var(--ink);font-size:16px"><input id="dTv" type="checkbox" style="width:auto"> <span id="dTvLabel"></span></label><p class="hintline" id="dTvHint"></p></div>
+      <button id="dSave" type="submit"></button>
+    </form>
+    <p class="msg" id="dMsg" hidden></p>
+  </div>
+  <h1 id="title"></h1>
+  <p class="sub" id="intro"></p>
+  <div class="card">
+    <div class="label" id="nowLabel"></div>
+    <div class="now" id="now">…</div>
+  </div>
+  <div class="card">
+    <form id="search">
+      <input id="q" type="search" autocomplete="off" required>
+      <button id="go" type="submit"></button>
+    </form>
+    <ul id="results"></ul>
+    <p class="msg" id="msg" hidden></p>
+  </div>
+  <button class="plain" id="auto" type="button"></button>
+</main>
+<script>
+var STRINGS = {
+  en: {title: "Weather on the TV", intro: "Choose the place Homebar shows the weather for.", now: "Now", auto: "From the TV's internet address", search: "Search", placeholder: "Town or city", none: "Nothing found.", saved: "Saved. The TV shows the weather for {place}.", useAuto: "Use the TV's internet address instead", autoSaved: "Saved. The TV finds its place from its internet address.", failed: "The search did not work. Try again.", expired: "This page has expired. On the TV, open Launcher settings → Weather place and scan the code again.", unknown: "Not known yet"},
+  es: {title: "El tiempo en la TV", intro: "Elige el lugar del que Homebar muestra el tiempo.", now: "Ahora", auto: "Por la dirección de internet de la TV", search: "Buscar", placeholder: "Pueblo o ciudad", none: "No se encontró nada.", saved: "Guardado. La TV muestra el tiempo de {place}.", useAuto: "Usar la dirección de internet de la TV", autoSaved: "Guardado. La TV busca su lugar por su dirección de internet.", failed: "La búsqueda no funcionó. Inténtalo de nuevo.", expired: "Esta página ha caducado. En la TV, abre Ajustes del launcher → Lugar del tiempo y escanea el código de nuevo.", unknown: "Aún no se sabe"},
+  de: {title: "Wetter auf dem Fernseher", intro: "Wähle den Ort, für den Homebar das Wetter zeigt.", now: "Jetzt", auto: "Über die Internetadresse des Fernsehers", search: "Suchen", placeholder: "Ort oder Stadt", none: "Nichts gefunden.", saved: "Gespeichert. Der Fernseher zeigt das Wetter für {place}.", useAuto: "Stattdessen die Internetadresse des Fernsehers nutzen", autoSaved: "Gespeichert. Der Fernseher bestimmt seinen Ort über die Internetadresse.", failed: "Die Suche hat nicht geklappt. Bitte noch einmal.", expired: "Diese Seite ist abgelaufen. Öffne am Fernseher Launcher-Einstellungen → Wetter-Ort und scanne den Code erneut.", unknown: "Noch nicht bekannt"},
+  pl: {title: "Pogoda na telewizorze", intro: "Wybierz miejsce, dla którego Homebar pokazuje pogodę.", now: "Teraz", auto: "Z adresu internetowego telewizora", search: "Szukaj", placeholder: "Miejscowość", none: "Nic nie znaleziono.", saved: "Zapisano. Telewizor pokazuje pogodę dla: {place}.", useAuto: "Użyj adresu internetowego telewizora", autoSaved: "Zapisano. Telewizor ustala miejsce z adresu internetowego.", failed: "Wyszukiwanie nie zadziałało. Spróbuj ponownie.", expired: "Ta strona wygasła. Na telewizorze otwórz Ustawienia launchera → Miejsce pogody i zeskanuj kod jeszcze raz.", unknown: "Jeszcze nieznane"},
+  fr: {title: "La météo sur la TV", intro: "Choisissez le lieu dont Homebar affiche la météo.", now: "Actuellement", auto: "D'après l'adresse internet de la TV", search: "Rechercher", placeholder: "Ville ou village", none: "Aucun résultat.", saved: "Enregistré. La TV affiche la météo de {place}.", useAuto: "Utiliser plutôt l'adresse internet de la TV", autoSaved: "Enregistré. La TV trouve son lieu d'après son adresse internet.", failed: "La recherche n'a pas abouti. Réessayez.", expired: "Cette page a expiré. Sur la TV, ouvrez Paramètres du launcher → Lieu de la météo et scannez à nouveau le code.", unknown: "Pas encore connu"},
+  it: {title: "Il meteo sulla TV", intro: "Scegli il luogo di cui Homebar mostra il meteo.", now: "Ora", auto: "Dall'indirizzo internet della TV", search: "Cerca", placeholder: "Paese o città", none: "Nessun risultato.", saved: "Salvato. La TV mostra il meteo di {place}.", useAuto: "Usa invece l'indirizzo internet della TV", autoSaved: "Salvato. La TV trova il luogo dal suo indirizzo internet.", failed: "La ricerca non è riuscita. Riprova.", expired: "Questa pagina è scaduta. Sulla TV apri Impostazioni del launcher → Luogo del meteo e scansiona di nuovo il codice.", unknown: "Non ancora noto"},
+  pt: {title: "O tempo na TV", intro: "Escolha o local de que o Homebar mostra o tempo.", now: "Agora", auto: "Pelo endereço de internet da TV", search: "Procurar", placeholder: "Vila ou cidade", none: "Nada encontrado.", saved: "Guardado. A TV mostra o tempo de {place}.", useAuto: "Usar antes o endereço de internet da TV", autoSaved: "Guardado. A TV encontra o local pelo seu endereço de internet.", failed: "A pesquisa não funcionou. Tente de novo.", expired: "Esta página expirou. Na TV, abra Definições do launcher → Local do tempo e leia o código de novo.", unknown: "Ainda não se sabe"},
+  nl: {title: "Het weer op de tv", intro: "Kies de plaats waarvan Homebar het weer laat zien.", now: "Nu", auto: "Via het internetadres van de tv", search: "Zoeken", placeholder: "Plaats of stad", none: "Niets gevonden.", saved: "Opgeslagen. De tv laat het weer zien voor {place}.", useAuto: "Toch het internetadres van de tv gebruiken", autoSaved: "Opgeslagen. De tv bepaalt zijn plaats via zijn internetadres.", failed: "Het zoeken lukte niet. Probeer het opnieuw.", expired: "Deze pagina is verlopen. Open op de tv Launcher-instellingen → Plaats voor het weer en scan de code opnieuw.", unknown: "Nog niet bekend"},
+  cs: {title: "Počasí na televizi", intro: "Vyberte místo, pro které Homebar ukazuje počasí.", now: "Teď", auto: "Podle internetové adresy televize", search: "Hledat", placeholder: "Obec nebo město", none: "Nic nenalezeno.", saved: "Uloženo. Televize ukazuje počasí pro {place}.", useAuto: "Použít raději internetovou adresu televize", autoSaved: "Uloženo. Televize zjistí místo podle své internetové adresy.", failed: "Hledání se nepovedlo. Zkuste to znovu.", expired: "Tato stránka vypršela. Na televizi otevřete Nastavení launcheru → Místo počasí a naskenujte kód znovu.", unknown: "Zatím neznámé"}
+};
+var lang = (navigator.language || "en").slice(0, 2).toLowerCase();
+if (!STRINGS[lang]) lang = "en";
+var S = STRINGS[lang];
+var token = (location.search.match(/[?&]t=([0-9a-f]+)/) || [])[1] || "";
+function $(id) { return document.getElementById(id); }
+function text(id, value) { $(id).textContent = value; }
+text("title", S.title); text("intro", S.intro); text("nowLabel", S.now); text("go", S.search); text("auto", S.useAuto);
+$("q").placeholder = S.placeholder;
+document.documentElement.lang = lang;
+
+function message(value, ok) { var m = $("msg"); m.hidden = !value; m.textContent = value || ""; m.className = ok ? "msg ok" : "msg"; }
+function showPlace(p) {
+  var now = $("now");
+  now.textContent = p && p.name ? p.name : S.unknown;
+  if (p && p.auto) { var s = document.createElement("small"); s.textContent = S.auto; now.appendChild(s); }
+  $("auto").hidden = !p || p.auto;
+}
+function expired() {
+  $("search").hidden = true; $("auto").hidden = true; $("results").innerHTML = "";
+  message(S.expired);
+}
+function call(method, body) {
+  return fetch("/place?t=" + token, {method: method, headers: {"Content-Type": "application/json"}, body: body ? JSON.stringify(body) : undefined})
+    .then(function (r) { if (r.status === 403) { expired(); throw new Error("expired"); } return r.json(); });
+}
+function save(place, done) {
+  call("POST", place).then(function (r) {
+    if (!r.ok) throw new Error(r.error);
+    showPlace(r.place);
+    $("results").innerHTML = "";
+    message(place.auto ? S.autoSaved : S.saved.replace("{place}", r.place ? r.place.name : place.name), true);
+  }).catch(function (e) { if (e.message !== "expired") message(S.failed); });
+}
+$("search").addEventListener("submit", function (e) {
+  e.preventDefault();
+  var q = $("q").value.trim();
+  if (!q) return;
+  message("");
+  fetch("https://geocoding-api.open-meteo.com/v1/search?count=8&format=json&language=" + lang + "&name=" + encodeURIComponent(q))
+    .then(function (r) { return r.json(); })
+    .then(function (r) {
+      var list = $("results"), found = r.results || [];
+      list.innerHTML = "";
+      if (!found.length) return message(S.none);
+      found.forEach(function (x) {
+        var li = document.createElement("li"), b = document.createElement("button"), s = document.createElement("span");
+        b.type = "button";
+        b.textContent = x.name;
+        s.textContent = [x.admin1, x.country].filter(function (v) { return v && v !== x.name; }).join(", ");
+        b.appendChild(s);
+        b.addEventListener("click", function () { save({name: x.name, lat: x.latitude, lon: x.longitude}); });
+        li.appendChild(b);
+        list.appendChild(li);
+      });
+    })
+    .catch(function () { message(S.failed); });
+});
+$("auto").addEventListener("click", function () { save({auto: true}); });
+call("GET").then(function (r) { showPlace(r.place); }).catch(function () {});
+
+// Discover: the Emby server with the Discover-Media plugin, for the wallpaper
+// and the poster row on the TV.
+var D = {
+  en: {title: "Discover on the TV", intro: "The Emby server with the Discover plugin. Its posters and backdrops show on the TV's Home screen.", server: "Emby server address", key: "Emby API key", keyHint: "Emby dashboard → Advanced → API keys. Leave empty to keep the saved key.", keySaved: "Saved key ends in {key}", row: "Row for the wallpaper", app: "App to open", appHint: "Your Emby app with the Discover page.", saver: "Screensaver after", saverHint: "Without a key press on the Discover screen, Homebar steps aside for the Discover backdrops. The TV's own screensaver stays away meanwhile.", min: "{n} min", off: "Off", tv: "Also over Live TV", tvHint: "When Live TV is behind Home (for example without channels), the wallpaper shows anyway.", none: "(choose an app)", save: "Save", saving: "Checking the server…", saved: "Saved. Discover {version} found; the TV fetches the posters now.", err_server: "That address is not valid.", err_key: "The API key is not accepted.", err_unreachable: "The server cannot be reached from the TV.", err_plugin: "The Discover plugin was not found on that server.", err_other: "Saving did not work. Try again.",
+    rows: {trending: "Trending", popular_movie: "Popular movies", upcoming_movie: "Upcoming movies", popular_tv: "Popular series", upcoming_tv: "Upcoming series"}},
+  nl: {title: "Discover op de tv", intro: "De Emby-server met de Discover-plugin. De posters en achtergronden komen op het Home-scherm van de tv.", server: "Adres van de Emby-server", key: "Emby-API-sleutel", keyHint: "Emby-dashboard → Geavanceerd → API-sleutels. Leeg laten houdt de opgeslagen sleutel.", keySaved: "Opgeslagen sleutel eindigt op {key}", row: "Rij voor de achtergrond", app: "App om te openen", appHint: "Je Emby-app met de Discover-pagina.", saver: "Screensaver na", saverHint: "Zonder toetsdruk op het Discover-scherm maakt Homebar plaats voor de Discover-achtergronden. De eigen screensaver van de tv blijft dan weg.", min: "{n} min", off: "Uit", tv: "Ook over Live TV", tvHint: "Staat Live TV achter Home (bijvoorbeeld zonder zenders), dan komt de wallpaper er toch.", none: "(kies een app)", save: "Opslaan", saving: "Server controleren…", saved: "Opgeslagen. Discover {version} gevonden; de tv haalt nu de posters op.", err_server: "Dat adres klopt niet.", err_key: "De API-sleutel wordt niet geaccepteerd.", err_unreachable: "De tv kan de server niet bereiken.", err_plugin: "De Discover-plugin staat niet op die server.", err_other: "Opslaan lukte niet. Probeer het opnieuw.",
+    rows: {trending: "Trending", popular_movie: "Populaire films", upcoming_movie: "Aankomende films", popular_tv: "Populaire series", upcoming_tv: "Aankomende series"}}
+};
+var DS = D[lang] || D.en;
+text("dTitle", DS.title); text("dIntro", DS.intro); text("dServerLabel", DS.server); text("dKeyLabel", DS.key);
+text("dKeyHint", DS.keyHint); text("dRowLabel", DS.row); text("dAppLabel", DS.app); text("dAppHint", DS.appHint); text("dSave", DS.save); text("dTvLabel", DS.tv); text("dTvHint", DS.tvHint);
+function dMessage(value, ok) { var m = $("dMsg"); m.hidden = !value; m.textContent = value || ""; m.className = ok ? "msg ok" : "msg"; }
+function option(select, value, label, chosen) {
+  var o = document.createElement("option"); o.value = value; o.textContent = label; if (chosen) o.selected = true; select.appendChild(o);
+}
+function dCall(route, method, body) {
+  return fetch(route + "?t=" + token, {method: method, headers: {"Content-Type": "application/json"}, body: body ? JSON.stringify(body) : undefined})
+    .then(function (r) { if (r.status === 403) { expired(); $("dForm").hidden = true; throw new Error("expired"); } return r.json(); });
+}
+var dConfig = null;
+function dShow(c) {
+  dConfig = c;
+  $("dServer").value = c.server || "";
+  $("dKey").value = ""; $("dKey").placeholder = c.hasKey ? DS.keySaved.replace("{key}", c.apiKey.slice(-4)) : "";
+  $("dKey").required = !c.hasKey;
+  $("dTv").checked = c.overTv !== false;
+
+  var row = $("dRow"); row.innerHTML = "";
+  (c.rows || []).forEach(function (r) { option(row, r, DS.rows[r] || r, r === c.row); });
+  dApps(c.appId);
+}
+function dApps(chosen) {
+  dCall("/discover-apps", "GET").then(function (r) {
+    var app = $("dApp"); app.innerHTML = "";
+    option(app, "", DS.none, !chosen);
+    var found = false;
+    (r.apps || []).forEach(function (a) { if (a.id === chosen) found = true; option(app, a.id, a.title + " (" + a.id + ")", a.id === chosen); });
+    if (chosen && !found) option(app, chosen, chosen, true);
+  }).catch(function () {});
+}
+$("dForm").addEventListener("submit", function (e) {
+  e.preventDefault();
+  dMessage(DS.saving);
+  dCall("/discover-config", "POST", {server: $("dServer").value, apiKey: $("dKey").value, row: $("dRow").value, appId: $("dApp").value, overTv: $("dTv").checked})
+    .then(function (r) {
+      if (r.ok) { dShow(r.config); dMessage(DS.saved.replace("{version}", r.version), true); }
+      else dMessage(DS["err_" + r.error] || DS.err_other);
+    }).catch(function (e) { if (e.message !== "expired") dMessage(DS.err_other); });
+});
+dCall("/discover-config", "GET").then(function (r) { if (r.ok) dShow(r.config); }).catch(function () {});
+</script>
+</body>
+</html>
