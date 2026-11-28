@@ -1,3 +1,10 @@
+## Version 1.4.2.7
+
+- **Every genre tile gets its own picture.** Many genre tiles (Comedy, Crime, Drama ...) showed the same backdrop, because each genre picked its picture independently. The tiles now share one selection per list: each genre takes the first of its top titles' backdrops that no earlier genre uses (a duplicate is only allowed when all of them are taken). The new pictures are generated automatically.
+- **Requests are validated.** Requesting or removing a title now needs a type of "movie" or "tv" and a valid TMDB id, and an empty request gets a short "Invalid request." message instead of an error.
+- **A few null-checks** around the genre pictures, so an empty TMDB answer no longer breaks the genre tiles.
+
+If you like Discover, you can support it here: https://ko-fi.com/mrmuiz
 ## Version 1.4.2.6
 
 The stable release of the genre filter from the 1.4.2.3–1.4.2.5 betas, with a bit of polish.

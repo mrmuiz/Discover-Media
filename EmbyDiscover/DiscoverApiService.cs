@@ -1351,7 +1351,7 @@ namespace Emby.Plugins.Discover
         {
             if (!hasRequest || tmdbId <= 0 ||
                 !(string.Equals(type, "tv", StringComparison.OrdinalIgnoreCase) || string.Equals(type, "movie", StringComparison.OrdinalIgnoreCase)))
-                return DiscoverLanguage.Text("Ongeldige aanvraag.", "Invalid request.", "Ungültige Anfrage.");
+                return DiscoverLanguage.T("api.invalid_request");
             return null;
         }
         public async Task<object> Post(DiscoverRequestItem request)

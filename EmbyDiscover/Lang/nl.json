@@ -3,6 +3,7 @@
   "api.awaiting_approval": " (wacht op goedkeuring)",
   "api.cleanup_failed": "Opruimen mislukt: ",
   "api.enter_your_tmdb_api_key_in_the_plugin_settings": "Vul eerst je TMDB API key in bij de plugininstellingen (Dashboard > Plugins > Discover).",
+  "api.invalid_request": "Ongeldige aanvraag.",
   "api.loading_failed": "Laden mislukt: ",
   "api.movie_genres": "Filmgenres",
   "api.networks": "Netwerken",
