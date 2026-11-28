@@ -1,0 +1,4 @@
+Television and generic device icons: Material Design Icons, Pictogrammers and contributors.
+https://github.com/Templarian/MaterialDesign
+Original SVGs unchanged; PNGs regenerated with trimmed margins and optical scaling.
+Icons licensed under Apache License 2.0. See the two accompanying license files.

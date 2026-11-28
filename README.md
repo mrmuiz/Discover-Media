@@ -170,6 +170,12 @@ The separate *Emby for Android TV* and *Fire TV* apps cannot be patched; on thos
   <a href="https://github.com/mrmuiz/Enabler-for-Emby"><img src="https://raw.githubusercontent.com/mrmuiz/Enabler-for-Emby/main/docs/banner.jpg" alt="Discover Enabler for Emby" width="80%"></a>
 </p>
 
+### Rooted LG TVs: Homebar Discover
+
+For **rooted LG webOS TVs** (Homebrew Channel + root SSH), [`lg-launcher/`](lg-launcher/) holds *Homebar Discover*: a build of the [Homebar](https://github.com/rawinek/webos-homebar) launcher (MIT) that shows the Discover rows of this plugin as the TV's home screen, with large backdrops and posters, and the Homebar bar with your apps and HDMI inputs below. It is not an Emby plugin and nothing changes on the Emby server; it only reads the Discover rows with an Emby API key. Tested on webOS 6.5.3 only. Install guide (Dutch): [`lg-launcher/docs/Homebar-Discover-installeren.pdf`](lg-launcher/docs/Homebar-Discover-installeren.pdf). See [`lg-launcher/README.md`](lg-launcher/README.md).
+
+*Nederlands:* voor **geroote LG-tv's** staat in [`lg-launcher/`](lg-launcher/) *Homebar Discover*, een Homebar-startscherm met de Discover-rijen van deze plugin. Zie de [installatiehandleiding](lg-launcher/docs/Homebar-Discover-installeren.pdf).
+
 ## Requirements
 
 - Emby Server 4.10.2 or newer (4.11 beta included). The plugin is built against `MediaBrowser.Server.Core` 4.10.0.1-beta; it has been installed on Emby Server 4.10.2.0 and on the 4.11 beta.
