@@ -172,9 +172,9 @@ The separate *Emby for Android TV* and *Fire TV* apps cannot be patched; on thos
 
 ### Rooted LG TVs: Homebar Discover
 
-For **rooted LG webOS TVs** (Homebrew Channel + root SSH), [`lg-launcher/`](lg-launcher/) holds *Homebar Discover*: a build of the [Homebar](https://github.com/rawinek/webos-homebar) launcher (MIT) that shows the Discover rows of this plugin as the TV's home screen, with large backdrops and posters, and the Homebar bar with your apps and HDMI inputs below. It is not an Emby plugin and nothing changes on the Emby server; it only reads the Discover rows with an Emby API key. Tested on webOS 6.5.3 only. Install guide (Dutch): [`lg-launcher/docs/Homebar-Discover-installeren.pdf`](lg-launcher/docs/Homebar-Discover-installeren.pdf). See [`lg-launcher/README.md`](lg-launcher/README.md).
+For **rooted LG webOS TVs** (Homebrew Channel + root SSH), [`lg-launcher/`](lg-launcher/) holds *Homebar Discover*: a build of the [Homebar](https://github.com/rawinek/webos-homebar) launcher (MIT) that shows the Discover rows of this plugin as the TV's home screen, with large backdrops and posters, and the Homebar bar with your apps and HDMI inputs below. It is not an Emby plugin and nothing changes on the Emby server; it only reads the Discover rows with an Emby API key. Tested on webOS 6.5.3 only. Install guide: [English](lg-launcher/docs/INSTALL.en.md) · [Nederlands](lg-launcher/docs/INSTALL.nl.md) ([PDF](lg-launcher/docs/Homebar-Discover-installeren.pdf)). See [`lg-launcher/README.md`](lg-launcher/README.md).
 
-*Nederlands:* voor **geroote LG-tv's** staat in [`lg-launcher/`](lg-launcher/) *Homebar Discover*, een Homebar-startscherm met de Discover-rijen van deze plugin. Zie de [installatiehandleiding](lg-launcher/docs/Homebar-Discover-installeren.pdf).
+*Nederlands:* voor **geroote LG-tv's** staat in [`lg-launcher/`](lg-launcher/) *Homebar Discover*, een Homebar-startscherm met de Discover-rijen van deze plugin. Zie de [installatiehandleiding](lg-launcher/docs/INSTALL.nl.md) ([PDF](lg-launcher/docs/Homebar-Discover-installeren.pdf)) of de [Engelse versie](lg-launcher/docs/INSTALL.en.md).
 
 ## Requirements
 

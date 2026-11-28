@@ -13,7 +13,7 @@ It is **not an Emby plugin**: nothing is installed on the Emby server. The TV re
 
 ## Install
 
-The Dutch guide with every step is in [`docs/Homebar-Discover-installeren.pdf`](docs/Homebar-Discover-installeren.pdf). In short:
+The full guide is in [`docs/INSTALL.en.md`](docs/INSTALL.en.md) (English) and [`docs/INSTALL.nl.md`](docs/INSTALL.nl.md) (Dutch, same content as [`docs/Homebar-Discover-installeren.pdf`](docs/Homebar-Discover-installeren.pdf)). In short:
 
 1. Pack the folder: `tar czf homebar-discover.tar.gz rawin-launcher` (from inside `lg-launcher/`).
 2. Copy it to the TV: `scp -O homebar-discover.tar.gz root@TV-IP:/tmp/rawin-launcher.tar.gz`.
@@ -26,7 +26,8 @@ The Dutch guide with every step is in [`docs/Homebar-Discover-installeren.pdf`](
 | :--- | :--- |
 | `rawin-launcher/` | The package: installers (`install.sh`, `webos4/`, `webos10/`), `ui/` (QML), `shared/` (setup server and `discover.js`), upstream `README.md` and `LICENSE`. |
 | `rawin-launcher/webos10/*.ipk` | The prebuilt overlay app and black card. The root helper service (`service.js` and friends) exists only inside the IPK. |
-| `docs/Homebar-Discover-installeren.pdf` | Dutch install guide. |
+| `docs/INSTALL.en.md`, `docs/INSTALL.nl.md` | Install guide in English and Dutch. |
+| `docs/Homebar-Discover-installeren.pdf` | The original Dutch install guide (PDF). |
 | `NOTICE.md` | Licenses and attribution. |
 
 The upstream `rawin-launcher/README.md` describes plain Homebar; its links to `docs/` and screenshots are not part of this copy (see the upstream repository).
@@ -40,4 +41,4 @@ Het is **geen Emby-plugin**: er wordt niets op de Emby-server geïnstalleerd. De
 - Vereist een geroote tv met Homebrew Channel en SSH als root. Gebruik op eigen risico; niet verbonden aan LG.
 - Getest op **webOS 6.5.3**; andere versies zijn niet met Discover getest.
 - Updates van de originele Homebar staan in deze build uit; een nieuwe versie installeer je opnieuw.
-- Alle stappen staan in de [installatiehandleiding (PDF)](docs/Homebar-Discover-installeren.pdf).
+- Alle stappen staan in de [installatiehandleiding](docs/INSTALL.nl.md) (ook als [PDF](docs/Homebar-Discover-installeren.pdf)); een [Engelse versie](docs/INSTALL.en.md) is er ook.
