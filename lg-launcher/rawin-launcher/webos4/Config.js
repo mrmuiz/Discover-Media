@@ -1,5 +1,5 @@
 .pragma library
-var version = "0.20.3-discover9";
+var version = "1.0.0";
 var platform = "Home panel";
 var webos = "";
 var apps = [];

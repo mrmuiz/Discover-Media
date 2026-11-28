@@ -20,9 +20,9 @@ get() {
 
 check() {
     current=$(cat "$HERE/VERSION" 2>/dev/null)
-    # A Discover build: an update from rawinek/webos-homebar would replace it
-    # with Homebar without Discover, so it does not look for one.
-    case "$current" in *-discover*) fail "updates are off in this Discover build" ;; esac
+    # This is not upstream Homebar: an update from rawinek/webos-homebar would
+    # replace it with Homebar without Discover, so it never looks for one.
+    fail "updates are off in this Discover build"
     url=https://api.github.com/repos/$REPO/releases/latest
     [ "$1" = test ] && url="https://api.github.com/repos/$REPO/releases?per_page=10"
     rm -rf "$WORK"
