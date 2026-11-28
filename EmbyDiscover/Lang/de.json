@@ -3,6 +3,7 @@
   "api.awaiting_approval": " (wartet auf Freigabe)",
   "api.cleanup_failed": "Aufräumen fehlgeschlagen: ",
   "api.enter_your_tmdb_api_key_in_the_plugin_settings": "Gib zuerst deinen TMDB-API-Schlüssel in den Plugin-Einstellungen ein (Dashboard > Plugins > Discover).",
+  "api.invalid_request": "Ungültige Anfrage.",
   "api.loading_failed": "Laden fehlgeschlagen: ",
   "api.movie_genres": "Filmgenres",
   "api.networks": "Sender",

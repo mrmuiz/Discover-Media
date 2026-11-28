@@ -805,8 +805,8 @@ namespace Emby.Plugins.Discover
             { 10764, "red" }, { 10765, "lightblue" }, { 10766, "darkpurple" }, { 10767, "lightgreen" }, { 10768, "darkred" }
         };
 
-        private static readonly Dictionary<string, KeyValuePair<DateTime, string>> GenreBackdropCache =
-            new Dictionary<string, KeyValuePair<DateTime, string>>();
+        private static readonly Dictionary<string, KeyValuePair<DateTime, List<string>>> GenreBackdropCache =
+            new Dictionary<string, KeyValuePair<DateTime, List<string>>>();
 
         private static string DuotoneUrl(string colorName, string backdrop)
         {
@@ -863,24 +863,50 @@ namespace Emby.Plugins.Discover
             }
         }
 
-        // Zoals Seerr: de vijfde achtergrond uit de populairste titels van dat genre.
-        private Task<string> GenreBackdrop(bool tv, int genreId, CancellationToken ct) => GenreBackdropFor(_tmdb, tv, genreId, ct);
+        /// <summary>Ook gebruikt door de Discover-pagina (genretegels met foto), dezelfde cache van 12 uur.
+        /// Elk genre krijgt een andere achtergrond dan de eerdere genres, zolang er kandidaten over zijn.</summary>
+        internal static async Task<string[]> GenreBackdropsFor(TmdbClient tmdb, bool tv, IList<int> genreIds, CancellationToken ct)
+        {
+            var candidates = await Task.WhenAll(genreIds.Select(id => GenreCandidates(tmdb, tv, id, ct))).ConfigureAwait(false);
+            var result = new string[genreIds.Count];
+            var used = new HashSet<string>();
+            for (int i = 0; i < genreIds.Count; i++)
+            {
+                var list = candidates[i];
+                if (list == null || list.Count == 0) continue;
+                string pick = null;
+                for (int k = 0; k < list.Count; k++)
+                {
+                    var c = list[(4 + k) % list.Count];
+                    if (!used.Contains(c)) { pick = c; break; }
+                }
+                if (pick == null) pick = list[4 % list.Count];
+                used.Add(pick);
+                result[i] = pick;
+            }
+            return result;
+        }
 
-        /// <summary>Ook gebruikt door de Discover-pagina (genretegels met foto), dezelfde cache van 12 uur.</summary>
-        internal static async Task<string> GenreBackdropFor(TmdbClient tmdb, bool tv, int genreId, CancellationToken ct)
+        private static async Task<List<string>> GenreCandidates(TmdbClient tmdb, bool tv, int genreId, CancellationToken ct)
         {
             var key = TmdbClient.Language() + "|" + (tv ? "t" : "m") + genreId;
             lock (GenreBackdropCache)
             {
-                KeyValuePair<DateTime, string> hit;
+                KeyValuePair<DateTime, List<string>> hit;
                 if (GenreBackdropCache.TryGetValue(key, out hit) && DateTime.UtcNow - hit.Key < TimeSpan.FromHours(12)) return hit.Value;
             }
-            string chosen = null;
             try
             {
                 var items = await tmdb.BrowsePages(tv, "&with_genres=" + genreId, 1, 1, ct).ConfigureAwait(false);
-                var backs = items.Where(x => !string.IsNullOrEmpty(x.backdrop_path)).Select(x => x.backdrop_path).ToList();
-                if (backs.Count > 0) chosen = backs.Count > 4 ? backs[4] : backs[backs.Count - 1];
+                if (items == null) return null;
+                var backs = items.Where(x => !string.IsNullOrEmpty(x.backdrop_path)).Select(x => x.backdrop_path).Distinct().Take(12).ToList();
+                if (backs.Count > 0)
+                    lock (GenreBackdropCache)
+                    {
+                        GenreBackdropCache[key] = new KeyValuePair<DateTime, List<string>>(DateTime.UtcNow, backs);
+                        CacheLimit.Trim(GenreBackdropCache, 200, e => e.Key);
+                    }
+                return backs;
             }
             catch (Exception ex)
             {
@@ -888,12 +914,6 @@ namespace Emby.Plugins.Discover
                 DiscoverDiagnostics.Add("log.channel.genre_achtergrond_mislukt", key, ex.Message);
                 return null;
             }
-            lock (GenreBackdropCache)
-            {
-                GenreBackdropCache[key] = new KeyValuePair<DateTime, string>(DateTime.UtcNow, chosen);
-                CacheLimit.Trim(GenreBackdropCache, 200, e => e.Key);
-            }
-            return chosen;
         }
 
         private async Task<ChannelItemResult> GenreTiles(bool tv, CancellationToken ct)
@@ -901,7 +921,7 @@ namespace Emby.Plugins.Discover
             var genres = await _tmdb.GetGenres(tv, ct).ConfigureAwait(false);
             RememberGenreNames(tv, genres);
             var names = genres.Select(genre => LocalizedGenreName(genre.id, tv, genre.name)).ToArray();
-            var backs = await Task.WhenAll(genres.Select(g => GenreBackdrop(tv, g.id, ct))).ConfigureAwait(false);
+            var backs = await GenreBackdropsFor(_tmdb, tv, genres.Select(g => g.id).ToList(), ct).ConfigureAwait(false);
             var imageUrls = genres.Select((genre, i) => GenreImageUrl(genre.id, backs[i])).ToArray();
             var creations = genres.Select((genre, i) => FolderTile.Create(
                 "genre-" + (tv ? "tv-" : "movie-") + genre.id,

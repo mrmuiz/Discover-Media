@@ -837,7 +837,7 @@ namespace Emby.Plugins.Discover
                 string[] backs;
                 try
                 {
-                    backs = await Task.WhenAll(genres.Select(g => DiscoverMediaChannel.GenreBackdropFor(_tmdb, tvGenres, g.id, CancellationToken.None))).ConfigureAwait(false);
+                    backs = await DiscoverMediaChannel.GenreBackdropsFor(_tmdb, tvGenres, genres.Select(g => g.id).ToList(), CancellationToken.None).ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {
@@ -1347,9 +1347,18 @@ namespace Emby.Plugins.Discover
             return best;
         }
 
+        private static string InvalidRequestMessage(string type, int tmdbId, bool hasRequest)
+        {
+            if (!hasRequest || tmdbId <= 0 ||
+                !(string.Equals(type, "tv", StringComparison.OrdinalIgnoreCase) || string.Equals(type, "movie", StringComparison.OrdinalIgnoreCase)))
+                return DiscoverLanguage.T("api.invalid_request");
+            return null;
+        }
         public async Task<object> Post(DiscoverRequestItem request)
         {
             var res = new DiscoverRequestResult();
+            var invalid = InvalidRequestMessage(request != null ? request.Type : null, request != null ? request.TmdbId : 0, request != null);
+            if (invalid != null) { res.Message = invalid; return res; }
             try
             {
                 object requesterId = null;
@@ -1475,6 +1484,8 @@ namespace Emby.Plugins.Discover
         public async Task<object> Post(DiscoverRemoveItem request)
         {
             var res = new DiscoverRequestResult();
+            var invalid = InvalidRequestMessage(request != null ? request.Type : null, request != null ? request.TmdbId : 0, request != null);
+            if (invalid != null) { res.Message = invalid; return res; }
             try
             {
                 // Alleen beheerders of gebruikers die in Emby media mogen verwijderen.

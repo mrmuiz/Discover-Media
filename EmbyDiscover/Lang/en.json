@@ -3,6 +3,7 @@
   "api.awaiting_approval": " (awaiting approval)",
   "api.cleanup_failed": "Cleanup failed: ",
   "api.enter_your_tmdb_api_key_in_the_plugin_settings": "Enter your TMDB API key in the plugin settings first (Dashboard > Plugins > Discover).",
+  "api.invalid_request": "Invalid request.",
   "api.loading_failed": "Loading failed: ",
   "api.movie_genres": "Movie Genres",
   "api.networks": "Networks",
