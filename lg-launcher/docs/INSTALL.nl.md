@@ -4,7 +4,7 @@
 
 Homebar Discover vervangt het startscherm van een geroote LG-tv door een Discover-scherm: grote achtergronden van films en series, alle rijen van de Discover-plugin onder elkaar, en onderaan de Homebar-balk met je apps en HDMI-ingangen. Getest op een LG uit 2021 met webOS 6.5.3; andere webOS-versies zijn nog niet getest.
 
-> Dit is een tekstversie van `Homebar-Discover-installeren.pdf`. De namen van menu's en opties volgen de tv-taal; staat de tv op Engels, dan heten ze zoals tussen haakjes vermeld.
+> Dit is een tekstversie van `Homebar-Discover-installeren.pdf`. De PDF is de oudere uitgave (0.20.3-discover9) en toont die versienummers in de installatie-uitvoer; deze Markdown-handleiding is leidend (versie 1.0.0). De namen van menu's en opties volgen de tv-taal; staat de tv op Engels, dan heten ze zoals tussen haakjes vermeld.
 
 ## Wat je krijgt
 
@@ -57,8 +57,8 @@ sh rawin-launcher/install.sh
 Aan het eind hoort dit te staan:
 
 ```text
-rawin-launcher: installing org.rawin.launcher_0.20.3-discover9_all.ipk
-rawin-launcher: installing org.rawin.launcher.blank_0.20.3-discover9_all.ipk
+rawin-launcher: installing org.rawin.launcher_1.0.0_all.ipk
+rawin-launcher: installing org.rawin.launcher.blank_1.0.0_all.ipk
 rawin-launcher: done. Press HOME on the remote.
 ```
 
