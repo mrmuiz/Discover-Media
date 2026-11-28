@@ -898,6 +898,7 @@ namespace Emby.Plugins.Discover
             try
             {
                 var items = await tmdb.BrowsePages(tv, "&with_genres=" + genreId, 1, 1, ct).ConfigureAwait(false);
+                if (items == null) return null;
                 var backs = items.Where(x => !string.IsNullOrEmpty(x.backdrop_path)).Select(x => x.backdrop_path).Distinct().Take(12).ToList();
                 if (backs.Count > 0)
                     lock (GenreBackdropCache)
